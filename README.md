@@ -34,6 +34,14 @@ DNS66 and personalDNSfilter.
   session" that counts against the budget. Only time with the screen on counts, so background
   app refreshes don't drain it. Accurate to within a minute or two, which is plenty for a fence.
 - **Material You**: dynamic color from your wallpaper on Android 12+, themed launcher icon on 13+.
+- **Section rules** ("allow only parts of a site"): e.g. allow `facebook.com/marketplace` while
+  blocking the rest of facebook.com. DNS can't do this — the feed and Marketplace share one
+  hostname and TLS hides the URL path — so these rules are enforced by a small accessibility
+  service that reads the browser's address bar and presses Back on blocked pages. Works in the
+  major browsers (Chrome, Firefox, Brave, Edge, Samsung Internet, Opera, DuckDuckGo, …); it
+  cannot see inside native apps like the Facebook app, so use the allowed section in a browser.
+  Requires enabling the "Focus Fence" accessibility service once (the app guides you there);
+  address bars are read only to match your own rules, and nothing is stored or transmitted.
 - **Ad & tracker blocking**: optional toggle that downloads the
   [StevenBlack hosts list](https://github.com/StevenBlack/hosts) (100k+ ad/tracker/malware
   domains, aggregated from the same sources AdGuard/uBlock use) and blocks those too — for the

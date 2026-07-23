@@ -236,6 +236,9 @@ class DnsVpnService : VpnService() {
     }
 
     private fun ruleBlocks(rule: BlockRule): Boolean {
+        // Section rules must stay resolvable so the allowed paths work; the
+        // accessibility URL filter enforces them in the browser instead.
+        if (rule.hasPathExceptions) return false
         if (rule.hasBudget) {
             val dayKey = LocalDate.now().toString()
             val used = usageTracker.recordAndGetUsage(

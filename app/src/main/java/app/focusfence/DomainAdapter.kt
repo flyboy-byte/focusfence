@@ -32,6 +32,10 @@ class DomainAdapter(
             binding.domainText.text = rule.domain
             val ctx = binding.root.context
             binding.scheduleText.text = when {
+                rule.hasPathExceptions -> ctx.getString(
+                    R.string.rule_paths,
+                    rule.allowPaths.joinToString(", "),
+                )
                 rule.hasBudget -> {
                     val usedMinutes = (row.usedMillisToday / 60_000L).toInt()
                     if (usedMinutes >= rule.budgetMinutes) {

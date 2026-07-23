@@ -13,9 +13,17 @@ data class BlockRule(
     val startMinute: Int = ALWAYS,
     val endMinute: Int = ALWAYS,
     val budgetMinutes: Int = 0,
+    /**
+     * When non-empty, only these URL path prefixes are allowed (e.g. "/marketplace")
+     * and the rest of the site is blocked. Enforced by the accessibility URL filter
+     * in browsers, not at the DNS layer — DNS sees hostnames only, so the domain
+     * itself must stay resolvable for the allowed sections to work.
+     */
+    val allowPaths: List<String> = emptyList(),
 ) {
     val isScheduled: Boolean get() = startMinute != ALWAYS
     val hasBudget: Boolean get() = budgetMinutes > 0
+    val hasPathExceptions: Boolean get() = allowPaths.isNotEmpty()
 
     /** True if this rule is in effect at [minuteOfDay] (0..1439). */
     fun activeAt(minuteOfDay: Int): Boolean {
@@ -28,6 +36,7 @@ data class BlockRule(
     }
 
     fun encode(): String = when {
+        hasPathExceptions -> "$domain|p|${allowPaths.joinToString(",")}"
         hasBudget -> "$domain|b|$budgetMinutes"
         isScheduled -> "$domain|$startMinute|$endMinute"
         else -> domain
@@ -42,6 +51,11 @@ data class BlockRule(
                 1 -> parts[0].takeIf { it.isNotEmpty() }?.let { BlockRule(it) }
                 3 -> {
                     if (parts[0].isEmpty()) return null
+                    if (parts[1] == "p") {
+                        val paths = parts[2].split(',').mapNotNull { Blocklist.normalizePath(it) }
+                        if (paths.isEmpty()) return null
+                        return BlockRule(parts[0], allowPaths = paths)
+                    }
                     if (parts[1] == "b") {
                         val minutes = parts[2].toIntOrNull() ?: return null
                         if (minutes !in 1..1439) return null
@@ -94,6 +108,24 @@ object Blocklist {
         if (s.isEmpty() || !s.contains('.')) return null
         if (!s.all { it.isLetterOrDigit() || it == '.' || it == '-' }) return null
         if (s.split('.').any { it.isEmpty() || it.length > 63 }) return null
+        return s
+    }
+
+    /**
+     * Cleans a user-entered URL path prefix: "marketplace", "/marketplace/" and
+     * "facebook.com/marketplace" all become "/marketplace". Returns null if
+     * nothing usable remains (a bare "/" would allow the whole site).
+     */
+    fun normalizePath(input: String): String? {
+        var s = input.trim().lowercase(Locale.ROOT)
+        if (s.isEmpty()) return null
+        s = s.substringAfter("://")
+        if (!s.startsWith("/")) {
+            s = if (s.contains('/')) s.substring(s.indexOf('/')) else "/$s"
+        }
+        s = s.trimEnd('/')
+        if (s.isEmpty() || s == "/") return null
+        if (s.any { it == '|' || it == ',' || it.isWhitespace() }) return null
         return s
     }
 

@@ -57,6 +57,12 @@ object BlocklistStore {
         })
     }
 
+    fun setAllowPaths(context: Context, domain: String, allowPaths: List<String>) {
+        save(context, rules(context).map {
+            if (it.domain == domain) BlockRule(domain, allowPaths = allowPaths) else it
+        })
+    }
+
     fun clearSchedule(context: Context, domain: String) {
         save(context, rules(context).map {
             if (it.domain == domain) BlockRule(domain) else it
