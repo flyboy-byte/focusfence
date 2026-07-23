@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Focus Fence</string>
+    <string name="blocking_switch_label">Blocking</string>
+    <string name="status_inactive">Off — distracting sites are reachable</string>
+    <string name="status_active">Active — %1$d lookups blocked this session</string>
+    <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
+    <string name="add_button">Add</string>
+    <string name="preset_button">Add social media presets</string>
+    <string name="blocked_domains_header">Blocked domains</string>
+    <string name="delete_domain">Remove domain</string>
+    <string name="edit_schedule">Edit schedule</string>
+    <string name="invalid_domain">Enter a valid domain, like example.com</string>
+    <string name="vpn_permission_denied">VPN permission is required to block sites</string>
+    <string name="notification_channel_name">Blocking status</string>
+    <string name="notification_title">Focus Fence is active</string>
+    <string name="notification_text">Blocking distracting sites via local DNS filter</string>
+
+    <string name="rule_always">Blocked always</string>
+    <string name="rule_window">Blocked %1$s–%2$s daily</string>
+    <string name="schedule_always">Block always</string>
+    <string name="schedule_window">Block only during set hours…</string>
+    <string name="schedule_same_time">Start and end can\'t be the same time</string>
+    <string name="picker_start_title">Block from</string>
+    <string name="picker_end_title">Block until</string>
+
+    <string name="adblock_label">Block ads &amp; trackers</string>
+    <string name="adlist_none">No filter list downloaded yet</string>
+    <string name="adlist_status">%1$s domains · updated %2$s</string>
+    <string name="adlist_downloading">Downloading filter list…</string>
+    <string name="adlist_update">Update</string>
+    <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
+</resources>
