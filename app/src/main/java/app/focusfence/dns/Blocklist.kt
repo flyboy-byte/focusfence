@@ -3,15 +3,19 @@ package app.focusfence.dns
 import java.util.Locale
 
 /**
- * A user rule: block [domain] (and subdomains), either always or only during a
- * daily time window. Windows may wrap midnight (e.g. 22:00–06:00).
+ * A user rule for [domain] (and subdomains). Exactly one of three modes:
+ * block always, block during a daily time window (may wrap midnight,
+ * e.g. 22:00–06:00), or a daily usage budget in minutes after which the
+ * domain is blocked for the rest of the day.
  */
 data class BlockRule(
     val domain: String,
     val startMinute: Int = ALWAYS,
     val endMinute: Int = ALWAYS,
+    val budgetMinutes: Int = 0,
 ) {
     val isScheduled: Boolean get() = startMinute != ALWAYS
+    val hasBudget: Boolean get() = budgetMinutes > 0
 
     /** True if this rule is in effect at [minuteOfDay] (0..1439). */
     fun activeAt(minuteOfDay: Int): Boolean {
@@ -23,7 +27,11 @@ data class BlockRule(
         }
     }
 
-    fun encode(): String = if (isScheduled) "$domain|$startMinute|$endMinute" else domain
+    fun encode(): String = when {
+        hasBudget -> "$domain|b|$budgetMinutes"
+        isScheduled -> "$domain|$startMinute|$endMinute"
+        else -> domain
+    }
 
     companion object {
         const val ALWAYS = -1
@@ -33,9 +41,15 @@ data class BlockRule(
             return when (parts.size) {
                 1 -> parts[0].takeIf { it.isNotEmpty() }?.let { BlockRule(it) }
                 3 -> {
+                    if (parts[0].isEmpty()) return null
+                    if (parts[1] == "b") {
+                        val minutes = parts[2].toIntOrNull() ?: return null
+                        if (minutes !in 1..1439) return null
+                        return BlockRule(parts[0], budgetMinutes = minutes)
+                    }
                     val start = parts[1].toIntOrNull() ?: return null
                     val end = parts[2].toIntOrNull() ?: return null
-                    if (parts[0].isEmpty() || start !in 0..1439 || end !in 0..1439) return null
+                    if (start !in 0..1439 || end !in 0..1439) return null
                     BlockRule(parts[0], start, end)
                 }
                 else -> null

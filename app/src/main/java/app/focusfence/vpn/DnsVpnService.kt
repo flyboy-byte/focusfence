@@ -8,16 +8,19 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.UsageStore
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Dns
 import app.focusfence.dns.Packets
+import app.focusfence.dns.UsageTracker
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -25,6 +28,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.time.LocalDate
 import java.time.LocalTime
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -76,6 +80,10 @@ class DnsVpnService : VpnService() {
     @Volatile
     private var adHosts: Set<String> = emptySet()
 
+    private val usageTracker = UsageTracker()
+    private val lastPersistedUsage = HashMap<String, Long>()
+    private lateinit var powerManager: PowerManager
+
     private val upstreams: List<InetAddress> = listOf(
         InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)),
         InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)),
@@ -119,7 +127,15 @@ class DnsVpnService : VpnService() {
     private fun startVpn() {
         if (isRunning) return
 
+        powerManager = getSystemService(PowerManager::class.java)
         rules = BlocklistStore.rulesByDomain(this)
+        for (rule in rules.values) {
+            if (rule.hasBudget) {
+                UsageStore.load(this, rule.domain)?.let { (dayKey, used) ->
+                    usageTracker.preload(rule.domain, dayKey, used)
+                }
+            }
+        }
         reloadAdHostsAsync()
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
 
@@ -163,6 +179,9 @@ class DnsVpnService : VpnService() {
         if (!isRunning && tunFd == null) return
         isRunning = false
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
+        for ((domain, state) in usageTracker.snapshot()) {
+            UsageStore.save(this, domain, state.first, state.second)
+        }
         pool?.shutdownNow()
         pool = null
         // Closing the fd unblocks the reader thread's read().
@@ -211,12 +230,34 @@ class DnsVpnService : VpnService() {
 
     private fun isBlocked(qname: String): Boolean {
         val rule = Blocklist.findRule(qname, rules)
-        if (rule != null) {
-            val now = LocalTime.now()
-            if (rule.activeAt(now.hour * 60 + now.minute)) return true
-        }
+        if (rule != null && ruleBlocks(rule)) return true
         if (adHosts.isNotEmpty() && qname in adHosts) return true
         return Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)
+    }
+
+    private fun ruleBlocks(rule: BlockRule): Boolean {
+        if (rule.hasBudget) {
+            val dayKey = LocalDate.now().toString()
+            val used = usageTracker.recordAndGetUsage(
+                rule.domain,
+                System.currentTimeMillis(),
+                dayKey,
+                accrue = powerManager.isInteractive,
+            )
+            persistUsageThrottled(rule.domain, dayKey, used)
+            return used >= rule.budgetMinutes * 60_000L
+        }
+        val now = LocalTime.now()
+        return rule.activeAt(now.hour * 60 + now.minute)
+    }
+
+    /** Writes usage through to prefs at most every 15s of accrued time per domain. */
+    private fun persistUsageThrottled(domain: String, dayKey: String, usedMillis: Long) {
+        val last = lastPersistedUsage[domain]
+        if (last == null || usedMillis - last >= 15_000L || usedMillis < last) {
+            lastPersistedUsage[domain] = usedMillis
+            UsageStore.save(this, domain, dayKey, usedMillis)
+        }
     }
 
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {

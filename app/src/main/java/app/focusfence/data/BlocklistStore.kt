@@ -51,6 +51,12 @@ object BlocklistStore {
         })
     }
 
+    fun setBudget(context: Context, domain: String, budgetMinutes: Int) {
+        save(context, rules(context).map {
+            if (it.domain == domain) BlockRule(domain, budgetMinutes = budgetMinutes) else it
+        })
+    }
+
     fun clearSchedule(context: Context, domain: String) {
         save(context, rules(context).map {
             if (it.domain == domain) BlockRule(domain) else it

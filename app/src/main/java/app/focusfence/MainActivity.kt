@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.UsageStore
 import app.focusfence.databinding.ActivityMainBinding
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
@@ -25,6 +26,7 @@ import com.google.android.material.timepicker.TimeFormat
 import java.io.IOException
 import java.text.DateFormat
 import java.text.NumberFormat
+import java.time.LocalDate
 import java.util.Date
 
 class MainActivity : AppCompatActivity() {
@@ -134,16 +136,33 @@ class MainActivity : AppCompatActivity() {
         val options = arrayOf(
             getString(R.string.schedule_always),
             getString(R.string.schedule_window),
+            getString(R.string.schedule_budget),
         )
         MaterialAlertDialogBuilder(this)
             .setTitle(rule.domain)
             .setItems(options) { _, which ->
-                if (which == 0) {
-                    BlocklistStore.clearSchedule(this, rule.domain)
-                    refreshList()
-                } else {
-                    pickWindow(rule)
+                when (which) {
+                    0 -> {
+                        BlocklistStore.clearSchedule(this, rule.domain)
+                        refreshList()
+                    }
+                    1 -> pickWindow(rule)
+                    else -> pickBudget(rule)
                 }
+            }
+            .show()
+    }
+
+    private fun pickBudget(rule: BlockRule) {
+        val minutes = intArrayOf(5, 10, 15, 20, 30, 45, 60, 90)
+        val labels = minutes
+            .map { resources.getQuantityString(R.plurals.budget_minutes, it, it) }
+            .toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.budget_dialog_title, rule.domain))
+            .setItems(labels) { _, which ->
+                BlocklistStore.setBudget(this, rule.domain, minutes[which])
+                refreshList()
             }
             .show()
     }
@@ -195,7 +214,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshList() {
-        adapter.submit(BlocklistStore.rules(this))
+        val rules = BlocklistStore.rules(this)
+        val dayKey = LocalDate.now().toString()
+        val usage = rules.filter { it.hasBudget }.associate {
+            it.domain to UsageStore.usedMillisOn(this, it.domain, dayKey)
+        }
+        adapter.submit(rules, usage)
     }
 
     private fun refreshState() {

@@ -15,6 +15,10 @@ class BlockRuleTest {
 
         val windowed = BlockRule("x.com", 9 * 60, 18 * 60)
         assertEquals(windowed, BlockRule.decode(windowed.encode()))
+
+        val budgeted = BlockRule("reddit.com", budgetMinutes = 10)
+        assertEquals(budgeted, BlockRule.decode(budgeted.encode()))
+        assertEquals("reddit.com|b|10", budgeted.encode())
     }
 
     @Test
@@ -24,6 +28,8 @@ class BlockRuleTest {
         assertNull(BlockRule.decode("x.com|100"))
         assertNull(BlockRule.decode("x.com|-5|100"))
         assertNull(BlockRule.decode("x.com|100|2000"))
+        assertNull(BlockRule.decode("x.com|b|0"))
+        assertNull(BlockRule.decode("x.com|b|nope"))
     }
 
     @Test
