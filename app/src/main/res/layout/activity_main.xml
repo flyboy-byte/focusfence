@@ -275,6 +275,13 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="@string/apps_choose_button" />
+
+                <Button
+                    android:id="@+id/excludedAppsButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/excluded_apps_button" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

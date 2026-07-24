@@ -23,6 +23,7 @@ import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
 import androidx.appcompat.app.AlertDialog
 import app.focusfence.data.BlockedAppsStore
+import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.databinding.ActivityMainBinding
@@ -140,6 +141,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.chooseAppsButton.setOnClickListener { chooseBlockedApps() }
+        binding.excludedAppsButton.setOnClickListener { chooseExcludedApps() }
 
         binding.adSwitch.isChecked = AdListStore.isEnabled(this)
         binding.adSwitch.setOnCheckedChangeListener { _, checked ->
@@ -208,6 +210,8 @@ class MainActivity : AppCompatActivity() {
         val configured = pathRules || appCount > 0
         val enabled = isUrlFilterEnabled()
         binding.chooseAppsButton.text = getString(R.string.apps_choose_button, appCount)
+        binding.excludedAppsButton.text =
+            getString(R.string.excluded_apps_button, ExcludedAppsStore.get(this).size)
         binding.sectionStatusText.text = when {
             !configured -> getString(R.string.section_idle)
             enabled -> getString(R.string.section_enabled)
@@ -276,15 +280,58 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
 
-    private fun chooseBlockedApps() {
+    private fun launchableApps(): List<Pair<String, String>> {
         val pm = packageManager
-        val launchables = pm.queryIntentActivities(
+        return pm.queryIntentActivities(
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
         )
             .map { it.activityInfo.packageName to it.loadLabel(pm).toString() }
             .distinctBy { it.first }
             .filter { it.first != packageName && it.first != "com.android.settings" }
             .sortedBy { it.second.lowercase(Locale.ROOT) }
+    }
+
+    private fun chooseExcludedApps() {
+        val launchables = launchableApps()
+        if (launchables.isEmpty()) return
+        val current = ExcludedAppsStore.get(this)
+        val labels = launchables.map { it.second }.toTypedArray()
+        val checked = BooleanArray(launchables.size) { launchables[it].first in current }
+        val original = checked.copyOf()
+        val locked = StrictStore.isLocked(this)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.excluded_dialog_title)
+            .setMultiChoiceItems(labels, checked) { dialog, index, isChecked ->
+                // Strict mode: excluding an app is a filter bypass (loosening).
+                if (locked && isChecked && !original[index]) {
+                    checked[index] = false
+                    (dialog as AlertDialog).listView.setItemChecked(index, false)
+                    Toast.makeText(this, R.string.strict_locked_toast, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val selected = launchables.indices
+                    .filter { checked[it] }
+                    .map { launchables[it].first }
+                    .toSet()
+                ExcludedAppsStore.set(this, selected)
+                refreshSectionStatus()
+                restartVpnIfRunning()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Exclusion changes only take effect on a fresh tunnel. */
+    private fun restartVpnIfRunning() {
+        if (!DnsVpnService.isRunning) return
+        startService(Intent(this, DnsVpnService::class.java).setAction(DnsVpnService.ACTION_STOP))
+        binding.root.postDelayed({ requestVpn() }, 600)
+    }
+
+    private fun chooseBlockedApps() {
+        val launchables = launchableApps()
         if (launchables.isEmpty()) return
 
         val current = BlockedAppsStore.get(this)

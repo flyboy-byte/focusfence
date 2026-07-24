@@ -129,6 +129,19 @@ object Blocklist {
         return s
     }
 
+    private val FRONT_DOOR_PREFIXES = listOf("www.", "m.", "web.", "mobile.", "touch.")
+
+    /**
+     * True if [qname] is one of [domain]'s user-facing web hostnames. Time
+     * budgets accrue and enforce only on these: hidden subdomains like
+     * graph.facebook.com carry SDK/API traffic from unrelated apps, which must
+     * neither drain a budget nor break when it runs out.
+     */
+    fun isFrontDoor(qname: String, domain: String): Boolean {
+        if (qname == domain) return true
+        return FRONT_DOOR_PREFIXES.any { qname == it + domain }
+    }
+
     /** True if [qname] equals a blocked domain or is a subdomain of one. */
     fun matches(qname: String, blocked: Set<String>): Boolean {
         if (blocked.isEmpty()) return false
