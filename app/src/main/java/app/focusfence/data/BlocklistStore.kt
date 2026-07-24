@@ -52,6 +52,10 @@ object BlocklistStore {
     }
 
     fun setBudget(context: Context, domain: String, budgetMinutes: Int) {
+        // Setting or changing a limit starts the day's count fresh — also the
+        // escape hatch when tracking has miscounted. Written before the rules
+        // so the service's reload sees the cleared value.
+        UsageStore.save(context, domain, java.time.LocalDate.now().toString(), 0L)
         save(context, rules(context).map {
             if (it.domain == domain) BlockRule(domain, budgetMinutes = budgetMinutes) else it
         })

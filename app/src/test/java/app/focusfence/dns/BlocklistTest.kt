@@ -24,6 +24,16 @@ class BlocklistTest {
     }
 
     @Test
+    fun frontDoorCoversWebHostsOnly() {
+        assertTrue(Blocklist.isFrontDoor("facebook.com", "facebook.com"))
+        assertTrue(Blocklist.isFrontDoor("www.facebook.com", "facebook.com"))
+        assertTrue(Blocklist.isFrontDoor("m.facebook.com", "facebook.com"))
+        assertFalse(Blocklist.isFrontDoor("graph.facebook.com", "facebook.com"))
+        assertFalse(Blocklist.isFrontDoor("edge-chat.facebook.com", "facebook.com"))
+        assertFalse(Blocklist.isFrontDoor("notfacebook.com", "facebook.com"))
+    }
+
+    @Test
     fun matchesExactAndSubdomains() {
         val blocked = setOf("facebook.com", "x.com")
         assertTrue(Blocklist.matches("facebook.com", blocked))

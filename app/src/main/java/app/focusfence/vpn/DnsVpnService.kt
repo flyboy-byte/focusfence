@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
@@ -15,6 +16,7 @@ import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StatsStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
@@ -100,8 +102,22 @@ class DnsVpnService : VpnService() {
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
-            BlocklistStore.KEY_RULES -> rules = BlocklistStore.rulesByDomain(this)
+            BlocklistStore.KEY_RULES -> {
+                rules = BlocklistStore.rulesByDomain(this)
+                preloadBudgetUsage()
+            }
             AdListStore.KEY_ENABLED, AdListStore.KEY_COUNT -> reloadAdHostsAsync()
+        }
+    }
+
+    /** Seeds the tracker from persisted usage; a cleared store entry (e.g. after
+     *  a budget change) resets the in-memory count too. */
+    private fun preloadBudgetUsage() {
+        val today = LocalDate.now().toString()
+        for (rule in rules.values) {
+            if (!rule.hasBudget) continue
+            val (dayKey, used) = UsageStore.load(this, rule.domain) ?: (today to 0L)
+            usageTracker.preload(rule.domain, dayKey, used)
         }
     }
 
@@ -143,13 +159,7 @@ class DnsVpnService : VpnService() {
 
         powerManager = getSystemService(PowerManager::class.java)
         rules = BlocklistStore.rulesByDomain(this)
-        for (rule in rules.values) {
-            if (rule.hasBudget) {
-                UsageStore.load(this, rule.domain)?.let { (dayKey, used) ->
-                    usageTracker.preload(rule.domain, dayKey, used)
-                }
-            }
-        }
+        preloadBudgetUsage()
         reloadAdHostsAsync()
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
@@ -169,6 +179,13 @@ class DnsVpnService : VpnService() {
                 .addRoute(VPN6_DNS, 128)
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "IPv6 tunnel config rejected, continuing with IPv4 only", e)
+        }
+        for (pkg in ExcludedAppsStore.get(this)) {
+            try {
+                builder.addDisallowedApplication(pkg)
+            } catch (e: PackageManager.NameNotFoundException) {
+                // App was uninstalled; skip.
+            }
         }
 
         val fd = builder.establish()
@@ -255,7 +272,7 @@ class DnsVpnService : VpnService() {
     /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
     private fun blockReason(qname: String): String? {
         val rule = Blocklist.findRule(qname, rules)
-        if (rule != null && ruleBlocks(rule)) return rule.domain
+        if (rule != null && ruleBlocks(rule, qname)) return rule.domain
         if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
         if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
         return null
@@ -282,11 +299,15 @@ class DnsVpnService : VpnService() {
         lastStatsFlush = System.currentTimeMillis()
     }
 
-    private fun ruleBlocks(rule: BlockRule): Boolean {
+    private fun ruleBlocks(rule: BlockRule, qname: String): Boolean {
         // Section rules must stay resolvable so the allowed paths work; the
         // accessibility URL filter enforces them in the browser instead.
         if (rule.hasPathExceptions) return false
         if (rule.hasBudget) {
+            // Budgets track and enforce only the site's user-facing hostnames;
+            // SDK/API subdomains (graph.facebook.com etc.) belong to other
+            // apps' background traffic and must not drain or break anything.
+            if (!Blocklist.isFrontDoor(qname, rule.domain)) return false
             val dayKey = LocalDate.now().toString()
             val used = usageTracker.recordAndGetUsage(
                 rule.domain,
