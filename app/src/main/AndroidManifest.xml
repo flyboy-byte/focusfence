@@ -7,6 +7,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Needed on Android 11+ so the blocked-apps picker can list launchable apps. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".FocusFenceApp"
         android:allowBackup="true"
@@ -34,6 +42,12 @@
         <activity
             android:name=".OnboardingActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".StatsActivity"
+            android:exported="false"
+            android:label="@string/stats_title"
+            android:parentActivityName=".MainActivity" />
 
         <!-- Watches browser address bars to enforce "allow only specific sections"
              rules; DNS cannot distinguish URL paths. Bound only by the system,

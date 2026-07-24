@@ -21,8 +21,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import androidx.appcompat.app.AlertDialog
+import app.focusfence.data.BlockedAppsStore
+import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.databinding.ActivityMainBinding
+import app.focusfence.dns.StrictLock
 import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
@@ -35,6 +39,7 @@ import java.text.DateFormat
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,6 +63,15 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) = refreshState()
     }
 
+    /** One-second UI tick while visible, for strict-mode countdowns and the block counter. */
+    private val ticker = object : Runnable {
+        override fun run() {
+            refreshStrict()
+            refreshState()
+            binding.root.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -65,10 +79,16 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         adapter = DomainAdapter(
-            onEditSchedule = { rule -> editSchedule(rule) },
+            onEditSchedule = { rule ->
+                if (StrictStore.isLocked(this)) showStrictLockedDialog() else editSchedule(rule)
+            },
             onDelete = { rule ->
-                BlocklistStore.remove(this, rule.domain)
-                refreshList()
+                if (StrictStore.isLocked(this)) {
+                    showStrictLockedDialog()
+                } else {
+                    BlocklistStore.remove(this, rule.domain)
+                    refreshList()
+                }
             },
         )
         binding.domainList.adapter = adapter
@@ -86,8 +106,40 @@ class MainActivity : AppCompatActivity() {
 
         binding.vpnSwitch.setOnCheckedChangeListener { _, checked ->
             if (checked == DnsVpnService.isRunning) return@setOnCheckedChangeListener
-            if (checked) requestVpn() else stopVpn()
+            if (checked) {
+                requestVpn()
+            } else if (StrictStore.isLocked(this)) {
+                binding.vpnSwitch.isChecked = true
+                showStrictLockedDialog()
+            } else {
+                stopVpn()
+            }
         }
+
+        binding.strictSwitch.setOnCheckedChangeListener { _, checked ->
+            if (checked == StrictStore.isEnabled(this)) return@setOnCheckedChangeListener
+            if (checked) {
+                StrictStore.setEnabled(this, true)
+            } else if (StrictStore.isLocked(this)) {
+                binding.strictSwitch.isChecked = true
+                showStrictLockedDialog()
+                return@setOnCheckedChangeListener
+            } else {
+                StrictStore.setEnabled(this, false)
+            }
+            refreshStrict()
+        }
+
+        binding.strictActionButton.setOnClickListener {
+            when (StrictStore.state(this)) {
+                is StrictLock.State.Locked -> StrictStore.requestUnlock(this)
+                is StrictLock.State.Pending -> StrictStore.cancelUnlock(this)
+                else -> {}
+            }
+            refreshStrict()
+        }
+
+        binding.chooseAppsButton.setOnClickListener { chooseBlockedApps() }
 
         binding.adSwitch.isChecked = AdListStore.isEnabled(this)
         binding.adSwitch.setOnCheckedChangeListener { _, checked ->
@@ -121,11 +173,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_help) {
-            startActivity(Intent(this, HelpActivity::class.java))
-            return true
+        return when (item.itemId) {
+            R.id.action_help -> {
+                startActivity(Intent(this, HelpActivity::class.java))
+                true
+            }
+            R.id.action_stats -> {
+                startActivity(Intent(this, StatsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
     }
 
     override fun onResume() {
@@ -140,23 +198,122 @@ class MainActivity : AppCompatActivity() {
         refreshState()
         refreshAdStatus()
         refreshSectionStatus()
+        refreshStrict()
+        binding.root.postDelayed(ticker, 1000)
     }
 
     private fun refreshSectionStatus() {
-        val needed = BlocklistStore.rules(this).any { it.hasPathExceptions }
-        binding.sectionCard.visibility = if (needed) android.view.View.VISIBLE else android.view.View.GONE
-        if (!needed) return
+        val pathRules = BlocklistStore.rules(this).any { it.hasPathExceptions }
+        val appCount = BlockedAppsStore.get(this).size
+        val configured = pathRules || appCount > 0
         val enabled = isUrlFilterEnabled()
-        binding.sectionStatusText.text = getString(
-            if (enabled) R.string.section_enabled else R.string.section_disabled
-        )
+        binding.chooseAppsButton.text = getString(R.string.apps_choose_button, appCount)
+        binding.sectionStatusText.text = when {
+            !configured -> getString(R.string.section_idle)
+            enabled -> getString(R.string.section_enabled)
+            else -> getString(R.string.section_disabled)
+        }
         binding.sectionEnableButton.visibility =
-            if (enabled) android.view.View.GONE else android.view.View.VISIBLE
+            if (configured && !enabled) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     override fun onPause() {
         super.onPause()
+        binding.root.removeCallbacks(ticker)
         unregisterReceiver(stateReceiver)
+    }
+
+    private fun refreshStrict() {
+        val state = StrictStore.state(this)
+        val enabled = state !is StrictLock.State.Off
+        if (binding.strictSwitch.isChecked != enabled) binding.strictSwitch.isChecked = enabled
+        when (state) {
+            is StrictLock.State.Off -> {
+                binding.strictStatusText.text = getString(R.string.strict_off)
+                binding.strictActionButton.visibility = android.view.View.GONE
+            }
+            is StrictLock.State.Locked -> {
+                binding.strictStatusText.text = getString(R.string.strict_locked)
+                binding.strictActionButton.visibility = android.view.View.VISIBLE
+                binding.strictActionButton.text = getString(R.string.strict_request_unlock)
+            }
+            is StrictLock.State.Pending -> {
+                binding.strictStatusText.text =
+                    getString(R.string.strict_pending, formatCountdown(state.remainingMs))
+                binding.strictActionButton.visibility = android.view.View.VISIBLE
+                binding.strictActionButton.text = getString(android.R.string.cancel)
+            }
+            is StrictLock.State.Unlocked -> {
+                binding.strictStatusText.text =
+                    getString(R.string.strict_unlocked, formatCountdown(state.remainingMs))
+                binding.strictActionButton.visibility = android.view.View.GONE
+            }
+        }
+    }
+
+    private fun formatCountdown(ms: Long): String {
+        val totalSeconds = (ms + 999) / 1000
+        return String.format(Locale.ROOT, "%d:%02d", totalSeconds / 60, totalSeconds % 60)
+    }
+
+    private fun showStrictLockedDialog() {
+        val state = StrictStore.state(this)
+        val message = if (state is StrictLock.State.Pending) {
+            getString(R.string.strict_dialog_pending, formatCountdown(state.remainingMs))
+        } else {
+            getString(R.string.strict_dialog_locked)
+        }
+        val builder = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.strict_title)
+            .setMessage(message)
+            .setNegativeButton(android.R.string.ok, null)
+        if (state is StrictLock.State.Locked) {
+            builder.setPositiveButton(R.string.strict_request_unlock) { _, _ ->
+                StrictStore.requestUnlock(this)
+                refreshStrict()
+            }
+        }
+        builder.show()
+    }
+
+    private fun chooseBlockedApps() {
+        val pm = packageManager
+        val launchables = pm.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
+        )
+            .map { it.activityInfo.packageName to it.loadLabel(pm).toString() }
+            .distinctBy { it.first }
+            .filter { it.first != packageName && it.first != "com.android.settings" }
+            .sortedBy { it.second.lowercase(Locale.ROOT) }
+        if (launchables.isEmpty()) return
+
+        val current = BlockedAppsStore.get(this)
+        val labels = launchables.map { it.second }.toTypedArray()
+        val checked = BooleanArray(launchables.size) { launchables[it].first in current }
+        val original = checked.copyOf()
+        val locked = StrictStore.isLocked(this)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.apps_dialog_title)
+            .setMultiChoiceItems(labels, checked) { dialog, index, isChecked ->
+                // Strict mode: un-blocking an app is a loosening change.
+                if (locked && !isChecked && original[index]) {
+                    checked[index] = true
+                    (dialog as AlertDialog).listView.setItemChecked(index, true)
+                    Toast.makeText(this, R.string.strict_locked_toast, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val selected = launchables.indices
+                    .filter { checked[it] }
+                    .map { launchables[it].first }
+                    .toSet()
+                BlockedAppsStore.set(this, selected)
+                refreshSectionStatus()
+                if (selected.isNotEmpty() && !isUrlFilterEnabled()) promptEnableUrlFilter()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun addDomainFromInput() {

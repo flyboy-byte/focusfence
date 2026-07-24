@@ -7,6 +7,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import app.focusfence.R
+import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.UrlFilter
@@ -40,6 +41,7 @@ class UrlFilterService : AccessibilityService() {
 
         private const val EVENT_THROTTLE_MS = 250L
         private const val BACK_DEBOUNCE_MS = 1500L
+        private const val APP_BLOCK_DEBOUNCE_MS = 2000L
         private const val MAX_FALLBACK_NODES = 250
     }
 
@@ -49,11 +51,15 @@ class UrlFilterService : AccessibilityService() {
     @Volatile
     private var hasSectionRules = false
 
+    @Volatile
+    private var blockedApps: Set<String> = emptySet()
+
     private var lastCheckAt = 0L
     private var lastBackAt = 0L
+    private var lastAppBlockAt = 0L
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == BlocklistStore.KEY_RULES) reloadRules()
+        if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS) reloadRules()
     }
 
     override fun onServiceConnected() {
@@ -70,16 +76,31 @@ class UrlFilterService : AccessibilityService() {
         val loaded = BlocklistStore.rulesByDomain(this)
         rules = loaded
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
+        blockedApps = BlockedAppsStore.get(this)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!hasSectionRules) return
+        val eventPackage = event.packageName?.toString() ?: return
+        if (eventPackage == packageName) return
+
+        // Whole-app blocking: bounce to the home screen.
+        if (eventPackage in blockedApps) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastAppBlockAt >= APP_BLOCK_DEBOUNCE_MS) {
+                lastAppBlockAt = now
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                Toast.makeText(this, R.string.app_blocked_toast, Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        // Section rules: only meaningful inside known browsers.
+        if (!hasSectionRules || eventPackage !in URL_BAR_IDS) return
         val now = SystemClock.uptimeMillis()
         if (now - lastCheckAt < EVENT_THROTTLE_MS) return
         lastCheckAt = now
 
-        val packageName = event.packageName?.toString() ?: return
-        val url = findUrl(packageName) ?: return
+        val url = findUrl(eventPackage) ?: return
         if (!UrlFilter.shouldBlock(url, rules)) return
 
         if (now - lastBackAt >= BACK_DEBOUNCE_MS) {

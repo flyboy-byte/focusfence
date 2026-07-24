@@ -4,5 +4,4 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="300"
     android:canRetrieveWindowContent="true"
-    android:packageNames="com.android.chrome,com.brave.browser,com.vivaldi.browser,com.kiwibrowser.browser,com.microsoft.emmx,org.mozilla.firefox,org.mozilla.focus,com.sec.android.app.sbrowser,com.opera.browser,com.duckduckgo.mobile.android"
     android:description="@string/accessibility_service_description" />

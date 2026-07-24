@@ -31,13 +31,38 @@
     <string name="paths_dialog_hint">/marketplace, /groups</string>
     <string name="paths_invalid">Enter at least one path, like /marketplace</string>
 
-    <string name="section_service_label">Section filter</string>
+    <string name="strict_title">Strict mode</string>
+    <string name="strict_off">Off — rules can be changed freely</string>
+    <string name="strict_locked">Locked — turning blocking off or removing rules requires a 10-minute unlock</string>
+    <string name="strict_pending">Unlocks in %1$s — go do something else</string>
+    <string name="strict_unlocked">Unlocked for %1$s — make your changes now</string>
+    <string name="strict_request_unlock">Request unlock</string>
+    <string name="strict_dialog_locked">Strict mode is on. To turn blocking off, remove rules, or un-block apps, request an unlock and wait 10 minutes; you\'ll then have a 5-minute window to make changes.</string>
+    <string name="strict_dialog_pending">Unlock already requested — %1$s to go. When it opens you\'ll have 5 minutes to make changes.</string>
+    <string name="strict_locked_toast">Strict mode: un-blocking needs an unlock first</string>
+
+    <string name="apps_dialog_title">Block these apps</string>
+    <string name="apps_choose_button">Blocked apps (%1$d) — choose</string>
+    <string name="app_blocked_toast">App blocked by Focus Fence</string>
+
+    <string name="stats_title">Stats</string>
+    <string name="stats_today_summary">%1$d blocked today (%2$d ads &amp; trackers)</string>
+    <string name="stats_domains_header">Top blocked sites today</string>
+    <string name="stats_none_yet">Nothing blocked yet today</string>
+    <string name="stats_budgets_header">Time budgets today</string>
+    <string name="stats_no_budgets">No daily time limits set</string>
+    <string name="stats_budget_value">%1$d of %2$d min</string>
+    <string name="stats_week_header">Blocked lookups, last 7 days</string>
+    <string name="stats_today_label">Today</string>
+
+    <string name="section_service_label">App &amp; section blocking</string>
+    <string name="section_idle">Block whole apps here, or add section rules from a domain\'s menu.</string>
     <string name="section_enabled">Active — watching browser address bars</string>
     <string name="section_disabled">Needs the accessibility permission to read browser address bars</string>
     <string name="section_enable_button">Enable</string>
     <string name="section_enable_message">Section rules work by reading the browser\'s address bar and backing out of blocked pages, which Android only allows via an accessibility service. Enable "Focus Fence" on the next screen. Nothing is stored or sent anywhere.</string>
     <string name="section_blocked_toast">Blocked by Focus Fence</string>
-    <string name="accessibility_service_description">Reads browser address bars to enforce your "allow only specific sections" rules (for example, allowing facebook.com/marketplace while blocking the rest of facebook.com). Used only in browsers, only for matching against your own blocklist; nothing is stored or transmitted.</string>
+    <string name="accessibility_service_description">Enforces your own blocking rules: closes apps you\'ve chosen to block, and reads browser address bars to enforce "allow only specific sections" rules (for example, allowing facebook.com/marketplace while blocking the rest of facebook.com). Screen content is only matched against your own rules; nothing is stored or transmitted.</string>
     <string name="schedule_same_time">Start and end can\'t be the same time</string>
     <string name="picker_start_title">Block from</string>
     <string name="picker_end_title">Block until</string>
@@ -61,6 +86,9 @@
 
     <string name="help_limits_title">What it can\'t do</string>
     <string name="help_limits_body"><![CDATA[Honesty section — the limits of DNS-based blocking:<br><br>• Pages your phone looked up recently may still load for a few minutes after you block them (DNS caching).<br><br>• <b>Time limits are estimates</b> based on lookup activity — accurate to within a minute or two, and only screen-on time counts.<br><br>• Turn <b>off Private DNS</b> in Android\'s network settings, or it will carry lookups around the filter. (The common browser tricks are already guarded against.)<br><br>• Android allows only <b>one VPN at a time</b>, so Focus Fence can\'t run alongside a regular VPN.<br><br>• Video ads on YouTube or Twitch can\'t be removed — they come from the same domains as the videos themselves.<br><br>• And you can always just switch it off. It\'s a fence, not a prison — Always-on VPN adds friction if you want more commitment.]]></string>
+
+    <string name="help_power_title">Strict mode, app blocking &amp; stats</string>
+    <string name="help_power_body"><![CDATA[<b>Strict mode</b> keeps future-you honest. While it\'s on, turning blocking off, removing rules, or un-blocking apps requires requesting an unlock, waiting <b>10 minutes</b>, and making your change inside a 5-minute window. Adding new blocks is always allowed. (Pair it with Always-on VPN for the strongest fence.)<br><br><b>App blocking</b> closes whole apps the moment they open — use it for the Facebook or TikTok <i>apps</i>, which DNS and section rules can\'t reach. Choose apps from the "App &amp; section blocking" card; it uses the same accessibility permission as section rules.<br><br><b>Stats</b> (the chart icon up top) shows what was blocked today, your time-budget usage, and a 7-day trend. Counts only ever live on your phone, and only the last 14 days are kept.]]></string>
 
     <string name="help_start_title">A good starter setup</string>
     <string name="help_start_body"><![CDATA[1. Tap <b>Add social media presets</b>, or add your own domains.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections.<br><br>3. Optionally switch on <b>Block ads &amp; trackers</b> — it downloads a 100k+ domain filter list once and blocks ads device-wide.<br><br>4. Flip the main switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top of the main screen.]]></string>
