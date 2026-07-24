@@ -1,6 +1,7 @@
 package app.focusfence.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.SharedPreferences
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
@@ -77,6 +78,26 @@ class UrlFilterService : AccessibilityService() {
         rules = loaded
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
         blockedApps = BlockedAppsStore.get(this)
+        applyEventFilter()
+    }
+
+    /**
+     * Scopes event delivery to only the packages we act on — the system then
+     * never wakes this process for other apps' UI changes, which matters
+     * enormously for battery. With nothing configured, listen only to our own
+     * package (i.e. effectively nothing). Content-changed events (high volume)
+     * are requested only while section rules exist.
+     */
+    private fun applyEventFilter() {
+        val info = serviceInfo ?: return
+        val targets = HashSet<String>()
+        if (hasSectionRules) targets += URL_BAR_IDS.keys
+        targets += blockedApps
+        info.packageNames =
+            if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+            (if (hasSectionRules) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
+        serviceInfo = info
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
