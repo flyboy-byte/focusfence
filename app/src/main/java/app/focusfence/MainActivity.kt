@@ -9,13 +9,19 @@ import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.text.InputType
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.UsageStore
 import app.focusfence.databinding.ActivityMainBinding
+import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
 import app.focusfence.vpn.DnsVpnService
@@ -25,6 +31,7 @@ import com.google.android.material.timepicker.TimeFormat
 import java.io.IOException
 import java.text.DateFormat
 import java.text.NumberFormat
+import java.time.LocalDate
 import java.util.Date
 
 class MainActivity : AppCompatActivity() {
@@ -90,6 +97,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.adUpdateButton.setOnClickListener { updateAdList() }
+        binding.sectionEnableButton.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
@@ -110,6 +120,19 @@ class MainActivity : AppCompatActivity() {
         refreshList()
         refreshState()
         refreshAdStatus()
+        refreshSectionStatus()
+    }
+
+    private fun refreshSectionStatus() {
+        val needed = BlocklistStore.rules(this).any { it.hasPathExceptions }
+        binding.sectionCard.visibility = if (needed) android.view.View.VISIBLE else android.view.View.GONE
+        if (!needed) return
+        val enabled = isUrlFilterEnabled()
+        binding.sectionStatusText.text = getString(
+            if (enabled) R.string.section_enabled else R.string.section_disabled
+        )
+        binding.sectionEnableButton.visibility =
+            if (enabled) android.view.View.GONE else android.view.View.VISIBLE
     }
 
     override fun onPause() {
@@ -134,16 +157,87 @@ class MainActivity : AppCompatActivity() {
         val options = arrayOf(
             getString(R.string.schedule_always),
             getString(R.string.schedule_window),
+            getString(R.string.schedule_budget),
+            getString(R.string.schedule_paths),
         )
         MaterialAlertDialogBuilder(this)
             .setTitle(rule.domain)
             .setItems(options) { _, which ->
-                if (which == 0) {
-                    BlocklistStore.clearSchedule(this, rule.domain)
-                    refreshList()
-                } else {
-                    pickWindow(rule)
+                when (which) {
+                    0 -> {
+                        BlocklistStore.clearSchedule(this, rule.domain)
+                        refreshList()
+                    }
+                    1 -> pickWindow(rule)
+                    2 -> pickBudget(rule)
+                    else -> pickAllowedPaths(rule)
                 }
+            }
+            .show()
+    }
+
+    private fun pickAllowedPaths(rule: BlockRule) {
+        val input = EditText(this).apply {
+            hint = getString(R.string.paths_dialog_hint)
+            setText(rule.allowPaths.joinToString(", "))
+            inputType = InputType.TYPE_TEXT_VARIATION_URI
+        }
+        val container = FrameLayout(this).apply {
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.paths_dialog_title, rule.domain))
+            .setMessage(R.string.paths_dialog_message)
+            .setView(container)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val paths = input.text.toString().split(',')
+                    .mapNotNull { Blocklist.normalizePath(it) }
+                    .distinct()
+                if (paths.isEmpty()) {
+                    Toast.makeText(this, R.string.paths_invalid, Toast.LENGTH_LONG).show()
+                } else {
+                    BlocklistStore.setAllowPaths(this, rule.domain, paths)
+                    refreshList()
+                    if (!isUrlFilterEnabled()) promptEnableUrlFilter()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun isUrlFilterEnabled(): Boolean {
+        val enabled = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ) ?: return false
+        val component = "$packageName/${UrlFilterService::class.java.name}"
+        val short = "$packageName/.accessibility.UrlFilterService"
+        return enabled.split(':').any { it.equals(component, true) || it.equals(short, true) }
+    }
+
+    private fun promptEnableUrlFilter() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.section_service_label)
+            .setMessage(R.string.section_enable_message)
+            .setPositiveButton(R.string.section_enable_button) { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun pickBudget(rule: BlockRule) {
+        val minutes = intArrayOf(5, 10, 15, 20, 30, 45, 60, 90)
+        val labels = minutes
+            .map { resources.getQuantityString(R.plurals.budget_minutes, it, it) }
+            .toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.budget_dialog_title, rule.domain))
+            .setItems(labels) { _, which ->
+                BlocklistStore.setBudget(this, rule.domain, minutes[which])
+                refreshList()
             }
             .show()
     }
@@ -195,7 +289,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshList() {
-        adapter.submit(BlocklistStore.rules(this))
+        val rules = BlocklistStore.rules(this)
+        val dayKey = LocalDate.now().toString()
+        val usage = rules.filter { it.hasBudget }.associate {
+            it.domain to UsageStore.usedMillisOn(this, it.domain, dayKey)
+        }
+        adapter.submit(rules, usage)
     }
 
     private fun refreshState() {

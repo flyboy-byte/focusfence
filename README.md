@@ -28,6 +28,20 @@ DNS66 and personalDNSfilter.
 - Input is forgiving — paste a full URL and it's normalized to the bare domain.
 - **Schedules per domain**: block always, or only during a daily window (e.g. 9:00–18:00).
   Windows may wrap midnight (22:00–06:00).
+- **Daily time limits per domain**: e.g. 10 minutes of reddit.com per day, then blocked until
+  midnight. Usage is inferred from DNS activity — while you actively use a site your phone keeps
+  re-resolving its domains, so each lookup within a few minutes of the last extends an "active
+  session" that counts against the budget. Only time with the screen on counts, so background
+  app refreshes don't drain it. Accurate to within a minute or two, which is plenty for a fence.
+- **Material You**: dynamic color from your wallpaper on Android 12+, themed launcher icon on 13+.
+- **Section rules** ("allow only parts of a site"): e.g. allow `facebook.com/marketplace` while
+  blocking the rest of facebook.com. DNS can't do this — the feed and Marketplace share one
+  hostname and TLS hides the URL path — so these rules are enforced by a small accessibility
+  service that reads the browser's address bar and presses Back on blocked pages. Works in the
+  major browsers (Chrome, Firefox, Brave, Edge, Samsung Internet, Opera, DuckDuckGo, …); it
+  cannot see inside native apps like the Facebook app, so use the allowed section in a browser.
+  Requires enabling the "Focus Fence" accessibility service once (the app guides you there);
+  address bars are read only to match your own rules, and nothing is stored or transmitted.
 - **Ad & tracker blocking**: optional toggle that downloads the
   [StevenBlack hosts list](https://github.com/StevenBlack/hosts) (100k+ ad/tracker/malware
   domains, aggregated from the same sources AdGuard/uBlock use) and blocks those too — for the
@@ -67,9 +81,9 @@ copy the APK over (or download the CI artifact on the phone), and open it.
 - **DNS-level blocking**, not packet inspection: a site already resolved and cached may load
   until its DNS TTL expires; apps that hard-code IPs or ship their own DoH stack can bypass it.
   In practice it works well for browsers and most apps, including social media apps.
-- **No per-site minute budgets** ("30 min/day then block"): a DNS filter only sees name lookups,
-  not how long you stay on a page, so usage time can't be measured honestly at this layer.
-  Schedules cover most of the same ground; for true usage timers, Android's built-in
+- **Time limits are estimates**: a DNS filter can't see page focus, so budgets are inferred from
+  lookup activity (see Features). Long-lived DNS caches undercount; leaving an app open in the
+  foreground without touching it still counts. For exact usage timers, Android's built-in
   Digital Wellbeing offers per-app timers and Chrome site timers, and pairs well with this app.
 - YouTube/Twitch ads are served from the same domains as their video content, so DNS-level ad
   blocking (this app, AdGuard DNS, Pi-hole alike) cannot remove them.

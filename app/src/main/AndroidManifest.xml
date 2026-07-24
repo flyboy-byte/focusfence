@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".FocusFenceApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -23,6 +24,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Watches browser address bars to enforce "allow only specific sections"
+             rules; DNS cannot distinguish URL paths. Bound only by the system,
+             and only after the user enables it in accessibility settings. -->
+        <service
+            android:name=".accessibility.UrlFilterService"
+            android:exported="false"
+            android:label="@string/section_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
         <!-- exported=true is required so the system can bind to the VPN service;
              access is protected by the BIND_VPN_SERVICE signature permission. -->
