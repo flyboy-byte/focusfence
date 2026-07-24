@@ -156,6 +156,9 @@ class DnsVpnService : VpnService() {
 
         val builder = Builder()
             .setSession(getString(R.string.app_name))
+            // Critical: establish() returns a NON-blocking fd by default, which
+            // would turn the reader loop into a CPU-pinning busy spin.
+            .setBlocking(true)
             .setMtu(MTU)
             .addAddress(VPN4_ADDRESS, 24)
             .addDnsServer(VPN4_DNS)
@@ -222,7 +225,8 @@ class DnsVpnService : VpnService() {
             } catch (e: IOException) {
                 break // fd closed by stopVpn()
             }
-            if (n <= 0) continue
+            if (n < 0) break
+            if (n == 0) continue
             handlePacket(buf.copyOf(n))
         }
     }
