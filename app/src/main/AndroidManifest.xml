@@ -44,9 +44,8 @@
             android:exported="false" />
 
         <activity
-            android:name=".StatsActivity"
+            android:name=".DomainDetailActivity"
             android:exported="false"
-            android:label="@string/stats_title"
             android:parentActivityName=".MainActivity" />
 
         <!-- Watches browser address bars to enforce "allow only specific sections"
