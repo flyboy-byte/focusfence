@@ -42,6 +42,29 @@
     <string name="picker_start_title">Block from</string>
     <string name="picker_end_title">Block until</string>
 
+    <string name="help_title">Guide</string>
+    <string name="list_hint">Tap a domain to choose how it\'s blocked: always, on a schedule, with a daily limit, or allowing only some sections.</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_done">Get started</string>
+    <string name="onboarding_progress">%1$d of %2$d</string>
+
+    <string name="help_how_title">How Focus Fence works</string>
+    <string name="help_how_body"><![CDATA[Focus Fence blocks distracting sites for your <b>whole phone</b> using a local VPN that filters only DNS — the phone\'s address lookups. Nothing you browse leaves your phone: no account, no server, and battery impact is basically zero.<br><br>Flip the switch on the main screen and accept Android\'s VPN prompt to start blocking.<br><br><b>Tip:</b> for blocking that survives reboots, enable <b>Always-on VPN</b> for Focus Fence in Android\'s network settings.]]></string>
+
+    <string name="help_rules_title">Four ways to block a site</string>
+    <string name="help_rules_body"><![CDATA[Add a domain like reddit.com, then <b>tap it in the list</b> to choose how it\'s blocked:<br><br>• <b>Block always</b> — the default when you add a domain.<br><br>• <b>Block only during set hours</b> — for example 9:00–18:00 every day. Windows can wrap midnight, like 22:00–06:00.<br><br>• <b>Daily time limit</b> — for example 10 minutes per day, then it\'s blocked until midnight.<br><br>• <b>Allow only specific sections</b> — block a site except the parts you choose (next page).<br><br>Blocking a domain always covers its subdomains too: reddit.com also blocks old.reddit.com.]]></string>
+
+    <string name="help_sections_title">Allow only parts of a site</string>
+    <string name="help_sections_body"><![CDATA[Want Facebook Marketplace without the feed? That\'s a <b>section rule</b>:<br><br>1. Add <b>facebook.com</b> to your list.<br><br>2. Tap it, then choose <b>Allow only specific sections…</b><br><br>3. Type <b>/marketplace</b> — the "section" is whatever comes after the domain in the address, so facebook.com/marketplace → /marketplace. Add several separated by commas, like <i>/marketplace, /events</i>.<br><br>4. When prompted, enable the <b>Focus Fence accessibility service</b>. Section rules work by reading your browser\'s address bar, and Android requires that permission for it. The address bar is only compared against your own rules; nothing is stored or sent anywhere.<br><br>From then on, any facebook.com page that isn\'t under /marketplace is backed out of automatically, with a small "Blocked by Focus Fence" notice.<br><br><b>Browsers only:</b> the Facebook <i>app</i> has no address bar to read, so open marketplace in your browser (Chrome, Firefox, Brave, Edge, Samsung Internet and others all work).]]></string>
+
+    <string name="help_limits_title">What it can\'t do</string>
+    <string name="help_limits_body"><![CDATA[Honesty section — the limits of DNS-based blocking:<br><br>• Pages your phone looked up recently may still load for a few minutes after you block them (DNS caching).<br><br>• <b>Time limits are estimates</b> based on lookup activity — accurate to within a minute or two, and only screen-on time counts.<br><br>• Turn <b>off Private DNS</b> in Android\'s network settings, or it will carry lookups around the filter. (The common browser tricks are already guarded against.)<br><br>• Android allows only <b>one VPN at a time</b>, so Focus Fence can\'t run alongside a regular VPN.<br><br>• Video ads on YouTube or Twitch can\'t be removed — they come from the same domains as the videos themselves.<br><br>• And you can always just switch it off. It\'s a fence, not a prison — Always-on VPN adds friction if you want more commitment.]]></string>
+
+    <string name="help_start_title">A good starter setup</string>
+    <string name="help_start_body"><![CDATA[1. Tap <b>Add social media presets</b>, or add your own domains.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections.<br><br>3. Optionally switch on <b>Block ads &amp; trackers</b> — it downloads a 100k+ domain filter list once and blocks ads device-wide.<br><br>4. Flip the main switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top of the main screen.]]></string>
+
     <string name="adblock_label">Block ads &amp; trackers</string>
     <string name="adlist_none">No filter list downloaded yet</string>
     <string name="adlist_status">%1$s domains · updated %2$s</string>
