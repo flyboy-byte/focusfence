@@ -15,7 +15,10 @@ import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.StatsStore
+import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
+import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Dns
@@ -84,6 +87,12 @@ class DnsVpnService : VpnService() {
     private val lastPersistedUsage = HashMap<String, Long>()
     private lateinit var powerManager: PowerManager
 
+    private val statsLock = Any()
+    private var statsBufferDay = ""
+    private val statsBuffer = HashMap<String, Int>()
+    private var statsPending = 0
+    private var lastStatsFlush = 0L
+
     private val upstreams: List<InetAddress> = listOf(
         InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)),
         InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)),
@@ -105,6 +114,11 @@ class DnsVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // A null intent (restart) or the system's always-on trigger both mean "start".
         if (intent?.action == ACTION_STOP) {
+            // Strict mode: refuse to stop until an unlock window is open.
+            if (StrictStore.isLocked(this)) {
+                broadcastState()
+                return START_STICKY
+            }
             stopVpn()
             stopSelf()
             return START_NOT_STICKY
@@ -137,6 +151,7 @@ class DnsVpnService : VpnService() {
             }
         }
         reloadAdHostsAsync()
+        StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
 
         val builder = Builder()
@@ -182,6 +197,7 @@ class DnsVpnService : VpnService() {
         for ((domain, state) in usageTracker.snapshot()) {
             UsageStore.save(this, domain, state.first, state.second)
         }
+        synchronized(statsLock) { flushStatsLocked() }
         pool?.shutdownNow()
         pool = null
         // Closing the fd unblocks the reader thread's read().
@@ -216,11 +232,15 @@ class DnsVpnService : VpnService() {
         if (udp.dstPort != 53) return
 
         val question = Dns.parseQuestion(udp.packet, udp.payloadOffset, udp.payloadLength)
-        if (question != null && isBlocked(question.qname)) {
-            blockedCount.incrementAndGet()
-            val dnsResponse = Dns.buildNxDomain(udp.packet, udp.payloadOffset, question.questionEnd)
-            writeToTun(Packets.buildUdpReply(udp, dnsResponse))
-            return
+        if (question != null) {
+            val reason = blockReason(question.qname)
+            if (reason != null) {
+                blockedCount.incrementAndGet()
+                recordStat(reason)
+                val dnsResponse = Dns.buildNxDomain(udp.packet, udp.payloadOffset, question.questionEnd)
+                writeToTun(Packets.buildUdpReply(udp, dnsResponse))
+                return
+            }
         }
 
         // Not blocked (or unparseable): relay to a real resolver off the reader thread.
@@ -228,11 +248,34 @@ class DnsVpnService : VpnService() {
         pool?.execute { forward(udp, query) }
     }
 
-    private fun isBlocked(qname: String): Boolean {
+    /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
+    private fun blockReason(qname: String): String? {
         val rule = Blocklist.findRule(qname, rules)
-        if (rule != null && ruleBlocks(rule)) return true
-        if (adHosts.isNotEmpty() && qname in adHosts) return true
-        return Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)
+        if (rule != null && ruleBlocks(rule)) return rule.domain
+        if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
+        if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
+        return null
+    }
+
+    private fun recordStat(bucket: String) {
+        val day = LocalDate.now().toString()
+        synchronized(statsLock) {
+            if (day != statsBufferDay) flushStatsLocked()
+            statsBufferDay = day
+            statsBuffer.merge(bucket, 1, Int::plus)
+            statsPending++
+            val now = System.currentTimeMillis()
+            if (statsPending >= 25 || now - lastStatsFlush >= 30_000L) flushStatsLocked()
+        }
+    }
+
+    private fun flushStatsLocked() {
+        if (statsBuffer.isNotEmpty() && statsBufferDay.isNotEmpty()) {
+            StatsStore.add(this, statsBufferDay, statsBuffer)
+        }
+        statsBuffer.clear()
+        statsPending = 0
+        lastStatsFlush = System.currentTimeMillis()
     }
 
     private fun ruleBlocks(rule: BlockRule): Boolean {

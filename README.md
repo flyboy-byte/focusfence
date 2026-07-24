@@ -47,6 +47,13 @@ DNS66 and personalDNSfilter.
   domains, aggregated from the same sources AdGuard/uBlock use) and blocks those too — for the
   whole device, in every app.
 - One-tap preset that adds the major social media sites.
+- **Strict mode**: while on, turning blocking off, removing rules, or un-blocking apps requires
+  requesting an unlock, waiting 10 minutes, then making changes inside a 5-minute window.
+  Adding new blocks is always allowed.
+- **App blocking**: chosen apps are bounced to the home screen the moment they open (same
+  accessibility service as section rules) — covers native apps DNS can't touch.
+- **Stats**: per-day block counts by domain, ad/tracker totals, budget usage, and a 7-day
+  trend. Kept on-device only, last 14 days.
 - Blocks common browser DoH endpoints and answers the `use-application-dns.net` canary while
   active, so Firefox/Chrome can't silently bypass the filter with their own encrypted DNS.
 - Foreground notification + live counter of blocked lookups.

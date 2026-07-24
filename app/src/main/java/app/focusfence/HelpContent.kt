@@ -8,6 +8,7 @@ object HelpContent {
         Page(R.string.help_how_title, R.string.help_how_body),
         Page(R.string.help_rules_title, R.string.help_rules_body),
         Page(R.string.help_sections_title, R.string.help_sections_body),
+        Page(R.string.help_power_title, R.string.help_power_body),
         Page(R.string.help_limits_title, R.string.help_limits_body),
         Page(R.string.help_start_title, R.string.help_start_body),
     )
