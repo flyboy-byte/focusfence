@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -107,6 +109,23 @@ class MainActivity : AppCompatActivity() {
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        if (!BlocklistStore.prefs(this).getBoolean(OnboardingActivity.KEY_ONBOARDED, false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_help) {
+            startActivity(Intent(this, HelpActivity::class.java))
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onResume() {

@@ -25,6 +25,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".HelpActivity"
+            android:exported="false"
+            android:label="@string/help_title"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false" />
+
         <!-- Watches browser address bars to enforce "allow only specific sections"
              rules; DNS cannot distinguish URL paths. Bound only by the system,
              and only after the user enables it in accessibility settings. -->

@@ -51,6 +51,7 @@ class DomainAdapter(
                 )
                 else -> ctx.getString(R.string.rule_always)
             }
+            binding.root.setOnClickListener { onEditSchedule(rule) }
             binding.scheduleButton.setOnClickListener { onEditSchedule(rule) }
             binding.deleteButton.setOnClickListener { onDelete(rule) }
         }
