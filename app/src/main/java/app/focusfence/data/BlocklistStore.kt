@@ -34,43 +34,21 @@ object BlocklistStore {
     fun rulesByDomain(context: Context): Map<String, BlockRule> =
         rules(context).associateBy { it.domain }
 
-    fun add(context: Context, domain: String) {
-        if (rulesByDomain(context).containsKey(domain)) return
-        save(context, rules(context) + BlockRule(domain))
-    }
-
     fun addAll(context: Context, domains: Collection<String>) {
         val existing = rulesByDomain(context)
         val newRules = domains.filter { it !in existing }.map { BlockRule(it) }
         if (newRules.isNotEmpty()) save(context, rules(context) + newRules)
     }
 
-    fun setSchedule(context: Context, domain: String, startMinute: Int, endMinute: Int) {
-        save(context, rules(context).map {
-            if (it.domain == domain) BlockRule(domain, startMinute, endMinute) else it
-        })
-    }
-
-    fun setBudget(context: Context, domain: String, budgetMinutes: Int) {
-        // Setting or changing a limit starts the day's count fresh — also the
-        // escape hatch when tracking has miscounted. Written before the rules
-        // so the service's reload sees the cleared value.
-        UsageStore.save(context, domain, java.time.LocalDate.now().toString(), 0L)
-        save(context, rules(context).map {
-            if (it.domain == domain) BlockRule(domain, budgetMinutes = budgetMinutes) else it
-        })
-    }
-
-    fun setAllowPaths(context: Context, domain: String, allowPaths: List<String>) {
-        save(context, rules(context).map {
-            if (it.domain == domain) BlockRule(domain, allowPaths = allowPaths) else it
-        })
-    }
-
-    fun clearSchedule(context: Context, domain: String) {
-        save(context, rules(context).map {
-            if (it.domain == domain) BlockRule(domain) else it
-        })
+    /** Adds or replaces the rule for [rule]'s domain. */
+    fun upsert(context: Context, rule: BlockRule) {
+        // Saving a budget rule starts the day's count fresh — also the escape
+        // hatch when tracking has miscounted. Written before the rules so the
+        // service's reload sees the cleared value.
+        if (rule.hasBudget) {
+            UsageStore.save(context, rule.domain, java.time.LocalDate.now().toString(), 0L)
+        }
+        save(context, rules(context).filterNot { it.domain == rule.domain } + rule)
     }
 
     fun remove(context: Context, domain: String) {

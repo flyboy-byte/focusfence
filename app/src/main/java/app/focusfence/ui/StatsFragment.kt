@@ -1,13 +1,15 @@
-package app.focusfence
+package app.focusfence.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import app.focusfence.R
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.StatsStore
 import app.focusfence.data.UsageStore
-import app.focusfence.databinding.ActivityStatsBinding
+import app.focusfence.databinding.FragmentStatsBinding
 import app.focusfence.databinding.ItemStatBinding
 import app.focusfence.dns.StatsCodec
 import java.time.LocalDate
@@ -15,16 +17,16 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /** Blocking history: today's counts, budget usage, and a 7-day trend. */
-class StatsActivity : AppCompatActivity() {
+class StatsFragment : Fragment() {
 
-    private lateinit var binding: ActivityStatsBinding
+    private var _binding: FragmentStatsBinding? = null
+    private val binding get() = _binding!!
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityStatsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?,
+    ): View {
+        _binding = FragmentStatsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onResume() {
@@ -32,19 +34,19 @@ class StatsActivity : AppCompatActivity() {
         populate()
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun populate() {
+        val context = requireContext()
         val today = LocalDate.now()
-        val todayStats = StatsStore.get(this, today.toString())
+        val todayStats = StatsStore.get(context, today.toString())
         val total = StatsCodec.total(todayStats)
         val ads = todayStats[StatsCodec.KEY_ADS] ?: 0
         binding.todaySummary.text = getString(R.string.stats_today_summary, total, ads)
 
-        // Top blocked domains today (user rules only).
         binding.domainStats.removeAllViews()
         val domainCounts = todayStats
             .filterKeys { it != StatsCodec.KEY_ADS && it != StatsCodec.KEY_GUARD }
@@ -59,15 +61,15 @@ class StatsActivity : AppCompatActivity() {
             }
         }
 
-        // Budget usage today.
         binding.budgetStats.removeAllViews()
-        val budgetRules = BlocklistStore.rules(this).filter { it.hasBudget }
+        val budgetRules = BlocklistStore.rules(context).filter { it.hasBudget }
         if (budgetRules.isEmpty()) {
             addRow(binding.budgetStats, getString(R.string.stats_no_budgets), "", 0, 1)
         } else {
             for (rule in budgetRules) {
                 val usedMin =
-                    (UsageStore.usedMillisOn(this, rule.domain, today.toString()) / 60_000L).toInt()
+                    (UsageStore.usedMillisOn(context, rule.domain, today.toString()) / 60_000L)
+                        .toInt()
                 addRow(
                     binding.budgetStats,
                     rule.domain,
@@ -78,10 +80,9 @@ class StatsActivity : AppCompatActivity() {
             }
         }
 
-        // Last 7 days.
         binding.weekStats.removeAllViews()
         val days = (6L downTo 0L).map { today.minusDays(it) }
-        val totals = days.associateWith { StatsCodec.total(StatsStore.get(this, it.toString())) }
+        val totals = days.associateWith { StatsCodec.total(StatsStore.get(context, it.toString())) }
         val weekMax = (totals.values.maxOrNull() ?: 0).coerceAtLeast(1)
         for (day in days) {
             val label = if (day == today) {
@@ -95,7 +96,7 @@ class StatsActivity : AppCompatActivity() {
     }
 
     private fun addRow(parent: ViewGroup, title: String, value: String, progress: Int, max: Int) {
-        val row = ItemStatBinding.inflate(LayoutInflater.from(this), parent, false)
+        val row = ItemStatBinding.inflate(layoutInflater, parent, false)
         row.statTitle.text = title
         row.statValue.text = value
         row.statBar.max = max
