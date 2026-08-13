@@ -82,7 +82,7 @@
     <string name="group_apps">Blocked apps</string>
     <string name="group_title_fmt">%1$s (%2$d)</string>
     <string name="blocklist_empty">Nothing blocked yet — tap + to add your first domain.</string>
-    <string name="apps_empty_hint">No blocked apps — tap here to choose some.</string>
+    <string name="apps_empty_hint">No blocked apps — tap here (or +) to choose some.</string>
     <string name="blocked_app_summary">Blocked app</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_delete">Delete</string>

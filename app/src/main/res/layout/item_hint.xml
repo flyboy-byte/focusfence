@@ -3,6 +3,7 @@
     android:id="@+id/hintText"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
     android:padding="16dp"
     android:textAppearance="?attr/textAppearanceBodyMedium"
     android:textColor="?android:attr/textColorSecondary" />
