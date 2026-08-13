@@ -66,6 +66,12 @@ class DnsVpnService : VpnService() {
         private const val NOTIFICATION_CHANNEL = "vpn_status"
         private const val NOTIFICATION_ID = 1
 
+        private const val UPSTREAM_TIMEOUT_MS = 2500
+        /** Ad/tracker blocks are stable — let clients cache them for an hour. */
+        private const val AD_BLOCK_TTL_SECONDS = 3600
+        /** User rules change with schedules/budgets — keep their cache short. */
+        private const val RULE_BLOCK_TTL_SECONDS = 60
+
         @Volatile
         var isRunning = false
             private set
@@ -96,9 +102,16 @@ class DnsVpnService : VpnService() {
     private var lastStatsFlush = 0L
 
     private val upstreams: List<InetAddress> = listOf(
-        InetAddress.getByAddress(byteArrayOf(1, 1, 1, 1)),
-        InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)),
+        InetAddress.getByName("1.1.1.1"),
+        InetAddress.getByName("8.8.8.8"),
+        InetAddress.getByName("2606:4700:4700::1111"),
+        InetAddress.getByName("2001:4860:4860::8888"),
     )
+
+    /** Index of the upstream that most recently answered; tried first so a dead
+     *  or unreachable server isn't re-probed on every single query. */
+    @Volatile
+    private var preferredUpstream = 0
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
@@ -258,7 +271,13 @@ class DnsVpnService : VpnService() {
             if (reason != null) {
                 blockedCount.incrementAndGet()
                 recordStat(reason)
-                val dnsResponse = Dns.buildNxDomain(udp.packet, udp.payloadOffset, question.questionEnd)
+                val ttl = if (reason == StatsCodec.KEY_ADS || reason == StatsCodec.KEY_GUARD) {
+                    AD_BLOCK_TTL_SECONDS
+                } else {
+                    RULE_BLOCK_TTL_SECONDS
+                }
+                val dnsResponse =
+                    Dns.buildBlockedResponse(udp.packet, udp.payloadOffset, question, ttl)
                 writeToTun(Packets.buildUdpReply(udp, dnsResponse))
                 return
             }
@@ -332,15 +351,20 @@ class DnsVpnService : VpnService() {
     }
 
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
-        for (server in upstreams) {
+        val first = preferredUpstream
+        val order = upstreams.indices.sortedBy { if (it == first) -1 else it }
+        for (index in order) {
             try {
                 DatagramSocket().use { socket ->
                     if (!protect(socket)) return
-                    socket.soTimeout = 4000
-                    socket.send(DatagramPacket(query, query.size, InetSocketAddress(server, 53)))
+                    socket.soTimeout = UPSTREAM_TIMEOUT_MS
+                    socket.send(
+                        DatagramPacket(query, query.size, InetSocketAddress(upstreams[index], 53))
+                    )
                     val respBuf = ByteArray(MTU - 48)
                     val resp = DatagramPacket(respBuf, respBuf.size)
                     socket.receive(resp)
+                    preferredUpstream = index
                     writeToTun(Packets.buildUdpReply(udp, respBuf, resp.length))
                 }
                 return

@@ -40,7 +40,7 @@ class UrlFilterService : AccessibilityService() {
             "com.duckduckgo.mobile.android" to "com.duckduckgo.mobile.android:id/omnibarTextInput",
         )
 
-        private const val EVENT_THROTTLE_MS = 250L
+        private const val EVENT_THROTTLE_MS = 700L
         private const val BACK_DEBOUNCE_MS = 1500L
         private const val APP_BLOCK_DEBOUNCE_MS = 2000L
         private const val MAX_FALLBACK_NODES = 250
@@ -97,6 +97,9 @@ class UrlFilterService : AccessibilityService() {
             if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
             (if (hasSectionRules) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
+        // Batch event delivery: URL changes are human-speed, no need for more
+        // than a couple of wakeups per second while scrolling.
+        info.notificationTimeout = 600
         serviceInfo = info
     }
 
