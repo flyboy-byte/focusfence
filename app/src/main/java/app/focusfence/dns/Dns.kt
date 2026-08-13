@@ -4,13 +4,16 @@ import java.util.Locale
 
 /**
  * Minimal DNS wire-format helpers: enough to read the question of a query
- * and synthesize an NXDOMAIN answer for blocked names.
+ * and synthesize blocked answers.
  */
 object Dns {
 
+    const val TYPE_A = 1
+    const val TYPE_AAAA = 28
+
     /** The parsed question of a DNS query. [questionEnd] is the offset (relative to the
      *  start of the DNS message) of the first byte after the question section. */
-    data class Question(val qname: String, val questionEnd: Int)
+    data class Question(val qname: String, val qtype: Int, val questionEnd: Int)
 
     /**
      * Parses the header + first question of a DNS message. Returns null for anything
@@ -44,12 +47,69 @@ object Dns {
         }
         // QTYPE + QCLASS must follow.
         if (i + 4 > end) return null
-        return Question(sb.toString().lowercase(Locale.ROOT), i + 4 - offset)
+        return Question(
+            sb.toString().lowercase(Locale.ROOT),
+            readU16(msg, i),
+            i + 4 - offset,
+        )
+    }
+
+    /**
+     * Builds the response for a blocked query. A and AAAA questions get a real
+     * answer (0.0.0.0 / ::) carrying [ttlSeconds], so clients CACHE the block
+     * instead of re-asking endlessly — plain NXDOMAIN without an SOA is
+     * uncacheable and was waking the VPN thousands of times a day. Other query
+     * types get an empty NOERROR (NODATA) response.
+     */
+    fun buildBlockedResponse(
+        msg: ByteArray,
+        offset: Int,
+        question: Question,
+        ttlSeconds: Int,
+    ): ByteArray {
+        val rdataLength = when (question.qtype) {
+            TYPE_A -> 4
+            TYPE_AAAA -> 16
+            else -> -1
+        }
+        if (rdataLength < 0) {
+            // NODATA: NOERROR with no answer records.
+            val resp = ByteArray(question.questionEnd)
+            System.arraycopy(msg, offset, resp, 0, question.questionEnd)
+            resp[2] = 0x81.toByte() // QR=1, RD=1
+            resp[3] = 0x80.toByte() // RA=1, RCODE=0
+            for (j in 6..11) resp[j] = 0
+            return resp
+        }
+
+        val resp = ByteArray(question.questionEnd + 12 + rdataLength)
+        System.arraycopy(msg, offset, resp, 0, question.questionEnd)
+        resp[2] = 0x81.toByte() // QR=1, RD=1
+        resp[3] = 0x80.toByte() // RA=1, RCODE=0
+        for (j in 6..11) resp[j] = 0
+        resp[7] = 1 // ANCOUNT = 1
+
+        var i = question.questionEnd
+        resp[i++] = 0xc0.toByte() // name: pointer to the question name at offset 12
+        resp[i++] = 0x0c
+        resp[i++] = 0
+        resp[i++] = question.qtype.toByte()
+        resp[i++] = 0
+        resp[i++] = 1 // class IN
+        resp[i++] = ((ttlSeconds ushr 24) and 0xff).toByte()
+        resp[i++] = ((ttlSeconds ushr 16) and 0xff).toByte()
+        resp[i++] = ((ttlSeconds ushr 8) and 0xff).toByte()
+        resp[i++] = (ttlSeconds and 0xff).toByte()
+        resp[i++] = 0
+        resp[i] = rdataLength.toByte()
+        // RDATA is all zeros: 0.0.0.0 / :: — already zero-initialized.
+        return resp
     }
 
     /**
      * Builds an NXDOMAIN response for the query in [msg]: same ID and question,
-     * QR/RA set, RCODE=3, no answer records.
+     * QR/RA set, RCODE=3, no answer records. Note: without an SOA record this
+     * is not cacheable by clients; prefer [buildBlockedResponse] for blocking.
      */
     fun buildNxDomain(msg: ByteArray, offset: Int, questionEnd: Int): ByteArray {
         val resp = ByteArray(questionEnd)
