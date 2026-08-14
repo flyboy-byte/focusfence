@@ -1,0 +1,92 @@
+# Research Handoff Workflow
+
+> **Tier:** Meta (process doc) · **Audience:** you, during the scoping/validation
+> phase · **Use when:** a doc in this packet has a claim marked unverified/inferred that
+> needs real citations, current facts, or legal/licensing specifics — things a coding
+> agent shouldn't fabricate.
+
+## Why this exists
+
+Claims in this packet **about the codebase** have been verified against source — see
+[`audits/findings.md`](audits/findings.md), which checked every code-level assertion in the
+external research and found several wrong. Claims about **the outside world** have not. This
+session had no network access, so platform policies, licensing terms, competitor behaviour and
+library capabilities are recorded, not endorsed.
+
+The right tool for closing those gaps is a deep research engine with live web access, run by you
+in a browser — not this coding session, which shouldn't be the source of truth for anything that
+needs to be traceable and citable later.
+
+This project has already been through one full cycle of this: five documents were commissioned,
+delivered, and then verified. **The verification found real errors** — a platform version off by
+three releases, half a proposed roadmap already shipped, a misattributed repository, and a license
+compatibility table that contradicted its own prose. Treat new research output the same way.
+
+## What qualifies for handoff
+
+Externally verifiable, and not something this session should guess at. Internal decisions (which
+architecture, what to name something) are judgment calls and belong in [`notes.md`](notes.md).
+Questions needing *primary* research — running it on a real device, asking a real person — belong
+in [`../FRAMEWORK.md`](../FRAMEWORK.md) Phase 2 as action items, **not here**. The VPN-coexistence
+test is the clearest example: no amount of web research answers it, only a phone does.
+
+## Current handoff queue
+
+Pulled from open items flagged across this packet. Items 1–2 block the release; the rest inform
+Track B.
+
+| # | Question | Source doc | Suggested engine | Why that engine |
+| - | -------- | ---------- | ---------------- | --------------- |
+| 1 | For an Android app that *downloads* (not vendors) third-party hosts files, what are the practical differences between MPL-2.0, Apache-2.0 and GPLv3 — specifically around a future library/SDK extraction, and around F-Droid/Play distribution? | `risks.md`, O-001 | Claude | Licensing needs careful reading of actual terms and cross-referencing; Claude tends to hedge appropriately rather than assert |
+| 2 | What are StevenBlack/hosts' actual license and redistribution terms, and those of HaGeZi, OISD, Block List Project and EasyList? Which permit runtime download vs. bundling, and what attribution is required? | `risks.md`, B6 | Claude | Same — primary-source license text, several sources to compare |
+| 3 | What can Shizuku actually do on a **non-root** device as of 2026 — specifically package suspend/disable? What permissions, what setup friction, and does it genuinely require restarting after every reboot? | `approach.md` B7 | Either | Fast-moving project; needs current docs and issue tracker, not model priors |
+| 4 | What exactly does `UsageStatsManager` report, how is `PACKAGE_USAGE_STATS` granted, and what are its known accuracy limitations for foreground time? | `approach.md` B3 | Either | Well-documented Android API; official docs plus known gotchas |
+| 5 | What are F-Droid's current requirements for inclusion — reproducible builds, anti-feature labelling for apps using `VpnService` and `AccessibilityService`, and the review process for a first submission? | O-005, `risks.md` | Claude | Policy documents plus community practice; needs sourcing |
+| 6 | What is Google Play's current policy for apps that combine `VpnService` and `AccessibilityService`? Is such an app publishable at all, and under what declarations? | `risks.md` | Claude | Play policy is dense, changes often, and heavily penalises getting it wrong |
+| 7 | Is the claim that Play will require `targetSdk` 36 from 2026-08-31 accurate? (Flagged unverified in `audits/findings.md` §4, and currently moot — the plan is GitHub Releases.) | `audits/findings.md` | Either | Single factual check |
+| 8 | Does Android offer any mechanism for VPN coexistence, or app-specific routing that would let a filtering app cohabit with a user's real VPN? Has anything changed in recent releases? | `approach.md` B4 | Either | If the answer is "no, one slot, period," that confirms the design constraint permanently |
+| 9 | How do comparable FOSS tools (RethinkDNS, NetGuard, personalDNSfilter, AdAway) handle release signing and key custody for GitHub/F-Droid distribution? Any established practice worth copying? | O-002 | Either | Prior art on a one-way door decision |
+
+## Handoff procedure
+
+1. **Pick one row** — don't batch unrelated questions into one session; it dilutes the result and
+   makes sourcing harder to track.
+2. **Write the prompt** using the template below and run it in the browser per the suggested
+   engine. Ask for citations explicitly — an answer without a source is not more trustworthy than
+   what's already in these docs.
+3. **Save the raw output** into [`research/`](research/) before doing anything else with it.
+4. **Merge findings back** into the originating doc: replace the unverified language with the
+   finding and add a citation line pointing at the saved file. Don't delete the fact that it was
+   once unverified — the audit trail of assumed vs. confirmed is useful later.
+5. **Verify anything it says about this codebase** before acting on it. The last research cycle
+   got the block path wrong in all five documents, and acting on it would have re-introduced a
+   fixed battery regression.
+6. **Update this queue** — mark the row resolved and add any new questions it surfaced.
+
+## Prompt template
+
+```
+I'm scoping a project: Focus Fence, an open-source Android app that blocks distracting
+websites and apps using a DNS-only local VpnService plus an accessibility service. Fully
+on-device — no accounts, no servers, no telemetry. It's distributed by sideloading from
+GitHub Releases. Kotlin, minSdk 26, targetSdk 34.
+
+Research question: {{paste the question from the handoff queue table}}
+
+Please answer with current, sourced information — include links or citations for every
+claim, note publication/last-verified dates where relevant, and flag anything that's
+opinion or estimate rather than sourced fact.
+```
+
+## `research/` folder structure
+
+```
+research/
+  YYYY-MM-DD-<short-topic-slug>-<engine>.md
+```
+
+Each file starts with the exact prompt used, the engine and the date, then the raw response.
+Don't edit the raw response after saving — corrections go in the doc that consumes it.
+
+The five documents in [`audits/`](audits/) are the output of an earlier cycle, saved before this
+convention existed. They stay where they are.

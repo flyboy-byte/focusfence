@@ -1,5 +1,13 @@
 # Suggested sequencing
 
+> **Superseded as an ordering (2026-08-14).** This file was written from external research, before
+> product intent was recorded. That intent now lives in [`../overview.md`](../overview.md), and the
+> ordering that answers to it is [`../approach.md`](../approach.md) (items B1–B8). Where the two
+> disagree, `approach.md` wins.
+>
+> Kept because the *analysis* is still good — particularly what's already built, what the platform
+> forbids, and the rejected directions. Read it as reference, not as a plan.
+
 **These are suggestions, not decisions.** They follow from
 [`../audits/findings.md`](../audits/findings.md) — only from claims that survived
 verification — and every one of them is separable. Take any, reorder them, drop the rest.
