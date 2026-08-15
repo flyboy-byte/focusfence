@@ -64,6 +64,15 @@ class BlocklistFragment : Fragment() {
                     refresh()
                 }
             },
+            onHintClick = { key ->
+                when (key) {
+                    GroupedBlocklistAdapter.GROUP_APPS ->
+                        UiUtil.chooseBlockedApps(requireContext()) { refresh() }
+                    else -> startActivity(
+                        Intent(requireContext(), DomainDetailActivity::class.java)
+                    )
+                }
+            },
         )
         binding.blockList.adapter = adapter
         binding.addFab.setOnClickListener {
@@ -100,7 +109,7 @@ class BlocklistFragment : Fragment() {
         )
 
         val rows = mutableListOf<Row>()
-        if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocklist_empty)))
+        if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocklist_empty), "domains"))
 
         for ((key, titleRes, predicate) in groups) {
             val members = rules.filter(predicate)
@@ -125,11 +134,17 @@ class BlocklistFragment : Fragment() {
                 GroupedBlocklistAdapter.GROUP_APPS,
                 getString(R.string.group_title_fmt, getString(R.string.group_apps), apps.size),
                 appsExpanded,
+                showAdd = true,
             )
         )
         if (appsExpanded) {
             if (apps.isEmpty()) {
-                rows.add(Row.Hint(getString(R.string.apps_empty_hint)))
+                rows.add(
+                    Row.Hint(
+                        getString(R.string.apps_empty_hint),
+                        GroupedBlocklistAdapter.GROUP_APPS,
+                    )
+                )
             } else {
                 apps.forEach {
                     rows.add(

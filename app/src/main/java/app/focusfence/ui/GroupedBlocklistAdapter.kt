@@ -1,6 +1,7 @@
 package app.focusfence.ui
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.DiffUtil
@@ -13,10 +14,19 @@ import app.focusfence.databinding.ItemHintBinding
 import app.focusfence.dns.BlockRule
 
 sealed class Row {
-    data class Header(val key: String, val title: String, val expanded: Boolean) : Row()
+    /** [showAdd] puts a + action on the header (used by the apps group). */
+    data class Header(
+        val key: String,
+        val title: String,
+        val expanded: Boolean,
+        val showAdd: Boolean = false,
+    ) : Row()
+
     data class Domain(val rule: BlockRule, val summary: String) : Row()
     data class App(val pkg: String, val label: String, val summary: String) : Row()
-    data class Hint(val text: String) : Row()
+
+    /** [actionKey] makes the hint tappable; the key identifies what to open. */
+    data class Hint(val text: String, val actionKey: String? = null) : Row()
 }
 
 class GroupedBlocklistAdapter(
@@ -26,6 +36,7 @@ class GroupedBlocklistAdapter(
     private val onAppsEdit: () -> Unit,
     private val onAppClick: (String) -> Unit,
     private val onAppRemove: (String) -> Unit,
+    private val onHintClick: (String) -> Unit,
 ) : ListAdapter<Row, RecyclerView.ViewHolder>(DIFF) {
 
     companion object {
@@ -41,7 +52,8 @@ class GroupedBlocklistAdapter(
                 oldItem is Row.Domain && newItem is Row.Domain ->
                     oldItem.rule.domain == newItem.rule.domain
                 oldItem is Row.App && newItem is Row.App -> oldItem.pkg == newItem.pkg
-                oldItem is Row.Hint && newItem is Row.Hint -> true
+                oldItem is Row.Hint && newItem is Row.Hint ->
+                    oldItem.actionKey == newItem.actionKey
                 else -> false
             }
 
@@ -80,6 +92,8 @@ class GroupedBlocklistAdapter(
             binding.headerTitle.text = row.title
             binding.expandIcon.rotation = if (row.expanded) 180f else 0f
             binding.root.setOnClickListener { onHeaderClick(row.key) }
+            binding.addButton.visibility = if (row.showAdd) View.VISIBLE else View.GONE
+            binding.addButton.setOnClickListener { onAppsEdit() }
         }
     }
 
@@ -125,6 +139,11 @@ class GroupedBlocklistAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Hint) {
             binding.hintText.text = row.text
+            val key = row.actionKey
+            binding.hintText.isClickable = key != null
+            binding.hintText.setOnClickListener(
+                if (key == null) null else View.OnClickListener { onHintClick(key) }
+            )
         }
     }
 }
