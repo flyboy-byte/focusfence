@@ -34,6 +34,7 @@ object RuleEvaluator {
         // Section rules must stay resolvable so the allowed paths work; the
         // accessibility URL filter enforces them in the browser instead.
         if (rule.hasPathExceptions) return false
+        if (rule.hasCommitment) return now.epochMillis < rule.commitUntilEpochMillis
         if (rule.hasBudget) {
             // Budgets track and enforce only the site's user-facing hostnames;
             // SDK/API subdomains (graph.facebook.com etc.) belong to other apps'
@@ -41,6 +42,19 @@ object RuleEvaluator {
             if (!Blocklist.isFrontDoor(qname, rule.domain)) return false
             return usedMillis >= rule.budgetMinutes * 60_000L
         }
+        return rule.activeAt(now.minuteOfDay)
+    }
+
+    /**
+     * True if an app-targeted [rule] blocks right now. Apps have no hostname, so the
+     * front-door and section-path logic does not apply.
+     */
+    fun blocksApp(rule: BlockRule, now: Now): Boolean {
+        if (rule.hasCommitment) return now.epochMillis < rule.commitUntilEpochMillis
+        // Counting an app's foreground time needs UsageStatsManager (W10), which
+        // does not exist yet. Returning false keeps an unsatisfiable budget
+        // permissive; treating it as always-blocked would be a silent trap.
+        if (rule.hasBudget) return false
         return rule.activeAt(now.minuteOfDay)
     }
 }

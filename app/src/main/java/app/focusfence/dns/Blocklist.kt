@@ -3,10 +3,14 @@ package app.focusfence.dns
 import java.util.Locale
 
 /**
- * A user rule for [domain] (and subdomains). Exactly one of three modes:
- * block always, block during a daily time window (may wrap midnight,
- * e.g. 22:00–06:00), or a daily usage budget in minutes after which the
- * domain is blocked for the rest of the day.
+ * A user rule for [domain] (and subdomains). Exactly one mode: block always,
+ * block during a daily time window (may wrap midnight, e.g. 22:00–06:00), a
+ * daily usage budget in minutes after which the domain is blocked for the rest
+ * of the day, or — for app rules — a commitment lasting until a fixed instant.
+ *
+ * The same encoding is reused for app rules, keyed by package name instead of
+ * domain, so a bare package name stored by an older version decodes as
+ * always-blocked and needs no migration.
  */
 data class BlockRule(
     val domain: String,
@@ -20,10 +24,17 @@ data class BlockRule(
      * itself must stay resolvable for the allowed sections to work.
      */
     val allowPaths: List<String> = emptyList(),
+    /**
+     * Wall-clock instant (epoch millis) until which this rule blocks, for
+     * "unavailable until 6pm" commitments. Absolute rather than a daily window
+     * because a commitment is a one-off promise, not a recurring schedule.
+     */
+    val commitUntilEpochMillis: Long = 0L,
 ) {
     val isScheduled: Boolean get() = startMinute != ALWAYS
     val hasBudget: Boolean get() = budgetMinutes > 0
     val hasPathExceptions: Boolean get() = allowPaths.isNotEmpty()
+    val hasCommitment: Boolean get() = commitUntilEpochMillis > 0L
 
     /** True if this rule is in effect at [minuteOfDay] (0..1439). */
     fun activeAt(minuteOfDay: Int): Boolean {
@@ -35,8 +46,11 @@ data class BlockRule(
         }
     }
 
+    // Ordering is deliberate: a rule carrying more than one mode encodes as the
+    // most specific one, and decode() reproduces exactly that single mode.
     fun encode(): String = when {
         hasPathExceptions -> "$domain|p|${allowPaths.joinToString(",")}"
+        hasCommitment -> "$domain|c|$commitUntilEpochMillis"
         hasBudget -> "$domain|b|$budgetMinutes"
         isScheduled -> "$domain|$startMinute|$endMinute"
         else -> domain
@@ -55,6 +69,11 @@ data class BlockRule(
                         val paths = parts[2].split(',').mapNotNull { Blocklist.normalizePath(it) }
                         if (paths.isEmpty()) return null
                         return BlockRule(parts[0], allowPaths = paths)
+                    }
+                    if (parts[1] == "c") {
+                        val until = parts[2].toLongOrNull() ?: return null
+                        if (until <= 0L) return null
+                        return BlockRule(parts[0], commitUntilEpochMillis = until)
                     }
                     if (parts[1] == "b") {
                         val minutes = parts[2].toIntOrNull() ?: return null

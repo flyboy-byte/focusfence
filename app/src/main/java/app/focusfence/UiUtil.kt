@@ -9,13 +9,21 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StrictStore
+import app.focusfence.dns.BlockRule
 import app.focusfence.dns.StrictLock
 import app.focusfence.vpn.DnsVpnService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** UI helpers shared between the tab fragments and the domain editor. */
@@ -121,6 +129,134 @@ object UiUtil {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /**
+     * Per-app rule editor: always / daily window / until a chosen instant. Mirrors
+     * the mode choice in [DomainDetailActivity] rather than inventing a new pattern.
+     */
+    fun editAppRule(activity: FragmentActivity, pkg: String, onDone: () -> Unit) {
+        val existing = BlockedAppsStore.rulesByPackage(activity)[pkg]
+        val options = arrayOf<CharSequence>(
+            activity.getString(R.string.app_schedule_always),
+            activity.getString(R.string.app_schedule_window),
+            activity.getString(R.string.app_schedule_until),
+        )
+        MaterialAlertDialogBuilder(activity)
+            .setTitle(activity.getString(R.string.app_rule_dialog_title, appLabel(activity, pkg)))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> commitAppRule(activity, BlockRule(pkg), existing, onDone)
+                    1 -> pickTime(
+                        activity,
+                        R.string.app_window_start,
+                        existing?.startMinute?.takeIf { it != BlockRule.ALWAYS } ?: (9 * 60),
+                    ) { start ->
+                        pickTime(
+                            activity,
+                            R.string.app_window_end,
+                            existing?.endMinute?.takeIf { it != BlockRule.ALWAYS } ?: (18 * 60),
+                        ) { end ->
+                            commitAppRule(activity, BlockRule(pkg, start, end), existing, onDone)
+                        }
+                    }
+                    2 -> pickTime(activity, R.string.app_until_title, 18 * 60) { minute ->
+                        commitAppRule(
+                            activity,
+                            BlockRule(pkg, commitUntilEpochMillis = nextOccurrenceOf(minute)),
+                            existing,
+                            onDone,
+                        )
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** The next wall-clock occurrence of [minuteOfDay] — today if still ahead, else tomorrow. */
+    private fun nextOccurrenceOf(minuteOfDay: Int): Long {
+        val now = LocalDateTime.now()
+        var target = now.toLocalDate().atStartOfDay().plusMinutes(minuteOfDay.toLong())
+        if (!target.isAfter(now)) target = target.plusDays(1)
+        return target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    private fun commitAppRule(
+        context: Context,
+        proposed: BlockRule,
+        existing: BlockRule?,
+        onDone: () -> Unit,
+    ) {
+        if (StrictStore.isLocked(context) && isLoosening(existing, proposed)) {
+            showStrictLockedDialog(context)
+            return
+        }
+        BlockedAppsStore.upsert(context, proposed)
+        onDone()
+    }
+
+    /**
+     * Strict mode guards *loosening*, so this is deliberately conservative:
+     * always-block is the strictest state and is never refused, and a commitment
+     * may be extended but not cut short. Anything else that changes an existing
+     * rule is treated as a loosening, because two arbitrary daily windows have no
+     * meaningful "stricter than" ordering and guessing wrong would defeat a
+     * boundary the user set precisely so their later self couldn't move it.
+     */
+    private fun isLoosening(existing: BlockRule?, proposed: BlockRule): Boolean {
+        if (existing == null) return false
+        val proposedIsAlways =
+            !proposed.isScheduled && !proposed.hasCommitment && !proposed.hasBudget
+        if (proposedIsAlways) return false
+        if (existing.hasCommitment) {
+            return !proposed.hasCommitment ||
+                proposed.commitUntilEpochMillis < existing.commitUntilEpochMillis
+        }
+        return true
+    }
+
+    /** One-line description of an app rule for the blocklist row. */
+    fun appRuleSummary(context: Context, rule: BlockRule): String = when {
+        rule.hasCommitment -> {
+            val until = Instant.ofEpochMilli(rule.commitUntilEpochMillis)
+                .atZone(ZoneId.systemDefault())
+            if (rule.commitUntilEpochMillis <= System.currentTimeMillis()) {
+                context.getString(R.string.app_rule_until_passed)
+            } else {
+                context.getString(
+                    R.string.app_rule_until,
+                    until.format(DateTimeFormatter.ofPattern("EEE HH:mm", Locale.getDefault())),
+                )
+            }
+        }
+        // Apps cannot have budgets until W10 lands; say so rather than implying a block.
+        rule.hasBudget -> context.getString(R.string.app_rule_budget_unsupported)
+        rule.isScheduled -> context.getString(
+            R.string.app_rule_window,
+            formatMinuteOfDay(rule.startMinute),
+            formatMinuteOfDay(rule.endMinute),
+        )
+        else -> context.getString(R.string.app_rule_always)
+    }
+
+    private fun formatMinuteOfDay(m: Int): String =
+        String.format(Locale.ROOT, "%02d:%02d", m / 60, m % 60)
+
+    private fun pickTime(
+        activity: FragmentActivity,
+        titleRes: Int,
+        defaultMinute: Int,
+        onPicked: (Int) -> Unit,
+    ) {
+        val picker = MaterialTimePicker.Builder()
+            .setTimeFormat(TimeFormat.CLOCK_24H)
+            .setHour(defaultMinute / 60)
+            .setMinute(defaultMinute % 60)
+            .setTitleText(titleRes)
+            .build()
+        picker.addOnPositiveButtonClickListener { onPicked(picker.hour * 60 + picker.minute) }
+        picker.show(activity.supportFragmentManager, "app_rule_time")
     }
 
     fun chooseExcludedApps(context: Context, onDone: () -> Unit) {

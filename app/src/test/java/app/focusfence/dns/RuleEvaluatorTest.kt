@@ -81,6 +81,75 @@ class RuleEvaluatorTest {
         )
     }
 
+    // --- app rules (W7) ---
+
+    private fun nowAt(epochMillis: Long, minuteOfDay: Int = 720) = RuleEvaluator.Now(
+        minuteOfDay = minuteOfDay,
+        epochMillis = epochMillis,
+        dayKey = "2026-08-15",
+        screenOn = true,
+    )
+
+    @Test
+    fun blocksAppHonoursCommitmentBoundary() {
+        val until = 1_755_180_000_000L
+        val rule = BlockRule("com.zhiliaoapp.musically", commitUntilEpochMillis = until)
+        assertTrue(RuleEvaluator.blocksApp(rule, nowAt(until - 1)))
+        assertFalse(RuleEvaluator.blocksApp(rule, nowAt(until)))
+        assertFalse(RuleEvaluator.blocksApp(rule, nowAt(until + 60_000L)))
+    }
+
+    @Test
+    fun blocksAppIgnoresTimeOfDayForCommitments() {
+        // A commitment is an absolute instant, not a daily window: the minute of
+        // day must not change the answer.
+        val until = 1_755_180_000_000L
+        val rule = BlockRule("com.zhiliaoapp.musically", commitUntilEpochMillis = until)
+        assertTrue(RuleEvaluator.blocksApp(rule, nowAt(until - 1, minuteOfDay = 0)))
+        assertTrue(RuleEvaluator.blocksApp(rule, nowAt(until - 1, minuteOfDay = 1439)))
+    }
+
+    @Test
+    fun blocksAppFollowsWindowsIncludingWrapping() {
+        val work = BlockRule("com.instagram.android", 540, 1080)
+        assertFalse(RuleEvaluator.blocksApp(work, nowAt(0, minuteOfDay = 539)))
+        assertTrue(RuleEvaluator.blocksApp(work, nowAt(0, minuteOfDay = 540)))
+        assertTrue(RuleEvaluator.blocksApp(work, nowAt(0, minuteOfDay = 1079)))
+        assertFalse(RuleEvaluator.blocksApp(work, nowAt(0, minuteOfDay = 1080)))
+
+        val night = BlockRule("com.instagram.android", 1320, 360)
+        assertTrue(RuleEvaluator.blocksApp(night, nowAt(0, minuteOfDay = 1320)))
+        assertTrue(RuleEvaluator.blocksApp(night, nowAt(0, minuteOfDay = 0)))
+        assertTrue(RuleEvaluator.blocksApp(night, nowAt(0, minuteOfDay = 359)))
+        assertFalse(RuleEvaluator.blocksApp(night, nowAt(0, minuteOfDay = 360)))
+    }
+
+    @Test
+    fun blocksAppTreatsAnAppBudgetAsNotBlocking() {
+        // Counting app foreground time needs UsageStatsManager (W10). Until that
+        // exists a budget on an app must NOT silently behave as always-blocked.
+        val rule = BlockRule("com.zhiliaoapp.musically", budgetMinutes = 10)
+        assertFalse(RuleEvaluator.blocksApp(rule, nowAt(0)))
+        assertFalse(RuleEvaluator.blocksApp(rule, nowAt(Long.MAX_VALUE / 2)))
+    }
+
+    @Test
+    fun blocksAppAlwaysRuleBlocksWheneverAsked() {
+        val rule = BlockRule("com.zhiliaoapp.musically")
+        assertTrue(RuleEvaluator.blocksApp(rule, nowAt(0, minuteOfDay = 0)))
+        assertTrue(RuleEvaluator.blocksApp(rule, nowAt(0, minuteOfDay = 1439)))
+    }
+
+    @Test
+    fun domainBlocksAlsoHonourCommitments() {
+        // blocks() gained the same branch, ordered after the section guard.
+        val until = 1_755_180_000_000L
+        val rule = BlockRule("reddit.com", commitUntilEpochMillis = until)
+        assertTrue(RuleEvaluator.blocks(rule, "reddit.com", nowAt(until - 1)))
+        assertFalse(RuleEvaluator.blocks(rule, "reddit.com", nowAt(until)))
+        assertFalse(RuleEvaluator.requiresUsage(rule, "reddit.com"))
+    }
+
     @Test
     fun sectionRuleNeverBlocksAndNeverAccrues() {
         // Section rules must stay resolvable; the accessibility URL filter enforces them.
