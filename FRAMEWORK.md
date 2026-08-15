@@ -124,13 +124,17 @@ Mostly pre-existing. Honest status:
 
 ## Current status (update this line as phases advance)
 
-**Phase 1 complete; Phase 2 design reasoning done; Phase 3 partially pre-satisfied.** The single
-highest-leverage next action is **B1 — move condition evaluation out of `DnsVpnService` into
-`dns/` behind an injected clock.** No behaviour change, existing tests to lean on, and it's the
-prerequisite for B3a (time-bounded app blocking, which `docs/design.md` found to be nearly free
-and which closes the most-missed gap), for the VPN-down degradation path in `design.md` §4, and
-for most of the rest of Track B.
+**2026-08-15.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
+W1 (doc corrections), W2 (CI builds the release APK), W6 (rule evaluation extracted to `dns/`) and
+W7 (time-bounded app blocking — apps can now be scheduled or committed, not just always-blocked)
+all landed and are merged to `main`, alongside the licence (D-015, acknowledged) and the
+adult-content decision (D-016). Test suite: 53 passing.
 
-The remaining decision that blocks the release — signing key custody (O-002) — needs
-@sidewinderzz, as does his acknowledgement of the MIT choice. Both are worth raising now, since
-neither requires any code.
+**The only thing left blocking the release is signing key custody (O-002)** — a one-way decision
+for @sidewinderzz, decision support written up in `docs/signing-key-custody.md`. No code work
+remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an hour
+once it's made.
+
+**Branching (D-005, revised 2026-08-15):** `logandev` and `shelbydev` are personal working
+branches; both sync back to `main` directly rather than through a shared `dev`. First round of
+that worked cleanly — see D-005 for what changed and why.

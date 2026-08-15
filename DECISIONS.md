@@ -56,12 +56,22 @@ audits and plans live under `docs/`, which no tool loads automatically.
 **Why:** `CLAUDE.md` loads into every Claude session in this repo, including @sidewinderzz's. A
 contributor's opinions about direction shouldn't silently steer the maintainer's sessions.
 
-## D-005 — Development happens on branches; `main` is never committed to directly
+## D-005 — Development happens on personal branches, integrated on `main`
 
-*Decided: 2026-08-14, by @flyboy-byte.*
+*Decided: 2026-08-14, by @flyboy-byte. Revised: 2026-08-15 after the first two-person round.*
 
-`dev` branches off `main`; feature branches off `dev`; merge into `main` by PR. `dev` is
-deliberately left with **no upstream**, so a bare `git push` cannot target `main`.
+Original shape: a single shared `dev` branched off `main`, feature branches off `dev`, merge to
+`main` by PR. In practice the first real test of this — @flyboy-byte and @sidewinderzz working the
+same day — showed the simpler version works fine at this scale: each maintainer works on their own
+long-lived branch (`logandev`, `shelbydev`), forked from and periodically brought back to `main`.
+No separate shared integration branch; with two people and frequent syncing, `main` itself served
+that role without incident (verified: `shelbydev` fast-forwarded cleanly into `logandev`, which
+merged into `main` with zero conflicts).
+
+**Consequence:** personal branches are short-lived by convention, not by tooling — sync back to
+`main` often rather than letting either branch diverge for long. If a third contributor joins, or
+personal branches start diverging enough to conflict, reintroduce a shared integration branch
+rather than merging straight to `main`.
 
 ## D-006 — "Finished" means a public GitHub Release
 
