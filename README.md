@@ -71,8 +71,8 @@ service. This covers native apps that DNS can't touch.
 ### Ads and trackers
 
 An optional toggle downloads the [StevenBlack hosts list](https://github.com/StevenBlack/hosts) —
-100k+ ad, tracker and malware domains, aggregated from the same sources AdGuard and uBlock use —
-and blocks them device-wide, in every app.
+100k+ ad, tracker and malware domains, a widely used and actively maintained aggregation of
+hosts-format sources — and blocks them device-wide, in every app.
 
 ### Strict mode
 

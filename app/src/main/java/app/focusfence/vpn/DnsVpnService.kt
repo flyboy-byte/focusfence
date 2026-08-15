@@ -44,9 +44,14 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * The tunnel is configured so that ONLY packets addressed to the tunnel's virtual
  * DNS servers are routed into it — all other traffic takes the normal network path,
- * which is why running this costs essentially no battery or throughput. Queries for
- * blocked domains are answered NXDOMAIN locally; everything else is relayed to a
- * real resolver over a protected socket.
+ * which is why the design is expected to cost very little battery or throughput.
+ * Queries for blocked domains are answered locally with a null address (0.0.0.0 / ::)
+ * carrying an explicit TTL, so the name resolves but nothing connects; everything
+ * else is relayed to a real resolver over a protected socket.
+ *
+ * The blocked answer is deliberately cacheable: an uncacheable negative reply carries
+ * no SOA, so clients treat it as unstorable and re-ask continuously, which was
+ * measured waking this service thousands of times a day.
  */
 class DnsVpnService : VpnService() {
 
