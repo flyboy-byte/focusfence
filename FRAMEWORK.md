@@ -139,3 +139,8 @@ once it's made.
 and merge into `shareddev`; `shareddev` merges to `main` at release points. `main` is never
 committed to directly. All four branches currently sit at the same commit — see D-005 for how the
 shape got here.
+
+**What to work on next:** [`docs/work/NEXT.md`](docs/work/NEXT.md) — the standing, ordered queue.
+It's written so an unsupervised agent session always has an answer to "what now," including which
+research items it can execute directly if it has live web access, and the branch discipline for
+landing work without a human in the loop for every item.

@@ -1,7 +1,11 @@
 # W10 — App budgets via `UsageStatsManager`
 
-**Track:** Product (B3b) · **Depends on:** W7, W8 · **Status:** Spec draft — **needs research Q4**
+**Track:** Product (B3b) · **Depends on:** W7 · **Status:** Spec draft — **needs research Q4**
 **Size:** ~2–3 days
+
+> **2026-08-15:** originally also listed W8 (the unified boundary model), which is now parked
+> (`docs/parked.md`, `DECISIONS.md` D-016 recommendation). Nothing below actually needs it — this
+> extends `RuleEvaluator.blocksApp`, which W7 already established.
 
 ## Why
 

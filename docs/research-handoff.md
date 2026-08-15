@@ -13,9 +13,11 @@ external research and found several wrong. Claims about **the outside world** ha
 session had no network access, so platform policies, licensing terms, competitor behaviour and
 library capabilities are recorded, not endorsed.
 
-The right tool for closing those gaps is a deep research engine with live web access, run by you
-in a browser — not this coding session, which shouldn't be the source of truth for anything that
-needs to be traceable and citable later.
+The right tool for closing those gaps is a deep research engine with live web access — either run
+by you in a browser, or, if you're an agent session that genuinely has live web access (not this
+one), run directly. Either way it shouldn't be the source of truth for anything that needs to be
+traceable and citable later without that discipline: cite sources, save the raw output before
+acting on it, and verify anything the result claims about this codebase against the actual source.
 
 This project has already been through one full cycle of this: five documents were commissioned,
 delivered, and then verified. **The verification found real errors** — a platform version off by
@@ -47,6 +49,7 @@ Track B.
 | 8 | Does Android offer any mechanism for VPN coexistence, or app-specific routing that would let a filtering app cohabit with a user's real VPN? Has anything changed in recent releases? | `approach.md` B4 | Either | If the answer is "no, one slot, period," that confirms the design constraint permanently |
 | 9 | How do comparable FOSS tools (RethinkDNS, NetGuard, personalDNSfilter, AdAway) handle release signing and key custody for GitHub/F-Droid distribution? Any established practice worth copying? | O-002 | Either | Prior art on a one-way door decision |
 | 10 | What are the current SafeSearch hostnames for Google, Bing, DuckDuckGo and Yandex, and do they still work in 2026? Separately (parked, P-002): does YouTube restricted mode still require the `YouTube-Restrict` HTTP header, which a DNS-layer filter cannot set? How do AdGuard Home and Pi-hole implement the rewrite, specifically the answer-name handling? | `docs/work/W14`, D-016, `parked.md` | Claude | Several vendor behaviours to verify against current docs, plus two mature open-source implementations to read; model priors on this are likely stale |
+| 11 | **Investigative, not a build authorization.** What does CloudVeil (and any comparable open-source project) actually do for on-device NSFW image/content classification — model size, battery/CPU cost, false-positive rate, and whether inference genuinely stays on-device with nothing uploaded? This exists to check whether `docs/parked.md` P-003's rejection of any content-inspection engine still holds now that real prior art can be read instead of reasoned about from first principles. Bring findings back to P-003 and D-016 for a human to weigh — a good implementation existing elsewhere is not itself a reason to build one here. | `docs/parked.md` P-003, D-016 | Either | Needs current, specific technical detail (model size, measured battery cost) that general knowledge won't have reliably |
 
 ## Handoff procedure
 

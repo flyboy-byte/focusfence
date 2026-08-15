@@ -1,7 +1,12 @@
 # W8 — The boundary model
 
-**Track:** Product (B2) · **Depends on:** W6, W7 · **Blocks:** W10, W12 · **Status:** Spec draft
-**Size:** The largest item on the plan — weeks, not days. Read this whole file before starting.
+**Track:** Product (B2) · **Depends on:** W6, W7 · **Status:** 🔴 **Parked, 2026-08-15 — do not
+start without a human reopening it.** See `docs/parked.md` and the recommendation in the project
+review: W7 already captures most of the value of giving apps first-class rule targets, at a
+fraction of this order's cost. W10 and W12 no longer depend on this — both were re-scoped to
+depend on W7 instead.
+**Size:** The largest item on the plan — weeks, not days. Read this whole file before starting,
+if it's ever reopened.
 
 ## Why
 

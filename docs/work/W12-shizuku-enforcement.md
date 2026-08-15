@@ -1,7 +1,11 @@
 # W12 — Shizuku package suspension as preferred app enforcement
 
-**Track:** Product (B7) · **Depends on:** W8 · **Status:** Spec draft — **needs research Q3**
+**Track:** Product (B7) · **Depends on:** W7 · **Status:** Spec draft — **needs research Q3**
 **Size:** ~1 week
+
+> **2026-08-15:** originally specced against W8 (the unified boundary model), which is now
+> parked (`docs/parked.md`, `DECISIONS.md` D-016 recommendation). W7 already made `App` a
+> first-class rule target — that's all this order actually needs. Re-read as depending on W7.
 
 ## Why — this is a privacy improvement, not a power feature
 
@@ -33,8 +37,9 @@ becomes a footnote rather than a feature.
 
 - Shizuku is an **optional capability**. The app must work fully without it; this changes the
   enforcement mechanism for `App` targets, nothing else.
-- Because W8 makes enforcement pluggable behind an `App` target, this should be a mechanism swap
-  rather than a rewrite. If it isn't, W8 didn't do its job — report that.
+- Because W7 already made `App` a first-class rule target with its own evaluation path
+  (`RuleEvaluator.blocksApp`), this should be a mechanism swap in `UrlFilterService` rather than a
+  rewrite. If it isn't, something about W7's shape doesn't hold — report that.
 - Precedence: Shizuku when available and granted, accessibility bounce otherwise. The user should
   be able to see which is in use.
 - When Shizuku handles app blocking and no section rules exist, the accessibility service's

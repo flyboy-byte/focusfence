@@ -75,6 +75,12 @@ than squeamish:
 - It largely cannot work anyway — TLS hides paths, ECH is closing SNI.
 - The threat model doesn't need it. The adversary is an impulse, not an adversary.
 
+**What would reopen it, concretely:** `docs/research-handoff.md` queue item 11 asks an agent with
+live web access to look at CloudVeil and comparable projects as real prior art for on-device NSFW
+classification — cost, accuracy, whether inference genuinely stays local. That research is
+explicitly investigative: finding something good does not authorize building it, only gives a
+human something concrete to weigh against the four points above.
+
 ---
 
 ## P-004 — Rewriting the matcher for speed

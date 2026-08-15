@@ -12,7 +12,7 @@ answer to "where is this project actually at." This file is the doc index.
 | --- | --- | --- |
 | [`../FRAMEWORK.md`](../FRAMEWORK.md) | Meta | Phase-gated status tracker — where this is and what's next |
 | [`../DECISIONS.md`](../DECISIONS.md) | Meta | Numbered log of *why* (D-001 … D-014) |
-| [`work/`](work/) | **Execution** | **The work orders — W1…W14. Start here to build anything.** |
+| [`work/`](work/) | **Execution** | **The work orders — W1…W14.** For what to do *right now*, go straight to [`work/NEXT.md`](work/NEXT.md). |
 | [`documentation-guide.md`](documentation-guide.md) | Meta | The tier map — who each doc is for and how they fit |
 | [`overview.md`](overview.md) | High-level | What it is, who it's for, the recorded product intent |
 | [`approach.md`](approach.md) | High-level | Is this worth doing this way — the gap, alternatives, what to validate |
