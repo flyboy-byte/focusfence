@@ -114,7 +114,8 @@ Mostly pre-existing. Honest status:
 
 ### Phase 5 — Formalize
 
-- [x] Decide the license — **MIT** (D-015, 2026-08-15). `LICENSE` and README section landed; still needs @sidewinderzz's written acknowledgement before a binary ships.
+- [x] Decide the license — **MIT** (D-015, 2026-08-15). `LICENSE` and README section landed, and
+      @sidewinderzz acknowledged the choice on 2026-08-15 (recorded in D-015).
 - [ ] Decide signing key custody (O-002) — a one-way door; the key becomes the app's permanent
       identity
 - [ ] Tag and cut the first GitHub Release with a signed APK and published SHA-256

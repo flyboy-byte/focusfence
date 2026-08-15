@@ -193,9 +193,13 @@ Apache-2.0's explicit patent grant is the one real thing MIT gives up. Accepted 
 patentable subject matter here and no corporate contributor to worry about.
 
 **Consequence:** `LICENSE` at the repo root, `SPDX-License-Identifier: MIT` in the README, no
-per-file headers. Unblocks W3 and therefore the first release. **Still needs @sidewinderzz's
-acknowledgement** — copyright is shared and one maintainer cannot license the other's work. Get
-it in writing (an issue comment is enough) before publishing a binary.
+per-file headers. Unblocks W3 and therefore the first release. Needed @sidewinderzz's
+acknowledgement — copyright is shared and one maintainer cannot license the other's work.
+
+**Acknowledged 2026-08-15 by @sidewinderzz**, stated directly when asked during the session that
+produced this commit. Recorded here by the agent that asked, so if a stronger artefact is wanted
+before a binary ships, a signed commit or an issue comment from @sidewinderzz supersedes this
+line.
 
 ## D-016 — Adult-content blocking is a category list plus SafeSearch, not a content engine
 
