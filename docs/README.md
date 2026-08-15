@@ -23,6 +23,8 @@ answer to "where is this project actually at." This file is the doc index.
 | [`risks.md`](risks.md) | Mixed | Scope, legal/licensing, technical and operational risk |
 | [`notes.md`](notes.md) | High-level | Open decisions and questions — working scratchpad |
 | [`research-handoff.md`](research-handoff.md) | Meta | Queue of unverified external claims, and how to close them |
+| [`research/prompts.md`](research/prompts.md) | Meta | Ready-to-paste, fully self-contained prompts for every open research-handoff item |
+| [`reasoning-prompts.md`](reasoning-prompts.md) | Meta | Deep judgment-call prompts for a high-context model — not fact lookup, real trade-off reasoning |
 | [`research/`](research/) | — | Intake folder for raw deep-research output |
 | [`audits/findings.md`](audits/findings.md) | Source | **Read before the audits.** Every claim they make about this codebase, checked against source |
 | [`audits/`](audits/) | Source | Five externally commissioned research documents, delivered 2026-08-13 |

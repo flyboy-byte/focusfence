@@ -4,6 +4,9 @@
 > turn · **Use when:** you're an autorun session (or anyone) asking "what should I do right now."
 > **Start here, not at the board below.** This file exists so that question always has an answer.
 
+**Starting a brand-new session cold?** Use [`KICKOFF.md`](KICKOFF.md) instead of reading this file
+directly first — it's a paste-able prompt that gets a fresh session oriented in one message.
+
 ## How to use this file
 
 Work top to bottom. Each item names a doc to open and execute. When an item is done:
@@ -38,6 +41,14 @@ the human step and do the research yourself** — same discipline, though: cite 
 raw output to `docs/research/` before touching anything else, and verify any claim the result
 makes about *this codebase* against the actual source before acting on it (the project's own
 research cycle already caught five wrong claims doing exactly that once).
+
+**Full prompts, already written, one per open question:** [`docs/research/prompts.md`](../research/prompts.md).
+Paste directly — don't re-derive the prompt from the table row in `research-handoff.md`.
+
+**High-context reasoning, not fact lookup:** [`docs/reasoning-prompts.md`](../reasoning-prompts.md)
+has two deep-judgment prompts (signing-key custody trade-offs; a re-audit of everything in
+`parked.md` against what's actually shipped since) — a better use of a big-context/high-reasoning
+session than grinding through Kotlin.
 
 ## The queue
 

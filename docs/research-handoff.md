@@ -51,6 +51,11 @@ Track B.
 | 10 | What are the current SafeSearch hostnames for Google, Bing, DuckDuckGo and Yandex, and do they still work in 2026? Separately (parked, P-002): does YouTube restricted mode still require the `YouTube-Restrict` HTTP header, which a DNS-layer filter cannot set? How do AdGuard Home and Pi-hole implement the rewrite, specifically the answer-name handling? | `docs/work/W14`, D-016, `parked.md` | Claude | Several vendor behaviours to verify against current docs, plus two mature open-source implementations to read; model priors on this are likely stale |
 | 11 | **Investigative, not a build authorization.** What does CloudVeil (and any comparable open-source project) actually do for on-device NSFW image/content classification — model size, battery/CPU cost, false-positive rate, and whether inference genuinely stays on-device with nothing uploaded? This exists to check whether `docs/parked.md` P-003's rejection of any content-inspection engine still holds now that real prior art can be read instead of reasoned about from first principles. Bring findings back to P-003 and D-016 for a human to weigh — a good implementation existing elsewhere is not itself a reason to build one here. | `docs/parked.md` P-003, D-016 | Either | Needs current, specific technical detail (model size, measured battery cost) that general knowledge won't have reliably |
 
+**Full prompts already written:** [`research/prompts.md`](research/prompts.md) has a
+ready-to-paste, fully self-contained prompt for every open row below — heavier than the generic
+template further down, because each states what decision the answer feeds and what would change
+as a result. Use those instead of writing your own from the table row.
+
 ## Handoff procedure
 
 1. **Pick one row** — don't batch unrelated questions into one session; it dilutes the result and
