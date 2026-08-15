@@ -43,4 +43,65 @@ class BlocklistTest {
         assertFalse(Blocklist.matches("com", blocked))
         assertFalse(Blocklist.matches("wikipedia.org", blocked))
     }
+
+    @Test
+    fun allowlistExemptsAdHost() {
+        val reason = Blocklist.blockReason(
+            "ads.example.com", ruleDomain = null, ruleBlockedNow = false,
+            allowlist = setOf("ads.example.com"), adHosts = setOf("ads.example.com"),
+        )
+        assertNull(reason)
+    }
+
+    @Test
+    fun allowlistExemptsSubdomainOfAllowedParent() {
+        val reason = Blocklist.blockReason(
+            "cdn.tracker.com", ruleDomain = null, ruleBlockedNow = false,
+            allowlist = setOf("tracker.com"), adHosts = setOf("cdn.tracker.com"),
+        )
+        assertNull(reason)
+    }
+
+    @Test
+    fun allowlistDoesNotOverrideAUserRule() {
+        // D-017: a user rule that is currently in force is final.
+        val reason = Blocklist.blockReason(
+            "reddit.com", ruleDomain = "reddit.com", ruleBlockedNow = true,
+            allowlist = setOf("reddit.com"), adHosts = emptySet(),
+        )
+        assertEquals("reddit.com", reason)
+    }
+
+    @Test
+    fun allowlistCanExemptADohGuard() {
+        val reason = Blocklist.blockReason(
+            "dns.google", ruleDomain = null, ruleBlockedNow = false,
+            allowlist = setOf("dns.google"), adHosts = emptySet(),
+        )
+        assertNull(reason)
+    }
+
+    @Test
+    fun emptyAllowlistChangesNothing() {
+        assertEquals(
+            StatsCodec.KEY_ADS,
+            Blocklist.blockReason(
+                "ads.example.com", ruleDomain = null, ruleBlockedNow = false,
+                allowlist = emptySet(), adHosts = setOf("ads.example.com"),
+            ),
+        )
+        assertEquals(
+            StatsCodec.KEY_GUARD,
+            Blocklist.blockReason(
+                "dns.google", ruleDomain = null, ruleBlockedNow = false,
+                allowlist = emptySet(), adHosts = emptySet(),
+            ),
+        )
+        assertNull(
+            Blocklist.blockReason(
+                "wikipedia.org", ruleDomain = null, ruleBlockedNow = false,
+                allowlist = emptySet(), adHosts = emptySet(),
+            ),
+        )
+    }
 }

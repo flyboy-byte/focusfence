@@ -50,10 +50,14 @@ research cycle already caught five wrong claims doing exactly that once).
 
 ### Ready now, zero dependencies
 
-- [ ] **W9** — user allowlist. `docs/work/W9-allowlist.md`.
+- [x] **W9 (core)** — 2026-08-15, `logandev`. Store, pure evaluator (`Blocklist.blockReason`),
+      D-017 decision, `DnsVpnService` wiring, and JVM tests are done. **UI still open** —
+      `docs/work/W9-allowlist.md` now specs only that half, precisely, for a fresh pickup.
 - [ ] **W13** — battery/CPU benchmark harness. `docs/work/W13-benchmark-harness.md`. Unblocks
       every performance argument the project makes about itself; currently there is no
       benchmark anywhere in the tree.
+- [ ] **W9 (UI)** — the "Allowed domains" section described in `docs/work/W9-allowlist.md`'s
+      "What's left" — small, self-contained, good pickup for a fresh session.
 
 ### Research that unblocks a work order
 

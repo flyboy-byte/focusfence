@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
+import app.focusfence.data.AllowlistStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StatsStore
@@ -97,6 +98,9 @@ class DnsVpnService : VpnService() {
     @Volatile
     private var adHosts: Set<String> = emptySet()
 
+    @Volatile
+    private var allowlist: Set<String> = emptySet()
+
     private val usageTracker = UsageTracker()
     private val lastPersistedUsage = HashMap<String, Long>()
     private lateinit var powerManager: PowerManager
@@ -126,6 +130,7 @@ class DnsVpnService : VpnService() {
                 preloadBudgetUsage()
             }
             AdListStore.KEY_ENABLED, AdListStore.KEY_COUNT -> reloadAdHostsAsync()
+            AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
         }
     }
 
@@ -180,6 +185,7 @@ class DnsVpnService : VpnService() {
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
+        allowlist = AllowlistStore.get(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
 
@@ -297,10 +303,8 @@ class DnsVpnService : VpnService() {
     /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
     private fun blockReason(qname: String): String? {
         val rule = Blocklist.findRule(qname, rules)
-        if (rule != null && ruleBlocks(rule, qname)) return rule.domain
-        if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
-        if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
-        return null
+        val ruleBlockedNow = rule != null && ruleBlocks(rule, qname)
+        return Blocklist.blockReason(qname, rule?.domain, ruleBlockedNow, allowlist, adHosts)
     }
 
     private fun recordStat(bucket: String) {

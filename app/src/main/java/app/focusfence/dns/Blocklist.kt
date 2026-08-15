@@ -168,6 +168,28 @@ object Blocklist {
         return parentDomains(qname).any { it in blocked }
     }
 
+    /**
+     * Null if [qname] is allowed; otherwise the stats bucket: the rule's domain, ads, or
+     * the DoH guard. Pure so the O-003 ordering (D-017) is unit-testable: a user rule that
+     * is currently in force is final and cannot be overridden by [allowlist] — only
+     * list-sourced blocks (ads, DoH bypass guards) can be. [ruleDomain]/[ruleBlockedNow]
+     * are supplied by the caller because whether a rule is *currently* in force depends on
+     * the clock and accrued usage, which this package has no access to (see [RuleEvaluator]).
+     */
+    fun blockReason(
+        qname: String,
+        ruleDomain: String?,
+        ruleBlockedNow: Boolean,
+        allowlist: Set<String>,
+        adHosts: Set<String>,
+    ): String? {
+        if (ruleDomain != null && ruleBlockedNow) return ruleDomain
+        if (matches(qname, allowlist)) return null
+        if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
+        if (matches(qname, DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
+        return null
+    }
+
     /** Finds the rule covering [qname] (exact domain or nearest parent), if any. */
     fun findRule(qname: String, rules: Map<String, BlockRule>): BlockRule? {
         if (rules.isEmpty()) return null

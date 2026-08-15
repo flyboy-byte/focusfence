@@ -63,7 +63,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W6](W6-extract-rule-evaluator.md) | Extract rule evaluation into `dns/` | Product | — | **Done** |
 | [W7](W7-time-bounded-app-blocking.md) | Time-bounded app blocking | Product | W6 | **Done** |
 | [W8](W8-boundary-model.md) | The boundary model | Product | W6, W7 | **Parked** — see `docs/parked.md`, D-016 recommendation |
-| [W9](W9-allowlist.md) | User allowlist | Product | W6 | **Ready** |
+| [W9](W9-allowlist.md) | User allowlist | Product | W6 | **Core done** (`logandev`, 2026-08-15) — UI open, see file |
 | [W10](W10-app-budgets-usagestats.md) | App budgets via `UsageStatsManager` | Product | W7 | Needs research Q4 |
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | Needs research Q2 |
 | [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | Needs research Q3 |

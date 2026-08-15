@@ -264,6 +264,27 @@ than anywhere else in the app).
 
 ---
 
+## D-017 — An allowlist overrides list-sourced blocks only, never a user rule
+
+*Decided: 2026-08-15, resolving O-003, while implementing W9.*
+
+An allowlist entry exempts a domain from the ad/tracker list, but **never** from a `BlockRule` the
+user deliberately set. The alternative — letting it override anything — would turn the allowlist
+into a one-tap bypass of the app's entire purpose, which fails the threat model (D-012): the
+adversary is the user's own impulse, and an impulse will absolutely reach for the nearest bypass.
+
+**Consequence for evaluation order:** in `blockReason()`, the user-rule check runs first and is
+final; the allowlist check only runs afterward, against the ad-host set and the DoH bypass guards.
+Implemented as a pure `Blocklist.blockReason()` so the ordering is unit-tested (`BlocklistTest`)
+rather than only living in `DnsVpnService`, which cannot run on the JVM.
+
+**DoH guards:** an allowlist entry *can* exempt a DoH bootstrap host — the app respects device
+ownership enough to let a user who deliberately wants DoH say so — but the UI warns at the point of
+adding that this disables the filter's own bypass protection, since D-012's "silent non-enforcement
+is the worst failure mode" applies here too.
+
+---
+
 # Open — decided before the first release
 
 ## O-002 — Signing key custody
@@ -276,9 +297,3 @@ To settle: who generates and holds the keystore; whether both of us hold a copy;
 lives; and whether CI signs from a GitHub Actions secret or releases are signed by hand.
 
 Worth settling now — losing this key later is unrecoverable.
-
-## O-003 — Whether an allowlist overrides user rules
-
-Scoped in `docs/plans/00-roadmap.md` Tier 1. The conservative answer is that an allowlist should
-override only list-sourced blocks, never a rule the user deliberately set — so it can't silently
-defeat a boundary someone chose. Not yet decided.
