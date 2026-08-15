@@ -38,13 +38,15 @@ and go straight into the existing `HashSet`.
 hundred thousand entries on its own. Memory with base + ads + adult enabled must be measured, not
 assumed, and recorded in the PR body (same criterion as W11).
 
-### The gap to state honestly in the UI
+### The gap, and where it lives
 
-Mixed-content platforms (Reddit, X, Telegram, Discord, Imgur) serve adult and non-adult content
-from the same hostnames. No DNS-layer mechanism can separate them, and per D-016 nothing deeper is
-being built. The UI must say this — offer to block those domains outright as a separate,
-explicit choice, and never imply the category list handles them. An overstated guarantee here is
-worse than no feature, because someone will rely on it.
+Mixed-content platforms — Reddit, X, TikTok, Telegram, Discord, Imgur — serve adult and non-adult
+content from the same hostnames, and nothing at DNS level separates them. **This work order does
+not attempt to solve that**; the reasoning is parked in [`docs/parked.md`](../parked.md) P-001.
+
+What W14 owes it is one sentence of honesty in the UI: the adult category covers dedicated adult
+sites, and a platform like Reddit is blocked whole or not at all. Don't imply more. Someone will
+rely on this.
 
 ## Part 2 — DNS SafeSearch enforcement (the interesting half)
 
@@ -58,7 +60,6 @@ to them:
 | `google.com` (and country TLDs) | `forcesafesearch.google.com` |
 | `bing.com` | `strict.bing.com` |
 | `duckduckgo.com` | `safe.duckduckgo.com` |
-| `youtube.com`, `m.youtube.com`, `youtubei.googleapis.com` | `restrict.youtube.com` (strict) or `restrictmoderate.youtube.com` |
 
 This closes the single largest hole a domain list leaves: image and video search, which surfaces
 adult content from hostnames no blocklist can list.
@@ -102,13 +103,13 @@ toggle does not inherit it.
 
 ## Blocked on research
 
-**New queue item 10:** the current, correct SafeSearch hostnames for Google, Bing, DuckDuckGo,
-YouTube and (if applicable) Yandex/Brave; whether each still works in 2026; whether YouTube's
-restricted mode still requires the accompanying `YouTube-Restrict` HTTP header (which a DNS-layer
-filter **cannot** set) or works from the hostname alone; and how AdGuard Home / Pi-hole implement
-the rewrite, since both have solved the answer-name problem already.
+**Queue item 10:** the current, correct SafeSearch hostnames for Google, Bing, DuckDuckGo and (if
+applicable) Yandex/Brave; whether each still works in 2026; and how AdGuard Home / Pi-hole
+implement the rewrite, since both have already solved the answer-name problem.
 
-The YouTube header question is the one that could shrink part 2. Answer it first.
+YouTube is **not** part of this work order — its restricted mode may require an HTTP header a DNS
+filter cannot set, so it is parked in [`docs/parked.md`](../parked.md) P-002 pending the same
+research item. If the answer comes back "hostname alone works," adding it is one line.
 
 ## Acceptance criteria
 
@@ -121,7 +122,7 @@ The YouTube header question is the one that could shrink part 2. Answer it first
 - [ ] A failed rewrite blocks rather than falls through.
 - [ ] Turning the category or SafeSearch off is refused under strict lock and routed through
       `UiUtil.showStrictLockedDialog`.
-- [ ] The UI states the mixed-content-platform limitation in plain language.
+- [ ] The UI states the mixed-content-platform limitation in plain language (P-001).
 - [ ] Memory footprint with base + ads + adult lists measured and recorded in the PR body.
 - [ ] `grep -rn "^import android" app/src/main/java/app/focusfence/dns/` returns nothing.
 - [ ] `./gradlew testDebugUnitTest` passes, with `SafeSearch` mapping covered by JVM tests.
@@ -132,4 +133,5 @@ The YouTube header question is the one that could shrink part 2. Answer it first
   classification, content proxying.
 - Per-search-term filtering or keyword blocking.
 - DNS-over-HTTPS upstream. Separate concern, separate work order.
-- Trying to solve mixed-content platforms. Document the gap; do not paper over it.
+- Mixed-content platforms (P-001) and YouTube restricted mode (P-002). Both are parked, both have
+  written reasoning; state the limitation, don't attempt it.

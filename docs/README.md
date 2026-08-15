@@ -12,13 +12,14 @@ answer to "where is this project actually at." This file is the doc index.
 | --- | --- | --- |
 | [`../FRAMEWORK.md`](../FRAMEWORK.md) | Meta | Phase-gated status tracker — where this is and what's next |
 | [`../DECISIONS.md`](../DECISIONS.md) | Meta | Numbered log of *why* (D-001 … D-014) |
-| [`work/`](work/) | **Execution** | **The work orders — W1…W13. Start here to build anything.** |
+| [`work/`](work/) | **Execution** | **The work orders — W1…W14. Start here to build anything.** |
 | [`documentation-guide.md`](documentation-guide.md) | Meta | The tier map — who each doc is for and how they fit |
 | [`overview.md`](overview.md) | High-level | What it is, who it's for, the recorded product intent |
 | [`approach.md`](approach.md) | High-level | Is this worth doing this way — the gap, alternatives, what to validate |
 | [`architecture.md`](architecture.md) | Low-level | How the app works **as built today**, and why the odd parts are odd |
 | [`design.md`](design.md) | Low-level | The boundary model reasoned through against the six examples — resolves O-004 and reorders Track B |
 | [`infrastructure.md`](infrastructure.md) | Low-level | Toolchain, the release-readiness gap, hard constraints, testing |
+| [`parked.md`](parked.md) | High-level | Ideas considered and set down deliberately, with the reasoning — read before proposing an "obvious" addition |
 | [`risks.md`](risks.md) | Mixed | Scope, legal/licensing, technical and operational risk |
 | [`notes.md`](notes.md) | High-level | Open decisions and questions — working scratchpad |
 | [`research-handoff.md`](research-handoff.md) | Meta | Queue of unverified external claims, and how to close them |

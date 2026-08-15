@@ -231,12 +231,12 @@ on-device image or text classification, or a content-scanning proxy.
   category list plus SafeSearch defeats the impulse; nothing defeats a determined owner, and the
   attempt costs privacy, battery and complexity.
 
-**Where the honest gap is:** mixed-content platforms (Reddit, X, Telegram, Discord) serve both
-adult and non-adult content from the same hostnames. DNS cannot separate them, and neither can
-anything else short of reading content. The answer is to say so plainly in the UI — block the
-whole domain or don't — rather than to imply a precision the app does not have. Section rules
-(the accessibility layer) can carve paths on the handful of sites where paths are visible, and
-that is the limit.
+**Where the honest gap is:** mixed-content platforms (Reddit, X, TikTok, Telegram, Discord) serve
+both adult and non-adult content from the same hostnames. DNS cannot separate them, and neither
+can anything else short of reading content. This is **parked, not solved** — see
+[`docs/parked.md`](docs/parked.md) P-001. The app says so plainly in the UI and offers the whole
+domain as an ordinary target; it does not imply a precision it doesn't have. YouTube restricted
+mode is parked separately (P-002) because it may need an HTTP header a DNS filter cannot set.
 
 **Consequence:** adult filtering ships as W14, sequenced after W11. No new architecture. The
 category toggle must be protected by strict mode (D-012's friction is more load-bearing here
