@@ -32,12 +32,12 @@ test is the clearest example: no amount of web research answers it, only a phone
 
 ## Current handoff queue
 
-Pulled from open items flagged across this packet. Items 1–2 block the release; the rest inform
+Pulled from open items flagged across this packet. Item 2 blocks the release; the rest inform
 Track B.
 
 | # | Question | Source doc | Suggested engine | Why that engine |
 | - | -------- | ---------- | ---------------- | --------------- |
-| 1 | For an Android app that *downloads* (not vendors) third-party hosts files, what are the practical differences between MPL-2.0, Apache-2.0 and GPLv3 — specifically around a future library/SDK extraction, and around F-Droid/Play distribution? | `risks.md`, O-001 | Claude | Licensing needs careful reading of actual terms and cross-referencing; Claude tends to hedge appropriately rather than assert |
+| ~~1~~ | ~~MPL-2.0 vs Apache-2.0 vs GPLv3 for an app that downloads third-party hosts files~~ — **closed 2026-08-15 without research**: MIT chosen (D-015). | O-001 | — | ✅ Resolved |
 | 2 | What are StevenBlack/hosts' actual license and redistribution terms, and those of HaGeZi, OISD, Block List Project and EasyList? Which permit runtime download vs. bundling, and what attribution is required? | `risks.md`, B6 | Claude | Same — primary-source license text, several sources to compare |
 | 3 | What can Shizuku actually do on a **non-root** device as of 2026 — specifically package suspend/disable? What permissions, what setup friction, and does it genuinely require restarting after every reboot? | `approach.md` B7 | Either | Fast-moving project; needs current docs and issue tracker, not model priors |
 | 4 | What exactly does `UsageStatsManager` report, how is `PACKAGE_USAGE_STATS` granted, and what are its known accuracy limitations for foreground time? | `approach.md` B3 | Either | Well-documented Android API; official docs plus known gotchas |
@@ -46,6 +46,7 @@ Track B.
 | 7 | Is the claim that Play will require `targetSdk` 36 from 2026-08-31 accurate? (Flagged unverified in `audits/findings.md` §4, and currently moot — the plan is GitHub Releases.) | `audits/findings.md` | Either | Single factual check |
 | 8 | Does Android offer any mechanism for VPN coexistence, or app-specific routing that would let a filtering app cohabit with a user's real VPN? Has anything changed in recent releases? | `approach.md` B4 | Either | If the answer is "no, one slot, period," that confirms the design constraint permanently |
 | 9 | How do comparable FOSS tools (RethinkDNS, NetGuard, personalDNSfilter, AdAway) handle release signing and key custody for GitHub/F-Droid distribution? Any established practice worth copying? | O-002 | Either | Prior art on a one-way door decision |
+| 10 | What are the current SafeSearch hostnames for Google, Bing, DuckDuckGo, YouTube and Yandex, and do they still work in 2026? Does YouTube restricted mode still require the `YouTube-Restrict` HTTP header (which a DNS-layer filter cannot set), or does the hostname alone suffice? How do AdGuard Home and Pi-hole implement the rewrite, specifically the answer-name handling? | `docs/work/W14`, D-016 | Claude | Several vendor behaviours to verify against current docs, plus two mature open-source implementations to read; model priors on this are likely stale |
 
 ## Handoff procedure
 

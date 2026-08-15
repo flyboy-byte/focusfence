@@ -48,7 +48,7 @@ version string. JDK 17 (CI) and 21 both work.
 |---|---|---|---|---|
 | [W1](W1-doc-corrections.md) | Correct three false documentation claims | Release | — | **Ready** |
 | [W2](W2-ci-release-build.md) | CI builds and verifies the release APK | Release | — | **Ready** |
-| [W3](W3-license.md) | Add a `LICENSE` file | Release | O-001 | **BLOCKED** — human decision |
+| [W3](W3-license.md) | Add a `LICENSE` file | Release | D-015 | 🟡 Done — awaiting @sidewinderzz's ack |
 | [W4](W4-release-signing.md) | Release signing config + CI secret | Release | O-002 | **BLOCKED** — human decision |
 | [W5](W5-release-workflow.md) | Tag → signed APK → GitHub Release, + `CHANGELOG.md` | Release | W2, W4 | Blocked by W4 |
 | [W6](W6-extract-rule-evaluator.md) | Extract rule evaluation into `dns/` | Product | — | **Ready** |
@@ -59,6 +59,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | Needs research Q2 |
 | [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W8 | Needs research Q3 |
 | [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | Spec draft |
+| [W14](W14-adult-content-category.md) | Adult-content filtering: category lists + DNS SafeSearch | Product | W11 | Needs research Q10 |
 
 **Start with W1, W2 and W6 — all three are ready, independent of each other, and blocked on
 nobody.**

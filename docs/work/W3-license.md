@@ -1,7 +1,9 @@
 # W3 — Add a `LICENSE` file
 
-**Track:** Release · **Depends on:** decision O-001 · **Blocks:** the first release
-**Status:** 🔴 **BLOCKED — do not start.** Requires a human decision from both maintainers.
+**Track:** Release · **Decision:** D-015 (MIT) · **Blocks:** the first release
+**Status:** 🟡 **Mostly done.** `LICENSE` and the README section landed 2026-08-15. One item
+remains: @sidewinderzz's written acknowledgement of MIT, since copyright is shared. Do not
+publish a binary before that exists.
 
 ## Why
 
@@ -17,7 +19,10 @@ moment a binary is published for strangers, which is the stated definition of "f
 Copyright is shared — @sidewinderzz wrote the original app, @flyboy-byte has contributed since.
 Neither can license it alone. This needs an explicit agreement, not a default.
 
-## The decision (O-001)
+## The decision — resolved as MIT (D-015)
+
+MIT was chosen on 2026-08-15; the reasoning is recorded in `DECISIONS.md` D-015. The candidate
+analysis below is kept for the record.
 
 Three candidates, analysed in `docs/audits/03-foss-ecosystem.md`:
 

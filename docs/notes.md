@@ -10,10 +10,10 @@ holds what's still open.
 
 ## Things to explicitly decide before committing further
 
-**O-001 — Which license.** Blocks the first release. MPL-2.0 (file-level copyleft — engine
-improvements stay open, embedding allowed), Apache-2.0 (maximum reuse, explicit patent grant), or
-GPLv3 (aligns with most of the surrounding filtering ecosystem, constrains reuse as a library).
-Needs @sidewinderzz — copyright is shared.
+~~**O-001 — Which license.**~~ **Resolved 2026-08-15: MIT** (D-015). The candidates considered were
+MPL-2.0 (file-level copyleft), Apache-2.0 (patent grant) and GPLv3 (ecosystem alignment); MIT won
+on lowest cost to everyone and on matching StevenBlack, our main upstream source. @sidewinderzz's
+written acknowledgement is still outstanding — copyright is shared.
 
 **O-002 — Signing key custody.** Blocks the first release, and it's a **one-way door**: the key
 becomes the app's permanent identity, and a later key change forces every user to uninstall and
@@ -78,7 +78,8 @@ Ordered so nothing waits on a decision that hasn't been made.
    stale text that misled all five audit documents.
 4. **Track A step 3** — CI builds `assembleRelease`. Permanently closes the "nothing watches the
    release build" gap.
-5. **Raise O-001 and O-002 with @sidewinderzz.** Nothing else in Track A can proceed without them.
+5. **Get @sidewinderzz's written acknowledgement of MIT (D-015), and settle O-002 with him.**
+   Nothing else in Track A can proceed without both.
 6. **Install the R8 release build on a device.** The one check reasoning can't substitute for.
 7. **B2** — the full boundary object, once B1 and B3a have proved the split works in both services.
 

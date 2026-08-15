@@ -114,7 +114,7 @@ Mostly pre-existing. Honest status:
 
 ### Phase 5 — Formalize
 
-- [ ] Decide the license (O-001) — blocks everything else here
+- [x] Decide the license — **MIT** (D-015, 2026-08-15). `LICENSE` and README section landed; still needs @sidewinderzz's written acknowledgement before a binary ships.
 - [ ] Decide signing key custody (O-002) — a one-way door; the key becomes the app's permanent
       identity
 - [ ] Tag and cut the first GitHub Release with a signed APK and published SHA-256
@@ -130,5 +130,6 @@ prerequisite for B3a (time-bounded app blocking, which `docs/design.md` found to
 and which closes the most-missed gap), for the VPN-down degradation path in `design.md` §4, and
 for most of the rest of Track B.
 
-The two decisions that block the release (license O-001, signing key custody O-002) need
-@sidewinderzz and are worth raising in parallel, since neither requires any code.
+The remaining decision that blocks the release — signing key custody (O-002) — needs
+@sidewinderzz, as does his acknowledgement of the MIT choice. Both are worth raising now, since
+neither requires any code.

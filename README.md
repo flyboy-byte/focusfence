@@ -106,3 +106,7 @@ If you'd rather not maintain your own app: NetGuard (custom domain blocking is a
 RethinkDNS, personalDNSfilter (all open source, same VpnService approach), or — with no app at
 all — Android's Private DNS pointed at a NextDNS/ControlD config with a denylist. Building your
 own keeps the blocklist fully local and under your control.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). `SPDX-License-Identifier: MIT`

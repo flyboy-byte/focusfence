@@ -178,21 +178,73 @@ extend. But abstractions have to prove their value in the app first.
 around a general policy language. Guards the source-model work (B6) from becoming a matcher
 rewrite — audit 03 found the existing `HashSet` adequate at ~100k entries.
 
+## D-015 — MIT license
+
+*Decided: 2026-08-15 by @flyboy-byte.*
+
+MIT, over the MPL-2.0 / Apache-2.0 / GPLv3 candidates from audit 03. Rationale: it costs the
+least to everyone, imposes no obligations that would complicate a future library extraction
+(D-014), and matches StevenBlack/hosts — the project's main upstream data source — so there is no
+mismatch between what we consume and what we publish. The reciprocity MPL or GPL would buy is
+worth little here: the value of this project is the design and the maintenance, not code a
+closed fork could meaningfully strip.
+
+Apache-2.0's explicit patent grant is the one real thing MIT gives up. Accepted — there is no
+patentable subject matter here and no corporate contributor to worry about.
+
+**Consequence:** `LICENSE` at the repo root, `SPDX-License-Identifier: MIT` in the README, no
+per-file headers. Unblocks W3 and therefore the first release. **Still needs @sidewinderzz's
+acknowledgement** — copyright is shared and one maintainer cannot license the other's work. Get
+it in writing (an issue comment is enough) before publishing a binary.
+
+## D-016 — Adult-content blocking is a category list plus SafeSearch, not a content engine
+
+*Decided: 2026-08-15.*
+
+Adult-content filtering is in scope as a **first-class category**, implemented with two
+mechanisms and no third:
+
+1. **Curated category lists** (HaGeZi NSFW, StevenBlack's porn extension) loaded as ordinary
+   sources through the multi-source work (B6/W11). These are hosts-format files that drop
+   straight into the existing matcher — architecturally this is *free*.
+2. **DNS-level SafeSearch enforcement** — rewriting queries for the major search engines and
+   YouTube to their safe-search hostnames, so image and video search stops surfacing the
+   content that a domain list can never catch.
+
+Explicitly **rejected**: any "deeper layer" engine — TLS/SNI inspection, full traffic routing,
+on-device image or text classification, or a content-scanning proxy.
+
+**Why the deep engine is the wrong answer here, specifically:**
+
+- It requires seeing content. This app's privacy claim (D-010) is not "we don't upload your
+  data", it is "we don't look at it in the first place". A classifier that judges whether a page
+  is pornographic must first read the page. That is the single largest thing this project has
+  said it will not do, and adult content is precisely the category where being watched is most
+  invasive.
+- It requires routing everything. The `/32`+`/128` route trick is the whole reason battery cost
+  is negligible. Inspecting content means carrying real traffic, which breaks the premise the
+  README sells.
+- It mostly cannot work anyway. TLS hides paths and payloads; ECH is eating SNI. The realistic
+  ceiling for on-device inspection in 2026 is hostname-level — which is exactly what DNS already
+  gives us, for free.
+- The threat model doesn't need it (D-012). The adversary is an impulse, not an adversary. A
+  category list plus SafeSearch defeats the impulse; nothing defeats a determined owner, and the
+  attempt costs privacy, battery and complexity.
+
+**Where the honest gap is:** mixed-content platforms (Reddit, X, Telegram, Discord) serve both
+adult and non-adult content from the same hostnames. DNS cannot separate them, and neither can
+anything else short of reading content. The answer is to say so plainly in the UI — block the
+whole domain or don't — rather than to imply a precision the app does not have. Section rules
+(the accessibility layer) can carve paths on the handful of sites where paths are visible, and
+that is the limit.
+
+**Consequence:** adult filtering ships as W14, sequenced after W11. No new architecture. The
+category toggle must be protected by strict mode (D-012's friction is more load-bearing here
+than anywhere else in the app).
+
 ---
 
 # Open — decided before the first release
-
-## O-001 — Which license
-
-Blocks the first release (`docs/infrastructure.md` R1). Candidates from audit 03: **MPL-2.0** (file-level
-copyleft — improvements to the engine stay open, embedding still allowed), **Apache-2.0**
-(maximum reuse, explicit patent grant), **GPLv3** (aligns with most of the surrounding filtering
-ecosystem, constrains reuse as a library).
-
-Do **not** decide from the exec summary's compatibility table — it contains errors, documented in
-`docs/audits/findings.md` §2.8.
-
-Copyright is shared, so this needs @sidewinderzz's agreement.
 
 ## O-002 — Signing key custody
 

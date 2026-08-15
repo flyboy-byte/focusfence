@@ -55,7 +55,7 @@ redistribute or fork it. Candidates and their tradeoffs are in
 [`audits/03-foss-ecosystem.md`](audits/03-foss-ecosystem.md). Do **not** decide from the executive
 summary's compatibility table — it contains errors, documented in
 [`audits/findings.md`](audits/findings.md) §2.8. Copyright is shared with @sidewinderzz, so this
-is a joint decision (O-001).
+was decided as **MIT** on 2026-08-15 (D-015); `LICENSE` now exists. Because copyright is shared, @sidewinderzz's written acknowledgement is still required before publishing a binary.
 
 **R2 — no signing.** There is no `signingConfig` in `app/build.gradle.kts`. **This is a one-way
 door:** the key becomes the app's permanent identity, and signing a later update with a different
