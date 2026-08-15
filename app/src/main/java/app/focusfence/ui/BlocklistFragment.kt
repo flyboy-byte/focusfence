@@ -54,6 +54,7 @@ class BlocklistFragment : Fragment() {
                 }
             },
             onAppsEdit = { UiUtil.chooseBlockedApps(requireContext()) { refresh() } },
+            onAppClick = { pkg -> UiUtil.editAppRule(requireActivity(), pkg) { refresh() } },
             onAppRemove = { pkg ->
                 val context = requireContext()
                 if (StrictStore.isLocked(context)) {
@@ -117,7 +118,7 @@ class BlocklistFragment : Fragment() {
             }
         }
 
-        val apps = BlockedAppsStore.get(context).sortedBy { it.lowercase(Locale.ROOT) }
+        val apps = BlockedAppsStore.rules(context)
         val appsExpanded = GroupedBlocklistAdapter.GROUP_APPS !in collapsedGroups
         rows.add(
             Row.Header(
@@ -130,7 +131,15 @@ class BlocklistFragment : Fragment() {
             if (apps.isEmpty()) {
                 rows.add(Row.Hint(getString(R.string.apps_empty_hint)))
             } else {
-                apps.forEach { rows.add(Row.App(it, UiUtil.appLabel(context, it))) }
+                apps.forEach {
+                    rows.add(
+                        Row.App(
+                            it.domain,
+                            UiUtil.appLabel(context, it.domain),
+                            UiUtil.appRuleSummary(context, it),
+                        )
+                    )
+                }
             }
         }
         return rows

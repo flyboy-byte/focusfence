@@ -3,6 +3,7 @@ package app.focusfence.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.SharedPreferences
+import android.os.PowerManager
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -11,7 +12,10 @@ import app.focusfence.R
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.RuleEvaluator
 import app.focusfence.dns.UrlFilter
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * Enforces "allow only specific sections" rules by watching browser address
@@ -53,17 +57,21 @@ class UrlFilterService : AccessibilityService() {
     private var hasSectionRules = false
 
     @Volatile
-    private var blockedApps: Set<String> = emptySet()
+    private var appRules: Map<String, BlockRule> = emptyMap()
 
     private var lastCheckAt = 0L
     private var lastBackAt = 0L
     private var lastAppBlockAt = 0L
+
+    private var powerManager: PowerManager? = null
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS) reloadRules()
     }
 
     override fun onServiceConnected() {
+        // Held rather than fetched per event: onAccessibilityEvent is hot.
+        powerManager = getSystemService(PowerManager::class.java)
         reloadRules()
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
     }
@@ -77,8 +85,19 @@ class UrlFilterService : AccessibilityService() {
         val loaded = BlocklistStore.rulesByDomain(this)
         rules = loaded
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
-        blockedApps = BlockedAppsStore.get(this)
+        appRules = BlockedAppsStore.rulesByPackage(this)
         applyEventFilter()
+    }
+
+    /** Everything time- and device-dependent a rule evaluation needs, sampled once. */
+    private fun nowSnapshot(): RuleEvaluator.Now {
+        val localTime = LocalTime.now()
+        return RuleEvaluator.Now(
+            minuteOfDay = localTime.hour * 60 + localTime.minute,
+            epochMillis = System.currentTimeMillis(),
+            dayKey = LocalDate.now().toString(),
+            screenOn = powerManager?.isInteractive ?: true,
+        )
     }
 
     /**
@@ -92,7 +111,10 @@ class UrlFilterService : AccessibilityService() {
         val info = serviceInfo ?: return
         val targets = HashSet<String>()
         if (hasSectionRules) targets += URL_BAR_IDS.keys
-        targets += blockedApps
+        // Every package with a rule, whether or not it blocks right now: the
+        // service must still be receiving events for an app during its allowed
+        // window, or it cannot act the moment that window closes.
+        targets += appRules.keys
         info.packageNames =
             if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
@@ -107,8 +129,13 @@ class UrlFilterService : AccessibilityService() {
         val eventPackage = event.packageName?.toString() ?: return
         if (eventPackage == packageName) return
 
-        // Whole-app blocking: bounce to the home screen.
-        if (eventPackage in blockedApps) {
+        // Whole-app blocking: bounce to the home screen. Evaluated on window
+        // state changes only — a window that closes while the user is already
+        // inside the app does not eject them until the next window event. That
+        // is deliberate: the impulse being blocked is *opening* the app, and a
+        // timer to evict mid-session would mean a periodic wakeup.
+        val appRule = appRules[eventPackage]
+        if (appRule != null && RuleEvaluator.blocksApp(appRule, nowSnapshot())) {
             val now = SystemClock.uptimeMillis()
             if (now - lastAppBlockAt >= APP_BLOCK_DEBOUNCE_MS) {
                 lastAppBlockAt = now

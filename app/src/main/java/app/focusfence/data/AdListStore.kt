@@ -13,8 +13,8 @@ import java.net.URL
  */
 object AdListStore {
 
-    /** StevenBlack's unified hosts list: ads + malware, aggregated from the same
-     *  upstream sources AdGuard/uBlock use, maintained and hosts-format. */
+    /** StevenBlack's unified hosts list: a widely used, actively maintained
+     *  aggregation of hosts-format ad, tracker and malware sources. */
     const val HOSTS_URL = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 
     const val KEY_ENABLED = "adblock_enabled"

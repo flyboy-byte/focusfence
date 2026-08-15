@@ -44,6 +44,19 @@
     <string name="apps_dialog_title">Block these apps</string>
     <string name="apps_choose_button">Blocked apps (%1$d) — choose</string>
     <string name="app_blocked_toast">App blocked by Focus Fence</string>
+
+    <string name="app_rule_dialog_title">%1$s — when to block</string>
+    <string name="app_schedule_always">Block always</string>
+    <string name="app_schedule_window">Block only during set hours…</string>
+    <string name="app_schedule_until">Block until a set time…</string>
+    <string name="app_window_start">Blocked from</string>
+    <string name="app_window_end">Blocked until</string>
+    <string name="app_until_title">Blocked until</string>
+    <string name="app_rule_always">Blocked always</string>
+    <string name="app_rule_window">Blocked %1$s–%2$s daily</string>
+    <string name="app_rule_until">Blocked until %1$s</string>
+    <string name="app_rule_until_passed">Commitment finished — no longer blocking</string>
+    <string name="app_rule_budget_unsupported">Daily limits for apps aren\'t supported yet — not blocking</string>
     <string name="excluded_apps_button">VPN exclusions (%1$d)</string>
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
 

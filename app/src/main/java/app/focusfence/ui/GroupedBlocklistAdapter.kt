@@ -15,7 +15,7 @@ import app.focusfence.dns.BlockRule
 sealed class Row {
     data class Header(val key: String, val title: String, val expanded: Boolean) : Row()
     data class Domain(val rule: BlockRule, val summary: String) : Row()
-    data class App(val pkg: String, val label: String) : Row()
+    data class App(val pkg: String, val label: String, val summary: String) : Row()
     data class Hint(val text: String) : Row()
 }
 
@@ -24,6 +24,7 @@ class GroupedBlocklistAdapter(
     private val onDomainClick: (BlockRule) -> Unit,
     private val onDomainDelete: (BlockRule) -> Unit,
     private val onAppsEdit: () -> Unit,
+    private val onAppClick: (String) -> Unit,
     private val onAppRemove: (String) -> Unit,
 ) : ListAdapter<Row, RecyclerView.ViewHolder>(DIFF) {
 
@@ -104,10 +105,13 @@ class GroupedBlocklistAdapter(
 
         fun bindApp(row: Row.App) {
             binding.entryTitle.text = row.label
-            binding.entrySummary.text = binding.root.context.getString(R.string.blocked_app_summary)
-            binding.root.setOnClickListener { onAppsEdit() }
+            binding.entrySummary.text = row.summary
+            binding.root.setOnClickListener { onAppClick(row.pkg) }
             binding.moreButton.setOnClickListener { view ->
                 PopupMenu(view.context, view).apply {
+                    menu.add(R.string.menu_edit).setOnMenuItemClickListener {
+                        onAppClick(row.pkg); true
+                    }
                     menu.add(R.string.menu_remove).setOnMenuItemClickListener {
                         onAppRemove(row.pkg); true
                     }
