@@ -25,6 +25,7 @@ import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Dns
 import app.focusfence.dns.Packets
+import app.focusfence.dns.RuleEvaluator
 import app.focusfence.dns.UsageTracker
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -323,27 +324,23 @@ class DnsVpnService : VpnService() {
         lastStatsFlush = System.currentTimeMillis()
     }
 
+    /** Observes the world and accrues usage; the decision itself lives in [RuleEvaluator]. */
     private fun ruleBlocks(rule: BlockRule, qname: String): Boolean {
-        // Section rules must stay resolvable so the allowed paths work; the
-        // accessibility URL filter enforces them in the browser instead.
-        if (rule.hasPathExceptions) return false
-        if (rule.hasBudget) {
-            // Budgets track and enforce only the site's user-facing hostnames;
-            // SDK/API subdomains (graph.facebook.com etc.) belong to other
-            // apps' background traffic and must not drain or break anything.
-            if (!Blocklist.isFrontDoor(qname, rule.domain)) return false
-            val dayKey = LocalDate.now().toString()
-            val used = usageTracker.recordAndGetUsage(
-                rule.domain,
-                System.currentTimeMillis(),
-                dayKey,
-                accrue = powerManager.isInteractive,
+        val localTime = LocalTime.now()
+        val now = RuleEvaluator.Now(
+            minuteOfDay = localTime.hour * 60 + localTime.minute,
+            epochMillis = System.currentTimeMillis(),
+            dayKey = LocalDate.now().toString(),
+            screenOn = powerManager.isInteractive,
+        )
+        var used = 0L
+        if (RuleEvaluator.requiresUsage(rule, qname)) {
+            used = usageTracker.recordAndGetUsage(
+                rule.domain, now.epochMillis, now.dayKey, accrue = now.screenOn,
             )
-            persistUsageThrottled(rule.domain, dayKey, used)
-            return used >= rule.budgetMinutes * 60_000L
+            persistUsageThrottled(rule.domain, now.dayKey, used)
         }
-        val now = LocalTime.now()
-        return rule.activeAt(now.hour * 60 + now.minute)
+        return RuleEvaluator.blocks(rule, qname, now, used)
     }
 
     /** Writes usage through to prefs at most every 15s of accrued time per domain. */
