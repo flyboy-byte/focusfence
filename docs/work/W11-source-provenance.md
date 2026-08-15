@@ -3,6 +3,10 @@
 **Track:** Product (B6) · **Depends on:** W9 · **Status:** Spec draft — **needs research Q2**
 **Size:** ~1 week
 
+> **2026-08-15:** W9's core (the allowlist store and its evaluator) landed on `logandev`/
+> `shareddev` — the dependency this order actually needs (an allowlist to fall back on once a
+> second source exists) is satisfied. Only research Q2 (filter-list licensing) still blocks this.
+
 ## Why
 
 "Block adult-content domains all the time" is one of the six example boundaries and is currently

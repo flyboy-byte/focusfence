@@ -1,6 +1,6 @@
 # W6 — Extract rule evaluation into `dns/`
 
-**Track:** Product (B1) · **Depends on:** nothing · **Blocks:** W7, W8, W9 · **Status:** Ready
+**Track:** Product (B1) · **Depends on:** nothing · **Blocks:** W7, W8, W9 · **Status:** ✅ Done
 **Size:** ~half a day. Pure refactor — **zero behaviour change**, and that's the acceptance bar.
 
 ## Why

@@ -1,6 +1,6 @@
 # W7 — Time-bounded app blocking
 
-**Track:** Product (B3a) · **Depends on:** W6 · **Blocks:** W8, W10 · **Status:** Ready after W6
+**Track:** Product (B3a) · **Depends on:** W6 · **Blocks:** W8, W10 · **Status:** ✅ Done
 **Size:** ~1 day including UI. First user-visible new capability in the plan.
 
 ## Why

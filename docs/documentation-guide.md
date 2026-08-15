@@ -4,13 +4,17 @@
 > including future-you after time away · **Use when:** you don't know which doc to open,
 > or you're adding a new doc and need to decide where it fits.
 
-This packet has two altitudes. Knowing which altitude you're reading (or writing) at prevents the
-two failure modes that hit project-planning docs specifically: framing material that's all vision
-and no way to actually build the thing, and build docs that bury the "is this worth doing this
-way" question under implementation detail.
+This packet has two altitudes, plus a third layer that sits below both once there's real work to
+hand off. Knowing which altitude you're reading (or writing) at prevents the two failure modes
+that hit project-planning docs specifically: framing material that's all vision and no way to
+actually build the thing, and build docs that bury the "is this worth doing this way" question
+under implementation detail.
 
 **Start at [`../FRAMEWORK.md`](../FRAMEWORK.md)** — it's the phase tracker and the honest answer to
-"where are we." [`README.md`](README.md) in this directory is the doc index.
+"where are we." [`README.md`](README.md) in this directory is the **complete file listing** (every
+doc, one line each); this file is the **tier map** — which altitude each doc reads at and how they
+relate. If the two ever disagree about whether a doc exists, `README.md` is the one to trust and
+this file should be corrected to match — it's the newer, denser one and more likely to drift.
 
 ## The two tiers
 
@@ -27,6 +31,7 @@ require deep technical literacy.
 | [`approach.md`](approach.md) | Is this worth doing this way — the gap measured against the project's own examples, alternatives, validation plan |
 | [`notes.md`](notes.md) | Live scratchpad of open decisions |
 | [`risks.md`](risks.md) *(scope/legal sections)* | What could derail this and why |
+| [`parked.md`](parked.md) | Ideas already considered and deliberately set down, with the reasoning — check before proposing an "obvious" addition |
 
 ### Low-level — the build layer
 
@@ -40,14 +45,29 @@ require deep technical literacy.
 | [`infrastructure.md`](infrastructure.md) | Toolchain, the release-readiness gap, hard constraints, testing |
 | [`risks.md`](risks.md) *(technical/operational sections)* | What breaks in practice and how it's guarded |
 
+### Execution — the work layer
+
+**Question it answers:** *What do I actually do right now?* Sits below both tiers above: it exists
+once there's real, sequenced work to hand off, not while the project is still deciding what it is.
+
+| Doc | What it's for |
+| --- | --- |
+| [`work/NEXT.md`](work/NEXT.md) | **Start here for "what now."** The standing, ordered queue |
+| [`work/KICKOFF.md`](work/KICKOFF.md) | Paste-able prompt to orient a brand-new agent session in one message |
+| [`work/README.md`](work/README.md) | Rules of execution and the full work-order board (`W1`…`W14`) |
+| `work/W*.md` | One self-contained spec per work order |
+
 ### Meta — about the project and the docs
 
 | Doc | What it's for |
 | --- | --- |
 | [`../FRAMEWORK.md`](../FRAMEWORK.md) | Phase-gated status tracker — the entry point |
-| [`../DECISIONS.md`](../DECISIONS.md) | Numbered log of *why* (D-001 … D-014), separate from the narrative |
+| [`../DECISIONS.md`](../DECISIONS.md) | Numbered log of *why* (D-001 … D-017), separate from the narrative |
 | [`documentation-guide.md`](documentation-guide.md) | This file |
 | [`research-handoff.md`](research-handoff.md) | Queue of unverified external claims and how to close them |
+| [`research/prompts.md`](research/prompts.md) | Every open research-handoff item, expanded into a ready-to-paste prompt |
+| [`reasoning-prompts.md`](reasoning-prompts.md) | Deep judgment-call prompts for a high-context model — trade-offs, not fact lookup |
+| [`signing-key-custody.md`](signing-key-custody.md) | Decision support for O-002, the one open blocking decision |
 
 ### Source material this packet was built from
 

@@ -34,8 +34,9 @@ tun fd (blocking)
    ├─ dstPort != 53           → dropped
    ├─ Dns.parseQuestion       single-question queries only; responses and malformed → null
    │
-   ├─ blockReason(qname)
-   │     ├─ user rule matches and is in force   → rule.domain
+   ├─ blockReason(qname)  (Blocklist.blockReason — pure, dns/)
+   │     ├─ user rule matches and is in force   → rule.domain   (final — see D-017)
+   │     ├─ qname in the user's allowlist       → null, regardless of what follows
    │     ├─ qname in downloaded ad hosts        → "_ads"
    │     ├─ qname is a DoH bootstrap host       → "_guard"
    │     └─ otherwise                           → null
@@ -68,35 +69,46 @@ accessibility/  the AccessibilityService — section rules and app blocking
 ui/      fragments + the domain editor
 ```
 
-The `dns/` boundary is real and worth keeping: `Blocklist`, `BlockRule`, `Dns`, `Packets`,
-`UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec` and `HostsParser` take no Android
-types, which is why the test suite runs as plain JUnit with no instrumentation. New decision
-logic belongs there, with the caller supplying clocks and timestamps.
+The `dns/` boundary is real and worth keeping: `Blocklist`, `BlockRule`, `RuleEvaluator`, `Dns`,
+`Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec` and `HostsParser` take no
+Android types, which is why the test suite runs as plain JUnit with no instrumentation. New
+decision logic belongs there, with the caller supplying clocks and timestamps.
 
-The one place that boundary is soft is `DnsVpnService.ruleBlocks()`, which holds the
-"is this rule in force right now" logic — schedule evaluation, budget accrual, the
-front-door check — inline in the service rather than in `dns/`.
+**`RuleEvaluator`** (added in W6, extended in W7) is the actual "is this rule in force right
+now" decision — `blocks()` for domains, `blocksApp()` for app targets — and it's pure: the
+caller supplies a `Now` (minute of day, epoch millis, day key, screen-on) and any accrued
+usage. `DnsVpnService.ruleBlocks()` is a thin wrapper that only *assembles* those inputs
+(reads the clock, looks up accrued usage) and calls out to `RuleEvaluator.blocks()`; it does
+not hold decision logic itself. `Blocklist.blockReason()` (added in W9) is the next layer up
+— it takes the rule-evaluation result plus the allowlist and ad-host sets and applies the
+final ordering (D-017), and is itself pure and unit-tested.
 
 ## Rules
 
-One `BlockRule` per domain, in exactly one of four modes, serialised into a single
-`StringSet` preference:
+One `BlockRule` per domain (or, for app rules — W7 — per package name, using the same
+encoding), in exactly one of five modes, serialised into a single `StringSet` preference:
 
 | Mode | Encoding | Enforced by |
 |---|---|---|
-| Always | `reddit.com` | DNS |
-| Daily window (may wrap midnight) | `reddit.com\|540\|1080` | DNS |
-| Daily budget in minutes | `reddit.com\|b\|30` | DNS, once exhausted |
+| Always | `reddit.com` | DNS (or accessibility, for an app target) |
+| Daily window (may wrap midnight) | `reddit.com\|540\|1080` | DNS / accessibility |
+| Daily budget in minutes | `reddit.com\|b\|30` | DNS, once exhausted (domains only — see W10) |
 | Allowed section paths | `facebook.com\|p\|/marketplace` | accessibility service only |
+| Commitment (blocks until a fixed instant) | `reddit.com\|c\|<epochMillis>` | DNS / accessibility |
 
 Rules apply to subdomains: matching walks up parent domains (`a.b.example.com` →
 `b.example.com` → `example.com`), so one entry covers unknown subdomains without enumerating
 them.
 
 Section rules are the exception that shapes the rest. DNS sees hostnames and TLS hides paths,
-so a domain with allowed sections **must stay resolvable** — `ruleBlocks()` returns false for
-those, and enforcement moves entirely to the accessibility service reading the browser's
-address bar. That is also why they can't work inside native apps.
+so a domain with allowed sections **must stay resolvable** — `RuleEvaluator.blocks()` returns
+false for those, and enforcement moves entirely to the accessibility service reading the
+browser's address bar. That is also why they can't work inside native apps.
+
+An **allowlist** (W9, D-017) sits alongside rules, not inside `BlockRule` — it's a plain set
+of domains in `AllowlistStore`, checked in `Blocklist.blockReason()` after the rule check.
+It exempts a domain from the ad list and the DoH bypass guards, but a user rule that is
+currently in force always wins; see the request-path diagram above.
 
 ## Configuration propagation
 
@@ -136,6 +148,13 @@ Two guards keep it honest, and both have tests:
 
 Usage is written through to prefs at most every 15 seconds per domain, and saving a budget
 rule resets that day's count — which doubles as the escape hatch when tracking miscounts.
+
+**App targets (W7) reuse windows and commitments, not budgets.** `RuleEvaluator.blocksApp()`
+handles daily windows and commitment rules for a package the same way it does for a domain,
+but deliberately returns `false` (permissive, not blocked) for a budget rule on an app target
+— there is no DNS activity to infer foreground time from for a native app, and treating an
+unsatisfiable budget as always-blocked would be a silent trap. Real app budgets need
+`UsageStatsManager` (W10), not usage inference.
 
 ## Accessibility service
 
@@ -191,7 +210,7 @@ Worth knowing before proposing changes, because several are structural rather th
   not a boundary — any other host can offer the same service.
 - Android's Private DNS setting bypasses the filter entirely when enabled.
 - Only one VPN can be active per user, so this cannot run alongside another VPN.
-- **There is no allowlist.** Nothing can exempt a domain from the downloaded ad list; a false
-  positive can only be resolved by disabling the whole list.
+- An allowlist exists (W9, D-017) but only its logic and storage are done — no UI yet to add
+  or remove an entry from the app itself (see `docs/work/W9-allowlist.md`).
 - Battery cost is unmeasured. The architecture justifies expecting it to be low; no benchmark
   in the tree establishes it.

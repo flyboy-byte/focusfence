@@ -52,7 +52,7 @@ Capture   ──►   Scoping  ──►   Validation ──►  Build   ──�
 - [x] [`docs/notes.md`](docs/notes.md) — open decisions log
 - [x] [`docs/documentation-guide.md`](docs/documentation-guide.md) +
       [`docs/research-handoff.md`](docs/research-handoff.md)
-- [x] [`DECISIONS.md`](DECISIONS.md) — numbered log of *why*, D-001 … D-014
+- [x] [`DECISIONS.md`](DECISIONS.md) — numbered log of *why*, D-001 … D-017
 
 **Gate to Phase 2:** none blocking. What's *not* done is anything that required leaving these
 files.
@@ -127,8 +127,10 @@ Mostly pre-existing. Honest status:
 **2026-08-15.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
 W1 (doc corrections), W2 (CI builds the release APK), W6 (rule evaluation extracted to `dns/`) and
 W7 (time-bounded app blocking — apps can now be scheduled or committed, not just always-blocked)
-all landed and are merged to `main`, alongside the licence (D-015, acknowledged) and the
-adult-content decision (D-016). Test suite: 53 passing.
+are merged to `main`, alongside the licence (D-015, acknowledged) and the adult-content decision
+(D-016). W9's core (user allowlist: store, pure evaluator, D-017) has landed on `logandev`/
+`shareddev` but not yet reached `main` — its UI half is still open, see `docs/work/W9-allowlist.md`.
+Test suite: 58 passing.
 
 **The only thing left blocking the release is signing key custody (O-002)** — a one-way decision
 for @sidewinderzz, decision support written up in `docs/signing-key-custody.md`. No code work
@@ -137,8 +139,9 @@ once it's made.
 
 **Branching (D-005):** `main` → `shareddev` → `{logandev, shelbydev}`. Personal branches fork from
 and merge into `shareddev`; `shareddev` merges to `main` at release points. `main` is never
-committed to directly. All four branches currently sit at the same commit — see D-005 for how the
-shape got here.
+committed to directly. Branches are expected to diverge between releases — `main` and `shelbydev`
+are not kept in lockstep with every doc/scoping commit on `logandev`; check `git log` /
+`git branch -vv` for the current state rather than trusting a specific commit claim here.
 
 **What to work on next:** [`docs/work/NEXT.md`](docs/work/NEXT.md) — the standing, ordered queue.
 It's written so an unsupervised agent session always has an answer to "what now," including which

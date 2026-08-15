@@ -47,17 +47,22 @@ Three enforcement layers, each covering what the others cannot:
 
 ### Purity boundary
 
-Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
-`Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`) so it can be
-unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
-timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
+Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`,
+`RuleEvaluator`, `Dns`, `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`,
+`HostsParser`) so it can be unit-tested on the JVM. Keep new decision logic there and let the
+service/UI supply clocks, timestamps and context. `data/` holds the Android-side
+SharedPreferences wrappers, including `AllowlistStore` — domains exempted from list-sourced
+blocks only, never from a user rule in force (D-017).
 
 ### Rules and persistence
 
-A `BlockRule` is exactly one of four modes, serialized to a single prefs string via
+A `BlockRule` is exactly one of five modes, serialized to a single prefs string via
 `encode()`/`decode()`: always-block (`domain`), daily window (`domain|start|end`, may wrap
-midnight), daily budget (`domain|b|minutes`), section allowlist (`domain|p|/a,/b`). Rules live in
-a `StringSet` under `focusfence`/`block_rules`. Both the VPN service and the accessibility service
+midnight), daily budget (`domain|b|minutes`), section allowlist (`domain|p|/a,/b`), or a
+commitment blocking until a fixed instant (`domain|c|<epochMillis>`, used by app rules — W7).
+`RuleEvaluator.blocks()`/`blocksApp()` in `dns/` is the pure decision of whether a rule is in
+force right now; the service only supplies the clock and accrued usage. Rules live in a
+`StringSet` under `focusfence`/`block_rules`. Both the VPN service and the accessibility service
 hold `@Volatile` snapshots refreshed by a `SharedPreferences.OnSharedPreferenceChangeListener` —
 **that listener is the only propagation mechanism**, so any new store key the runtime depends on
 must be written to the `focusfence` prefs file and handled in those listeners (`AdListStore`

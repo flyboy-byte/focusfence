@@ -1,11 +1,12 @@
 # W1 — Correct three false documentation claims
 
-> **Update 2026-08-15:** all three README corrections were made during a full README rewrite
-> (commit on `dev`). **What remains of this work order is the two code comments** — the stale
-> KDoc in `DnsVpnService.kt` and the provenance comment in `AdListStore.kt`. The README sections
-> below are kept as the record of what was wrong and why.
+> **Update 2026-08-15:** ✅ **Done.** All three README corrections landed in a full README
+> rewrite, and the two remaining code comments — the stale KDoc in `DnsVpnService.kt` and the
+> provenance comment in `AdListStore.kt` — are also fixed (neither mentions NXDOMAIN or stale
+> provenance language anymore). The README sections below are kept as the record of what was
+> wrong and why.
 
-**Track:** Release · **Depends on:** nothing · **Blocks:** nothing · **Status:** Ready
+**Track:** Release · **Depends on:** nothing · **Blocks:** nothing · **Status:** ✅ Done
 **Size:** ~30 minutes. Documentation and comments only — zero behaviour change.
 
 ## Why

@@ -1,6 +1,6 @@
 # W2 — CI builds and verifies the release APK
 
-**Track:** Release · **Depends on:** nothing · **Blocks:** W5 · **Status:** Ready
+**Track:** Release · **Depends on:** nothing · **Blocks:** W5 · **Status:** ✅ Done
 **Size:** ~20 minutes. CI configuration only — no app code.
 
 ## Why

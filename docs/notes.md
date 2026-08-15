@@ -21,9 +21,10 @@ reinstall, losing their rules. To settle: who generates and holds the keystore; 
 you hold a copy; where the backup lives; whether CI signs from a GitHub Actions secret or releases
 are signed by hand. Worth settling now — losing this key later is unrecoverable.
 
-**O-003 — Should an allowlist override a *user rule*, or only list-sourced blocks?** The
-conservative answer is only list-sourced blocks, so an allowlist can never silently defeat a
-boundary the user deliberately set. Not yet decided.
+**~~O-003 — Should an allowlist override a *user rule*, or only list-sourced blocks?~~ RESOLVED
+2026-08-15** — only list-sourced blocks (D-017); an allowlist can never silently defeat a boundary
+the user deliberately set. Implemented as W9's core (`AllowlistStore`, `Blocklist.blockReason`);
+the UI half is still open.
 
 **~~O-004 — Is B2 real, or is it B3 wearing a costume?~~ RESOLVED 2026-08-14** — reasoned through
 in [`design.md`](design.md). It's real: the current four "modes" are two dimensions
@@ -54,18 +55,24 @@ Several of these were answered by [`design.md`](design.md); what's left is genui
   browsers whenever a domain boundary exists, gated on the VPN being down. That's the high-volume
   event type the service deliberately avoids. This is the one design proposal whose cost genuinely
   can't be argued without B8's benchmark.
-- **Should the DoH guard list be user-editable?** Currently hardcoded (`DOH_BYPASS_GUARDS`). Under
-  "least invasive mechanism" and "respect the owner," a user who deliberately wants DoH should
-  probably be able to say so.
+- **~~Should the DoH guard list be user-editable?~~ RESOLVED 2026-08-15 as part of D-017**: not
+  editable itself, but the allowlist (W9) can exempt an individual DoH bootstrap host, which gets
+  the same outcome — a user who deliberately wants DoH can say so per-host — without turning the
+  guard list itself into a store.
 
 **Answered in `design.md`:** whether a boundary must span mechanisms atomically (yes — that's the
 model's main job, §2); how strict mode and commitment periods reconcile (commitment is a
 *condition*, not a second lock, §5); and what happens to existing rules on migration (total,
 deterministic, lossless, §6).
 
-## Sequencing — a reasonable next stretch of work
+## Sequencing — historical, superseded by `docs/work/NEXT.md`
 
-Ordered so nothing waits on a decision that hasn't been made.
+*Kept for the reasoning, same treatment as `plans/00-roadmap.md`.* This ordering predates
+`docs/work/NEXT.md`, which is now the live queue — steps 1–2 below shipped as W6/W7, step 5's
+license half resolved as D-015/W3 (signing, O-002, is still open), and the boundary model in
+step 7 (B2) is now `docs/work/W8-boundary-model.md`, **parked** rather than pursued — see
+`docs/parked.md`. Don't work from this list; it's here so the "why this order" reasoning isn't
+lost.
 
 1. **B1** — move condition evaluation out of `DnsVpnService` into `dns/` behind an injected clock.
    No behaviour change, existing tests to lean on, and the prerequisite for everything below.

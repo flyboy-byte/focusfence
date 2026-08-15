@@ -106,7 +106,8 @@ well.
 
 **B4 — Enforcement that survives without the VPN.** Make the promise true and *test* it.
 
-**B5 — Allowlist.** Escape hatch for false positives; prerequisite for B6.
+**B5 — Allowlist.** Escape hatch for false positives; prerequisite for B6. Core (store, pure
+evaluator, D-017) shipped 2026-08-15 (`docs/work/W9-allowlist.md`); UI still open.
 
 **B6 — Categories with provenance.** Multiple sources retaining which source blocked what, so
 "block adult content" becomes expressible and the app can answer *why*. Justified by the boundary

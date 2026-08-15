@@ -112,8 +112,9 @@ What actually helps, in increasing order of effort:
 
 **Permanent maintenance commitments** the project takes on the moment it has real users: browser
 compatibility (above), filter-list availability, Android version churn across three platform APIs,
-and support for false positives — which is currently unanswerable, because there is no allowlist.
-A user with a broken site has exactly one remedy: turn the entire ad list off.
+and support for false positives. An allowlist now exists at the logic/storage level (W9 core,
+D-017), but with no UI to add an entry yet, a user with a broken site still has exactly one
+practical remedy today: turn the entire ad list off. That changes once W9's UI half lands.
 
 **Support expectations for a wellbeing tool are unusual.** People rely on this to hold a boundary.
 A bug that silently stops enforcement is worse than a crash, because nothing tells the user it
