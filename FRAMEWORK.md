@@ -135,6 +135,7 @@ for @sidewinderzz, decision support written up in `docs/signing-key-custody.md`.
 remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an hour
 once it's made.
 
-**Branching (D-005, revised 2026-08-15):** `logandev` and `shelbydev` are personal working
-branches; both sync back to `main` directly rather than through a shared `dev`. First round of
-that worked cleanly — see D-005 for what changed and why.
+**Branching (D-005):** `main` → `shareddev` → `{logandev, shelbydev}`. Personal branches fork from
+and merge into `shareddev`; `shareddev` merges to `main` at release points. `main` is never
+committed to directly. All four branches currently sit at the same commit — see D-005 for how the
+shape got here.

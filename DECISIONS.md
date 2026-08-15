@@ -56,22 +56,28 @@ audits and plans live under `docs/`, which no tool loads automatically.
 **Why:** `CLAUDE.md` loads into every Claude session in this repo, including @sidewinderzz's. A
 contributor's opinions about direction shouldn't silently steer the maintainer's sessions.
 
-## D-005 — Development happens on personal branches, integrated on `main`
+## D-005 — Personal branches integrate on `shareddev`; `main` is releases only
 
-*Decided: 2026-08-14, by @flyboy-byte. Revised: 2026-08-15 after the first two-person round.*
+*Decided: 2026-08-14, by @flyboy-byte. Revised twice on 2026-08-15.*
 
-Original shape: a single shared `dev` branched off `main`, feature branches off `dev`, merge to
-`main` by PR. In practice the first real test of this — @flyboy-byte and @sidewinderzz working the
-same day — showed the simpler version works fine at this scale: each maintainer works on their own
-long-lived branch (`logandev`, `shelbydev`), forked from and periodically brought back to `main`.
-No separate shared integration branch; with two people and frequent syncing, `main` itself served
-that role without incident (verified: `shelbydev` fast-forwarded cleanly into `logandev`, which
-merged into `main` with zero conflicts).
+Went through three shapes in one day, kept here because the reasoning at each step is worth
+having:
 
-**Consequence:** personal branches are short-lived by convention, not by tooling — sync back to
-`main` often rather than letting either branch diverge for long. If a third contributor joins, or
-personal branches start diverging enough to conflict, reintroduce a shared integration branch
-rather than merging straight to `main`.
+1. **A single shared `dev`, feature branches off it, PR to `main`.** The original plan. Never
+   really exercised as designed.
+2. **Personal branches (`logandev`, `shelbydev`) straight to `main`, no shared branch.** Tried
+   after the first real two-person round — `shelbydev` fast-forwarded into `logandev`, which
+   merged into `main` with zero conflicts, so the shared branch looked unnecessary.
+3. **`main` → `shareddev` → `{logandev, shelbydev}` — the current shape.** @flyboy-byte's call:
+   put a shared integration branch back between the personal branches and `main`, so `main` stays
+   releases-only and integration testing has a home that isn't the release branch itself. All
+   three branches sat at the same commit (`60724f4`) when `shareddev` was created, so nothing
+   moved — this only changes where the *next* round of work lands.
+
+**Consequence:** personal branches fork from and merge back into `shareddev`, not `main`.
+`shareddev` merges to `main` deliberately, at release points — not on every sync. `main` is never
+committed to directly (restoring the original D-005 intent, just with two personal branches
+feeding it through one gate instead of many).
 
 ## D-006 — "Finished" means a public GitHub Release
 
