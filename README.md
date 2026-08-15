@@ -107,6 +107,17 @@ RethinkDNS, personalDNSfilter (all open source, same VpnService approach), or �
 all — Android's Private DNS pointed at a NextDNS/ControlD config with a denylist. Building your
 own keeps the blocklist fully local and under your control.
 
+## Project status and direction
+
+A written review of where the project stands — what works, what's blocked, what's being built next
+and what has been deliberately parked — is kept as a page:
+
+**[Focus Fence — Project Review](https://claude.ai/code/artifact/78d38a65-6891-4169-be8c-b75b5761339a)**
+
+The same material lives in the repo, in more detail: [`FRAMEWORK.md`](FRAMEWORK.md) for status,
+[`DECISIONS.md`](DECISIONS.md) for why, [`docs/parked.md`](docs/parked.md) for ideas considered and
+set down on purpose, and [`docs/work/`](docs/work/) for the executable work orders.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE). `SPDX-License-Identifier: MIT`
