@@ -1,6 +1,9 @@
 # W13 — Battery/CPU benchmark harness
 
-**Track:** Product (B8) · **Depends on:** nothing · **Status:** Spec draft
+**Track:** Product (B8) · **Depends on:** nothing · **Status:** 🟡 **Harness built and proven on
+real hardware (`logandev`, 2026-08-16)** — scenario 1 measured for real; scenarios 2–5 need a
+one-time manual VPN/accessibility grant (documented, ~10s each) then a longer run. See
+`docs/benchmarks/README.md`.
 **Size:** ~2–3 days. Can be done at any time; blocks nothing, unblocks every performance argument.
 
 ## Why
@@ -56,14 +59,23 @@ number, because it will be quoted later.
 
 ## Acceptance criteria
 
-- [ ] All five scenarios are runnable by following written instructions, on a device the author
-      does not have.
-- [ ] Results are recorded with date, device, Android version and method.
-- [ ] Wakeups per hour is among the reported metrics.
-- [ ] A baseline for the current version is committed.
-- [ ] The harness adds **no** dependency or code to the release APK — it must not ship inside the
-      app.
-- [ ] If a new module is added, `assembleRelease` output size is unchanged.
+- [x] All five scenarios are runnable by following written instructions, on a device the author
+      does not have — `scripts/battery-bench.sh` plus the manual-grant steps in
+      `docs/benchmarks/README.md`. Scenarios 2–5 are documented and harness-ready but **not yet
+      actually run** — see below.
+- [x] Results are recorded with date, device, Android version and method — scenario 1 only so far.
+- [x] Wakeups per hour is among the reported metrics (as wakeup-event counts; scenario 1's 60s
+      smoke-test run should be redone at 15–30min before quoting an hourly rate anywhere).
+- [ ] A baseline for the current version is committed — scenario 1 (the floor) is; 2, 3 and 5
+      (the scenarios whose deltas actually matter) are not yet.
+- [x] The harness adds **no** dependency or code to the release APK — `scripts/battery-bench.sh`
+      only drives an already-built debug APK over `adb shell`; nothing under `app/` changed.
+- [ ] N/A — no new Gradle module was added; the harness is a standalone shell script.
+
+**What's left:** grant VPN + accessibility once on the bench device (documented, ~10s each,
+`docs/benchmarks/README.md` "Why 2–5 aren't measured yet"), then run scenarios 2, 3, 4, 5 at a
+15–30 minute duration each and record the deltas. No further code or script work is needed —
+this is now a "run it and paste the numbers in" task, not a build task.
 
 ## Out of scope
 

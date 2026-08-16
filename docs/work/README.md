@@ -67,7 +67,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W10](W10-app-budgets-usagestats.md) | App budgets via `UsageStatsManager` | Product | W7 | Needs research Q4 |
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | Needs research Q2 |
 | [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | Needs research Q3 |
-| [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | **Ready** |
+| [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | **Harness built** (`logandev`, 2026-08-16) — 4 of 5 scenarios still need running, see file |
 | [W14](W14-adult-content-category.md) | Adult-content filtering: category lists + DNS SafeSearch | Product | W11 | Needs research Q10 |
 
 **W1, W2, W3, W6 and W7 are done.** For what to pick up next, read

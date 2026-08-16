@@ -73,9 +73,13 @@ session than grinding through Kotlin.
       strict-mode gate on add, DoH-guard warning) are all done. `testDebugUnitTest` and
       `assembleDebug` both pass. Manual on-device check still worth doing before release, per
       `docs/work/W9-allowlist.md`.
-- [ ] **W13** — battery/CPU benchmark harness. `docs/work/W13-benchmark-harness.md`. Unblocks
-      every performance argument the project makes about itself; currently there is no
-      benchmark anywhere in the tree.
+- [x] **W13 (harness)** — 2026-08-16, `logandev`. `scripts/battery-bench.sh` built and proven on
+      real hardware (Pixel 7); scenario 1 (the floor) measured for real: 0 wakeup events
+      attributed to `app.focusfence` at idle. Scenarios 2–5 are harness-ready and documented in
+      `docs/benchmarks/README.md`, but need a one-time manual VPN/accessibility grant on the
+      bench device (~10s each, exact steps written down) and a longer (15–30min) run before the
+      deltas are worth quoting anywhere. **Good pickup for whoever has physical device access
+      next:** no more code needed, just run the script four more times and paste the numbers in.
 
 ### Research that unblocks a work order
 
