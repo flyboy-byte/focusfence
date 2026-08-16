@@ -29,15 +29,33 @@ Branch discipline (also in docs/work/README.md rule 1): work on your own persona
 directly. Merge into shareddev yourself once ./gradlew testDebugUnitTest passes. Never touch
 main.
 
-Pick the top unblocked item in docs/work/NEXT.md's queue and execute it. If everything is
-blocked, say so rather than inventing scope — NEXT.md is deliberately closed. If you hit a
-research item and have live web access, execute it directly per the instructions at the top
-of docs/research-handoff.md rather than waiting for a human browser session.
+Pick the top unblocked item in docs/work/NEXT.md's queue and execute it. When you finish an
+item: check it off in NEXT.md with the date and branch, run the test suite, commit, and merge
+into shareddev if it's genuinely done and tested.
 
-When you finish an item: check it off in NEXT.md with the date and branch, run the test
-suite, commit, and merge into shareddev if it's genuinely done and tested. Report back
-concisely — what you did, what you decided, what's still open — the same way you'd write a
-commit message: why, not just what.
+**Then do not stop. Go back to NEXT.md, re-read it (your last merge may have unblocked
+something), and pick the next unblocked item.** Keep going, item after item, in this same
+session, until one of these is actually true:
+- NEXT.md has no unblocked item left — everything remaining is genuinely waiting on a human
+  decision (say which one, and why) or another item that hasn't landed yet.
+- You hit something that needs a decision only a human can make (a one-way door, a legal
+  question, anything DECISIONS.md would need a new numbered entry for) — stop, write down the
+  fork, and ask, rather than guessing and moving on.
+- You've been at this long enough that quality is dropping — better to report a clean stopping
+  point than to grind out a sixth item sloppily. Use judgment; there's no fixed item count.
+
+A session that does one item and reports back has NOT finished the task — it's done the first
+fifth of it. "I completed an item" is not the exit condition; "the queue is actually empty or
+actually blocked" is. If you're unsure whether to keep going, keep going.
+
+If you hit a research item and have live web access, execute it directly per the instructions
+at the top of docs/research-handoff.md rather than waiting for a human browser session — that
+counts as an item like any other, keep looping afterward.
+
+Report back only once, at the end: what you did across every item, what you decided, what's
+still open — the same way you'd write a commit message: why, not just what. Don't send a
+progress report after each individual item; work through the queue silently and summarize once
+at the end.
 ```
 
 ## Why it's shaped this way
@@ -53,3 +71,8 @@ commit message: why, not just what.
 - **No status dashboard, no ceremony.** `docs/work/NEXT.md`'s checkboxes are the entire coordination
   mechanism between sessions. This file exists only to make starting a *new* session cheap; it isn't
   a second source of truth to keep in sync with anything.
+- **The loop instruction exists because it was needed, not preemptively.** 2026-08-15: a session
+  given this prompt ran exactly one queue item (Q9), reported back, and stopped, despite several
+  more zero-dependency items sitting ready in NEXT.md. The prompt didn't say not to stop, so it
+  stopped — that's a prompt bug, not a judgment failure on the session's part. Fixed by making the
+  exit condition explicit (queue empty or genuinely blocked, not "I did a thing").
