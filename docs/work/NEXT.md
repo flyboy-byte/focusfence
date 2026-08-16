@@ -54,10 +54,16 @@ session than grinding through Kotlin.
 
 ### Helps unblock the release — do this first
 
-- [ ] **Research Q9** — signing-key custody prior art (RethinkDNS, NetGuard,
-      personalDNSfilter, AdAway). Doesn't decide O-002, but gives @sidewinderzz something
-      concrete to react to instead of a blank decision. See `docs/research-handoff.md` row 9 and
-      `docs/signing-key-custody.md`.
+- [x] **Research Q9** — 2026-08-15, `shelbydev`. Signing-key custody prior art. Raw output in
+      `docs/research/2026-08-15-signing-key-custody-prior-art-claude.md`, merged into
+      `docs/signing-key-custody.md`. Answer: **4 of 4 comparable projects hand-sign production**;
+      RethinkDNS's CI signs only a *separate* alpha key under a different `applicationId`. **No
+      project documents any backup/escrow practice** — questions 1–3 of O-002 stay blank-page
+      decisions that no further research can help with.
+      **The ball is now with @sidewinderzz, not with an agent.** O-002 needs a human answer to
+      "who holds the key, does the other maintainer hold a copy, where does the backup live."
+      Nothing below is blocked on it, so an unsupervised session should skip to the next section
+      rather than sit here — but do not start W4/W5, and do not decide O-002 on a human's behalf.
 
 ### Ready now, zero dependencies
 

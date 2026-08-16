@@ -47,7 +47,7 @@ Track B.
 | 6 | What is Google Play's current policy for apps that combine `VpnService` and `AccessibilityService`? Is such an app publishable at all, and under what declarations? | `risks.md` | Claude | Play policy is dense, changes often, and heavily penalises getting it wrong |
 | 7 | Is the claim that Play will require `targetSdk` 36 from 2026-08-31 accurate? (Flagged unverified in `audits/findings.md` §4, and currently moot — the plan is GitHub Releases.) | `audits/findings.md` | Either | Single factual check |
 | 8 | Does Android offer any mechanism for VPN coexistence, or app-specific routing that would let a filtering app cohabit with a user's real VPN? Has anything changed in recent releases? | `approach.md` B4 | Either | If the answer is "no, one slot, period," that confirms the design constraint permanently |
-| 9 | How do comparable FOSS tools (RethinkDNS, NetGuard, personalDNSfilter, AdAway) handle release signing and key custody for GitHub/F-Droid distribution? Any established practice worth copying? | O-002 | Either | Prior art on a one-way door decision |
+| ~~9~~ | ~~How do comparable FOSS tools (RethinkDNS, NetGuard, personalDNSfilter, AdAway) handle release signing and key custody for GitHub/F-Droid distribution? Any established practice worth copying?~~ — **closed 2026-08-15**, raw output in [`research/2026-08-15-signing-key-custody-prior-art-claude.md`](research/2026-08-15-signing-key-custody-prior-art-claude.md), merged into `signing-key-custody.md`. Answer: 4/4 hand-sign production; none documents escrow. | O-002 | — | ✅ Resolved |
 | 10 | What are the current SafeSearch hostnames for Google, Bing, DuckDuckGo and Yandex, and do they still work in 2026? Separately (parked, P-002): does YouTube restricted mode still require the `YouTube-Restrict` HTTP header, which a DNS-layer filter cannot set? How do AdGuard Home and Pi-hole implement the rewrite, specifically the answer-name handling? | `docs/work/W14`, D-016, `parked.md` | Claude | Several vendor behaviours to verify against current docs, plus two mature open-source implementations to read; model priors on this are likely stale |
 | 11 | **Investigative, not a build authorization.** What does CloudVeil (and any comparable open-source project) actually do for on-device NSFW image/content classification — model size, battery/CPU cost, false-positive rate, and whether inference genuinely stays on-device with nothing uploaded? This exists to check whether `docs/parked.md` P-003's rejection of any content-inspection engine still holds now that real prior art can be read instead of reasoned about from first principles. Bring findings back to P-003 and D-016 for a human to weigh — a good implementation existing elsewhere is not itself a reason to build one here. | `docs/parked.md` P-003, D-016 | Either | Needs current, specific technical detail (model size, measured battery cost) that general knowledge won't have reliably |
 
@@ -55,6 +55,14 @@ Track B.
 ready-to-paste, fully self-contained prompt for every open row below — heavier than the generic
 template further down, because each states what decision the answer feeds and what would change
 as a result. Use those instead of writing your own from the table row.
+
+**Q9 sharpened row 5 (2026-08-15).** F-Droid's default is to generate and hold *its own* per-app
+signing key, so an F-Droid listing without reproducible builds creates a second, permanently
+un-migratable app identity. Whoever runs row 5 should treat "what does reproducible-builds
+eligibility actually require for this build?" as the load-bearing half of that question, not a
+footnote to the anti-feature labelling — and it wants answering *before* the first signed APK
+exists, not at submission time. See `signing-key-custody.md` §"A fifth question the research
+surfaced".
 
 ## Handoff procedure
 
