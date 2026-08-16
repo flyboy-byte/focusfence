@@ -24,6 +24,7 @@ sealed class Row {
 
     data class Domain(val rule: BlockRule, val summary: String) : Row()
     data class App(val pkg: String, val label: String, val summary: String) : Row()
+    data class Allowed(val domain: String) : Row()
 
     /** [actionKey] makes the hint tappable; the key identifies what to open. */
     data class Hint(val text: String, val actionKey: String? = null) : Row()
@@ -33,18 +34,21 @@ class GroupedBlocklistAdapter(
     private val onHeaderClick: (String) -> Unit,
     private val onDomainClick: (BlockRule) -> Unit,
     private val onDomainDelete: (BlockRule) -> Unit,
-    private val onAppsEdit: () -> Unit,
+    private val onHeaderAdd: (String) -> Unit,
     private val onAppClick: (String) -> Unit,
     private val onAppRemove: (String) -> Unit,
+    private val onAllowedRemove: (String) -> Unit,
     private val onHintClick: (String) -> Unit,
 ) : ListAdapter<Row, RecyclerView.ViewHolder>(DIFF) {
 
     companion object {
         const val GROUP_APPS = "apps"
+        const val GROUP_ALLOWED = "allowed"
         private const val TYPE_HEADER = 0
         private const val TYPE_DOMAIN = 1
         private const val TYPE_APP = 2
         private const val TYPE_HINT = 3
+        private const val TYPE_ALLOWED = 4
 
         private val DIFF = object : DiffUtil.ItemCallback<Row>() {
             override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = when {
@@ -52,6 +56,8 @@ class GroupedBlocklistAdapter(
                 oldItem is Row.Domain && newItem is Row.Domain ->
                     oldItem.rule.domain == newItem.rule.domain
                 oldItem is Row.App && newItem is Row.App -> oldItem.pkg == newItem.pkg
+                oldItem is Row.Allowed && newItem is Row.Allowed ->
+                    oldItem.domain == newItem.domain
                 oldItem is Row.Hint && newItem is Row.Hint ->
                     oldItem.actionKey == newItem.actionKey
                 else -> false
@@ -66,6 +72,7 @@ class GroupedBlocklistAdapter(
         is Row.Domain -> TYPE_DOMAIN
         is Row.App -> TYPE_APP
         is Row.Hint -> TYPE_HINT
+        is Row.Allowed -> TYPE_ALLOWED
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -83,6 +90,7 @@ class GroupedBlocklistAdapter(
             is Row.Domain -> (holder as EntryHolder).bindDomain(row)
             is Row.App -> (holder as EntryHolder).bindApp(row)
             is Row.Hint -> (holder as HintHolder).bind(row)
+            is Row.Allowed -> (holder as EntryHolder).bindAllowed(row)
         }
     }
 
@@ -93,7 +101,7 @@ class GroupedBlocklistAdapter(
             binding.expandIcon.rotation = if (row.expanded) 180f else 0f
             binding.root.setOnClickListener { onHeaderClick(row.key) }
             binding.addButton.visibility = if (row.showAdd) View.VISIBLE else View.GONE
-            binding.addButton.setOnClickListener { onAppsEdit() }
+            binding.addButton.setOnClickListener { onHeaderAdd(row.key) }
         }
     }
 
@@ -128,6 +136,21 @@ class GroupedBlocklistAdapter(
                     }
                     menu.add(R.string.menu_remove).setOnMenuItemClickListener {
                         onAppRemove(row.pkg); true
+                    }
+                    show()
+                }
+            }
+        }
+
+        fun bindAllowed(row: Row.Allowed) {
+            binding.entryTitle.text = row.domain
+            binding.entrySummary.text =
+                binding.root.context.getString(R.string.allowed_domain_summary)
+            binding.root.setOnClickListener(null)
+            binding.moreButton.setOnClickListener { view ->
+                PopupMenu(view.context, view).apply {
+                    menu.add(R.string.menu_remove).setOnMenuItemClickListener {
+                        onAllowedRemove(row.domain); true
                     }
                     show()
                 }

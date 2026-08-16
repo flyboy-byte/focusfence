@@ -67,14 +67,15 @@ session than grinding through Kotlin.
 
 ### Ready now, zero dependencies
 
-- [x] **W9 (core)** — 2026-08-15, `logandev`. Store, pure evaluator (`Blocklist.blockReason`),
-      D-017 decision, `DnsVpnService` wiring, and JVM tests are done. **UI still open** —
-      `docs/work/W9-allowlist.md` now specs only that half, precisely, for a fresh pickup.
+- [x] **W9 (core + UI)** — core 2026-08-15, UI 2026-08-16, both `logandev`. Store, pure evaluator
+      (`Blocklist.blockReason`), D-017 decision, `DnsVpnService` wiring, JVM tests, and the
+      "Allowed domains" group in `BlocklistFragment`/`GroupedBlocklistAdapter` (add/list/remove,
+      strict-mode gate on add, DoH-guard warning) are all done. `testDebugUnitTest` and
+      `assembleDebug` both pass. Manual on-device check still worth doing before release, per
+      `docs/work/W9-allowlist.md`.
 - [ ] **W13** — battery/CPU benchmark harness. `docs/work/W13-benchmark-harness.md`. Unblocks
       every performance argument the project makes about itself; currently there is no
       benchmark anywhere in the tree.
-- [ ] **W9 (UI)** — the "Allowed domains" section described in `docs/work/W9-allowlist.md`'s
-      "What's left" — small, self-contained, good pickup for a fresh session.
 
 ### Research that unblocks a work order
 

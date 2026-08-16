@@ -93,14 +93,22 @@
     <string name="group_budget">Time limits</string>
     <string name="group_paths">Section rules</string>
     <string name="group_apps">Blocked apps</string>
+    <string name="group_allowed">Allowed domains</string>
     <string name="group_title_fmt">%1$s (%2$d)</string>
     <string name="blocklist_empty">Nothing blocked yet — tap + to add your first domain.</string>
     <string name="apps_empty_hint">No blocked apps — tap here (or +) to choose some.</string>
+    <string name="allowed_empty_hint">No allowed domains — tap here (or +) to exempt one from ad/tracker blocking.</string>
+    <string name="allowed_domain_summary">Always allowed</string>
     <string name="blocked_app_summary">Blocked app</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_remove">Remove</string>
+    <string name="menu_add">Add</string>
     <string name="menu_more">More options</string>
+    <string name="allow_domain_title">Allow a domain</string>
+    <string name="allow_domain_hint">example.com</string>
+    <string name="allow_doh_warning_title">This looks like a DNS-privacy host</string>
+    <string name="allow_doh_warning_message">Allowing this domain disables Focus Fence\'s protection against browsers bypassing the filter via encrypted DNS. Only continue if you specifically intend that.</string>
 
     <string name="add_domain_title">Add domain</string>
     <string name="mode_header">How should it be blocked?</string>

@@ -1,8 +1,8 @@
 # W9 — User allowlist
 
-**Track:** Product (B5) · **Depends on:** W6 · **Blocks:** W11 · **Status:** 🟡 **Core done on
-`logandev` (2026-08-15), UI still open — this file now specs only the UI half.**
-**Size:** Remaining work is ~1-2 hours: one dialog, one adapter row type, wiring.
+**Track:** Product (B5) · **Depends on:** W6 · **Blocks:** W11 · **Status:** ✅ **Done
+(`logandev`, 2026-08-16)** — core and UI both landed, `./gradlew testDebugUnitTest` and
+`assembleDebug` both pass.
 
 ## What's already done (don't redo)
 
@@ -75,10 +75,34 @@ strict mode blocks the add dialog while locked.
 - [x] `AllowlistStore` writes to the `focusfence` prefs file and `DnsVpnService`'s listener is
       updated — done.
 - [x] Allowlist entries are normalized via `Blocklist.normalize` at the store boundary — done.
-- [ ] UI: "Allowed domains" group in `BlocklistFragment` — add, list, remove.
-- [ ] Adding an entry while strict mode is locked is refused, via `UiUtil.showStrictLockedDialog`.
-- [ ] Adding a DoH bootstrap host shows an explicit warning before it's added.
+- [x] UI: "Allowed domains" group in `BlocklistFragment` — add, list, remove. Done 2026-08-16.
+- [x] Adding an entry while strict mode is locked is refused, via `UiUtil.showStrictLockedDialog`.
+      Removing an entry is not gated — per D-017, adding is the loosening action, removing only
+      tightens.
+- [x] Adding a DoH bootstrap host shows an explicit warning before it's added.
 - [x] `./gradlew testDebugUnitTest` passes with the new cases — done.
+
+## UI implementation notes (2026-08-16)
+
+- `GroupedBlocklistAdapter`: added `Row.Allowed`, `TYPE_ALLOWED`, `GROUP_ALLOWED`. Replaced the
+  hardwired `onAppsEdit: () -> Unit` with `onHeaderAdd: (String) -> Unit` keyed on the header's
+  group key, and added `onAllowedRemove: (String) -> Unit`. `bindAllowed` shows the domain, a
+  fixed "Always allowed" summary, and a remove-only popup (no edit — nothing to edit).
+- `BlocklistFragment`: `onHeaderAdd` dispatches `GROUP_APPS` → `chooseBlockedApps`,
+  `GROUP_ALLOWED` → `promptAddAllowlistDomain`. `buildRows()` appends an "Allowed domains" group
+  sorted by domain with a `Row.Hint` empty state, mirroring the apps group.
+  `promptAddAllowlistDomain` checks `StrictStore.isLocked` first (refuses via
+  `showStrictLockedDialog`), then a plain `EditText` dialog normalizes via `Blocklist.normalize`
+  (invalid input → a dialog using `R.string.invalid_domain`), then if the normalized domain
+  matches `Blocklist.DOH_BYPASS_GUARDS` shows a Cancel/Continue warning dialog before adding.
+- New strings: `group_allowed`, `allowed_empty_hint`, `allowed_domain_summary`, `menu_add`,
+  `allow_domain_title`, `allow_domain_hint`, `allow_doh_warning_title`,
+  `allow_doh_warning_message`.
+- Not instrumented-tested (no instrumented tests exist in this project); verified by
+  `testDebugUnitTest` (unchanged, 58 passing — this is pure UI wiring, no new pure logic) and
+  `assembleDebug` succeeding. Manual on-device verification (add/list/remove, strict-mode gate,
+  DoH warning) is still worth doing before calling this release-ready, but nothing here is
+  speculative — every path mirrors an existing, already-shipped pattern in the same two files.
 
 ## Out of scope
 

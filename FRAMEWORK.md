@@ -128,8 +128,8 @@ Mostly pre-existing. Honest status:
 W1 (doc corrections), W2 (CI builds the release APK), W6 (rule evaluation extracted to `dns/`) and
 W7 (time-bounded app blocking — apps can now be scheduled or committed, not just always-blocked)
 are merged to `main`, alongside the licence (D-015, acknowledged) and the adult-content decision
-(D-016). W9's core (user allowlist: store, pure evaluator, D-017) has landed on `logandev`/
-`shareddev` but not yet reached `main` — its UI half is still open, see `docs/work/W9-allowlist.md`.
+(D-016). W9 (user allowlist: store, pure evaluator, D-017, and the UI) is fully done on `logandev`/
+`shareddev` but not yet reached `main` — see `docs/work/W9-allowlist.md`.
 Test suite: 58 passing.
 
 **The only thing left blocking the release is signing key custody (O-002)** — a one-way decision

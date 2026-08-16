@@ -144,8 +144,6 @@ consequence of the purity boundary working well for `dns/` and not being extende
 - No signing configuration.
 - No instrumented or on-device testing of any kind.
 - No benchmark harness, while battery is an explicit product requirement.
-- An allowlist exists (W9 core, D-017) but has no UI yet, so in practice a false positive in
-  the ~100k-entry hosts file still can only be resolved by disabling the entire list until
-  the UI half lands — see `docs/work/W9-allowlist.md`.
+- ~~An allowlist exists but has no UI~~ — resolved (W9, D-017), see `docs/work/W9-allowlist.md`.
 - No `local.properties` guidance or documented JDK constraint for contributors — the JDK 26
   failure mode above is opaque enough that a new contributor would likely just give up.

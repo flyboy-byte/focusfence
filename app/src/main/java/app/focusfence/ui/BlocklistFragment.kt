@@ -1,20 +1,25 @@
 package app.focusfence.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import androidx.fragment.app.Fragment
 import app.focusfence.DomainDetailActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
+import app.focusfence.data.AllowlistStore
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.databinding.FragmentBlocklistBinding
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.Blocklist
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.time.LocalDate
 import java.util.Locale
 
@@ -53,7 +58,13 @@ class BlocklistFragment : Fragment() {
                     refresh()
                 }
             },
-            onAppsEdit = { UiUtil.chooseBlockedApps(requireContext()) { refresh() } },
+            onHeaderAdd = { key ->
+                when (key) {
+                    GroupedBlocklistAdapter.GROUP_APPS ->
+                        UiUtil.chooseBlockedApps(requireContext()) { refresh() }
+                    GroupedBlocklistAdapter.GROUP_ALLOWED -> promptAddAllowlistDomain(requireContext())
+                }
+            },
             onAppClick = { pkg -> UiUtil.editAppRule(requireActivity(), pkg) { refresh() } },
             onAppRemove = { pkg ->
                 val context = requireContext()
@@ -64,10 +75,15 @@ class BlocklistFragment : Fragment() {
                     refresh()
                 }
             },
+            onAllowedRemove = { domain ->
+                AllowlistStore.remove(requireContext(), domain)
+                refresh()
+            },
             onHintClick = { key ->
                 when (key) {
                     GroupedBlocklistAdapter.GROUP_APPS ->
                         UiUtil.chooseBlockedApps(requireContext()) { refresh() }
+                    GroupedBlocklistAdapter.GROUP_ALLOWED -> promptAddAllowlistDomain(requireContext())
                     else -> startActivity(
                         Intent(requireContext(), DomainDetailActivity::class.java)
                     )
@@ -157,7 +173,69 @@ class BlocklistFragment : Fragment() {
                 }
             }
         }
+        val allowed = AllowlistStore.get(context).sorted()
+        val allowedExpanded = GroupedBlocklistAdapter.GROUP_ALLOWED !in collapsedGroups
+        rows.add(
+            Row.Header(
+                GroupedBlocklistAdapter.GROUP_ALLOWED,
+                getString(R.string.group_title_fmt, getString(R.string.group_allowed), allowed.size),
+                allowedExpanded,
+                showAdd = true,
+            )
+        )
+        if (allowedExpanded) {
+            if (allowed.isEmpty()) {
+                rows.add(
+                    Row.Hint(
+                        getString(R.string.allowed_empty_hint),
+                        GroupedBlocklistAdapter.GROUP_ALLOWED,
+                    )
+                )
+            } else {
+                allowed.forEach { rows.add(Row.Allowed(it)) }
+            }
+        }
         return rows
+    }
+
+    private fun promptAddAllowlistDomain(context: Context) {
+        if (StrictStore.isLocked(context)) {
+            UiUtil.showStrictLockedDialog(context)
+            return
+        }
+        val input = EditText(context).apply { hint = getString(R.string.allow_domain_hint) }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.allow_domain_title)
+            .setView(input)
+            .setPositiveButton(R.string.menu_add) { _, _ ->
+                addAllowlistDomain(context, Blocklist.normalize(input.text?.toString().orEmpty()))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun addAllowlistDomain(context: Context, normalized: String?) {
+        if (normalized == null) {
+            MaterialAlertDialogBuilder(context)
+                .setMessage(R.string.invalid_domain)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        if (Blocklist.matches(normalized, Blocklist.DOH_BYPASS_GUARDS)) {
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.allow_doh_warning_title)
+                .setMessage(R.string.allow_doh_warning_message)
+                .setPositiveButton(R.string.menu_add) { _, _ ->
+                    AllowlistStore.add(context, normalized)
+                    refresh()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        } else {
+            AllowlistStore.add(context, normalized)
+            refresh()
+        }
     }
 
     private fun summaryFor(rule: BlockRule, dayKey: String): String {
