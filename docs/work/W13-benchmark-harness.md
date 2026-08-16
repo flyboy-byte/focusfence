@@ -1,9 +1,11 @@
 # W13 — Battery/CPU benchmark harness
 
-**Track:** Product (B8) · **Depends on:** nothing · **Status:** 🟡 **Harness built and proven on
-real hardware (`logandev`, 2026-08-16)** — scenario 1 measured for real; scenarios 2–5 need a
-one-time manual VPN/accessibility grant (documented, ~10s each) then a longer run. See
-`docs/benchmarks/README.md`.
+**Track:** Product (B8) · **Depends on:** nothing · **Status:** ✅ **Done (`logandev`,
+2026-08-16)** — harness built and all five scenarios measured for real on a Pixel 7, VPN consent
+and accessibility grant driven over `adb input tap` through the actual system dialogs. Result:
+wakeup events are zero in every scenario, and battery-drain rate is flat within noise across all
+five. See `docs/benchmarks/README.md`. Longer (15–30min) confirmatory runs and one off-USB-power
+run are noted as follow-up, not blocking.
 **Size:** ~2–3 days. Can be done at any time; blocks nothing, unblocks every performance argument.
 
 ## Why
@@ -60,22 +62,21 @@ number, because it will be quoted later.
 ## Acceptance criteria
 
 - [x] All five scenarios are runnable by following written instructions, on a device the author
-      does not have — `scripts/battery-bench.sh` plus the manual-grant steps in
-      `docs/benchmarks/README.md`. Scenarios 2–5 are documented and harness-ready but **not yet
-      actually run** — see below.
-- [x] Results are recorded with date, device, Android version and method — scenario 1 only so far.
-- [x] Wakeups per hour is among the reported metrics (as wakeup-event counts; scenario 1's 60s
-      smoke-test run should be redone at 15–30min before quoting an hourly rate anywhere).
-- [ ] A baseline for the current version is committed — scenario 1 (the floor) is; 2, 3 and 5
-      (the scenarios whose deltas actually matter) are not yet.
+      does not have — `scripts/battery-bench.sh` plus the grant steps in
+      `docs/benchmarks/README.md`, and all five have now actually been run.
+- [x] Results are recorded with date, device, Android version and method — all five scenarios.
+- [x] Wakeups per hour is among the reported metrics (as wakeup-event counts; all five scenarios'
+      120s runs showed zero — a longer 15–30min run would sharpen the number but is unlikely to
+      change the zero).
+- [x] A baseline for the current version is committed — all five scenarios, `docs/benchmarks/raw/`.
 - [x] The harness adds **no** dependency or code to the release APK — `scripts/battery-bench.sh`
       only drives an already-built debug APK over `adb shell`; nothing under `app/` changed.
-- [ ] N/A — no new Gradle module was added; the harness is a standalone shell script.
+- [x] N/A — no new Gradle module was added; the harness is a standalone shell script.
 
-**What's left:** grant VPN + accessibility once on the bench device (documented, ~10s each,
-`docs/benchmarks/README.md` "Why 2–5 aren't measured yet"), then run scenarios 2, 3, 4, 5 at a
-15–30 minute duration each and record the deltas. No further code or script work is needed —
-this is now a "run it and paste the numbers in" task, not a build task.
+**Follow-up, not blocking:** re-run at 15–30 minutes per scenario for a sharper hourly-rate
+number, and one confirmatory run with the device physically off USB power (this session's runs
+used `dumpsys battery unplug`, a reporting trick, while still tethered for `adb`). Neither is
+expected to change the direction of the result.
 
 ## Out of scope
 

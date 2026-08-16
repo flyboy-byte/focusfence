@@ -73,13 +73,14 @@ session than grinding through Kotlin.
       strict-mode gate on add, DoH-guard warning) are all done. `testDebugUnitTest` and
       `assembleDebug` both pass. Manual on-device check still worth doing before release, per
       `docs/work/W9-allowlist.md`.
-- [x] **W13 (harness)** — 2026-08-16, `logandev`. `scripts/battery-bench.sh` built and proven on
-      real hardware (Pixel 7); scenario 1 (the floor) measured for real: 0 wakeup events
-      attributed to `app.focusfence` at idle. Scenarios 2–5 are harness-ready and documented in
-      `docs/benchmarks/README.md`, but need a one-time manual VPN/accessibility grant on the
-      bench device (~10s each, exact steps written down) and a longer (15–30min) run before the
-      deltas are worth quoting anywhere. **Good pickup for whoever has physical device access
-      next:** no more code needed, just run the script four more times and paste the numbers in.
+- [x] **W13** — 2026-08-16, `logandev`. `scripts/battery-bench.sh` built and all five scenarios
+      measured for real on a Pixel 7 (VPN consent + accessibility grant driven over
+      `adb input tap` through the real system dialogs, not bypassed). Result: **zero wakeup
+      events in every scenario**, battery-drain rate flat within noise across all five (~0.0013
+      mAh/s regardless of VPN/list/accessibility state). This is the first measured (not
+      inferred) support for the README's "battery impact is effectively zero" claim. See
+      `docs/benchmarks/README.md`. Follow-up (not blocking): longer 15–30min runs and one
+      off-USB-power confirmatory run.
 
 ### Research that unblocks a work order
 

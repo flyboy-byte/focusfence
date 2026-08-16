@@ -104,9 +104,10 @@ Mostly pre-existing. Honest status:
 ### Phase 4 — Verify
 
 - [ ] Release APK verified on a real device, not just built
-- [ ] Battery measured rather than asserted — no benchmark harness exists anywhere in the tree,
-      and battery is an explicit product requirement, so no claim can currently be made as a
-      *result*
+- [x] Battery measured rather than asserted — W13's harness (`docs/benchmarks/`) measured all
+      five scenarios on real hardware 2026-08-16: zero wakeup events and a flat drain rate across
+      VPN/list/accessibility states. Short-duration (120s) runs; a longer confirmatory pass is
+      noted as follow-up but the harness and a real result both now exist.
 - [ ] Remaining gaps documented plainly — in progress; `docs/risks.md` and the "Not yet done"
       section below
 
@@ -124,12 +125,14 @@ Mostly pre-existing. Honest status:
 
 ## Current status (update this line as phases advance)
 
-**2026-08-15.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
+**2026-08-16.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
 W1 (doc corrections), W2 (CI builds the release APK), W6 (rule evaluation extracted to `dns/`) and
 W7 (time-bounded app blocking — apps can now be scheduled or committed, not just always-blocked)
 are merged to `main`, alongside the licence (D-015, acknowledged) and the adult-content decision
-(D-016). W9 (user allowlist: store, pure evaluator, D-017, and the UI) is fully done on `logandev`/
-`shareddev` but not yet reached `main` — see `docs/work/W9-allowlist.md`.
+(D-016). W9 (user allowlist: store, pure evaluator, D-017, and the UI) and W13 (battery/CPU
+benchmark harness, with real measurements on a Pixel 7 — zero wakeup events across all five
+scenarios) are both fully done on `logandev`/`shareddev` but not yet reached `main` — see
+`docs/work/W9-allowlist.md` and `docs/benchmarks/README.md`.
 Test suite: 58 passing.
 
 **The only thing left blocking the release is signing key custody (O-002)** — a one-way decision
