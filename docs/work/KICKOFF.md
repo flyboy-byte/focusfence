@@ -29,6 +29,14 @@ Branch discipline (also in docs/work/README.md rule 1): work on your own persona
 directly. Merge into shareddev yourself once ./gradlew testDebugUnitTest passes. Never touch
 main.
 
+Before picking an item: work out whether you actually have live web access (can you fetch a
+real URL right now, not just reason from training data). This changes what "unblocked" means for
+you specifically — NEXT.md's sections are labeled by what they need. If you don't have web
+access, skip straight past anything requiring it (don't stop just because the first section you
+see needs browsing you don't have) and look for a "no web access needed" section instead. If
+literally nothing in NEXT.md is unblocked for a session with your capabilities, that's a real
+stopping point — say so plainly rather than inventing scope.
+
 Pick the top unblocked item in docs/work/NEXT.md's queue and execute it. When you finish an
 item: check it off in NEXT.md with the date and branch, run the test suite, commit, and merge
 into shareddev if it's genuinely done and tested.
@@ -76,3 +84,9 @@ at the end.
   more zero-dependency items sitting ready in NEXT.md. The prompt didn't say not to stop, so it
   stopped — that's a prompt bug, not a judgment failure on the session's part. Fixed by making the
   exit condition explicit (queue empty or genuinely blocked, not "I did a thing").
+- **The web-access check exists for the same reason.** By 2026-08-16 every zero-dependency
+  code item was done, leaving a queue where most remaining rows need live web access. A session
+  without it (a plain high-context chat with no browsing) would hit those rows, correctly fail to
+  do them, and — without being told to look further — might stop entirely instead of noticing
+  `docs/reasoning-prompts.md`'s R1/R2 need no browsing at all. Sessions differ in what they can
+  actually do; the prompt now says to account for that before concluding nothing's available.

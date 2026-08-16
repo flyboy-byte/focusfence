@@ -46,9 +46,10 @@ research cycle already caught five wrong claims doing exactly that once).
 Paste directly — don't re-derive the prompt from the table row in `research-handoff.md`.
 
 **High-context reasoning, not fact lookup:** [`docs/reasoning-prompts.md`](../reasoning-prompts.md)
-has two deep-judgment prompts (signing-key custody trade-offs; a re-audit of everything in
+has two deep-judgment prompts (R1 signing-key custody trade-offs; R2 a re-audit of everything in
 `parked.md` against what's actually shipped since) — a better use of a big-context/high-reasoning
-session than grinding through Kotlin.
+session than grinding through Kotlin, and **unlike the research items above, neither needs live
+web access.** They're queue items in their own right, below.
 
 ## The queue
 
@@ -82,7 +83,18 @@ session than grinding through Kotlin.
       `docs/benchmarks/README.md`. Follow-up (not blocking): longer 15–30min runs and one
       off-USB-power confirmatory run.
 
-### Research that unblocks a work order
+### No web access needed — good pickup for a high-context/no-browsing session
+
+- [ ] **R1** — signing-key custody trade-off analysis. `docs/reasoning-prompts.md`. Pure reasoning
+      over what's already in `docs/signing-key-custody.md` and research Q9's findings — doesn't
+      need to fetch anything. Output is decision support for @sidewinderzz on O-002, not a
+      decision itself; do not write O-002 into `DECISIONS.md` as resolved.
+- [ ] **R2** — re-audit `docs/parked.md` and rejected ideas in `DECISIONS.md` against what's
+      actually shipped since (W6/W7/W9/W13). `docs/reasoning-prompts.md`. Output: a short table,
+      one row per parked item, "still holds / reopen-worthy / uncertain" with one-line reasoning.
+      Flag candidates for a human to reopen; don't reopen one yourself.
+
+### Research that unblocks a work order — needs live web access
 
 - [ ] **Research Q2** — filter-list licensing (StevenBlack, HaGeZi, OISD, Block List Project,
       EasyList). Unblocks **W11**. This one's a real legal question, not a formality — get it
