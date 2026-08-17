@@ -11,6 +11,7 @@ import app.focusfence.data.StatsStore
 import app.focusfence.data.UsageStore
 import app.focusfence.databinding.FragmentStatsBinding
 import app.focusfence.databinding.ItemStatBinding
+import app.focusfence.dns.FilterSources
 import app.focusfence.dns.StatsCodec
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -44,12 +45,14 @@ class StatsFragment : Fragment() {
         val today = LocalDate.now()
         val todayStats = StatsStore.get(context, today.toString())
         val total = StatsCodec.total(todayStats)
-        val ads = todayStats[StatsCodec.KEY_ADS] ?: 0
-        binding.todaySummary.text = getString(R.string.stats_today_summary, total, ads)
+        val listBlocks = todayStats.entries.sumOf {
+            if (StatsCodec.isListBucket(it.key) && it.key != StatsCodec.KEY_GUARD) it.value else 0
+        }
+        binding.todaySummary.text = getString(R.string.stats_today_summary, total, listBlocks)
 
         binding.domainStats.removeAllViews()
         val domainCounts = todayStats
-            .filterKeys { it != StatsCodec.KEY_ADS && it != StatsCodec.KEY_GUARD }
+            .filterKeys { !StatsCodec.isListBucket(it) }
             .entries.sortedByDescending { it.value }
             .take(10)
         if (domainCounts.isEmpty()) {
@@ -58,6 +61,24 @@ class StatsFragment : Fragment() {
             val max = domainCounts.first().value
             for ((domain, count) in domainCounts) {
                 addRow(binding.domainStats, domain, count.toString(), count, max)
+            }
+        }
+
+        // Provenance (W11): which filter list did the blocking. "_ads" is the
+        // pre-W11 aggregate bucket and still shows for days recorded before it.
+        binding.listStats.removeAllViews()
+        val listCounts = todayStats.entries
+            .filter { StatsCodec.isListBucket(it.key) && it.key != StatsCodec.KEY_GUARD }
+            .sortedByDescending { it.value }
+        if (listCounts.isEmpty()) {
+            addRow(binding.listStats, getString(R.string.stats_none_yet), "", 0, 1)
+        } else {
+            val max = listCounts.first().value
+            for ((bucket, count) in listCounts) {
+                val sourceId = StatsCodec.sourceId(bucket)
+                val name = sourceId?.let { FilterSources.byId(it)?.name ?: it }
+                    ?: getString(R.string.stats_legacy_list)
+                addRow(binding.listStats, name, count.toString(), count, max)
             }
         }
 

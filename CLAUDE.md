@@ -65,9 +65,14 @@ force right now; the service only supplies the clock and accrued usage. Rules li
 `StringSet` under `focusfence`/`block_rules`. Both the VPN service and the accessibility service
 hold `@Volatile` snapshots refreshed by a `SharedPreferences.OnSharedPreferenceChangeListener` —
 **that listener is the only propagation mechanism**, so any new store key the runtime depends on
-must be written to the `focusfence` prefs file and handled in those listeners (`AdListStore`
-deliberately writes `KEY_COUNT` last as its reload signal). Stats live in a separate
-`focusfence_stats` file so their high write volume doesn't churn the rules listeners.
+must be written to the `focusfence` prefs file and handled in those listeners (`FilterListStore`
+deliberately writes `KEY_REV` last as its reload signal). Filter lists (W11) are per-source:
+`FilterSources` in `dns/` is the catalog (id, URL, category, license), `FilterListStore` keeps
+one downloaded file per source, and the VPN service holds a `host → source id` map so stats can
+say *which* list blocked (`_src:<id>` buckets; `_ads` is the pre-W11 aggregate, still decoded).
+Lists are downloaded at runtime only, never bundled — licensing (research Q2) makes that
+distinction load-bearing. Stats live in a separate `focusfence_stats` file so their high write
+volume doesn't churn the rules listeners.
 
 ### Time budgets
 

@@ -14,8 +14,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
-import app.focusfence.data.AdListStore
 import app.focusfence.data.AllowlistStore
+import app.focusfence.data.FilterListStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StatsStore
@@ -95,8 +95,9 @@ class DnsVpnService : VpnService() {
     @Volatile
     private var rules: Map<String, BlockRule> = emptyMap()
 
+    /** host -> filter-source id over all enabled lists (W11 provenance). */
     @Volatile
-    private var adHosts: Set<String> = emptySet()
+    private var listHosts: Map<String, String> = emptyMap()
 
     @Volatile
     private var allowlist: Set<String> = emptySet()
@@ -129,7 +130,7 @@ class DnsVpnService : VpnService() {
                 rules = BlocklistStore.rulesByDomain(this)
                 preloadBudgetUsage()
             }
-            AdListStore.KEY_ENABLED, AdListStore.KEY_COUNT -> reloadAdHostsAsync()
+            FilterListStore.KEY_ENABLED_SOURCES, FilterListStore.KEY_REV -> reloadListHostsAsync()
             AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
         }
     }
@@ -145,9 +146,9 @@ class DnsVpnService : VpnService() {
         }
     }
 
-    private fun reloadAdHostsAsync() {
+    private fun reloadListHostsAsync() {
         Thread({
-            adHosts = if (AdListStore.isEnabled(this)) AdListStore.load(this) else emptySet()
+            listHosts = FilterListStore.loadEnabled(this)
         }, "focusfence-adlist-load").start()
     }
 
@@ -184,7 +185,7 @@ class DnsVpnService : VpnService() {
         powerManager = getSystemService(PowerManager::class.java)
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
-        reloadAdHostsAsync()
+        reloadListHostsAsync()
         allowlist = AllowlistStore.get(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
@@ -283,7 +284,7 @@ class DnsVpnService : VpnService() {
             if (reason != null) {
                 blockedCount.incrementAndGet()
                 recordStat(reason)
-                val ttl = if (reason == StatsCodec.KEY_ADS || reason == StatsCodec.KEY_GUARD) {
+                val ttl = if (StatsCodec.isListBucket(reason)) {
                     AD_BLOCK_TTL_SECONDS
                 } else {
                     RULE_BLOCK_TTL_SECONDS
@@ -300,11 +301,11 @@ class DnsVpnService : VpnService() {
         pool?.execute { forward(udp, query) }
     }
 
-    /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
+    /** Null if allowed; otherwise the stats bucket: the rule's domain, a list source, or DoH guard. */
     private fun blockReason(qname: String): String? {
         val rule = Blocklist.findRule(qname, rules)
         val ruleBlockedNow = rule != null && ruleBlocks(rule, qname)
-        return Blocklist.blockReason(qname, rule?.domain, ruleBlockedNow, allowlist, adHosts)
+        return Blocklist.blockReason(qname, rule?.domain, ruleBlockedNow, allowlist, listHosts)
     }
 
     private fun recordStat(bucket: String) {

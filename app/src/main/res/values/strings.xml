@@ -61,7 +61,9 @@
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
 
     <string name="stats_title">Stats</string>
-    <string name="stats_today_summary">%1$d blocked today (%2$d ads &amp; trackers)</string>
+    <string name="stats_today_summary">%1$d blocked today (%2$d from filter lists)</string>
+    <string name="stats_lists_header">Blocked by filter list today</string>
+    <string name="stats_legacy_list">Ad list</string>
     <string name="stats_domains_header">Top blocked sites today</string>
     <string name="stats_none_yet">Nothing blocked yet today</string>
     <string name="stats_budgets_header">Time budgets today</string>
@@ -127,7 +129,7 @@
 
     <string name="attention_title">Needs attention</string>
     <string name="attention_accessibility">Section rules and blocked apps need the accessibility permission.</string>
-    <string name="attention_adlist">Ad blocking is on, but no filter list is downloaded yet.</string>
+    <string name="attention_adlist">A filter list is enabled, but not downloaded yet.</string>
     <string name="attention_adlist_action">Open settings</string>
     <string name="settings_accessibility_button">Open accessibility settings</string>
     <string name="settings_guide">Open the guide</string>
@@ -154,12 +156,18 @@
     <string name="help_power_body"><![CDATA[<b>Strict mode</b> keeps future-you honest. While it\'s on, turning blocking off, removing rules, or un-blocking apps requires requesting an unlock, waiting <b>10 minutes</b>, and making your change inside a 5-minute window. Adding new blocks is always allowed. (Pair it with Always-on VPN for the strongest fence.)<br><br><b>App blocking</b> closes whole apps the moment they open — use it for the Facebook or TikTok <i>apps</i>, which DNS and section rules can\'t reach. Choose apps from the "App &amp; section blocking" card; it uses the same accessibility permission as section rules.<br><br><b>Stats</b> (the chart icon up top) shows what was blocked today, your time-budget usage, and a 7-day trend. Counts only ever live on your phone, and only the last 14 days are kept.]]></string>
 
     <string name="help_start_title">A good starter setup</string>
-    <string name="help_start_body"><![CDATA[1. On the <b>Blocklist</b> tab, tap <b>+</b> and add your own domains — or use <b>Add all social media presets</b> there.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections; block whole apps from the same tab.<br><br>3. On <b>Settings</b>, optionally switch on <b>Block ads &amp; trackers</b> — it downloads a 100k+ domain filter list once and blocks ads device-wide.<br><br>4. On <b>Home</b>, flip the switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top.]]></string>
+    <string name="help_start_body"><![CDATA[1. On the <b>Blocklist</b> tab, tap <b>+</b> and add your own domains — or use <b>Add all social media presets</b> there.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections; block whole apps from the same tab.<br><br>3. On <b>Settings</b>, optionally enable <b>Filter lists</b> — ads &amp; trackers, adult content, gambling or social media. Each list downloads once and blocks device-wide.<br><br>4. On <b>Home</b>, flip the switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top.]]></string>
 
-    <string name="adblock_label">Block ads &amp; trackers</string>
-    <string name="adlist_none">No filter list downloaded yet</string>
-    <string name="adlist_status">%1$s domains · updated %2$s</string>
-    <string name="adlist_downloading">Downloading filter list…</string>
+    <string name="filter_lists_label">Filter lists</string>
+    <string name="filter_category_ads">Ads &amp; trackers</string>
+    <string name="filter_category_adult">Adult content</string>
+    <string name="filter_category_gambling">Gambling</string>
+    <string name="filter_category_social">Social media</string>
+    <string name="filter_source_meta">%1$s · %2$s domains · updated %3$s</string>
+    <string name="filter_source_not_downloaded">%1$s · not downloaded yet</string>
+    <string name="filter_status_none">No lists enabled</string>
+    <string name="filter_status_summary">%1$d lists on · %2$s domains</string>
+    <string name="adlist_downloading">Downloading filter lists…</string>
     <string name="adlist_update">Update</string>
     <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
 </resources>

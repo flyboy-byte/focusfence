@@ -103,11 +103,22 @@ web access.** They're queue items in their own right, below.
 
 ### Ready to build — research landed
 
-- [ ] **W11** — multi-source lists with provenance and categories. `docs/work/W11-source-provenance.md`
-      (updated 2026-08-17 with the Q2 constraints: runtime-download only, EasyList dropped,
-      bare-domain format variants for HaGeZi/OISD). When it lands: re-run the W13 scenario-3
-      benchmark with the combined multi-source list — P-004's measured-adequate verdict covers
-      98,950 entries, and OISD big alone is ~269k (R2 re-audit + Q2, 2026-08-17).
+- [x] **W11** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. Multi-source lists
+      with provenance and categories: 8-source catalog (`dns/FilterSources`), per-source
+      files/enable/download (`FilterListStore` + legacy migration), `_src:<id>` stats buckets,
+      source-aware `blockReason()` with parent-domain matching (the bare-domain OISD/HaGeZi
+      variants require it), category+source UI in Settings with strict-gated disable, stats
+      "blocked by list" section. 67 JVM tests pass; `assembleDebug` builds. Memory measured with
+      5 real lists: 756,649 entries → 72 MB heap (~100 B/entry) — see the work order's "How it
+      landed". **Still needs a device:** the W13 scenario-3 re-run with a combined list, and an
+      on-device pass of the new Settings screen — both queued below.
+
+### Needs a physical device — cannot be done from a cloud session
+
+- [ ] **W13 follow-up for W11** — re-run `scripts/battery-bench.sh` scenario 3 with a combined
+      multi-source list enabled (P-004's measured-adequate verdict covers 98,950 entries; a
+      realistic W11 config can be ~750k). Also worth an on-device sanity pass of the new
+      per-source Settings UI while the phone is plugged in anyway.
 
 ### Research that unblocks a work order — needs live web access
 

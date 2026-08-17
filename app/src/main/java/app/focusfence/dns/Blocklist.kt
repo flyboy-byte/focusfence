@@ -169,24 +169,41 @@ object Blocklist {
     }
 
     /**
-     * Null if [qname] is allowed; otherwise the stats bucket: the rule's domain, ads, or
-     * the DoH guard. Pure so the O-003 ordering (D-017) is unit-testable: a user rule that
-     * is currently in force is final and cannot be overridden by [allowlist] — only
-     * list-sourced blocks (ads, DoH bypass guards) can be. [ruleDomain]/[ruleBlockedNow]
-     * are supplied by the caller because whether a rule is *currently* in force depends on
-     * the clock and accrued usage, which this package has no access to (see [RuleEvaluator]).
+     * Null if [qname] is allowed; otherwise the stats bucket: the rule's domain, a
+     * "_src:&lt;id&gt;" list bucket, or the DoH guard. Pure so the O-003 ordering (D-017)
+     * is unit-testable: a user rule that is currently in force is final and cannot be
+     * overridden by [allowlist] — only list-sourced blocks (filter lists, DoH bypass
+     * guards) can be. [ruleDomain]/[ruleBlockedNow] are supplied by the caller because
+     * whether a rule is *currently* in force depends on the clock and accrued usage,
+     * which this package has no access to (see [RuleEvaluator]).
+     *
+     * [listHosts] maps a blocked host to the id of the filter source that listed it
+     * (W11 provenance). Matching walks parent domains: the bare-domain lists the app
+     * consumes (OISD/HaGeZi wildcard variants) define an entry as covering all its
+     * subdomains, so exact-only matching would silently under-enforce them — the
+     * worst failure mode this app has (D-012).
      */
     fun blockReason(
         qname: String,
         ruleDomain: String?,
         ruleBlockedNow: Boolean,
         allowlist: Set<String>,
-        adHosts: Set<String>,
+        listHosts: Map<String, String>,
     ): String? {
         if (ruleDomain != null && ruleBlockedNow) return ruleDomain
         if (matches(qname, allowlist)) return null
-        if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
+        findListSource(qname, listHosts)?.let { return StatsCodec.SRC_PREFIX + it }
         if (matches(qname, DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
+        return null
+    }
+
+    /** The source id whose list covers [qname] (exact or parent domain), if any. */
+    fun findListSource(qname: String, listHosts: Map<String, String>): String? {
+        if (listHosts.isEmpty()) return null
+        listHosts[qname]?.let { return it }
+        for (parent in parentDomains(qname)) {
+            listHosts[parent]?.let { return it }
+        }
         return null
     }
 

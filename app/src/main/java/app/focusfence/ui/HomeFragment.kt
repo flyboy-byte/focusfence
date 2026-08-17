@@ -18,7 +18,7 @@ import androidx.fragment.app.Fragment
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
-import app.focusfence.data.AdListStore
+import app.focusfence.data.FilterListStore
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.StrictStore
@@ -182,7 +182,7 @@ class HomeFragment : Fragment() {
             ) && !UiUtil.isUrlFilterEnabled(context)
         b.accessibilityRow.visibility = if (needsAccessibility) View.VISIBLE else View.GONE
 
-        val needsAdList = AdListStore.isEnabled(context) && AdListStore.entryCount(context) == 0
+        val needsAdList = FilterListStore.enabledButMissing(context).isNotEmpty()
         b.adlistRow.visibility = if (needsAdList) View.VISIBLE else View.GONE
 
         b.attentionCard.visibility =

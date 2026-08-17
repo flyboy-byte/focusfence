@@ -1,6 +1,7 @@
 # W11 — Multi-source lists with provenance and categories
 
-**Track:** Product (B6) · **Depends on:** W9 · **Status:** **Ready — research Q2 answered 2026-08-17**
+**Track:** Product (B6) · **Depends on:** W9 · **Status:** ✅ **Done — 2026-08-17**, landed via
+`claude/focus-fence-session-s72elg` → `shareddev`. See "How it landed" at the bottom.
 **Size:** ~1 week
 
 > **2026-08-15:** W9's core (the allowlist store and its evaluator) landed on `logandev`/
@@ -67,18 +68,49 @@ What implementation must respect:
 
 ## Acceptance criteria
 
-- [ ] Research Q2 answered and merged before implementation; each source's license recorded in the
-      app and in the repo.
-- [ ] `blockReason()` can report which source matched.
-- [ ] Per-source enable/disable works, and disabling one does not require re-downloading others.
-- [ ] Category toggles map to sources and are expressible as a `Category` target (W8).
-- [ ] No new periodic wakeup is introduced.
-- [ ] Memory footprint with 5 large lists measured and recorded in the PR body.
-- [ ] Attribution for every bundled or downloaded source is visible in-app.
-- [ ] `./gradlew testDebugUnitTest` passes.
+- [x] Research Q2 answered and merged before implementation; each source's license recorded in the
+      app (`FilterSource.license`/`licenseUrl`) and in the repo (`docs/research/2026-08-17-filter-list-licensing-claude.md`).
+- [x] `blockReason()` can report which source matched — `_src:<id>` stats buckets, unit-tested in
+      `BlocklistTest.listBlockNamesItsSource`.
+- [x] Per-source enable/disable works, and disabling one does not require re-downloading others —
+      one file per source; disabling only removes the id from the enabled set.
+- [x] Category toggles map to sources and are expressible as a `Category` target (W8) — category
+      ids are string constants in `FilterSources`, not an enum, precisely so W8 can adopt them.
+- [x] No new periodic wakeup is introduced — downloads stay user-triggered only.
+- [x] Memory footprint with 5 large lists measured and recorded (see below, and the commit body).
+- [x] Attribution for every downloaded source is visible in-app — license label in every source
+      row; tapping the row opens the license text. Nothing is bundled, deliberately (Q2).
+- [x] `./gradlew testDebugUnitTest` passes — 67 tests, 0 failures (was 58 pre-W11).
 
 ## Out of scope
 
 - Replacing `HashSet` matching with a trie or bloom filter.
 - Supporting EasyList/ABP syntax — that's a different parser and a much larger project.
 - Authenticated or rapidly-regenerating sources (e.g. URLhaus).
+
+## How it landed (2026-08-17)
+
+- **Pure layer** (`dns/`): `FilterSource`/`FilterSources` — the catalog of 8 sources across 4
+  categories, every URL live-verified before being hardcoded; `Blocklist.blockReason()` now takes
+  `Map<host, sourceId>` and walks parent domains (the bare-domain OISD/HaGeZi variants define an
+  entry as covering its subdomains — exact-only matching would silently under-enforce them);
+  `StatsCodec` gained `_src:<id>` buckets with `_ads` kept as the decoded legacy aggregate.
+- **Android side**: `FilterListStore` replaces `AdListStore` — one file and enabled flag per
+  source, `KEY_REV` written last as the reload signal (same pattern as before), a one-shot
+  migration in `FocusFenceApp.onCreate` folds a pre-W11 install's list and enabled state onto the
+  `stevenblack` source. The VPN service holds the host→source map; TTL choice keys off
+  `isListBucket`.
+- **UI**: Settings shows the catalog grouped by category — category switches (enable = default
+  source; disable = strict-gated, per D-016) over per-source checkboxes; per-source license/count/
+  updated meta; row tap opens the license. Stats gained a "Blocked by filter list today" section
+  naming sources. The Home attention row generalises to any enabled-but-missing source.
+- **Memory, measured** (JVM, five real lists downloaded 2026-08-17: stevenblack + oisd_small +
+  hagezi_nsfw + oisd_nsfw + stevenblack_porn = 840,079 parsed entries, 756,649 after dedup):
+  **72.0 MB retained heap, ~100 bytes/entry** — the strings dominate; source-id values are
+  interned by construction. The default single-list config is ~13 MB, same as pre-W11. A
+  worst-case all-categories config is heavy but within a modern app heap; if it ever matters on
+  a real device, the compact-structure conversation belongs to P-004's discipline (benchmark
+  first). The oisd_nsfw list (494k entries) is the whale — worth knowing before enabling it.
+- **Still open (flagged, not blocking):** the W13 scenario-3 battery re-run with a combined list
+  needs a physical device and stays queued in `NEXT.md`; an on-device sanity pass of the new
+  Settings screen is worth doing before release, same as W9's.

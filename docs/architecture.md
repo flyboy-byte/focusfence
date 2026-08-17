@@ -121,8 +121,8 @@ UI writes prefs → listener fires → service swaps its snapshot
 
 Anything the runtime depends on must therefore be written to the **`focusfence`** prefs file
 and handled in those listeners. `BlockedAppsStore` and `ExcludedAppsStore` live in that file
-for exactly this reason even though they aren't rules. `AdListStore.download()` writes its
-entry count *last*, so that write doubles as the reload signal. Stats are the deliberate
+for exactly this reason even though they aren't rules. `FilterListStore` writes its revision
+counter (`KEY_REV`) *last*, so that write doubles as the reload signal. Stats are the deliberate
 exception: they live in a separate `focusfence_stats` file so their high write volume doesn't
 churn the rule listeners.
 
@@ -197,7 +197,7 @@ minute values are a chosen default, not a validated one.
 |---|---|
 | `focusfence` | rules, blocked apps, excluded apps, ad-list state, strict state, per-domain usage |
 | `focusfence_stats` | `stats_<yyyy-mm-dd>` → compact `domain=count;_ads=count` strings, pruned to 14 days |
-| `filesDir/adblock_hosts.txt` | downloaded hosts file, replaced transactionally via a `.tmp` rename |
+| `filesDir/filter_<sourceId>.txt` | downloaded filter lists (one per source since W11), each replaced transactionally via a `.tmp` rename |
 
 ## Known limits
 

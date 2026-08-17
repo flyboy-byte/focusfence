@@ -67,10 +67,10 @@ both `VpnService` and accessibility services. This is currently moot — the pla
 Releases, not Play — but it constrains any future decision to publish there, and F-Droid has its
 own requirements including anti-feature labelling. Both queued for research handoff.
 
-**The `AdListStore` provenance comment is inaccurate** (`AdListStore.kt:16-18`): it describes
-StevenBlack as "aggregated from the same sources AdGuard/uBlock use." StevenBlack is an aggregator
-of hosts sources; uBlock's defaults are EasyList-family lists in a far richer syntax. Not a legal
-problem, but it's a factual claim about a third party in shipped source.
+**~~The `AdListStore` provenance comment is inaccurate~~ — resolved by W11 (2026-08-17):**
+`AdListStore` no longer exists; the per-source `FilterSources` catalog describes each list
+accurately (verified against primary sources in research Q2) and the misattributed
+"same sources AdGuard/uBlock use" claim is gone from shipped source.
 
 ## Technical risk
 
