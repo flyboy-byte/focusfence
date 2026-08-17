@@ -187,9 +187,12 @@ web access.** They're queue items in their own right, below.
 
 ### Confirms a permanent constraint — low priority, no rush
 
-- [ ] **Research Q8** — whether Android has any VPN-coexistence mechanism at all. Expected answer
-      is "no, one slot, period," which would just confirm a design constraint already assumed
-      everywhere. Row 8.
+- [x] **Research Q8** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. VPN
+      coexistence. Raw output in `docs/research/2026-08-17-vpn-coexistence-claude.md`. Answer
+      exactly as expected: **one slot, period** — the current `VpnService` reference states it
+      verbatim, and no multi-VPN or third-party per-app-routing API exists. D-013's premise is
+      now cited rather than assumed. The on-device coexistence *behaviour* test (what Focus
+      Fence still enforces when WireGuard takes the slot) stays a physical-device item.
 
 ### Investigative — does not authorize building anything
 
