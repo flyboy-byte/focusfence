@@ -64,7 +64,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W7](W7-time-bounded-app-blocking.md) | Time-bounded app blocking | Product | W6 | **Done** |
 | [W8](W8-boundary-model.md) | The boundary model | Product | W6, W7 | **Parked** — see `docs/parked.md`, D-016 recommendation |
 | [W9](W9-allowlist.md) | User allowlist | Product | W6 | ✅ Done (`logandev`, 2026-08-16) |
-| [W10](W10-app-budgets-usagestats.md) | App budgets via `UsageStatsManager` | Product | W7 | Needs research Q4 |
+| [W10](W10-app-budgets-usagestats.md) | App budgets via `UsageStatsManager` | Product | W7 | **Ready** — Q4 answered 2026-08-17 |
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | ✅ Done (2026-08-17) — see file for the landed shape |
 | [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | Needs research Q3 |
 | [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | ✅ Done (`logandev`, 2026-08-16) — all 5 scenarios measured, see file |

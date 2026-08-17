@@ -147,16 +147,23 @@ web access.** They're queue items in their own right, below.
       dropped (ABP syntax, wrong object). Surprise finding: HaGeZi and OISD no longer publish
       hosts format; their bare-domain variants parse with the existing `HostsParser` unchanged
       (verified against the code). W11 moved up to "Ready to build" above.
-- [ ] **Research Q4** — `UsageStatsManager` behaviour and grant flow. Unblocks **W10**. Row 4.
+- [x] **Research Q4** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`.
+      `UsageStatsManager` behaviour and grant flow. Raw output in
+      `docs/research/2026-08-17-usagestatsmanager-claude.md`, merged into the W10 work order.
+      Answer: events-based (`queryEvents`, RESUMED→PAUSED intervals, delta-windowed, both event
+      families for API 26–28), not `queryUsageStats` aggregates; PiP doesn't accrue; grant is a
+      Settings deep-link + AppOps check. **W10 is now ready to build** (moved up below W11's
+      device follow-up — it's a build for a future session, nothing else blocks it).
 - [ ] **Research Q3** — Shizuku non-root capability in 2026. Unblocks **W12**. Row 3.
 - [ ] **Research Q10** — current SafeSearch hostnames, plus the YouTube header question (P-002).
       Needed for the second half of **W14**. Row 10.
 
 ### Build once the research above lands
 
-- [ ] **W14** — adult-content category + SafeSearch. After W11 (now ready, above) and Q10.
-      `docs/work/W14-adult-content-category.md`.
-- [ ] **W10** — app budgets via `UsageStatsManager`. After Q4. `docs/work/W10-app-budgets-usagestats.md`.
+- [ ] **W10** — app budgets via `UsageStatsManager`. **Ready** — Q4 answered 2026-08-17, design
+      constraints merged into `docs/work/W10-app-budgets-usagestats.md`.
+- [ ] **W14** — adult-content category + SafeSearch. W11 is done; still needs Q10 for the
+      SafeSearch half. `docs/work/W14-adult-content-category.md`.
 - [ ] **W12** — Shizuku enforcement. After Q3. `docs/work/W12-shizuku-enforcement.md`.
 
 ### Confirms a permanent constraint — low priority, no rush

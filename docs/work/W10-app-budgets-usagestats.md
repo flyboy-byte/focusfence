@@ -1,6 +1,6 @@
 # W10 — App budgets via `UsageStatsManager`
 
-**Track:** Product (B3b) · **Depends on:** W7 · **Status:** Spec draft — **needs research Q4**
+**Track:** Product (B3b) · **Depends on:** W7 · **Status:** **Ready — research Q4 answered 2026-08-17**
 **Size:** ~2–3 days
 
 > **2026-08-15:** originally also listed W8 (the unified boundary model), which is now parked
@@ -28,11 +28,27 @@ Cost: `PACKAGE_USAGE_STATS` is a special access permission the user grants throu
 screen, not a runtime dialog. It must be **optional** — the app must work fully without it, with
 only app budgets unavailable.
 
-## Blocked on research
+## Research Q4 — answered 2026-08-17
 
-Queue item 4 in `docs/research-handoff.md`: what `UsageStatsManager` actually reports, how the
-grant flow works, and its known accuracy limitations for foreground time. **Do not implement from
-assumption** — the query granularity and bucket semantics materially change the design.
+Full findings and citations:
+[`../research/2026-08-17-usagestatsmanager-claude.md`](../research/2026-08-17-usagestatsmanager-claude.md).
+What implementation must respect:
+
+- **Events, not aggregates.** Sum `ACTIVITY_RESUMED → ACTIVITY_PAUSED` intervals per package via
+  `queryEvents` since local midnight; on API 26–28 read the deprecated
+  `MOVE_TO_FOREGROUND`/`MOVE_TO_BACKGROUND` pair instead (same loop). `queryUsageStats`'s daily
+  buckets are still-accumulating aggregates with no freshness contract — not for a live budget.
+- **PiP/background playback does not accrue** under resumed-interval semantics — the app-side
+  analogue of the DNS front-door rule, and deliberate.
+- **Delta-window the queries.** Keep an in-memory per-package total; each check queries only
+  `lastQueryTime → now` and folds in new intervals. A from-midnight query per accessibility
+  event is O(day's events) per app switch — wrong shape. Count an open interval as
+  `now − resumeTime` or in-app users never hit the budget.
+- **Grant flow:** manifest `PACKAGE_USAGE_STATS` + `ACTION_USAGE_ACCESS_SETTINGS` deep-link (no
+  runtime dialog exists); check via `AppOpsManager.OPSTR_GET_USAGE_STATS` in one helper
+  (`unsafeCheckOpNoThrow` today; renamed `checkOpNoThrow` at API 36).
+- **On-device verification list:** PiP non-accrual; split-screen multi-resume (both apps accrue —
+  probably acceptable, both are on screen); one pre-29 run for the deprecated-constants path.
 
 ## Sketch
 
