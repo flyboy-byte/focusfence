@@ -85,10 +85,13 @@ web access.** They're queue items in their own right, below.
 
 ### No web access needed — good pickup for a high-context/no-browsing session
 
-- [ ] **R1** — signing-key custody trade-off analysis. `docs/reasoning-prompts.md`. Pure reasoning
-      over what's already in `docs/signing-key-custody.md` and research Q9's findings — doesn't
-      need to fetch anything. Output is decision support for @sidewinderzz on O-002, not a
-      decision itself; do not write O-002 into `DECISIONS.md` as resolved.
+- [x] **R1** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. Signing-key custody
+      trade-off analysis. Output: `docs/research/2026-08-17-signing-key-custody-reasoning.md`,
+      linked from `docs/signing-key-custody.md` § Status. Recommends hand-signing with split
+      custody (sealed encrypted copy with the contributor, passphrase escrowed on paper), includes
+      paste-able draft resolution text for O-002, and flags that W5's workflow spec silently
+      assumed CI signing and needs amending if hand-signing is adopted. **O-002 stays open** — the
+      draft decides nothing until @sidewinderzz adopts it; the ball is with him, same as Q9 left it.
 - [ ] **R2** — re-audit `docs/parked.md` and rejected ideas in `DECISIONS.md` against what's
       actually shipped since (W6/W7/W9/W13). `docs/reasoning-prompts.md`. Output: a short table,
       one row per parked item, "still holds / reopen-worthy / uncertain" with one-line reasoning.

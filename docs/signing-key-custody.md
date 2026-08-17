@@ -206,3 +206,13 @@ which changes what is still open:
 
 The research was explicitly *decision support*, per its own framing: it does not resolve O-002 and
 no part of it should be read as having done so.
+
+**Reasoning item R1 landed 2026-08-17**
+([full analysis](research/2026-08-17-signing-key-custody-reasoning.md)): a failure-mode walk of
+CI-signing vs hand-signing for this project's specific two-person/one-admin shape, a split-custody
+hybrid (one live key with @sidewinderzz; a sealed passphrase-encrypted copy with the contributor;
+the passphrase on paper in two sealed physical locations), and **draft resolution text for O-002
+in `DECISIONS.md` house style, ready to paste if adopted**. It also flags a W5 consequence: that
+work order's "assembleRelease (signed)" line silently assumed CI signing and needs amending under
+a hand-signing decision. Same discipline as Q9: decision support only — O-002 remains open until
+@sidewinderzz decides.
