@@ -196,16 +196,16 @@ web access.** They're queue items in their own right, below.
 
 ### Investigative — does not authorize building anything
 
-- [ ] **Research Q11** — CloudVeil (and any comparable project) as prior art for on-device NSFW
-      image/content classification: what it actually costs in battery, false-positive rate, model
-      size, and privacy (does classification happen on-device with no upload?). This exists to
-      check whether **P-003** in `docs/parked.md` (content inspection, rejected) still holds up,
-      now that real prior art can be read instead of reasoned about from first principles.
-      **Finding a good implementation does not mean build it** — it means bring the finding back
-      to `docs/parked.md` and `DECISIONS.md` D-016 and let a human decide whether to reopen the
-      question. Save findings to `docs/research/`, cite everything, and if the prior art turns out
-      to require server-side inference, cloud upload, or heavy device requirements, that's a
-      strong signal D-016's reasoning still holds — say so plainly rather than downplaying it.
+- [x] **Research Q11** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`.
+      CloudVeil / on-device NSFW classification prior art. Raw output in
+      `docs/research/2026-08-17-cloudveil-nsfw-classification-claude.md`, merged into
+      `parked.md` P-003. Said plainly, per the item's own instruction: **the rejection came back
+      stronger.** CloudVeil does no on-device classification — HTTPS-interception proxy on
+      desktop, forked apps (Telegram forks, filtered browser) where it owns the renderer, and
+      DNS for SafeSearch (the one mechanism it shares with this project). Existing on-device
+      classifiers (~3 MB quantized, ~90–93% self-reported, no published battery numbers) all
+      need pixels a DNS-only app has deliberately arranged never to carry. Recommendation to
+      the human: P-003 and D-016 unchanged.
 
 ### Deliberately not on this queue
 

@@ -92,6 +92,18 @@ classification — cost, accuracy, whether inference genuinely stays local. That
 explicitly investigative: finding something good does not authorize building it, only gives a
 human something concrete to weigh against the four points above.
 
+**Q11 ran 2026-08-17 and the rejection came back stronger**
+([`research/2026-08-17-cloudveil-nsfw-classification-claude.md`](research/2026-08-17-cloudveil-nsfw-classification-claude.md)):
+CloudVeil does no on-device NSFW classification at all — its architecture is an HTTP/S
+interception proxy on desktop (the rejected content-scanning-proxy branch, structurally
+requiring a trusted root certificate), *forked apps* (Telegram forks, a filtered browser) where
+it owns the renderer, and **DNS for SafeSearch — the one mechanism it shares with this
+project**. The on-device classifiers that exist (~3 MB quantized, ~90–93% by their own
+unverified numbers, no published battery data) all live inside a renderer; on stock Android a
+third-party app can only get another app's pixels by being the renderer, intercepting traffic,
+or watching the screen — all three already disqualified. The four points above stand;
+recommendation to the human: no change.
+
 ---
 
 ## P-004 — Rewriting the matcher for speed
