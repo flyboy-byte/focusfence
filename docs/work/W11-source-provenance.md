@@ -1,6 +1,6 @@
 # W11 — Multi-source lists with provenance and categories
 
-**Track:** Product (B6) · **Depends on:** W9 · **Status:** Spec draft — **needs research Q2**
+**Track:** Product (B6) · **Depends on:** W9 · **Status:** **Ready — research Q2 answered 2026-08-17**
 **Size:** ~1 week
 
 > **2026-08-15:** W9's core (the allowlist store and its evaluator) landed on `logandev`/
@@ -23,15 +23,31 @@ just *blocked* — plus per-source enable/disable and honest license tracking.
 `HashSet<String>` is **entirely defensible at ~100k entries**. Do not turn this into a matcher
 rewrite. If a benchmark (W13) later shows a real problem, that's a separate work order.
 
-## Blocked on research
+## Research Q2 — answered 2026-08-17
 
-Queue item 2: the actual license and redistribution terms for StevenBlack, HaGeZi, OISD, Block List
-Project and EasyList — which permit runtime download vs. bundling, and what attribution each
-requires.
+Full findings and citations:
+[`../research/2026-08-17-filter-list-licensing-claude.md`](../research/2026-08-17-filter-list-licensing-claude.md).
+What implementation must respect:
 
-**This is a genuine legal question, not a formality.** The app currently *downloads* rather than
-*vendors* lists, which is materially safer. If this work order ever bundles a list into the repo,
-the terms bind the project's own distribution. Get the answer first.
+- **Source set: StevenBlack, HaGeZi, OISD, Block List Project. EasyList is dropped** — it's an
+  ABP-syntax filter list, not a domain list; deriving domains from it triggers ShareAlike/GPL
+  obligations on the result and yields mostly DNS-inexpressible noise. (OISD already folds that
+  ecosystem's DNS-expressible content into a GPL-3.0 list.)
+- **Runtime download only — never vendor a list into the repo or APK.** HaGeZi and OISD are
+  GPL-3.0 (nothing owed when end-user devices fetch from the maintainer's hosting; conveying it
+  ourselves would create obligations). StevenBlack's base unified list contains **non-commercial**
+  upstream data (MVPS CC BY-NC-SA 4.0, Dan Pollock) — a redistribution mess the current
+  architecture entirely avoids. Block List Project is public domain (Unlicense).
+- **Formats: neither HaGeZi nor OISD publishes hosts format anymore.** Use HaGeZi
+  `wildcard/<list>-onlydomains.txt` and OISD `https://<list>.oisd.nl/domainswild2` — both are
+  bare-domain-per-line with `#` headers, which `HostsParser.parse()` already accepts unchanged
+  (verified against the code). Do **not** use the `*.domain` asterisk variants — the parser's
+  character filter silently skips them.
+- **Record each source's license in the `FilterSource` model and show it in the provenance UI**
+  (name, link, license) — that satisfies every attribution expectation in play.
+- **Scale note:** OISD big alone is ~269k entries vs the ~99k W13 measured. Re-run the W13
+  scenario-3 benchmark with the combined list as part of this work order (also flagged in
+  `NEXT.md` and the R2 re-audit).
 
 ## Sketch
 

@@ -101,11 +101,24 @@ web access.** They're queue items in their own right, below.
       flows through two pure choke points), though nothing yet needs it. One follow-up noted on
       the W11 line below.
 
+### Ready to build — research landed
+
+- [ ] **W11** — multi-source lists with provenance and categories. `docs/work/W11-source-provenance.md`
+      (updated 2026-08-17 with the Q2 constraints: runtime-download only, EasyList dropped,
+      bare-domain format variants for HaGeZi/OISD). When it lands: re-run the W13 scenario-3
+      benchmark with the combined multi-source list — P-004's measured-adequate verdict covers
+      98,950 entries, and OISD big alone is ~269k (R2 re-audit + Q2, 2026-08-17).
+
 ### Research that unblocks a work order — needs live web access
 
-- [ ] **Research Q2** — filter-list licensing (StevenBlack, HaGeZi, OISD, Block List Project,
-      EasyList). Unblocks **W11**. This one's a real legal question, not a formality — get it
-      right. See `docs/research-handoff.md` row 2.
+- [x] **Research Q2** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. Filter-list
+      licensing. Raw output in `docs/research/2026-08-17-filter-list-licensing-claude.md`, merged
+      into `risks.md`, `work/W11-source-provenance.md`, D-016 (format note), handoff queue row 2.
+      Answer: **W11 is a go** under runtime download — HaGeZi/OISD GPL-3.0, Block List Project
+      public domain, StevenBlack MIT-with-non-commercial-upstreams (never vendor it), EasyList
+      dropped (ABP syntax, wrong object). Surprise finding: HaGeZi and OISD no longer publish
+      hosts format; their bare-domain variants parse with the existing `HostsParser` unchanged
+      (verified against the code). W11 moved up to "Ready to build" above.
 - [ ] **Research Q4** — `UsageStatsManager` behaviour and grant flow. Unblocks **W10**. Row 4.
 - [ ] **Research Q3** — Shizuku non-root capability in 2026. Unblocks **W12**. Row 3.
 - [ ] **Research Q10** — current SafeSearch hostnames, plus the YouTube header question (P-002).
@@ -113,11 +126,8 @@ web access.** They're queue items in their own right, below.
 
 ### Build once the research above lands
 
-- [ ] **W11** — multi-source lists with provenance and categories. After Q2. `docs/work/W11-source-provenance.md`.
-      When it lands: re-run the W13 scenario-3 benchmark with the combined multi-source list —
-      P-004's measured-adequate verdict covers 98,950 entries, not whatever W11 grows that to
-      (R2 re-audit, 2026-08-17).
-- [ ] **W14** — adult-content category + SafeSearch. After W11 and Q10. `docs/work/W14-adult-content-category.md`.
+- [ ] **W14** — adult-content category + SafeSearch. After W11 (now ready, above) and Q10.
+      `docs/work/W14-adult-content-category.md`.
 - [ ] **W10** — app budgets via `UsageStatsManager`. After Q4. `docs/work/W10-app-budgets-usagestats.md`.
 - [ ] **W12** — Shizuku enforcement. After Q3. `docs/work/W12-shizuku-enforcement.md`.
 

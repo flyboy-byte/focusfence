@@ -227,6 +227,10 @@ mechanisms and no third:
 1. **Curated category lists** (HaGeZi NSFW, StevenBlack's porn extension) loaded as ordinary
    sources through the multi-source work (B6/W11). These are hosts-format files that drop
    straight into the existing matcher — architecturally this is *free*.
+   *(Format note, 2026-08-17, research Q2: HaGeZi no longer publishes hosts format — its
+   bare-domain `*-onlydomains.txt` variant is the consumable one, and it still drops straight
+   into `HostsParser` unchanged, so the conclusion stands. StevenBlack's porn alternates remain
+   genuine hosts format, and their sources are all MIT/CC BY — cleaner than the base list.)*
 2. **DNS-level SafeSearch enforcement** — rewriting queries for the major search engines and
    YouTube to their safe-search hostnames, so image and video search stops surfacing the
    content that a domain list can never catch.

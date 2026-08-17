@@ -50,11 +50,17 @@ arrived with no terms attached. This becomes acute the moment a binary is publis
 compatibility table has errors and should not be used (see `audits/findings.md` §2.8). Copyright
 is shared, so this needs @sidewinderzz.
 
-**Filter-list licensing is unverified and matters more than it looks.** StevenBlack's terms, and
-those of any list added under B6 (HaGeZi, OISD, Block List Project, EasyList), govern
-redistribution and sometimes attribution. The app currently *downloads* rather than *vendors*
-lists, which is materially safer, but the terms have not actually been read. Queued for research
-handoff. **If B6 ever vendors a list into the repo, this stops being theoretical.**
+**Filter-list licensing — verified 2026-08-15…17 (research Q2), no longer an unknown.** The terms
+have now actually been read, from primary sources:
+[`research/2026-08-17-filter-list-licensing-claude.md`](research/2026-08-17-filter-list-licensing-claude.md).
+Short version: HaGeZi and OISD are GPL-3.0, Block List Project is public domain (Unlicense), and
+all three are unambiguous for the app's runtime-download model. StevenBlack is MIT *as a
+compilation* but its base unified list carries upstream data under **non-commercial** terms
+(MVPS CC BY-NC-SA 4.0; Dan Pollock "non-commercial with attribution") — fine for an end-user's
+device downloading it, **not** fine to vendor into the repo or APK; its porn extension's sources
+are all MIT/CC BY. EasyList is dual GPLv3/CC BY-SA 3.0 but structurally an ABP filter list, not a
+domain list — excluded from B6/W11. **The standing rule survives: keep downloading at runtime,
+never vendor a list into the repo without re-reading that file's per-source table first.**
 
 **Distribution-channel policy is unverified.** Google Play has specific and strict policies for
 both `VpnService` and accessibility services. This is currently moot — the plan is GitHub
