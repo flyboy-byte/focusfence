@@ -92,10 +92,14 @@ web access.** They're queue items in their own right, below.
       paste-able draft resolution text for O-002, and flags that W5's workflow spec silently
       assumed CI signing and needs amending if hand-signing is adopted. **O-002 stays open** — the
       draft decides nothing until @sidewinderzz adopts it; the ball is with him, same as Q9 left it.
-- [ ] **R2** — re-audit `docs/parked.md` and rejected ideas in `DECISIONS.md` against what's
-      actually shipped since (W6/W7/W9/W13). `docs/reasoning-prompts.md`. Output: a short table,
-      one row per parked item, "still holds / reopen-worthy / uncertain" with one-line reasoning.
-      Flag candidates for a human to reopen; don't reopen one yourself.
+- [x] **R2** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. Re-audit of
+      parked/rejected items against shipped code. Output:
+      `docs/research/2026-08-17-parked-reaudit-reasoning.md`. **Clean re-audit — every item still
+      holds**; P-003/D-016 and D-001 are *strengthened* (W13 turned their battery premise into a
+      measurement) and P-004's reopen condition was tested by W13 and did not fire. One flag for a
+      human, not a reopen: W8's cost side has genuinely dropped post-W6/W9 (decision logic now
+      flows through two pure choke points), though nothing yet needs it. One follow-up noted on
+      the W11 line below.
 
 ### Research that unblocks a work order — needs live web access
 
@@ -110,6 +114,9 @@ web access.** They're queue items in their own right, below.
 ### Build once the research above lands
 
 - [ ] **W11** — multi-source lists with provenance and categories. After Q2. `docs/work/W11-source-provenance.md`.
+      When it lands: re-run the W13 scenario-3 benchmark with the combined multi-source list —
+      P-004's measured-adequate verdict covers 98,950 entries, not whatever W11 grows that to
+      (R2 re-audit, 2026-08-17).
 - [ ] **W14** — adult-content category + SafeSearch. After W11 and Q10. `docs/work/W14-adult-content-category.md`.
 - [ ] **W10** — app budgets via `UsageStatsManager`. After Q4. `docs/work/W10-app-budgets-usagestats.md`.
 - [ ] **W12** — Shizuku enforcement. After Q3. `docs/work/W12-shizuku-enforcement.md`.
