@@ -113,6 +113,23 @@ web access.** They're queue items in their own right, below.
       landed". **Still needs a device:** the W13 scenario-3 re-run with a combined list, and an
       on-device pass of the new Settings screen — both queued below.
 
+### Field report awaiting a product decision — needs @sidewinderzz or @flyboy-byte
+
+- [ ] **Parent-domain rules can break device-wide push (FCM).** Reported 2026-08-17: Focus Fence
+      blocked another PWA's notifications. Verified same day: `mtalk.google.com` (the FCM push
+      endpoint every Android push notification rides on) is **not** in any catalog filter list,
+      and TCP never transits the DNS-only VPN — so the breakage is only consistent with a *user
+      rule* on `google.com` being in force, which subdomain-matches `mtalk.google.com` and kills
+      push for every app on the device while active. The allowlist **cannot** fix this, by
+      design: D-017 says an allowlist entry never overrides a user rule. The decision needed —
+      and it is a semantics change, so a human's: should always/window rules carve out known
+      infrastructure subdomains the way budget rules already do (the `isFrontDoor` precedent
+      exists because "traffic belonging to unrelated apps must neither drain nor break"), or is
+      "block google.com = all of google.com" the honest contract, with a warning in the rule
+      editor when a rule's domain has known infra subdomains? Interim workaround for the user:
+      narrow or remove the `google.com` rule; allowlisting `mtalk.google.com` does nothing
+      against a user rule.
+
 ### Needs a physical device — cannot be done from a cloud session
 
 - [ ] **W13 follow-up for W11** — re-run `scripts/battery-bench.sh` scenario 3 with a combined
