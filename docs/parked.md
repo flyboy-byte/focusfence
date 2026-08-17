@@ -59,6 +59,17 @@ app has (D-012) — YouTube is out of scope for the first pass of SafeSearch.
 hostname alone works, this becomes a one-line addition to the SafeSearch map and should be done
 immediately. If it doesn't, it stays parked permanently and the UI should never imply otherwise.
 
+**Reopened 2026-08-17 — the exit condition above fired.** Research Q10
+([`research/2026-08-17-safesearch-hostnames-claude.md`](research/2026-08-17-safesearch-hostnames-claude.md))
+found Google's own admin documentation presenting DNS as a standalone option — CNAME exactly
+`www.youtube.com`, `m.youtube.com`, `youtubei.googleapis.com`, `youtube.googleapis.com`,
+`www.youtube-nocookie.com` to `restrict.youtube.com` or `restrictmoderate.youtube.com`, with an
+explicit don't-touch list — no `YouTube-Restrict` header required for network-level enforcement.
+AdGuard Home ships exactly this five-hostname map. YouTube restricted mode is therefore **in
+W14 part 2's scope** (five map entries plus a conscious strict-vs-moderate choice), per this
+item's own written condition. The UI must still say plainly that restricted mode moderates
+rather than eliminates.
+
 ---
 
 ## P-003 — Content inspection of any kind

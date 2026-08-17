@@ -162,15 +162,26 @@ web access.** They're queue items in their own right, below.
       mechanism friction-not-prevention and makes W12's loud-degradation requirement
       load-bearing. One spot-check left to W12's implementer: Shizuku app release recency
       (github.com listings proxy-blocked this session). **W12 is now ready to build.**
-- [ ] **Research Q10** — current SafeSearch hostnames, plus the YouTube header question (P-002).
-      Needed for the second half of **W14**. Row 10.
+- [x] **Research Q10** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`.
+      SafeSearch hostnames + YouTube header question. Raw output in
+      `docs/research/2026-08-17-safesearch-hostnames-claude.md`, merged into W14, P-002 and
+      D-016. All targets verified resolving live; the corrected map rewrites `www.google.<tld>`
+      (never bare domains). **The YouTube header is not required** — Google documents the DNS
+      CNAME method as standalone, so P-002 reopened into W14 per its own exit condition. AGH's
+      implementation (resolve the safe host, synthesize the answer, filter qtype HTTPS too)
+      adopted as W14 requirements — part 2 got *smaller* (no compression-pointer surgery).
+      **W14 is now fully unblocked** (W11 done + Q10 done).
 
 ### Build once the research above lands
 
 - [ ] **W10** — app budgets via `UsageStatsManager`. **Ready** — Q4 answered 2026-08-17, design
       constraints merged into `docs/work/W10-app-budgets-usagestats.md`.
-- [ ] **W14** — adult-content category + SafeSearch. W11 is done; still needs Q10 for the
-      SafeSearch half. `docs/work/W14-adult-content-category.md`.
+- [ ] **W14** — adult-content category + SafeSearch. **Ready** — W11 done and Q10 answered
+      2026-08-17; corrected hostname map, YouTube in scope, and the simpler AGH-shaped
+      implementation are all merged into `docs/work/W14-adult-content-category.md`. Note part 1
+      is largely done already: W11 shipped the adult category with three sources and the
+      strict-gated toggle, so W14 is mostly part 2 (SafeSearch) plus the P-001 honesty line in
+      the UI.
 - [ ] **W12** — Shizuku enforcement. **Ready** — Q3 answered 2026-08-17, constraints merged into
       `docs/work/W12-shizuku-enforcement.md`; check Shizuku upstream activity first (see file).
 

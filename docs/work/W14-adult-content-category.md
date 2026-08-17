@@ -1,6 +1,6 @@
 # W14 — Adult-content filtering: category lists + DNS SafeSearch
 
-**Track:** Product · **Depends on:** W11 (multi-source lists) · **Status:** Spec draft — **needs research Q10**
+**Track:** Product · **Depends on:** W11 (✅ done 2026-08-17) · **Status:** **Ready — research Q10 answered 2026-08-17**
 **Size:** ~3–4 days for part 1, ~1 week for part 2 (SafeSearch is the harder half)
 
 Governed by **D-016**. Read it before starting — it records what was rejected and why, and this
@@ -101,15 +101,33 @@ always immediate. This is the one place in the app where the friction is the fea
 Verify the check is actually added: `StrictLock` enforcement is spread across call sites, so a new
 toggle does not inherit it.
 
-## Blocked on research
+## Research Q10 — answered 2026-08-17
 
-**Queue item 10:** the current, correct SafeSearch hostnames for Google, Bing, DuckDuckGo and (if
-applicable) Yandex/Brave; whether each still works in 2026; and how AdGuard Home / Pi-hole
-implement the rewrite, since both have already solved the answer-name problem.
+Full findings and citations:
+[`../research/2026-08-17-safesearch-hostnames-claude.md`](../research/2026-08-17-safesearch-hostnames-claude.md).
+What changed relative to the sketch above:
 
-YouTube is **not** part of this work order — its restricted mode may require an HTTP header a DNS
-filter cannot set, so it is parked in [`docs/parked.md`](../parked.md) P-002 pending the same
-research item. If the answer comes back "hostname alone works," adding it is one line.
+- **The hostname table above is corrected by the research**: rewrite `www.google.<tld>` (every
+  country domain — AdGuard Home's shipped `google.txt` is the practical enumeration), never bare
+  `google.com`; Bing is `www.bing.com` + `edgeservices.bing.com` → `strict.bing.com`; DuckDuckGo
+  is `duckduckgo.com`/`www.`/`start.` → `safe.duckduckgo.com`; Yandex is an **A rewrite to the
+  family VIP `213.180.193.56`** (AGH's shape; `familysearch.yandex.ru` resolves to that VIP).
+  All targets verified resolving live on 2026-08-17.
+- **YouTube is now IN scope** — P-002's own exit condition fired: Google's admin doc presents
+  DNS as a standalone option (five exact hostnames CNAME'd to `restrict.youtube.com` /
+  `restrictmoderate.youtube.com`; explicit don't-touch list including bare `youtube.com` and
+  `s.ytimg.com`). Choose strict vs moderate consciously; note in the UI that restricted mode
+  moderates rather than eliminates.
+- **Part 2 is smaller than budgeted.** AdGuard Home never rewrites a relayed answer's owner
+  name: on a hit it resolves the *safe* hostname itself and synthesizes the client's response.
+  Do the same — relay a fresh query for the safe host, synthesize (question = original qname,
+  answer = CNAME + safe host's records, upstream TTL, cache briefly). **No compression-pointer
+  surgery.** The sketch's warning below about answer-name handling stands as a description of
+  the problem; this is the prior-art way around it.
+- **New requirement the sketch missed:** handle qtype **HTTPS (65)** — answer NODATA for
+  rewritten hostnames, or the HTTPS record's `ipv4hint` bypasses the VIP. AGH filters A, AAAA
+  and HTTPS; everything else passes through.
+- Fail-closed stands: a safe hostname that won't resolve → block answer, not fall-through.
 
 ## Acceptance criteria
 

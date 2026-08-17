@@ -68,7 +68,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | ✅ Done (2026-08-17) — see file for the landed shape |
 | [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | **Ready** — Q3 answered 2026-08-17 |
 | [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | ✅ Done (`logandev`, 2026-08-16) — all 5 scenarios measured, see file |
-| [W14](W14-adult-content-category.md) | Adult-content filtering: category lists + DNS SafeSearch | Product | W11 | Needs research Q10 |
+| [W14](W14-adult-content-category.md) | Adult-content filtering: category lists + DNS SafeSearch | Product | W11 | **Ready** — Q10 answered 2026-08-17; YouTube now in scope (P-002 reopened) |
 
 **W1, W2, W3, W6 and W7 are done.** For what to pick up next, read
 [`NEXT.md`](NEXT.md) — it's the standing, ordered queue and stays current in a way a static

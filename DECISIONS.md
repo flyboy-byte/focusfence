@@ -261,6 +261,8 @@ can anything else short of reading content. This is **parked, not solved** — s
 [`docs/parked.md`](docs/parked.md) P-001. The app says so plainly in the UI and offers the whole
 domain as an ordinary target; it does not imply a precision it doesn't have. YouTube restricted
 mode is parked separately (P-002) because it may need an HTTP header a DNS filter cannot set.
+*(P-002 note, 2026-08-17, research Q10: it doesn't — Google's own admin doc documents the DNS
+CNAME method as standalone, so P-002 reopened into W14's scope per its own exit condition.)*
 
 **Consequence:** adult filtering ships as W14, sequenced after W11. No new architecture. The
 category toggle must be protected by strict mode (D-012's friction is more load-bearing here
