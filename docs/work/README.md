@@ -66,7 +66,7 @@ version string. JDK 17 (CI) and 21 both work.
 | [W9](W9-allowlist.md) | User allowlist | Product | W6 | ✅ Done (`logandev`, 2026-08-16) |
 | [W10](W10-app-budgets-usagestats.md) | App budgets via `UsageStatsManager` | Product | W7 | **Ready** — Q4 answered 2026-08-17 |
 | [W11](W11-source-provenance.md) | Multi-source lists with provenance + categories | Product | W9 | ✅ Done (2026-08-17) — see file for the landed shape |
-| [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | Needs research Q3 |
+| [W12](W12-shizuku-enforcement.md) | Shizuku package suspension as preferred app enforcement | Product | W7 | **Ready** — Q3 answered 2026-08-17 |
 | [W13](W13-benchmark-harness.md) | Battery/CPU benchmark harness | Product | — | ✅ Done (`logandev`, 2026-08-16) — all 5 scenarios measured, see file |
 | [W14](W14-adult-content-category.md) | Adult-content filtering: category lists + DNS SafeSearch | Product | W11 | Needs research Q10 |
 

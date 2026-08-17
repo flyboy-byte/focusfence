@@ -1,6 +1,6 @@
 # W12 — Shizuku package suspension as preferred app enforcement
 
-**Track:** Product (B7) · **Depends on:** W7 · **Status:** Spec draft — **needs research Q3**
+**Track:** Product (B7) · **Depends on:** W7 · **Status:** **Ready — research Q3 answered 2026-08-17**
 **Size:** ~1 week
 
 > **2026-08-15:** originally specced against W8 (the unified boundary model), which is now
@@ -24,14 +24,27 @@ paths, so nothing cheaper can see `/shorts`. For *whole-app blocking* it is not.
 It also fits the threat model well (D-012): non-root Shizuku must be restarted after each reboot,
 which makes it naturally reversible and keeps it firmly on the "friction, not prevention" side.
 
-## Blocked on research
+## Research Q3 — answered 2026-08-17
 
-Queue item 3: what Shizuku can actually do on a **non-root** device as of 2026 — specifically
-package suspend/disable — what permissions it needs, how much setup friction the user faces, and
-whether the post-reboot restart requirement still holds.
+Full findings and citations:
+[`../research/2026-08-17-shizuku-nonroot-claude.md`](../research/2026-08-17-shizuku-nonroot-claude.md).
+The "becomes a footnote" branch is off the table. What implementation must respect:
 
-The whole work order depends on the answer. If suspension isn't available without root, this
-becomes a footnote rather than a feature.
+- **Suspension works on non-root.** The ADB shell uid holds `SUSPEND_APPS`,
+  `CHANGE_COMPONENT_ENABLED_STATE` and `FORCE_STOP_PACKAGES` (AOSP Shell manifest — the
+  reference Shizuku's own README points at). Use **suspend**, not disable: reversible, visually
+  obvious, doesn't break push/data.
+- **Reach `setPackagesSuspended` via the Shizuku binder wrapper + hidden-API bypass** — the
+  documented Shizuku pattern, but a hidden-API dependency to pin and re-test per Android release.
+- **The reboot hole is real and current**: the official manual still says the start steps must
+  be repeated after every reboot (pairing survives). That keeps the mechanism on D-012's
+  friction side *and* makes the sketch's loud-degradation requirement (auto-fallback to
+  accessibility + visible which-mechanism indicator) the load-bearing half of the feature.
+- **Treat Shizuku as an Android 11+ feature in the UI.** Below 11, non-root activation needs a
+  computer after every reboot — don't promise it to 8.x–10 users.
+- **First task when picking this up:** verify Shizuku app release/issue activity (github.com
+  listings were proxy-blocked for this research; the API lib's last Maven release is 13.1.5,
+  2023-09-21). A dormant upstream changes the calculus before a week is committed.
 
 ## Sketch
 

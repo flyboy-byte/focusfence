@@ -154,7 +154,14 @@ web access.** They're queue items in their own right, below.
       families for API 26–28), not `queryUsageStats` aggregates; PiP doesn't accrue; grant is a
       Settings deep-link + AppOps check. **W10 is now ready to build** (moved up below W11's
       device follow-up — it's a build for a future session, nothing else blocks it).
-- [ ] **Research Q3** — Shizuku non-root capability in 2026. Unblocks **W12**. Row 3.
+- [x] **Research Q3** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. Shizuku
+      non-root capability. Raw output in `docs/research/2026-08-17-shizuku-nonroot-claude.md`,
+      merged into the W12 work order. Answer: suspension **works** on non-root (shell holds
+      `SUSPEND_APPS` — verified in the AOSP Shell manifest, the reference Shizuku's own README
+      points at); restart-after-reboot is still required per the live manual, which keeps the
+      mechanism friction-not-prevention and makes W12's loud-degradation requirement
+      load-bearing. One spot-check left to W12's implementer: Shizuku app release recency
+      (github.com listings proxy-blocked this session). **W12 is now ready to build.**
 - [ ] **Research Q10** — current SafeSearch hostnames, plus the YouTube header question (P-002).
       Needed for the second half of **W14**. Row 10.
 
@@ -164,7 +171,8 @@ web access.** They're queue items in their own right, below.
       constraints merged into `docs/work/W10-app-budgets-usagestats.md`.
 - [ ] **W14** — adult-content category + SafeSearch. W11 is done; still needs Q10 for the
       SafeSearch half. `docs/work/W14-adult-content-category.md`.
-- [ ] **W12** — Shizuku enforcement. After Q3. `docs/work/W12-shizuku-enforcement.md`.
+- [ ] **W12** — Shizuku enforcement. **Ready** — Q3 answered 2026-08-17, constraints merged into
+      `docs/work/W12-shizuku-enforcement.md`; check Shizuku upstream activity first (see file).
 
 ### Confirms a permanent constraint — low priority, no rush
 
