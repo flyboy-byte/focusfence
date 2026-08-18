@@ -77,12 +77,12 @@ class StatsFragment : Fragment() {
             addRow(binding.domainStats, getString(R.string.stats_none_yet), "", 0, 1, rank = 0)
         } else {
             val max = domainCounts.first().value
-            domainCounts.forEachIndexed { index, (domain, count) ->
+            domainCounts.forEachIndexed { index, entry ->
                 addRow(
                     binding.domainStats,
-                    domain,
-                    numberFormat.format(count),
-                    count,
+                    entry.key,
+                    numberFormat.format(entry.value),
+                    entry.value,
                     max,
                     rank = index,
                 )
@@ -99,15 +99,15 @@ class StatsFragment : Fragment() {
             addRow(binding.listStats, getString(R.string.stats_none_yet), "", 0, 1, rank = 0)
         } else {
             val max = listCounts.first().value
-            listCounts.forEachIndexed { index, (bucket, count) ->
-                val sourceId = StatsCodec.sourceId(bucket)
+            listCounts.forEachIndexed { index, entry ->
+                val sourceId = StatsCodec.sourceId(entry.key)
                 val name = sourceId?.let { FilterSources.byId(it)?.name ?: it }
                     ?: getString(R.string.stats_legacy_list)
                 addRow(
                     binding.listStats,
                     name,
-                    numberFormat.format(count),
-                    count,
+                    numberFormat.format(entry.value),
+                    entry.value,
                     max,
                     rank = index,
                 )
