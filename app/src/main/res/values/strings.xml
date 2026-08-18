@@ -3,13 +3,8 @@
     <string name="app_name">Focus Fence</string>
     <string name="blocking_switch_label">Blocking</string>
     <string name="status_inactive">Off — distracting sites are reachable</string>
-    <string name="status_active">Active — %1$d lookups blocked this session</string>
     <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
     <string name="add_button">Add</string>
-    <string name="preset_button">Add social media presets</string>
-    <string name="blocked_domains_header">Blocked domains</string>
-    <string name="delete_domain">Remove domain</string>
-    <string name="edit_schedule">Edit schedule</string>
     <string name="invalid_domain">Enter a valid domain, like example.com</string>
     <string name="vpn_permission_denied">VPN permission is required to block sites</string>
     <string name="notification_channel_name">Blocking status</string>
@@ -20,13 +15,7 @@
     <string name="rule_window">Blocked %1$s–%2$s daily</string>
     <string name="rule_budget">Limit %1$d min/day · %2$d min used</string>
     <string name="rule_budget_exhausted">Limit %1$d min/day · used up, blocked until midnight</string>
-    <string name="schedule_always">Block always</string>
-    <string name="schedule_window">Block only during set hours…</string>
-    <string name="schedule_budget">Daily time limit…</string>
-    <string name="budget_dialog_title">Daily time limit for %1$s</string>
-    <string name="schedule_paths">Allow only specific sections…</string>
     <string name="rule_paths">Blocked except: %1$s</string>
-    <string name="paths_dialog_title">Allowed sections of %1$s</string>
     <string name="paths_dialog_message">Everything on this site will be blocked in the browser except pages under these paths. Separate several with commas.</string>
     <string name="paths_dialog_hint">/marketplace, /groups</string>
     <string name="paths_invalid">Enter at least one path, like /marketplace</string>
@@ -42,7 +31,6 @@
     <string name="strict_locked_toast">Strict mode: un-blocking needs an unlock first</string>
 
     <string name="apps_dialog_title">Block these apps</string>
-    <string name="apps_choose_button">Blocked apps (%1$d) — choose</string>
     <string name="app_blocked_toast">App blocked by Focus Fence</string>
 
     <string name="app_rule_dialog_title">%1$s — when to block</string>
@@ -60,8 +48,6 @@
     <string name="excluded_apps_button">VPN exclusions (%1$d)</string>
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
 
-    <string name="stats_title">Stats</string>
-    <string name="stats_today_summary">%1$d blocked today (%2$d from filter lists)</string>
     <string name="stats_lists_header">Blocked by filter list today</string>
     <string name="stats_legacy_list">Ad list</string>
     <string name="stats_domains_header">Top blocked sites today</string>
@@ -70,7 +56,6 @@
     <string name="stats_no_budgets">No daily time limits set</string>
     <string name="stats_budget_value">%1$d of %2$d min</string>
     <string name="stats_week_header">Blocked lookups, last 7 days</string>
-    <string name="stats_today_label">Today</string>
 
     <string name="section_service_label">App &amp; section blocking</string>
     <string name="section_idle">Block whole apps here, or add section rules from a domain\'s menu.</string>
@@ -96,12 +81,10 @@
     <string name="group_paths">Section rules</string>
     <string name="group_apps">Blocked apps</string>
     <string name="group_allowed">Allowed domains</string>
-    <string name="group_title_fmt">%1$s (%2$d)</string>
     <string name="blocklist_empty">Nothing blocked yet — tap + to add your first domain.</string>
     <string name="apps_empty_hint">No blocked apps — tap here (or +) to choose some.</string>
     <string name="allowed_empty_hint">No allowed domains — tap here (or +) to exempt one from ad/tracker blocking.</string>
     <string name="allowed_domain_summary">Always allowed</string>
-    <string name="blocked_app_summary">Blocked app</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_remove">Remove</string>
@@ -133,7 +116,6 @@
     <string name="attention_adlist_action">Open settings</string>
     <string name="settings_accessibility_button">Open accessibility settings</string>
     <string name="settings_guide">Open the guide</string>
-    <string name="list_hint">Tap a domain to choose how it\'s blocked: always, on a schedule, with a daily limit, or allowing only some sections.</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_skip">Skip</string>
@@ -170,4 +152,46 @@
     <string name="adlist_downloading">Downloading filter lists…</string>
     <string name="adlist_update">Update</string>
     <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
+
+    <!-- Home hero. The all-caps look comes from the type scale, so these stay
+         sentence case for screen readers and for languages without case. -->
+    <string name="status_label_on">Blocking active</string>
+    <string name="status_label_off">Blocking off</string>
+    <string name="status_sub_active">DNS filter running · nothing leaves your phone</string>
+    <string name="counter_unit">blocked today</string>
+    <string name="counter_unit_off">blocked today, before you stopped</string>
+    <string name="meter_window">Last 20 min</string>
+    <string name="meter_peak">Peak %1$d/min</string>
+    <string name="tile_protected">Protected</string>
+    <string name="tile_lists">Lists</string>
+    <string name="tile_rules">Rules</string>
+    <string name="uptime_none">—</string>
+    <string name="uptime_hours">%1$dh %2$dm</string>
+    <string name="uptime_minutes">%1$dm</string>
+
+    <string name="up_next">Up next</string>
+    <string name="up_next_off">Blocking is off</string>
+    <string name="up_next_off_detail">nothing enforced</string>
+    <string name="up_next_idle">No windows or limits running today</string>
+    <string name="up_next_idle_detail">always on</string>
+    <string name="up_next_minutes_left">%1$d min left</string>
+    <string name="up_next_used_up">blocked till midnight</string>
+    <string name="up_next_opens">opens %1$s</string>
+
+    <!-- Rule-mode chips on a blocklist row. -->
+    <string name="tag_always">Always</string>
+    <string name="tag_window">Window</string>
+    <string name="tag_budget">Limit</string>
+    <string name="tag_paths">Section</string>
+    <string name="tag_app">App</string>
+    <string name="tag_allowed">Allowed</string>
+
+    <string name="list_summary">%1$d rules · %2$d apps</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_blocked_lookups">blocked lookups</string>
+    <string name="stats_from_lists">%1$s from filter lists</string>
+    <string name="stats_used_up">used up</string>
+    <string name="filter_category_summary">%1$d of %2$d lists · %3$s</string>
+    <string name="filter_category_active">active</string>
+    <string name="filter_category_off">off</string>
 </resources>

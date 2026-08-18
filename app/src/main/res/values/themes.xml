@@ -1,6 +1,233 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.FocusFence" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand_primary</item>
+    <!--
+      One fixed dark theme, deliberately not DayNight and deliberately not
+      Material You (see the note in colors.xml). Nothing in the app reads
+      ?attr/isLightTheme, so the palette below is the only source of colour.
+    -->
+    <style name="Theme.FocusFence" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorPrimaryContainer">@color/accent_fill</item>
+        <item name="colorOnPrimaryContainer">@color/accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/on_accent</item>
+
+        <item name="android:colorBackground">@color/surface_page</item>
+        <item name="colorSurface">@color/surface_card</item>
+        <item name="colorSurfaceVariant">@color/surface_card</item>
+        <item name="colorSurfaceContainer">@color/surface_sheet</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_sheet</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorOutline">@color/outline_soft</item>
+        <item name="colorOutlineVariant">@color/hairline</item>
+        <item name="colorError">@color/danger</item>
+        <item name="colorOnError">@color/on_accent</item>
+
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:fontFamily">@font/plex_sans_regular</item>
+        <item name="fontFamily">@font/plex_sans_regular</item>
+
+        <item name="android:statusBarColor">@color/surface_page</item>
+        <item name="android:navigationBarColor">@color/surface_nav</item>
+        <item name="android:windowBackground">@color/surface_page</item>
+
+        <!-- Material components inherit Plex through the type scale. -->
+        <item name="textAppearanceBodyLarge">@style/FF.Text.Item</item>
+        <item name="textAppearanceBodyMedium">@style/FF.Text</item>
+        <item name="textAppearanceBodySmall">@style/FF.Text.Body</item>
+        <item name="textAppearanceTitleLarge">@style/FF.Text.Title</item>
+        <item name="textAppearanceTitleMedium">@style/FF.Text.CardTitle</item>
+        <item name="textAppearanceTitleSmall">@style/FF.Text.Item</item>
+        <item name="textAppearanceHeadlineSmall">@style/FF.Text.Headline</item>
+        <item name="textAppearanceLabelLarge">@style/FF.Text.Action</item>
+
+        <item name="materialSwitchStyle">@style/FF.Switch</item>
+        <item name="checkboxStyle">@style/FF.CheckBox</item>
+        <item name="radioButtonStyle">@style/FF.Radio</item>
+        <item name="materialAlertDialogTheme">@style/FF.Dialog</item>
+        <item name="bottomNavigationStyle">@style/FF.BottomNav</item>
+        <item name="chipStyle">@style/FF.Chip</item>
+        <item name="toolbarStyle">@style/FF.Toolbar</item>
+    </style>
+
+    <style name="FF.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/surface_page</item>
+        <item name="titleTextAppearance">@style/FF.Text.Toolbar</item>
+        <item name="titleTextColor">@color/text_primary</item>
+        <item name="navigationIconTint">@color/text_secondary</item>
+    </style>
+
+    <style name="FF.Text.Toolbar" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <!-- A bordered box per choice; bg_mode_option swaps to an accent wash on
+         state_checked, which RadioButton already supplies. -->
+    <style name="FF.ModeOption" parent="FF.Radio">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">7dp</item>
+        <item name="android:background">@drawable/bg_mode_option</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingTop">13dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingBottom">13dp</item>
+        <item name="android:textAppearance">@style/FF.Text.Item</item>
+    </style>
+
+    <style name="FF.Shape.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="FF.Shape.Card" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <!-- Bottom navigation: labels always visible, active icon sits in an accent
+         pill. The mockup shows all four labels, so labelVisibilityMode is pinned
+         to "labeled" rather than the 4-item default of showing only the active. -->
+    <style name="FF.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">@color/surface_nav</item>
+        <item name="labelVisibilityMode">labeled</item>
+        <item name="itemIconTint">@color/nav_item</item>
+        <item name="itemTextColor">@color/nav_item</item>
+        <item name="itemActiveIndicatorStyle">@style/FF.NavIndicator</item>
+        <item name="itemTextAppearanceActive">@style/FF.Text.NavActive</item>
+        <item name="itemTextAppearanceInactive">@style/FF.Text.Nav</item>
+        <item name="itemRippleColor">@color/accent_wash</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="FF.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/accent_pill</item>
+        <item name="android:width">58dp</item>
+        <item name="android:height">32dp</item>
+        <item name="shapeAppearance">@style/FF.Shape.Pill</item>
+    </style>
+
+    <style name="FF.Text.Nav" parent="FF.Text">
+        <item name="android:textSize">10.5sp</item>
+    </style>
+
+    <style name="FF.Text.NavActive" parent="FF.Text.Nav">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+    </style>
+
+    <!-- Track decoration is cleared: the M3 outlined "off" track reads as a
+         second border against the card hairlines. -->
+    <style name="FF.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb</item>
+        <item name="trackTint">@color/switch_track</item>
+        <item name="trackDecorationTint">@android:color/transparent</item>
+        <item name="thumbIcon">@null</item>
+    </style>
+
+    <style name="FF.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/control_tint</item>
+        <item name="android:textAppearance">@style/FF.Text.Item</item>
+    </style>
+
+    <style name="FF.Radio" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="buttonTint">@color/control_tint</item>
+        <item name="android:textAppearance">@style/FF.Text.Item</item>
+    </style>
+
+    <style name="FF.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/surface_sheet</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_sheet</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/FF.Dialog.Title</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/FF.Dialog.Body</item>
+        <item name="buttonBarPositiveButtonStyle">@style/FF.Button.Dialog</item>
+        <item name="buttonBarNegativeButtonStyle">@style/FF.Button.Dialog</item>
+        <item name="buttonBarNeutralButtonStyle">@style/FF.Button.Dialog</item>
+    </style>
+
+    <style name="FF.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="FF.Dialog.Body" parent="MaterialAlertDialog.Material3.Body.Text">
+        <item name="android:fontFamily">@font/plex_sans_regular</item>
+        <item name="fontFamily">@font/plex_sans_regular</item>
+        <item name="android:textSize">13.5sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+    </style>
+
+    <style name="FF.Button.Dialog" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textAppearance">@style/FF.Text.Action</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+    <!-- Buttons -->
+    <style name="FF.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:textAppearance">@style/FF.Text.Action</item>
+        <item name="android:textColor">@color/on_accent</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:paddingStart">26dp</item>
+        <item name="android:paddingEnd">26dp</item>
+        <item name="shapeAppearanceOverlay">@style/FF.Shape.Pill</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="FF.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:textAppearance">@style/FF.Text.Action</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="backgroundTint">@color/fill_low</item>
+        <item name="android:minHeight">42dp</item>
+        <item name="shapeAppearanceOverlay">@style/FF.Shape.Pill</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="FF.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAppearance">@style/FF.Text.Action</item>
+        <item name="android:textColor">@color/accent</item>
+        <item name="rippleColor">@color/accent_wash</item>
+    </style>
+
+    <style name="FF.Button.Danger" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAppearance">@style/FF.Text.Action</item>
+        <item name="android:textColor">@color/danger</item>
+        <item name="backgroundTint">@color/danger_wash</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:paddingStart">18dp</item>
+        <item name="android:paddingEnd">18dp</item>
+        <item name="shapeAppearanceOverlay">@style/FF.Shape.Pill</item>
+    </style>
+
+    <style name="FF.Input" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeColor">@color/input_stroke</item>
+        <item name="hintTextColor">@color/text_tertiary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+    </style>
+
+    <!-- Assist, not Filter: the preset chips are click-to-fill and must not
+         latch, while the budget chips opt into checkable themselves. -->
+    <style name="FF.Chip" parent="Widget.Material3.Chip.Assist">
+        <item name="android:textAppearance">@style/FF.Text.Mono</item>
+        <item name="chipBackgroundColor">@color/chip_bg</item>
+        <item name="chipStrokeColor">@color/chip_stroke</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/chip_text</item>
+        <item name="chipIconVisible">false</item>
+        <item name="checkedIconVisible">false</item>
     </style>
 </resources>

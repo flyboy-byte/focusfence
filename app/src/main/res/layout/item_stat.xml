@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingTop="10dp">
+    android:paddingTop="13dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,20 +15,38 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAppearance="@style/FF.Text.Item"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/statValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:layout_marginStart="10dp"
+            android:textAppearance="@style/FF.Text.Mono"
+            android:textSize="13sp" />
     </LinearLayout>
 
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:id="@+id/statBar"
+    <!-- Track plus a weighted fill: a LinearProgressIndicator would bring M3's
+         own indicator colours and a stop-dot back into a hand-tinted palette. -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        app:trackCornerRadius="3dp" />
+        android:layout_height="5dp"
+        android:layout_marginTop="7dp"
+        android:background="@drawable/bg_bar_track"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/statBarFill"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_bar_fill" />
+
+        <View
+            android:id="@+id/statBarRest"
+            android:layout_width="0dp"
+            android:layout_height="match_parent" />
+    </LinearLayout>
 </LinearLayout>

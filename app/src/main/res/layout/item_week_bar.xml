@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The spacer and the bar split the column by weight, so a day's height is a
+     fraction of the chart rather than a pixel figure the fragment has to
+     compute against a not-yet-measured parent. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:gravity="bottom|center_horizontal"
+    android:orientation="vertical">
+
+    <View
+        android:id="@+id/weekSpace"
+        android:layout_width="match_parent"
+        android:layout_height="0dp" />
+
+    <View
+        android:id="@+id/weekBar"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_bar_fill" />
+
+    <TextView
+        android:id="@+id/weekLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9dp"
+        android:textAppearance="@style/FF.Text.Label.Dim"
+        android:textSize="10.5sp" />
+</LinearLayout>

@@ -1,5 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Focus Fence dark palette. The app ships one fixed dark theme rather than
+  Material You: the fence metaphor leans on a single unmistakable "armed" green,
+  and a wallpaper-derived accent would have recoloured the one signal that has to
+  read the same on every device. Alpha-on-white values are hairlines and fills
+  layered over surface_card, not separate greys, so they stay correct if the card
+  colour is ever retuned.
+-->
 <resources>
+    <!-- Launcher icon: referenced by mipmap-anydpi-v26, not by the UI theme. -->
     <color name="brand_primary">#2E7D32</color>
     <color name="ic_launcher_background">#1B5E20</color>
+
+    <!-- Ground -->
+    <color name="surface_page">#060706</color>
+    <color name="surface_card">#101210</color>
+    <color name="surface_sheet">#161816</color>
+    <color name="surface_nav">#020302</color>
+
+    <!-- Text -->
+    <color name="text_primary">#F2F4F2</color>
+    <color name="text_secondary">#9BA29B</color>
+    <color name="text_tertiary">#6F766F</color>
+    <color name="text_muted">#868D86</color>
+    <color name="text_disabled">#8A908A</color>
+
+    <!-- Accent -->
+    <color name="accent">#00E676</color>
+    <color name="on_accent">#04150B</color>
+    <color name="accent_border">#4D00E676</color>
+    <color name="accent_pill">#2400E676</color>
+    <color name="accent_fill">#1F00E676</color>
+    <color name="accent_wash">#1200E676</color>
+    <color name="accent_meter">#4D00E676</color>
+
+    <!-- Status -->
+    <color name="warn">#E0A64B</color>
+    <color name="warn_border">#47E0A64B</color>
+    <color name="danger">#E06B6B</color>
+    <color name="danger_wash">#1AE06B6B</color>
+
+    <!-- Rule-mode identity: one hue per blocking mode, reused by the tag chip,
+         the group dot and the Up next row so a mode is recognisable anywhere. -->
+    <color name="mode_always">#63C68C</color>
+    <color name="mode_window">#6FA6CF</color>
+    <color name="mode_budget">#D2A05B</color>
+    <color name="mode_paths">#A98BD0</color>
+    <color name="mode_app">#CF8686</color>
+    <color name="mode_allowed">#6FCFC4</color>
+
+    <!-- Layered whites: hairlines, fills and bar tracks over surface_card. -->
+    <color name="hairline">#12FFFFFF</color>
+    <color name="hairline_soft">#0EFFFFFF</color>
+    <color name="hairline_strong">#1AFFFFFF</color>
+    <color name="fill_subtle">#0AFFFFFF</color>
+    <color name="fill_low">#0FFFFFFF</color>
+    <color name="fill">#12FFFFFF</color>
+    <color name="fill_high">#21FFFFFF</color>
+    <color name="track">#0FFFFFFF</color>
+    <color name="outline_soft">#38FFFFFF</color>
+    <color name="scrim">#A3000000</color>
+
+    <!-- Neutral bar fills for the stats chart, brightest = today. -->
+    <color name="bar_strong">#9EF2F4F2</color>
+    <color name="bar_mid">#75F2F4F2</color>
+    <color name="bar_low">#57F2F4F2</color>
+    <color name="bar_faint">#3DF2F4F2</color>
+    <color name="bar_track">#29F2F4F2</color>
 </resources>

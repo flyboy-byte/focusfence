@@ -34,6 +34,8 @@ Requirements:
 Keep-a-Changelog format, newest first. Backfill from the existing 11 commits — the history is small
 and reads clearly:
 
+- `2.1.0` — UI rebuilt on a fixed dark theme with bundled IBM Plex; live Home hero (counter,
+  20-minute activity meter, up next, tiles); grouped blocklist cards; stats week chart
 - `2.0.1` — battery: cacheable block answers, upstream and event tuning; unreachable app blocking fix
 - `2.0.0` — UI restructured into tabs, grouped blocklist, domain wizard
 - `1.x` — time budgets fixed against third-party app traffic, VPN exclusions, scroll fix, battery

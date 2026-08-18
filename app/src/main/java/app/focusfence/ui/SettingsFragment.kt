@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import app.focusfence.HelpActivity
 import app.focusfence.R
@@ -97,6 +98,7 @@ class SettingsFragment : Fragment() {
         val context = requireContext()
         val enabled = FilterListStore.enabledIds(context)
         b.filterSourcesContainer.removeAllViews()
+        var shown = 0
         for (category in FilterSources.CATEGORIES) {
             val sources = FilterSources.inCategory(category)
             if (sources.isEmpty()) continue
@@ -104,6 +106,24 @@ class SettingsFragment : Fragment() {
 
             val header = ItemFilterCategoryBinding.inflate(layoutInflater, b.filterSourcesContainer, false)
             header.categoryName.text = categoryLabel(category)
+            header.categoryName.setTextColor(
+                ContextCompat.getColor(
+                    context,
+                    if (anyEnabled) R.color.text_primary else R.color.text_disabled,
+                )
+            )
+            header.categorySummary.text = getString(
+                R.string.filter_category_summary,
+                sources.count { it.id in enabled },
+                sources.size,
+                getString(
+                    if (anyEnabled) R.string.filter_category_active
+                    else R.string.filter_category_off
+                ),
+            )
+            // The rule is one hairline *between* categories, not above the first.
+            header.categorySeparator.visibility = if (shown == 0) View.GONE else View.VISIBLE
+            shown++
             header.categorySwitch.isChecked = anyEnabled
             header.categorySwitch.setOnCheckedChangeListener { switch, checked ->
                 if (checked == sources.any { FilterListStore.isEnabled(context, it.id) }) {
