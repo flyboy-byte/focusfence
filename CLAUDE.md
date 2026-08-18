@@ -108,11 +108,38 @@ rule editor and `OnboardingActivity`/`HelpActivity` are standalone. Shared dialo
 prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
 `ACTION_STATE_CHANGED` package-scoped broadcast plus a 1s ticker for counters/countdowns.
 
+The app ships **one fixed dark theme**, not `DayNight` and not Material You — the fence metaphor
+rests on a single unmistakable "armed" green (`@color/accent`), and a wallpaper-derived palette
+would have recoloured the one signal that must read identically on every device. Consequences:
+nothing may read `?attr/isLightTheme`, there is no `values-night/`, and a new colour belongs in
+`res/values/colors.xml` rather than being picked from a Material role. The layered `hairline*`
+and `fill*` values are translucent whites composited over `surface_card`, not separate greys, so
+they stay correct if that card colour is ever retuned.
+
+Typography is IBM Plex, bundled — see [`docs/fonts.md`](docs/fonts.md) for provenance and for why
+weights are referenced as concrete font files instead of a `<font-family>`. `res/values/type.xml`
+is the only place that names a font file; layouts use its `FF.Text.*` styles, and
+`res/values/themes.xml` maps them onto the Material type-scale attributes so components inherit
+Plex too. Mono carries anything numeric or label-like so figures stay aligned while they tick.
+
+Home's hero reads three things the service exposes purely in memory and resets on every start:
+`blockedCount`, `startedAtMillis` (monotonic — it renders as a duration), and `activityMeter`, a
+`dns/ActivityMeter` ring of per-minute counts. It also adds `unflushedBlocks` to the stored day
+total, because stats are flushed in batches and the counter would otherwise step in 25s rather
+than tick. All four are deliberately process-lifetime state, not persistence.
+
+The blocklist is a flat `RecyclerView` drawn as grouped cards: `RowPos` tells each row whether it
+owns the top corners, the bottom ones, both or neither, and `BlocklistFragment` assigns it. Each
+blocking mode has one colour (`@color/mode_*`) reused by its group dot, its row tag and its Up
+next row, so a mode is recognisable anywhere it appears.
+
 ## Conventions
 
 - User input is normalized through `Blocklist.normalize` (domains) and `Blocklist.normalizePath`
   (paths) — never trust raw input at a store or matcher boundary.
-- All user-visible strings go in `res/values/strings.xml`; Material 3 theming with dynamic color.
+- All user-visible strings go in `res/values/strings.xml` in sentence case — the all-caps look
+  is applied by the type scale, so the strings stay readable to screen readers and translatable
+  into languages without case.
 - Comments in this codebase explain *why* a non-obvious constraint exists (battery, Android API
   quirks, bypass vectors). Match that when touching those areas.
 - The README's "Limitations" section documents deliberate non-goals (no TCP DNS relay, DNS-level

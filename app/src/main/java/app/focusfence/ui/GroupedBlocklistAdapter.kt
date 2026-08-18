@@ -1,9 +1,11 @@
 package app.focusfence.ui
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -12,22 +14,63 @@ import app.focusfence.databinding.ItemDomainCompactBinding
 import app.focusfence.databinding.ItemGroupHeaderBinding
 import app.focusfence.databinding.ItemHintBinding
 import app.focusfence.dns.BlockRule
+import java.util.Locale
+
+/**
+ * Where a row sits in its group. The list is flat, but each group is drawn as
+ * one rounded card, so a row has to know whether it owns the top corners, the
+ * bottom ones, both, or neither.
+ */
+enum class RowPos {
+    TOP, MIDDLE, BOTTOM, SINGLE;
+
+    val background: Int
+        get() = when (this) {
+            TOP -> R.drawable.bg_group_top
+            MIDDLE -> R.drawable.bg_group_middle
+            BOTTOM -> R.drawable.bg_group_bottom
+            SINGLE -> R.drawable.bg_group_single
+        }
+
+    /** Only rows that follow another one inside the same card get a hairline. */
+    val showsSeparator: Boolean get() = this == MIDDLE || this == BOTTOM
+}
 
 sealed class Row {
     /** [showAdd] puts a + action on the header (used by the apps group). */
     data class Header(
         val key: String,
         val title: String,
+        val count: Int,
         val expanded: Boolean,
+        val colorRes: Int,
         val showAdd: Boolean = false,
     ) : Row()
 
-    data class Domain(val rule: BlockRule, val summary: String) : Row()
-    data class App(val pkg: String, val label: String, val summary: String) : Row()
-    data class Allowed(val domain: String) : Row()
+    data class Domain(
+        val rule: BlockRule,
+        val summary: String,
+        val tagRes: Int,
+        val colorRes: Int,
+        val exhausted: Boolean,
+        val pos: RowPos,
+    ) : Row()
+
+    data class App(
+        val pkg: String,
+        val label: String,
+        val summary: String,
+        val pos: RowPos,
+    ) : Row()
+
+    data class Allowed(val domain: String, val pos: RowPos) : Row()
 
     /** [actionKey] makes the hint tappable; the key identifies what to open. */
-    data class Hint(val text: String, val actionKey: String? = null) : Row()
+    data class Hint(
+        val text: String,
+        val actionKey: String? = null,
+        val pos: RowPos = RowPos.SINGLE,
+    ) : Row()
 }
 
 class GroupedBlocklistAdapter(
@@ -49,6 +92,9 @@ class GroupedBlocklistAdapter(
         private const val TYPE_APP = 2
         private const val TYPE_HINT = 3
         private const val TYPE_ALLOWED = 4
+
+        /** Alpha for a mode colour used as a tag fill behind its own text. */
+        private const val TAG_FILL_ALPHA = 0x1C
 
         private val DIFF = object : DiffUtil.ItemCallback<Row>() {
             override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = when {
@@ -98,20 +144,31 @@ class GroupedBlocklistAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Header) {
             binding.headerTitle.text = row.title
-            binding.expandIcon.rotation = if (row.expanded) 180f else 0f
+            binding.headerCount.text = row.count.toString()
+            binding.headerDot.backgroundTintList =
+                ColorStateList.valueOf(color(row.colorRes))
+            // Pointing down when open, sideways when collapsed.
+            binding.expandIcon.rotation = if (row.expanded) 0f else -90f
             binding.root.setOnClickListener { onHeaderClick(row.key) }
             binding.addButton.visibility = if (row.showAdd) View.VISIBLE else View.GONE
             binding.addButton.setOnClickListener { onHeaderAdd(row.key) }
         }
+
+        private fun color(res: Int) = ContextCompat.getColor(binding.root.context, res)
     }
 
     inner class EntryHolder(private val binding: ItemDomainCompactBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bindDomain(row: Row.Domain) {
+            applyShell(row.pos, row.rule.domain)
+            applyTag(row.tagRes, row.colorRes)
             binding.entryTitle.text = row.rule.domain
             binding.entrySummary.text = row.summary
-            binding.root.setOnClickListener { onDomainClick(row.rule) }
+            binding.entrySummary.setTextColor(
+                color(if (row.exhausted) R.color.danger else R.color.text_secondary)
+            )
+            binding.rowContent.setOnClickListener { onDomainClick(row.rule) }
             binding.moreButton.setOnClickListener { view ->
                 PopupMenu(view.context, view).apply {
                     menu.add(R.string.menu_edit).setOnMenuItemClickListener {
@@ -126,9 +183,12 @@ class GroupedBlocklistAdapter(
         }
 
         fun bindApp(row: Row.App) {
+            applyShell(row.pos, row.label)
+            applyTag(R.string.tag_app, R.color.mode_app)
             binding.entryTitle.text = row.label
             binding.entrySummary.text = row.summary
-            binding.root.setOnClickListener { onAppClick(row.pkg) }
+            binding.entrySummary.setTextColor(color(R.color.text_secondary))
+            binding.rowContent.setOnClickListener { onAppClick(row.pkg) }
             binding.moreButton.setOnClickListener { view ->
                 PopupMenu(view.context, view).apply {
                     menu.add(R.string.menu_edit).setOnMenuItemClickListener {
@@ -143,10 +203,14 @@ class GroupedBlocklistAdapter(
         }
 
         fun bindAllowed(row: Row.Allowed) {
+            applyShell(row.pos, row.domain)
+            applyTag(R.string.tag_allowed, R.color.mode_allowed)
             binding.entryTitle.text = row.domain
             binding.entrySummary.text =
                 binding.root.context.getString(R.string.allowed_domain_summary)
-            binding.root.setOnClickListener(null)
+            binding.entrySummary.setTextColor(color(R.color.text_secondary))
+            binding.rowContent.setOnClickListener(null)
+            binding.rowContent.isClickable = false
             binding.moreButton.setOnClickListener { view ->
                 PopupMenu(view.context, view).apply {
                     menu.add(R.string.menu_remove).setOnMenuItemClickListener {
@@ -156,11 +220,31 @@ class GroupedBlocklistAdapter(
                 }
             }
         }
+
+        private fun applyShell(pos: RowPos, title: String) {
+            binding.root.setBackgroundResource(pos.background)
+            binding.rowSeparator.visibility =
+                if (pos.showsSeparator) View.VISIBLE else View.GONE
+            binding.rowContent.isClickable = true
+            binding.entryInitial.text = title.take(1).uppercase(Locale.getDefault())
+        }
+
+        private fun applyTag(tagRes: Int, colorRes: Int) {
+            val tint = color(colorRes)
+            binding.entryTag.setText(tagRes)
+            binding.entryTag.setTextColor(tint)
+            binding.entryTag.backgroundTintList = ColorStateList.valueOf(
+                (tint and 0x00FFFFFF) or (TAG_FILL_ALPHA shl 24)
+            )
+        }
+
+        private fun color(res: Int) = ContextCompat.getColor(binding.root.context, res)
     }
 
     inner class HintHolder(private val binding: ItemHintBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Hint) {
+            binding.hintText.setBackgroundResource(row.pos.background)
             binding.hintText.text = row.text
             val key = row.actionKey
             binding.hintText.isClickable = key != null

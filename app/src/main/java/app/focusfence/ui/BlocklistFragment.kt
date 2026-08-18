@@ -30,6 +30,30 @@ class BlocklistFragment : Fragment() {
         private val collapsedGroups = mutableSetOf<String>()
     }
 
+    /** One blocking mode: its group heading, its row tag, and its colour. */
+    private data class Group(
+        val key: String,
+        val titleRes: Int,
+        val tagRes: Int,
+        val colorRes: Int,
+        val predicate: (BlockRule) -> Boolean,
+    )
+
+    private val groups = listOf(
+        Group("always", R.string.group_always, R.string.tag_always, R.color.mode_always) {
+            !it.isScheduled && !it.hasBudget && !it.hasPathExceptions
+        },
+        Group("window", R.string.group_window, R.string.tag_window, R.color.mode_window) {
+            it.isScheduled
+        },
+        Group("budget", R.string.group_budget, R.string.tag_budget, R.color.mode_budget) {
+            it.hasBudget
+        },
+        Group("paths", R.string.group_paths, R.string.tag_paths, R.color.mode_paths) {
+            it.hasPathExceptions
+        },
+    )
+
     private var _binding: FragmentBlocklistBinding? = null
     private val binding get() = _binding!!
     private lateinit var adapter: GroupedBlocklistAdapter
@@ -91,7 +115,7 @@ class BlocklistFragment : Fragment() {
             },
         )
         binding.blockList.adapter = adapter
-        binding.addFab.setOnClickListener {
+        binding.addButton.setOnClickListener {
             startActivity(Intent(requireContext(), DomainDetailActivity::class.java))
         }
     }
@@ -107,6 +131,10 @@ class BlocklistFragment : Fragment() {
     }
 
     private fun refresh() {
+        val context = requireContext()
+        val ruleCount = BlocklistStore.rules(context).size
+        val appCount = BlockedAppsStore.get(context).size
+        _binding?.listSummary?.text = getString(R.string.list_summary, ruleCount, appCount)
         adapter.submitList(buildRows())
     }
 
@@ -115,31 +143,37 @@ class BlocklistFragment : Fragment() {
         val rules = BlocklistStore.rules(context)
         val dayKey = LocalDate.now().toString()
 
-        val groups = listOf(
-            Triple("always", R.string.group_always) { r: BlockRule ->
-                !r.isScheduled && !r.hasBudget && !r.hasPathExceptions
-            },
-            Triple("window", R.string.group_window) { r: BlockRule -> r.isScheduled },
-            Triple("budget", R.string.group_budget) { r: BlockRule -> r.hasBudget },
-            Triple("paths", R.string.group_paths) { r: BlockRule -> r.hasPathExceptions },
-        )
-
         val rows = mutableListOf<Row>()
-        if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocklist_empty), "domains"))
+        if (rules.isEmpty()) {
+            rows.add(Row.Hint(getString(R.string.blocklist_empty), "domains"))
+        }
 
-        for ((key, titleRes, predicate) in groups) {
-            val members = rules.filter(predicate)
+        for (group in groups) {
+            val members = rules.filter(group.predicate)
             if (members.isEmpty()) continue
-            val expanded = key !in collapsedGroups
+            val expanded = group.key !in collapsedGroups
             rows.add(
                 Row.Header(
-                    key,
-                    getString(R.string.group_title_fmt, getString(titleRes), members.size),
+                    group.key,
+                    getString(group.titleRes),
+                    members.size,
                     expanded,
+                    group.colorRes,
                 )
             )
-            if (expanded) {
-                members.forEach { rows.add(Row.Domain(it, summaryFor(it, dayKey))) }
+            if (!expanded) continue
+            members.forEachIndexed { index, rule ->
+                val exhausted = rule.hasBudget && usedMinutes(rule, dayKey) >= rule.budgetMinutes
+                rows.add(
+                    Row.Domain(
+                        rule,
+                        summaryFor(rule, dayKey),
+                        group.tagRes,
+                        group.colorRes,
+                        exhausted,
+                        posOf(index, members.size),
+                    )
+                )
             }
         }
 
@@ -148,8 +182,10 @@ class BlocklistFragment : Fragment() {
         rows.add(
             Row.Header(
                 GroupedBlocklistAdapter.GROUP_APPS,
-                getString(R.string.group_title_fmt, getString(R.string.group_apps), apps.size),
+                getString(R.string.group_apps),
+                apps.size,
                 appsExpanded,
+                R.color.mode_app,
                 showAdd = true,
             )
         )
@@ -162,24 +198,28 @@ class BlocklistFragment : Fragment() {
                     )
                 )
             } else {
-                apps.forEach {
+                apps.forEachIndexed { index, rule ->
                     rows.add(
                         Row.App(
-                            it.domain,
-                            UiUtil.appLabel(context, it.domain),
-                            UiUtil.appRuleSummary(context, it),
+                            rule.domain,
+                            UiUtil.appLabel(context, rule.domain),
+                            UiUtil.appRuleSummary(context, rule),
+                            posOf(index, apps.size),
                         )
                     )
                 }
             }
         }
+
         val allowed = AllowlistStore.get(context).sorted()
         val allowedExpanded = GroupedBlocklistAdapter.GROUP_ALLOWED !in collapsedGroups
         rows.add(
             Row.Header(
                 GroupedBlocklistAdapter.GROUP_ALLOWED,
-                getString(R.string.group_title_fmt, getString(R.string.group_allowed), allowed.size),
+                getString(R.string.group_allowed),
+                allowed.size,
                 allowedExpanded,
+                R.color.mode_allowed,
                 showAdd = true,
             )
         )
@@ -192,10 +232,19 @@ class BlocklistFragment : Fragment() {
                     )
                 )
             } else {
-                allowed.forEach { rows.add(Row.Allowed(it)) }
+                allowed.forEachIndexed { index, domain ->
+                    rows.add(Row.Allowed(domain, posOf(index, allowed.size)))
+                }
             }
         }
         return rows
+    }
+
+    private fun posOf(index: Int, size: Int): RowPos = when {
+        size == 1 -> RowPos.SINGLE
+        index == 0 -> RowPos.TOP
+        index == size - 1 -> RowPos.BOTTOM
+        else -> RowPos.MIDDLE
     }
 
     private fun promptAddAllowlistDomain(context: Context) {
@@ -238,27 +287,26 @@ class BlocklistFragment : Fragment() {
         }
     }
 
-    private fun summaryFor(rule: BlockRule, dayKey: String): String {
-        val context = requireContext()
-        return when {
-            rule.hasPathExceptions ->
-                getString(R.string.rule_paths, rule.allowPaths.joinToString(", "))
-            rule.hasBudget -> {
-                val usedMinutes =
-                    (UsageStore.usedMillisOn(context, rule.domain, dayKey) / 60_000L).toInt()
-                if (usedMinutes >= rule.budgetMinutes) {
-                    getString(R.string.rule_budget_exhausted, rule.budgetMinutes)
-                } else {
-                    getString(R.string.rule_budget, rule.budgetMinutes, usedMinutes)
-                }
+    private fun usedMinutes(rule: BlockRule, dayKey: String): Int =
+        (UsageStore.usedMillisOn(requireContext(), rule.domain, dayKey) / 60_000L).toInt()
+
+    private fun summaryFor(rule: BlockRule, dayKey: String): String = when {
+        rule.hasPathExceptions ->
+            getString(R.string.rule_paths, rule.allowPaths.joinToString(", "))
+        rule.hasBudget -> {
+            val used = usedMinutes(rule, dayKey)
+            if (used >= rule.budgetMinutes) {
+                getString(R.string.rule_budget_exhausted, rule.budgetMinutes)
+            } else {
+                getString(R.string.rule_budget, rule.budgetMinutes, used)
             }
-            rule.isScheduled -> getString(
-                R.string.rule_window,
-                formatMinute(rule.startMinute),
-                formatMinute(rule.endMinute),
-            )
-            else -> getString(R.string.rule_always)
         }
+        rule.isScheduled -> getString(
+            R.string.rule_window,
+            formatMinute(rule.startMinute),
+            formatMinute(rule.endMinute),
+        )
+        else -> getString(R.string.rule_always)
     }
 
     private fun formatMinute(m: Int): String =

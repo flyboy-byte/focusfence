@@ -1,33 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="44dp"
+    android:minHeight="40dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp">
+    android:paddingStart="4dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="4dp"
+    android:paddingBottom="9dp">
+
+    <View
+        android:id="@+id/headerDot"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:background="@drawable/bg_dot" />
 
     <TextView
         android:id="@+id/headerTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textAppearance="@style/FF.Text.Label" />
+
+    <TextView
+        android:id="@+id/headerCount"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:layout_weight="1"
-        android:textAppearance="?attr/textAppearanceTitleSmall" />
+        android:textAppearance="@style/FF.Text.Label.Dim" />
 
     <ImageButton
         android:id="@+id/addButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/apps_dialog_title"
+        android:contentDescription="@string/menu_add"
+        android:padding="7dp"
         android:src="@drawable/ic_add"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:tint="@color/accent" />
 
     <ImageView
         android:id="@+id/expandIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
         android:importantForAccessibility="no"
-        android:src="@drawable/ic_expand_more" />
+        android:src="@drawable/ic_expand_more"
+        app:tint="@color/text_tertiary" />
 </LinearLayout>

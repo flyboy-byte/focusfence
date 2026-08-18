@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The group background is applied by the adapter, so the touch feedback has
+     to ride in the foreground or it would be overwritten. -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/hintText"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
-    android:padding="16dp"
-    android:textAppearance="?attr/textAppearanceBodyMedium"
-    android:textColor="?android:attr/textColorSecondary" />
+    android:background="@drawable/bg_group_single"
+    android:foreground="?attr/selectableItemBackground"
+    android:paddingHorizontal="18dp"
+    android:paddingVertical="15dp"
+    android:textAppearance="@style/FF.Text.Body"
+    android:textColor="@color/text_muted" />

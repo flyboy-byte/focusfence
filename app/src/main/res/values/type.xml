@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The type scale. Weights are referenced as concrete font files rather than a
+  <font-family> with fontWeight entries: on API 26-27 a TextView only picks a
+  non-400 weight out of a family via textStyle, so a family would silently
+  render every 500/600 style at regular weight on the oldest supported devices.
+  Sans carries prose, Mono carries anything numeric or label-like — counters,
+  countdowns, tags and the all-caps section headers — so figures stay column
+  aligned while they tick.
+-->
+<resources>
+    <style name="FF.Text" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/plex_sans_regular</item>
+        <item name="fontFamily">@font/plex_sans_regular</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- Screen title in the app header. -->
+    <style name="FF.Text.Title">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <!-- Card and dialog headings. -->
+    <style name="FF.Text.CardTitle">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="FF.Text.SheetTitle">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <!-- List rows: domain names, source names, mode options. -->
+    <style name="FF.Text.Item">
+        <item name="android:fontFamily">@font/plex_sans_medium</item>
+        <item name="fontFamily">@font/plex_sans_medium</item>
+        <item name="android:textSize">14.5sp</item>
+    </style>
+
+    <style name="FF.Text.Body">
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+    </style>
+
+    <style name="FF.Text.Body.Small">
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- Long-form prose: onboarding and the guide. -->
+    <style name="FF.Text.Prose">
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <style name="FF.Text.Headline">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">25sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <!-- Mono -->
+    <style name="FF.Text.Mono" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_mono_medium</item>
+        <item name="fontFamily">@font/plex_mono_medium</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <!-- The live block counter on Home. -->
+    <style name="FF.Text.Counter" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_mono_semibold</item>
+        <item name="fontFamily">@font/plex_mono_semibold</item>
+        <item name="android:textSize">50sp</item>
+        <item name="android:letterSpacing">-0.03</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="FF.Text.Counter.Stats">
+        <item name="android:textSize">44sp</item>
+    </style>
+
+    <!-- Figures inside the three Home tiles. -->
+    <style name="FF.Text.Tile" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_mono_semibold</item>
+        <item name="fontFamily">@font/plex_mono_semibold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- All-caps section label, e.g. UP NEXT / TODAY. -->
+    <style name="FF.Text.Label" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_mono_semibold</item>
+        <item name="fontFamily">@font/plex_mono_semibold</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="FF.Text.Label.Dim">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- Status line above the counter: BLOCKING ACTIVE / BLOCKING OFF. -->
+    <style name="FF.Text.Label.Status">
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.15</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+
+    <!-- Mode chip on a rule row: ALWAYS / WINDOW / LIMIT / SECTION / APP. -->
+    <style name="FF.Text.Tag" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_mono_semibold</item>
+        <item name="fontFamily">@font/plex_mono_semibold</item>
+        <item name="android:textSize">9.5sp</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Pill button labels. -->
+    <style name="FF.Text.Action" parent="FF.Text">
+        <item name="android:fontFamily">@font/plex_sans_semibold</item>
+        <item name="fontFamily">@font/plex_sans_semibold</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/accent</item>
+    </style>
+</resources>

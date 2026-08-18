@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tinted per bar at runtime; only the top corners are rounded so the bars
+     read as rising from a shared baseline. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/white" />
+    <corners android:topLeftRadius="2dp" android:topRightRadius="2dp" />
+</shape>

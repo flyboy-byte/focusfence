@@ -1,0 +1,5 @@
+# Fonts are the only binaries in the tree; pin them so no contributor's
+# core.autocrlf setting can rewrite bytes inside a TTF.
+*.ttf binary
+*.otf binary
+*.png binary

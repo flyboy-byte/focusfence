@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
@@ -21,6 +22,7 @@ import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.StatsStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
+import app.focusfence.dns.ActivityMeter
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
@@ -84,6 +86,26 @@ class DnsVpnService : VpnService() {
             private set
 
         val blockedCount = AtomicLong(0)
+
+        /**
+         * elapsedRealtime when the tunnel came up, 0 while stopped. Monotonic on
+         * purpose: Home shows this as a duration, which a wall-clock change or a
+         * timezone shift must not move.
+         */
+        @Volatile
+        var startedAtMillis = 0L
+            private set
+
+        /** Per-minute blocks for the Home meter; cleared on every start. */
+        val activityMeter = ActivityMeter()
+
+        /**
+         * Blocks merged into the stats buffer but not yet written to
+         * [StatsStore]. Home adds this to the stored day total so its counter is
+         * exact between flushes — the flush is batched every 25 blocks or 30s to
+         * keep write volume down, which would otherwise make the counter jump.
+         */
+        val unflushedBlocks = AtomicLong(0)
     }
 
     private var tunFd: ParcelFileDescriptor? = null
@@ -226,6 +248,8 @@ class DnsVpnService : VpnService() {
         pool = Executors.newFixedThreadPool(4)
         isRunning = true
         blockedCount.set(0)
+        startedAtMillis = SystemClock.elapsedRealtime()
+        activityMeter.reset()
 
         startForeground(NOTIFICATION_ID, buildNotification())
 
@@ -239,6 +263,7 @@ class DnsVpnService : VpnService() {
     private fun stopVpn() {
         if (!isRunning && tunFd == null) return
         isRunning = false
+        startedAtMillis = 0L
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
         for ((domain, state) in usageTracker.snapshot()) {
             UsageStore.save(this, domain, state.first, state.second)
@@ -283,6 +308,7 @@ class DnsVpnService : VpnService() {
             val reason = blockReason(question.qname)
             if (reason != null) {
                 blockedCount.incrementAndGet()
+                activityMeter.record(SystemClock.elapsedRealtime())
                 recordStat(reason)
                 val ttl = if (StatsCodec.isListBucket(reason)) {
                     AD_BLOCK_TTL_SECONDS
@@ -315,6 +341,7 @@ class DnsVpnService : VpnService() {
             statsBufferDay = day
             statsBuffer.merge(bucket, 1, Int::plus)
             statsPending++
+            unflushedBlocks.incrementAndGet()
             val now = System.currentTimeMillis()
             if (statsPending >= 25 || now - lastStatsFlush >= 30_000L) flushStatsLocked()
         }
@@ -326,6 +353,7 @@ class DnsVpnService : VpnService() {
         }
         statsBuffer.clear()
         statsPending = 0
+        unflushedBlocks.set(0)
         lastStatsFlush = System.currentTimeMillis()
     }
 
