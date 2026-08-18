@@ -23,6 +23,7 @@ answer to "where is this project actually at." This file is the doc index.
 | [`parked.md`](parked.md) | High-level | Ideas considered and set down deliberately, with the reasoning — read before proposing an "obvious" addition |
 | [`risks.md`](risks.md) | Mixed | Scope, legal/licensing, technical and operational risk |
 | [`notes.md`](notes.md) | High-level | Open decisions and questions — working scratchpad |
+| [`partner-lock-direction.md`](partner-lock-direction.md) | High-level | Questionnaire for @flyboy-byte: does the app grow a second person (partner-held unlock), and how hard does it fight removal — awaiting answers |
 | [`research-handoff.md`](research-handoff.md) | Meta | Queue of unverified external claims, and how to close them |
 | [`research/prompts.md`](research/prompts.md) | Meta | Ready-to-paste, fully self-contained prompts for every open research-handoff item |
 | [`reasoning-prompts.md`](reasoning-prompts.md) | Meta | Deep judgment-call prompts for a high-context model — not fact lookup, real trade-off reasoning |
