@@ -125,20 +125,25 @@ Mostly pre-existing. Honest status:
 
 ## Current status (update this line as phases advance)
 
-**2026-08-16.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
-W1 (doc corrections), W2 (CI builds the release APK), W6 (rule evaluation extracted to `dns/`) and
-W7 (time-bounded app blocking — apps can now be scheduled or committed, not just always-blocked)
-are merged to `main`, alongside the licence (D-015, acknowledged) and the adult-content decision
-(D-016). W9 (user allowlist: store, pure evaluator, D-017, and the UI) and W13 (battery/CPU
-benchmark harness, with real measurements on a Pixel 7 — zero wakeup events across all five
-scenarios) are both fully done on `logandev`/`shareddev` but not yet reached `main` — see
-`docs/work/W9-allowlist.md` and `docs/benchmarks/README.md`.
-Test suite: 58 passing.
+**2026-08-17.** Phase 1 complete; Phase 2 design reasoning done; Phase 3 substantially advanced.
+W1, W2, W6, W7 are merged to `main`, alongside the licence (D-015, acknowledged) and the
+adult-content decision (D-016). W9 (user allowlist), W13 (battery/CPU benchmark harness, real
+measurements on a Pixel 7 — zero wakeup events across all five scenarios), and now **W11**
+(multi-source filter lists with provenance/categories — 8 sources, licensing verified, 756k
+entries measured at 72 MB heap) are all fully done on `logandev`/`shareddev` but not yet reached
+`main` — see `docs/work/W9-allowlist.md`, `docs/benchmarks/README.md`, `docs/work/W11-source-provenance.md`.
+The 2026-08-17 session also cleared every research item then in `NEXT.md`'s queue (R1, R2, Q2,
+Q3, Q4, Q8, Q10, Q11) and filed a field report: a user rule on `google.com` can kill device-wide
+FCM push, and D-017 means the allowlist can't fix it — see `docs/work/NEXT.md`'s field-report
+item for the open product decision. W10, W12, W14 are now research-unblocked and ready to build.
+Test suite: 67 passing.
 
 **The only thing left blocking the release is signing key custody (O-002)** — a one-way decision
-for @sidewinderzz, decision support written up in `docs/signing-key-custody.md`. No code work
-remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an hour
-once it's made.
+for @sidewinderzz. Decision support now includes both Q9's prior-art survey and R1's full
+trade-off analysis with a paste-able draft resolution, in `docs/signing-key-custody.md`. No code
+work remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an
+hour once it's made — though R1 flagged W5's workflow spec assumed CI signing and needs amending
+if hand-signing is adopted.
 
 **Branching (D-005):** `main` → `shareddev` → `{logandev, shelbydev}`. Personal branches fork from
 and merge into `shareddev`; `shareddev` merges to `main` at release points. `main` is never

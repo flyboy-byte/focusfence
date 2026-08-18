@@ -19,6 +19,30 @@ Work top to bottom. Each item names a doc to open and execute. When an item is d
 If every item here is blocked or done, stop and say so rather than inventing new scope — that's a
 "come back to me" moment, not a reason to start improvising past the plan.
 
+## Settled — do not re-litigate
+
+Prior sessions already reasoned these through and wrote down an answer. Re-opening a settled
+question from scratch (instead of reading the linked file) burns a session's budget re-deriving
+something that's already on file, and risks landing on a *worse* answer than the one already
+verified against source. Treat these as load-bearing unless a human overturns them:
+
+- **D-017** (allowlist beats list-blocks, never a user rule) — this is *why* the google.com/FCM
+  field report below can't be "fixed" with an allowlist entry. Don't suggest one.
+- **W11's shape** (per-source files, runtime-download-only, parent-domain matching, `_src:<id>`
+  stats buckets) — this is built and tested, not a proposal. Don't redesign it while doing W14
+  (which builds on it) unless you find it's actually wrong, not just different from how you'd
+  have done it.
+- **R1's O-002 draft** (hand-sign + split custody) — decision support, correctly left for
+  @sidewinderzz to adopt or amend. Don't re-run the research or re-derive a competing
+  recommendation from scratch; if you have new information R1 didn't have, add to it, don't
+  replace it.
+- **R2's re-audit verdict** (every parked/rejected item still holds) — don't re-open P-001–P-004
+  or any `DECISIONS.md` entry it covered without a specific new reason; "let me double check"
+  with no new input is exactly the re-litigation this section exists to prevent.
+- **Q2/Q3/Q4/Q8/Q10/Q11's findings** — each is cited from a primary source in its
+  `docs/research/2026-08-17-*.md` file. If you doubt one, check the citation before overriding it,
+  don't reason from priors instead.
+
 ## Branch discipline (read this before touching git)
 
 - Work on **your own personal branch** (`logandev` or `shelbydev`), never `shareddev` or `main`
@@ -185,6 +209,24 @@ web access.** They're queue items in their own right, below.
 - [ ] **W12** — Shizuku enforcement. **Ready** — Q3 answered 2026-08-17, constraints merged into
       `docs/work/W12-shizuku-enforcement.md`; check Shizuku upstream activity first (see file).
 
+### Polish pass — the app is functionally complete, this is about feel
+
+The core product (blocking, budgets, section rules, strict mode, allowlist, multi-source lists,
+stats) is done and tested. Nothing here unblocks anything else; it's for a session that wants to
+make the existing thing better rather than build the next thing.
+
+- [ ] **UI/UX pass over what W9/W11 shipped fast.** Both landed under real time pressure (device
+      automation in one session, a full data-model swap in another) — worth a session actually
+      using the app end to end (onboarding → add a rule of each of the 5 modes → the new
+      Allowed-domains group → the new per-source Settings screen → stats) looking for rough
+      edges: unclear copy, missing empty states, inconsistent spacing/dialogs, error messages
+      that don't say what to do next. Fix what's genuinely rough; don't redesign what works. If
+      something looks wrong on-screen but the underlying logic is intentional (see "Settled"
+      above and `docs/parked.md`), that's a documentation gap, not a bug.
+- [ ] **Read `docs/risks.md` "Not yet done" / open items with fresh eyes** and flag anything that
+      reads as stale now that W9/W11/W13 have landed since it was last touched — don't rewrite
+      it wholesale, just correct what's now wrong.
+
 ### Confirms a permanent constraint — low priority, no rush
 
 - [x] **Research Q8** — 2026-08-17, `claude/focus-fence-session-s72elg` → `shareddev`. VPN
@@ -193,6 +235,24 @@ web access.** They're queue items in their own right, below.
       verbatim, and no multi-VPN or third-party per-app-routing API exists. D-013's premise is
       now cited rather than assumed. The on-device coexistence *behaviour* test (what Focus
       Fence still enforces when WireGuard takes the slot) stays a physical-device item.
+
+### Distribution/policy research — needs live web access, never picked up before now
+
+These three rows have existed in `docs/research-handoff.md` since before `NEXT.md` did, but
+nobody folded them into this queue, so no session has picked them up. Q6 in particular is a real
+risk, not a formality — Play policy on the exact `VpnService` + `AccessibilityService` combination
+this app uses is precisely the kind of thing that gets an app rejected or pulled if gotten wrong.
+
+- [ ] **Research Q6** — Google Play's current policy for apps combining `VpnService` and
+      `AccessibilityService`. Is it publishable at all, and under what declarations? Feeds
+      `docs/risks.md`. See `docs/research-handoff.md` row 6. Do this one first of the three.
+- [ ] **Research Q5** — F-Droid's current inclusion requirements: reproducible builds, anti-feature
+      labelling for `VpnService`/`AccessibilityService` apps, first-submission review process.
+      Feeds O-005 and `docs/risks.md`. Row 5. Only matters once F-Droid inclusion is something a
+      human wants (Phase 5 in `FRAMEWORK.md`) — informs that choice, doesn't force it.
+- [ ] **Research Q7** — is the claim that Play will require `targetSdk` 36 from 2026-08-31
+      accurate? Flagged unverified in `docs/audits/findings.md` §4, and currently moot since the
+      release plan is GitHub Releases, not Play — low priority, single factual check. Row 7.
 
 ### Investigative — does not authorize building anything
 
@@ -206,6 +266,13 @@ web access.** They're queue items in their own right, below.
       classifiers (~3 MB quantized, ~90–93% self-reported, no published battery numbers) all
       need pixels a DNS-only app has deliberately arranged never to carry. Recommendation to
       the human: P-003 and D-016 unchanged.
+
+### Housekeeping
+
+- [ ] **`FRAMEWORK.md`'s "Current status" is stale** — still dated 2026-08-16, says "58 tests
+      passing" (it's 67 now), and doesn't mention W11 or any of the 2026-08-17 research batch
+      (R1/R2/Q2/Q3/Q4/Q8/Q10/Q11). Cheap to fix, and it's the one file whose whole job is
+      answering "where are we" — worth a session doing it even though it unblocks nothing.
 
 ### Deliberately not on this queue
 

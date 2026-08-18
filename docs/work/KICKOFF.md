@@ -18,7 +18,12 @@ servers, nothing leaves the phone.
 
 Before doing anything else, read these four files in order:
 1. CLAUDE.md — architecture, hard constraints, commands. Read the whole thing.
-2. docs/work/NEXT.md — the standing queue. This answers "what do I work on."
+2. docs/work/NEXT.md — the standing queue. This answers "what do I work on." **Read its
+   "Settled — do not re-litigate" section closely** — a prior session already reasoned through
+   D-017's allowlist/rule ordering, W11's shape, O-002's draft resolution (R1), the parked-item
+   re-audit (R2), and six research questions (Q2/Q3/Q4/Q8/Q10/Q11), each cited from a primary
+   source. Re-deriving one of these from scratch instead of reading the linked file is wasted
+   work at best and a worse answer than what's already on file at worst.
 3. DECISIONS.md — skim the headers (D-001..D-01N). These are settled; don't re-litigate them.
 4. docs/parked.md — ideas already considered and rejected. Check here before proposing
    anything that sounds like an "obvious" addition — it's probably already here with the
@@ -90,3 +95,11 @@ at the end.
   do them, and — without being told to look further — might stop entirely instead of noticing
   `docs/reasoning-prompts.md`'s R1/R2 need no browsing at all. Sessions differ in what they can
   actually do; the prompt now says to account for that before concluding nothing's available.
+- **The "Settled" pointer exists because it almost didn't happen.** A 2026-08-17 session with
+  live web access cleared the entire research backlog in one sitting (R1, R2, six research
+  questions, and W11 built end to end) — a genuinely good outcome, but it means the very next
+  session to open this repo will find a queue full of *answered* questions and *shipped* work,
+  not open ones. The risk isn't a session ignoring NEXT.md; it's a session reading a row, having
+  its own opinion, and quietly overriding a verified finding instead of treating it as load-
+  bearing. The app is now functionally complete — see the queue's Polish section — so most new
+  sessions from here on are working *on top of* settled decisions, not making new ones.
