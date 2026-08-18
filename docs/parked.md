@@ -123,3 +123,29 @@ otherwise. Reopen only if W13's harness produces a number showing a real problem
 Device Owner mode would make the app genuinely hard to remove. It also makes the user a managed
 device, which is the exact thing the product intent rejects: the owner must stay the owner, keep
 ADB, keep sideloading, keep the ability to run other VPNs. Friction, not prevention.
+
+---
+
+## P-006 — An AI judge that grants a bypass if it decides blocked content is "worth it"
+
+*Parked 2026-08-18 — effectively permanent; see D-016, P-003, research Q11.*
+
+Raised during the partner-lock direction conversation (`docs/partner-lock-direction.md`): once a
+lock is hard enough to matter, add an escape hatch where a model evaluates the content behind a
+block and decides whether the user's reason for wanting through is good enough. Rejected for two
+independent reasons, either one sufficient on its own:
+
+- **It's P-003 wearing a different name.** Judging whether content is "worth it" requires reading
+  the content first — the exact thing D-016 and P-003 already rule out, and research Q11
+  (2026-08-17) already confirmed on-device classification can't clear that bar without either
+  intercepting traffic or running inside the renderer, both independently disqualified. Doing it
+  well would mean cloud inference, which breaks "nothing leaves the phone" for a feature whose
+  entire point is resisting impulses, not accommodating them.
+- **It doesn't solve the problem, it relocates it.** The willpower gap this app exists to cover is
+  "I want to disable blocking right now." An AI judge just moves that gap to "I want to convince
+  the judge right now" — a negotiation a user optimizing for reels will get good at fast, in a way
+  a fixed timer or a human partner (D-018) can't be argued with.
+
+**What would reopen it:** nothing currently in view. Not blocked on a research question the way
+P-003 was — the reasoning here doesn't depend on classifier quality improving, it depends on the
+project's privacy and threat-model premises (D-010, D-012), which a better model doesn't change.

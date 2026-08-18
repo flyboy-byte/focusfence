@@ -62,7 +62,7 @@ protecting against. What they're protecting against is a quiet 11:30pm unlock.
 *Recommendation:* B + bounded C. It's the only one that raises the ceiling for people the current
 10-minute timer doesn't help, without spending the positioning.
 
-**Answer:**
+**Answer:** B + bounded C, per the recommendation. Recorded as D-018. — @flyboy-byte, 2026-08-18
 
 ### Q2. Does a partner-held key violate "not a content filter for someone else"?
 
@@ -87,7 +87,7 @@ Guardrails that keep it self-directed, if you say yes — all three, or the dist
 *Recommendation:* no-with-guardrails. Guardrail 3 is what keeps this out of stalkerware territory,
 and it costs nothing because there's no server to leak through anyway.
 
-**Answer:**
+**Answer:** No, with all three guardrails, written into D-019 as binding, not optional. — @flyboy-byte, 2026-08-18
 
 ### Q3. May the app ever send data *out*? (the one-way door)
 
@@ -104,7 +104,7 @@ downloads filter lists, so egress exists; it's just inbound-only today.
 
 *Recommendation:* hand-off only. It gets most of the value and the README claim stays literally true.
 
-**Answer:**
+**Answer:** Hand-off only. Recorded as D-020. — @flyboy-byte, 2026-08-18
 
 ---
 
@@ -124,7 +124,7 @@ downloads filter lists, so egress exists; it's just inbound-only today.
 *Recommendation:* TOTP, static passphrase as the low-ceremony fallback. Rare case where the more
 secure option is also the better UX and the easier thing to unit-test.
 
-**Answer:**
+**Answer:** TOTP with static passphrase as fallback, per the recommendation. — @flyboy-byte, 2026-08-18
 
 ### Q5. Does the partner key replace the 10-minute delay, or stack with it?
 
@@ -137,7 +137,8 @@ changes, `Pending` gains a second precondition, and no existing `isLocked` call 
 
 *Recommendation:* user's choice, defaulting to Both.
 
-**Answer:**
+**Answer:** User's choice at setup, defaulting to Both — matches wanting both a self-induced harsh
+lockup and a real second party, not one or the other. — @flyboy-byte, 2026-08-18
 
 ### Q6. Build tamper-evidence?
 
@@ -154,7 +155,7 @@ permissions and picks no fight with Settings.
 *Recommendation:* yes. Highest value-per-line item on the page, and the part that still works if Q1
 comes back as A.
 
-**Answer:**
+**Answer:** Yes, all of it. — @flyboy-byte, 2026-08-18
 
 ### Q7. Ceiling on accessibility self-defense?
 
@@ -165,8 +166,11 @@ comes back as A.
   plain uninstall regardless. Also the single fastest way to fail research Q6.
 
 *Recommendation:* detect and report, as a hard ceiling written into the decision so it can't creep.
+This is the ceiling — navigating away from Settings is explicitly out, both because it's the fastest
+way to fail research Q6 and because it's the CloudLocker-shaped move this project is deliberately
+not making.
 
-**Answer:**
+**Answer:** Detect and report only, as a hard ceiling. Recorded in D-018. — @flyboy-byte, 2026-08-18
 
 ### Q8. Spend the friction budget on legacy Device Admin?
 
@@ -184,7 +188,7 @@ status is something to **verify before building, not assume**.
 *Recommendation:* no. Four taps doesn't change an impulse's mind, and it costs the clean-exit
 promise that Q2's guardrail 1 depends on.
 
-**Answer:**
+**Answer:** No. — @flyboy-byte, 2026-08-18
 
 ### Q9. Take the two free composition wins?
 
@@ -207,7 +211,7 @@ available is composition, documented in the README, not integration.
 
 *Recommendation:* both.
 
-**Answer:**
+**Answer:** Both. — @flyboy-byte, 2026-08-18
 
 ---
 
@@ -226,7 +230,7 @@ polish pass. O-002 (signing key) still blocks the release itself and is yours, n
 
 *Recommendation:* run research Q6 now (cheap, and blocking-shaped), build after the release.
 
-**Answer:**
+**Answer:** Research Q6 first, then build after the release. — @flyboy-byte, 2026-08-18
 
 ---
 
@@ -239,6 +243,13 @@ Deliberately excluded so this doesn't reopen settled ground:
 - **Widening the VPN routes** — D-001.
 - **An account, a server, or sync** — not on the table under any answer above. A partner-held key
   does not imply a backend; every option in Q4 works with the network off.
+- **An AI judge that evaluates blocked content and grants a bypass if it decides the content is
+  "worth it."** Raised and rejected in the same conversation that produced Q1–Q3's answers, 2026-08-18
+  — see `docs/parked.md` P-006. It's a second content filter under a different name (P-003/D-016
+  territory), it needs the pixels this DNS-only app has deliberately arranged never to carry
+  (research Q11 already confirmed on-device classification can't clear that bar without cloud
+  inference), and it doesn't solve the willpower problem, it just relocates the negotiation from
+  "wait ten minutes" to "convince a model" — which is a skill users would get good at.
 
 ## §5 — What gets built if you answer nothing
 

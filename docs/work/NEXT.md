@@ -245,7 +245,9 @@ this app uses is precisely the kind of thing that gets an app rejected or pulled
 
 - [ ] **Research Q6** — Google Play's current policy for apps combining `VpnService` and
       `AccessibilityService`. Is it publishable at all, and under what declarations? Feeds
-      `docs/risks.md`. See `docs/research-handoff.md` row 6. Do this one first of the three.
+      `docs/risks.md`. See `docs/research-handoff.md` row 6. Do this one first of the three — it's
+      also the explicit prerequisite Q10 of `docs/partner-lock-direction.md` set for starting any
+      partner-lock work (D-018/D-019/D-020, below), not just a documentation nice-to-have anymore.
 - [ ] **Research Q5** — F-Droid's current inclusion requirements: reproducible builds, anti-feature
       labelling for `VpnService`/`AccessibilityService` apps, first-submission review process.
       Feeds O-005 and `docs/risks.md`. Row 5. Only matters once F-Droid inclusion is something a
@@ -253,6 +255,16 @@ this app uses is precisely the kind of thing that gets an app rejected or pulled
 - [ ] **Research Q7** — is the claim that Play will require `targetSdk` 36 from 2026-08-31
       accurate? Flagged unverified in `docs/audits/findings.md` §4, and currently moot since the
       release plan is GitHub Releases, not Play — low priority, single factual check. Row 7.
+
+### Partner-lock direction — decided 2026-08-18, not yet a work order
+
+`docs/partner-lock-direction.md` is answered in full; D-018/D-019/D-020 in `DECISIONS.md` record
+the direction (partner-held unlock key, TOTP, hand-off-only notification, detect-and-report tamper
+evidence, no fighting Settings, no Device Admin). **No work order exists yet** — this is a decision,
+not a spec, and per the questionnaire's own Q10 answer the sequencing is: research Q6 first
+(above), then build **after the release**, not before or slotted into the current W10/W12/W14
+queue. A future session's job is to turn D-018–D-020 into a real `W*.md` work order once Q6 has
+landed and the release has shipped — don't start writing code straight from the decisions doc.
 
 ### Investigative — does not authorize building anything
 
