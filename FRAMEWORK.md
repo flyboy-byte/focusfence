@@ -91,8 +91,11 @@ Mostly pre-existing. Honest status:
       blocking, stats, onboarding
 - [x] Pure `dns/` logic unit-tested on the JVM (8 test classes)
 - [x] `assembleRelease` succeeds with R8 (verified 2026-08-14)
-- [ ] **Track A — release mechanics.** LICENSE, signing config, CI release build, release
-      workflow, changelog, README corrections. See `docs/infrastructure.md`.
+- [x] **Track A — release mechanics.** LICENSE (W3), signing config (W4), CI release build (W2),
+      release workflow (W5, draft-release shape for hand-signing), `CHANGELOG.md`, README
+      corrections — all landed on `logandev`/`shareddev` 2026-08-18. Not yet exercised with a real
+      signed release: @sidewinderzz still needs to generate the actual keystore and push a tag.
+      See `docs/infrastructure.md`, `RELEASING.md`.
 - [ ] **Track B — the boundary gap.** B1 → B3a → B2 → B3b → B4 … B8. Design reasoned through in
       [`docs/design.md`](docs/design.md); sequencing in `docs/notes.md`. **B1 and B3a are
       buildable now** — no open question blocks them.
@@ -138,12 +141,13 @@ FCM push, and D-017 means the allowlist can't fix it — see `docs/work/NEXT.md`
 item for the open product decision. W10, W12, W14 are now research-unblocked and ready to build.
 Test suite: 67 passing.
 
-**The only thing left blocking the release is signing key custody (O-002)** — a one-way decision
-for @sidewinderzz. Decision support now includes both Q9's prior-art survey and R1's full
-trade-off analysis with a paste-able draft resolution, in `docs/signing-key-custody.md`. No code
-work remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an
-hour once it's made — though R1 flagged W5's workflow spec assumed CI signing and needs amending
-if hand-signing is adopted.
+**O-002 is resolved** (2026-08-18): @sidewinderzz holds the signing key alone, hand-signs, RSA
+4096/30yr. **W4 and W5 are both done** — the build has a `signingConfigs.release` that activates
+once a real `keystore.properties` exists, and `.github/workflows/release.yml` drafts a release on
+a tag push without ever touching key material. **What's actually left to ship:**
+@sidewinderzz generating the real keystore per `docs/signing-key-custody.md`, and then following
+`RELEASING.md` to cut and publish the first real release. Everything code-side is done; what
+remains is entirely his manual key ceremony and one release cycle.
 
 **Branching (D-005):** `main` → `shareddev` → `{logandev, shelbydev}`. Personal branches fork from
 and merge into `shareddev`; `shareddev` merges to `main` at release points. `main` is never

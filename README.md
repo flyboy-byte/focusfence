@@ -18,7 +18,22 @@ filter. No root, no account, no policy server, no telemetry.
 
 ## Install
 
-No release yet — build it, or grab the CI artifact.
+**From a release (recommended):** download the latest signed APK from
+[Releases](https://github.com/sidewinderzz/focusfence/releases). Requires Android 8.0 (API 26) or
+newer.
+
+1. Download `focus-fence-<version>.apk` from the release you want.
+2. **Verify it before installing.** The release description publishes the file's SHA-256 —
+   check it against what you downloaded:
+   ```sh
+   sha256sum focus-fence-<version>.apk
+   ```
+   The two hashes must match exactly. This confirms you got the file that was actually built from
+   the tagged source, not a tampered copy.
+3. Enable "Install unknown apps" for whichever app you used to download it (Settings → Apps →
+   [that app] → Install unknown apps), then open the APK to install.
+
+**From source:**
 
 ```sh
 ./gradlew assembleDebug      # → app/build/outputs/apk/debug/app-debug.apk
@@ -27,7 +42,9 @@ No release yet — build it, or grab the CI artifact.
 
 Requires JDK 17+ and Android SDK platform 34. Pushing to GitHub also builds an APK and uploads it
 as the `focus-fence-debug-apk` artifact, which you can download on the phone and open directly.
-To sideload, enable "Install unknown apps" for whatever app you open the APK with.
+
+**Why sideloading, not Play:** the app isn't on Google Play. See "Permissions and trust" below for
+what that means for verifying you got the real thing.
 
 ## Setting it up
 
@@ -132,6 +149,35 @@ resolver, exactly as they would without the app installed.
 - **This is a productivity aid, not parental controls.** You can always turn it off. Always-on VPN
   plus app pinning adds friction if you want it.
 
+## Permissions and trust
+
+Focus Fence asks for `VpnService` **and** `AccessibilityService` — the same permission pair
+malware wants, because it's genuinely powerful. Being suspicious of an app that asks for both,
+sideloaded from outside Play, is the correct instinct. "It's open source" doesn't clear that on
+its own — almost nobody actually reads the source, and a downloaded APK isn't obviously the same
+binary as the repo. Here's exactly what each permission is used for, what it can technically see,
+and what it deliberately does not do:
+
+**VPN (`VpnService`).** Routes only DNS packets addressed to two synthetic local addresses the
+tunnel advertises itself — everything else (web pages, video, every other app's traffic) takes
+the normal network path and never enters this app at all. No traffic is ever sent to any server
+this project operates; there is no such server. Allowed DNS queries are relayed to a public
+resolver (Cloudflare `1.1.1.1` or Google `8.8.8.8`), the same place they'd go without the app
+installed.
+
+**Accessibility (`AccessibilityService`).** Reads the address bar of a small set of known browsers
+to enforce per-path rules (e.g. allow `facebook.com/marketplace`, block the rest of the site), and
+watches for a blocked app coming to the foreground so it can bounce it home. It does not read page
+content, form fields, or anything you type, and it's only ever registered for the specific
+packages you've actually configured a rule for — not every app on the device.
+
+**How you can check this yourself, not just take it on faith:** the app is DNS-only by
+construction — the VPN's routing table literally only contains the two addresses above (`/32` and
+`/128`), which you can confirm by reading `vpn/DnsVpnService.kt`. Releases are built by GitHub
+Actions CI directly from the tagged commit (see `.github/workflows/release.yml`), so the binary
+you download is traceable back to the exact source that produced it, and the SHA-256 in the
+release lets you confirm you received that build unmodified.
+
 ## Alternatives
 
 If you'd rather not maintain your own app: NetGuard (custom domain blocking is a paid feature),
@@ -150,6 +196,8 @@ readable summary. In the repo, in more detail:
 | [`DECISIONS.md`](DECISIONS.md) | Numbered log of *why* |
 | [`docs/parked.md`](docs/parked.md) | Ideas considered and deliberately set down |
 | [`docs/work/`](docs/work/) | Self-contained work orders — start here to build something |
+| [`CHANGELOG.md`](CHANGELOG.md) | What shipped, by version |
+| [`RELEASING.md`](RELEASING.md) | How a signed release actually gets cut |
 
 ## Licence
 

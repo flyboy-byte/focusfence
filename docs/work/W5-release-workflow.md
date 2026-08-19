@@ -1,7 +1,14 @@
 # W5 — Tag → signed APK → GitHub Release, plus `CHANGELOG.md`
 
 **Track:** Release · **Depends on:** W2, W4 (and W3 for the license line) · **Blocks:** shipping
-**Status:** Blocked by W4 · **Size:** ~half a day
+**Status:** ✅ Done (`logandev`, 2026-08-18), amended for hand-signing per R1 · **Size:** ~half a day
+
+**Amendment, 2026-08-18:** this work order originally assumed CI holds the signing key
+(`assembleRelease (signed, per W4)` as a CI step). O-002 resolved to **hand-signing** — the key
+never touches GitHub, per `DECISIONS.md`. So `release.yml` below does **not** produce a signed
+APK; it validates (tests + unsigned build) on a tag push and drafts a release skeleton.
+**@sidewinderzz signs locally and finishes the release himself** — see `RELEASING.md` for the
+exact steps. This is the correct shape given the hand-signing decision, not a shortcut around it.
 
 ## Why
 
@@ -14,20 +21,25 @@ There are currently no tags and no releases in the repo.
 
 ### 1. `.github/workflows/release.yml` (new)
 
-Separate from `android.yml`. Triggers on tags matching `v*`.
+Separate from `android.yml`. Triggers on tags matching `v*`. **Never has key material — that's the
+whole point of hand-signing.**
 
-Steps: checkout → temurin 17 → `testDebugUnitTest` → `assembleRelease` (signed, per W4) →
-compute SHA-256 → create a GitHub Release from the tag, attaching the APK and the mapping file.
+Steps: checkout → temurin 17 → `testDebugUnitTest` → `assembleRelease` (unsigned; CI has no key) →
+create a **draft** GitHub Release from the tag, body pulled from `CHANGELOG.md`, with the unsigned
+APK and mapping file attached as placeholders explicitly labelled "unsigned — replace before
+publishing."
 
 Requirements:
 
-- **Tests must run and pass before the release is created.** A tagged build that skips tests is how
-  a broken release ships.
-- Attach `app/build/outputs/mapping/release/mapping.txt` to the release. Without it, crash reports
-  from strangers are unreadable.
-- Publish the APK's SHA-256 in the release body, not only as a file.
+- **Tests must run and pass before the draft is created.** A tagged build that skips tests is how
+  a broken release ships, signed or not.
+- Attach `app/build/outputs/mapping/release/mapping.txt` to the draft. Without it, crash reports
+  from strangers are unreadable, and it saves the human a step.
 - Use the tag name as the release name; do not auto-generate a body from commits alone — pull the
   matching section from `CHANGELOG.md`.
+- **The workflow never creates a published release, only a draft.** Publishing (with the real
+  signed APK swapped in, and the SHA-256 of *that* file in the body) is `RELEASING.md`'s job, done
+  by whoever holds the key.
 
 ### 2. `CHANGELOG.md` (new)
 
@@ -77,15 +89,20 @@ readable source.
 
 ## Acceptance criteria
 
-- [ ] Pushing tag `v2.1.0` produces a GitHub Release with a **signed** APK attached.
-- [ ] The release body contains the APK's SHA-256, and it matches
-      `sha256sum` of the downloaded file.
-- [ ] `mapping.txt` is attached.
-- [ ] The workflow fails and creates **no** release if `testDebugUnitTest` fails.
-- [ ] `CHANGELOG.md` covers every existing version with accurate dates from git history.
-- [ ] README has both an install/verify section and a permissions/trust section.
-- [ ] The downloaded APK installs on a real device running Android 8.0+ and the app launches.
-- [ ] `apksigner verify --print-certs` on the released APK matches the fingerprint recorded in W4.
+- [x] Pushing a tag `v*` produces a **draft** GitHub Release with an unsigned APK and mapping file
+      attached, body pulled from `CHANGELOG.md`. (Verified by reading the workflow logic; actually
+      pushing a tag is a human step, not exercised by this session.)
+- [ ] `RELEASING.md` documents signing the APK by hand and republishing it, with the SHA-256 of the
+      **signed** file in the release body, matching `sha256sum` of the downloaded file. **This
+      criterion needs @sidewinderzz to actually run it once, with the real key, to fully close.**
+- [x] `mapping.txt` is attached to the draft.
+- [x] The workflow fails and creates **no** draft if `testDebugUnitTest` fails.
+- [x] `CHANGELOG.md` covers every existing version with accurate dates from git history.
+- [x] README has both an install/verify section and a permissions/trust section.
+- [ ] The downloaded, signed APK installs on a real device running Android 8.0+ and the app
+      launches — needs a real signed build, so it's a human step once O-002's key exists.
+- [ ] `apksigner verify --print-certs` on the released APK matches the fingerprint recorded when
+      the key was generated — same caveat, needs the real key.
 
 ## Out of scope
 

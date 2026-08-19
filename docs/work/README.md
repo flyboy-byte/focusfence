@@ -58,8 +58,8 @@ version string. JDK 17 (CI) and 21 both work.
 | [W1](W1-doc-corrections.md) | Correct three false documentation claims | Release | — | **Done** |
 | [W2](W2-ci-release-build.md) | CI builds and verifies the release APK | Release | — | **Done** |
 | [W3](W3-license.md) | Add a `LICENSE` file | Release | D-015 | **Done** — acked 2026-08-15 |
-| [W4](W4-release-signing.md) | Release signing config + CI secret | Release | O-002 | **Ready** — O-002 resolved 2026-08-18, hand-sign |
-| [W5](W5-release-workflow.md) | Tag → signed APK → GitHub Release, + `CHANGELOG.md` | Release | W2, W4 | Ready after W4; amend for hand-signing per R1 |
+| [W4](W4-release-signing.md) | Release signing config + CI secret | Release | O-002 | ✅ Done (`logandev`, 2026-08-18) — plumbing only, no key generated |
+| [W5](W5-release-workflow.md) | Tag → signed APK → GitHub Release, + `CHANGELOG.md` | Release | W2, W4 | ✅ Done (`logandev`, 2026-08-18) — draft-release workflow, not yet exercised with a real tag |
 | [W6](W6-extract-rule-evaluator.md) | Extract rule evaluation into `dns/` | Product | — | **Done** |
 | [W7](W7-time-bounded-app-blocking.md) | Time-bounded app blocking | Product | W6 | **Done** |
 | [W8](W8-boundary-model.md) | The boundary model | Product | W6, W7 | **Parked** — see `docs/parked.md`, D-016 recommendation |

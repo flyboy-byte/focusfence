@@ -1,0 +1,68 @@
+name: Draft release
+
+# O-002 (DECISIONS.md): the signing key is hand-held by @sidewinderzz and never touches CI.
+# This workflow only validates a tag and stages a DRAFT release with the unsigned build — it
+# never publishes. Publishing (with a hand-signed APK swapped in) is RELEASING.md's job.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Tests gate everything below — a tagged build that skips this is how a broken
+      # release ships, signed or not.
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build unsigned release APK
+        run: ./gradlew assembleRelease
+
+      - name: Verify R8 ran
+        run: test -f app/build/outputs/mapping/release/mapping.txt
+
+      # Keep-a-Changelog format: the version heading is "## <version>", so strip the
+      # leading "v" from the tag and pull everything up to the next "## " heading.
+      - name: Extract changelog section for this tag
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          {
+            echo "**⚠️ DRAFT — the attached APK is UNSIGNED.** Before publishing, follow"
+            echo "\`RELEASING.md\` to sign it by hand, replace this attachment with the signed"
+            echo "APK, and add its real SHA-256 below. Do not publish this draft as-is."
+            echo
+          } > /tmp/release-notes.md
+          awk -v ver="## $VERSION" '
+            $0 ~ "^"ver { found=1; print; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md >> /tmp/release-notes.md
+          if [ "$(wc -l < /tmp/release-notes.md)" -le 3 ]; then
+            echo "No CHANGELOG.md section found for $GITHUB_REF_NAME — draft anyway with a placeholder." >&2
+            echo "(No matching CHANGELOG.md section for $GITHUB_REF_NAME — fill in manually.)" >> /tmp/release-notes.md
+          fi
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: ${{ github.ref_name }}
+          body_path: /tmp/release-notes.md
+          files: |
+            app/build/outputs/apk/release/*-unsigned.apk
+            app/build/outputs/mapping/release/mapping.txt
