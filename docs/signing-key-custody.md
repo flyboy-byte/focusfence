@@ -190,8 +190,13 @@ Tracked so the decision is not mistaken for the work:
 
 ## Status
 
-**Unresolved.** Awaiting @sidewinderzz on questions 1–4. W4 stays BLOCKED until then, and this
-document is not a substitute for that decision.
+**Resolved 2026-08-18** — see `DECISIONS.md` O-002. @sidewinderzz holds the keystore alone (no
+second live copy), hand-signs releases, keeps an offline encrypted backup outside any synced
+folder. RSA 4096, ≥30yr validity. W4 is unblocked.
+
+**Provenance caveat, carried over from the decision entry:** this was relayed by @flyboy-byte in
+session, not typed by @sidewinderzz directly. Worth getting his own direct confirmation before he
+actually runs the `keytool` command below — see O-002 for the full note.
 
 **Research Q9 landed 2026-08-15** ([raw findings](research/2026-08-15-signing-key-custody-prior-art-claude.md)),
 which changes what is still open:

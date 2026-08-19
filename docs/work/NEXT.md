@@ -85,10 +85,20 @@ web access.** They're queue items in their own right, below.
       RethinkDNS's CI signs only a *separate* alpha key under a different `applicationId`. **No
       project documents any backup/escrow practice** — questions 1–3 of O-002 stay blank-page
       decisions that no further research can help with.
-      **The ball is now with @sidewinderzz, not with an agent.** O-002 needs a human answer to
-      "who holds the key, does the other maintainer hold a copy, where does the backup live."
-      Nothing below is blocked on it, so an unsupervised session should skip to the next section
-      rather than sit here — but do not start W4/W5, and do not decide O-002 on a human's behalf.
+      **O-002 resolved 2026-08-18** — see `DECISIONS.md`. @sidewinderzz holds the keystore alone,
+      hand-signs, offline encrypted backup, RSA 4096/30yr. **W4 and W5 are now ready to build** —
+      see below. One live caveat: the resolution was relayed by @flyboy-byte in session, not typed
+      by @sidewinderzz directly — a session picking up W4 should not itself run `keytool` or
+      generate real key material (that step is explicitly @sidewinderzz's alone, never an agent's,
+      per `docs/signing-key-custody.md`'s own opening warning); build the `signingConfigs` plumbing
+      so it works once he runs the command, and confirm the build still succeeds unsigned when key
+      material is absent.
+- [ ] **W4** — release signing config. **Ready.** `docs/work/W4-release-signing.md`. Read
+      `docs/signing-key-custody.md` first — hand-signing was chosen over CI signing, which changes
+      what this work order builds (no GitHub Actions secret).
+- [ ] **W5** — tag → signed APK → GitHub Release + CHANGELOG. **Ready after W4.**
+      `docs/work/W5-release-workflow.md`. R1 flagged this work order's spec silently assumed CI
+      signing — check it against the hand-signing decision before implementing, not after.
 
 ### Ready now, zero dependencies
 
@@ -290,8 +300,9 @@ landed and the release has shipped — don't start writing code straight from th
 
 - **W8** (the unified boundary model) — parked, see `DECISIONS.md` and the 04.3 recommendation in
   the project review. Don't pick it up without a human reopening it.
-- **W4 / W5** (signing config, release workflow) — blocked on O-002, a human decision. Research Q9
-  above can inform that decision; nothing here should execute W4/W5 before it's made.
+- ~~**W4 / W5** (signing config, release workflow) — blocked on O-002~~ — **O-002 resolved
+  2026-08-18, W4/W5 moved up to the top section.** Left here struck through so the history of why
+  they were blocked stays visible.
 - Anything not already speced as a `W*` work order or a numbered research question. This queue is
   deliberately closed — invent nothing. If something new and real comes up while working an item,
   write it up as a new work order or research question and add it here, rather than doing it

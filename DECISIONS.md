@@ -382,3 +382,23 @@ To settle: who generates and holds the keystore; whether both of us hold a copy;
 lives; and whether CI signs from a GitHub Actions secret or releases are signed by hand.
 
 Worth settling now — losing this key later is unrecoverable.
+
+**Resolved 2026-08-18**, per `docs/signing-key-custody.md` and R1's analysis:
+
+1. **Holder:** @sidewinderzz generates and holds the keystore alone.
+2. **Second copy:** none. @flyboy-byte does not hold a live copy — single holder, smallest leak
+   surface, per the doc's own table.
+3. **Backup:** @sidewinderzz's responsibility to keep an offline, encrypted backup outside any
+   synced folder, per `docs/signing-key-custody.md` §3 — not yet confirmed done, just assigned.
+4. **Signing:** by hand, not CI, per R1's recommendation and the unanimous prior art in research
+   Q9 (RethinkDNS, NetGuard, AdAway, personalDNSfilter all hand-sign production).
+5. **Key parameters:** RSA 4096, validity ≥ 30 years.
+
+**Provenance note, stated plainly:** relayed by @flyboy-byte ("he'll hold it") in the session that
+recorded this, not typed by @sidewinderzz directly here. Same caveat as D-015's acknowledgement —
+if a stronger artifact is wanted before a binary ships (a message or commit from @sidewinderzz's
+own account), that supersedes this line. Given this is the one truly unrecoverable decision in the
+project, getting that direct confirmation before he actually runs `keytool` is worth doing even
+though this entry treats O-002 as unblocked for W4 purposes.
+
+**Unblocks W4.**
