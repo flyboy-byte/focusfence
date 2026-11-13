@@ -1,7 +1,28 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// Release signing credentials. CI supplies them as environment variables (decoded from
+// GitHub secrets); local builds can use a git-ignored keystore.properties at the repo root
+// (see keystore.properties.example). Nothing secret is ever committed. With neither present,
+// assembleRelease still succeeds but produces an unsigned APK that Android won't install.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun signingValue(env: String, prop: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(prop)
+
+val releaseStoreFile = signingValue("FOCUSFENCE_KEYSTORE", "storeFile")
+val releaseStorePassword = signingValue("FOCUSFENCE_KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = signingValue("FOCUSFENCE_KEY_ALIAS", "keyAlias")
+// PKCS12 keystores (keytool's default) use one password for the store and the key.
+val releaseKeyPassword = signingValue("FOCUSFENCE_KEY_PASSWORD", "keyPassword") ?: releaseStorePassword
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias).all { it != null }
 
 android {
     namespace = "app.focusfence"
@@ -11,17 +32,38 @@ android {
         applicationId = "app.focusfence"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.0.1"
+        versionCode = 7
+        versionName = "2.1.0"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            signingConfig = signingConfigs.findByName("release")
+            // R8 is off so the release runs exactly the code the debug builds were tested
+            // with. Turn it on only alongside an on-device pass: the VPN/accessibility
+            // services are reached via the manifest, and shrinking bugs only show at runtime.
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            // Separate package so a debug/beta build installs alongside the real app
+            // instead of colliding with its signature. Label is overridden in src/debug.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
 

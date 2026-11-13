@@ -16,16 +16,20 @@ phone. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
 ## Commands
 
 ```sh
-./gradlew assembleDebug                 # APK -> app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleDebug                 # APK -> app/build/outputs/apk/debug/app-debug.apk (app.focusfence.debug)
+./gradlew assembleRelease               # signed only if FOCUSFENCE_* env vars or keystore.properties exist
 ./gradlew testDebugUnitTest             # all JVM unit tests
 ./gradlew testDebugUnitTest --tests 'app.focusfence.dns.BlocklistTest'          # one class
 ./gradlew testDebugUnitTest --tests 'app.focusfence.dns.BlocklistTest.matches*' # one method
 ./gradlew lint                          # Android lint
 ```
 
-CI (`.github/workflows/android.yml`) runs `testDebugUnitTest` then `assembleDebug` on every push
-and uploads the APK as artifact `focus-fence-debug-apk`. There are no instrumented tests — the
-only automated coverage is the JVM suite in `app/src/test/`.
+CI (`.github/workflows/android.yml`) runs `testDebugUnitTest`, then `assembleRelease` signed from
+the `FOCUSFENCE_KEYSTORE_BASE64` / `_KEYSTORE_PASSWORD` / `_KEY_ALIAS` secrets (artifact
+`focus-fence-apk`), falling back to `assembleDebug` when secrets are absent. `v*` tags also publish
+a GitHub Release. Debug builds use `applicationIdSuffix = ".debug"` so they install alongside the
+release. Release has R8 off deliberately (parity with the tested debug build). There are no
+instrumented tests — the only automated coverage is the JVM suite in `app/src/test/`.
 
 ## Architecture
 
@@ -35,14 +39,15 @@ Three enforcement layers, each covering what the others cannot:
    servers (`10.111.222.3`, `fd66:f0cf:0:1::53`) and routes *only those two addresses*, so normal
    traffic never enters the app. That is the entire reason battery/throughput cost is negligible;
    any change that widens the routes breaks the core premise. Blocked queries get a locally
-   synthesized NXDOMAIN; everything else is relayed over a `protect()`ed socket to
+   synthesized `0.0.0.0`/`::` answer with a TTL (`Dns.buildBlockedResponse`) — not NXDOMAIN, which
+   is uncacheable and kept waking the service; everything else is relayed over a `protect()`ed socket to
    1.1.1.1/8.8.8.8 (+ v6), tracking a `preferredUpstream` so dead resolvers aren't re-probed.
 2. **Accessibility service** (`accessibility/UrlFilterService.kt`) — enforces per-path "section"
    rules (allow `facebook.com/marketplace`, block the rest) by reading browser address bars and
    pressing Back, and bounces blocked apps to the home screen. DNS sees hostnames only and TLS
    hides paths, so section rules *must* leave the domain resolvable — hence
    `ruleBlocks()` returns false for `hasPathExceptions` rules.
-3. **DoH guards** (`Blocklist.DOH_BYPASS_GUARDS`) — NXDOMAINs browser DoH bootstrap hosts and
+3. **DoH guards** (`Blocklist.DOH_BYPASS_GUARDS`) — blocks browser DoH bootstrap hosts and
    answers the `use-application-dns.net` canary so browsers can't bypass the filter.
 
 ### Purity boundary

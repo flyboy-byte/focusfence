@@ -1,8 +1,9 @@
 # Focus Fence
 
 An Android app that blocks distracting websites **you** choose — social media, news, anything —
-using an on-device VPN. No root, no account, no external server: nothing about your browsing
-ever leaves your phone.
+using an on-device VPN. No root, no account, no server of ours: every blocking decision is made
+on your phone, and there's no telemetry. (Lookups for sites you *haven't* blocked are resolved
+by a normal public DNS resolver, the same as without the app — see below.)
 
 ## How it works (and why it's efficient)
 
@@ -14,12 +15,15 @@ but it is *not* a real VPN — no traffic is sent to any server. The tunnel is c
   routes *only* those two addresses through the tunnel. All of your normal traffic (web, video,
   apps) takes the regular network path, untouched.
 - The app reads DNS queries off the tunnel. Queries for a blocked domain (or any of its
-  subdomains) are answered locally with `NXDOMAIN`, so the site simply fails to resolve.
+  subdomains) are answered locally with the unroutable address `0.0.0.0` / `::`, so the site
+  simply fails to load. (The answer carries a TTL so the phone caches it rather than asking
+  again on every retry — a bare `NXDOMAIN` isn't cacheable and kept the VPN awake.)
 - Everything else is relayed to a real resolver (Cloudflare `1.1.1.1`, with Google `8.8.8.8` as
   fallback) over a socket that bypasses the tunnel, and the answer is written back.
 
 Because only DNS (a few small packets per page load) traverses the app, battery and throughput
-impact is effectively zero. This is the same architecture used by well-known apps like
+cost should be small — your actual traffic never touches it. (That's what the design predicts;
+it hasn't been formally measured.) This is the same architecture used by well-known apps like
 DNS66 and personalDNSfilter.
 
 ## Features
@@ -43,9 +47,9 @@ DNS66 and personalDNSfilter.
   Requires enabling the "Focus Fence" accessibility service once (the app guides you there);
   address bars are read only to match your own rules, and nothing is stored or transmitted.
 - **Ad & tracker blocking**: optional toggle that downloads the
-  [StevenBlack hosts list](https://github.com/StevenBlack/hosts) (100k+ ad/tracker/malware
-  domains, aggregated from the same sources AdGuard/uBlock use) and blocks those too — for the
-  whole device, in every app.
+  [StevenBlack hosts list](https://github.com/StevenBlack/hosts) (~100k ad/tracker/malware
+  domains, aggregated from a set of curated hosts files) and blocks those too — for the whole
+  device, in every app.
 - One-tap preset that adds the major social media sites.
 - **Strict mode**: while on, turning blocking off, removing rules, or un-blocking apps requires
   requesting an unlock, waiting 10 minutes, then making changes inside a 5-minute window.
@@ -59,20 +63,53 @@ DNS66 and personalDNSfilter.
 - Foreground notification + live counter of blocked lookups.
 - Works with Android's **always-on VPN** setting for enforcement that survives reboots.
 
+## Installing
+
+Download the latest `focus-fence-<version>.apk` from the repo's
+[Releases](../../releases) page. On your phone, allow "Install unknown apps" for your browser or
+file manager, then open the APK. Later releases install over the top and keep your settings.
+
+> **Coming from a build before 2.1.0?** Those were debug builds, and each one was signed with a
+> throwaway key, so Android won't upgrade them to the signed release ("App not installed").
+> Uninstall the old one first — note your rules down, since they don't carry over.
+
 ## Building
 
 Requirements: JDK 17+, Android SDK (platform 34). Then:
 
 ```sh
-./gradlew assembleDebug        # APK at app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest    # DNS/packet/blocklist unit tests
+./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease      # app/build/outputs/apk/release/app-release.apk (needs the key, below)
 ```
 
-Or just push to GitHub — the included Actions workflow builds the APK on every push and uploads
-it as an artifact (`focus-fence-debug-apk`), which you can download and sideload.
+The **debug** build installs as a separate app, "Focus Fence (debug)" (`app.focusfence.debug`),
+so test or beta builds can sit alongside the real one. Only one of them can run its VPN at a time.
 
-To install on your phone: enable "Install unknown apps" for your file manager or browser,
-copy the APK over (or download the CI artifact on the phone), and open it.
+### Release signing
+
+Release APKs are signed with the project's release key, which is never committed. Locally, copy
+`keystore.properties.example` to `keystore.properties` (git-ignored) and fill it in; without it,
+`assembleRelease` produces an unsigned APK Android won't install.
+
+CI reads the key from three repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `FOCUSFENCE_KEYSTORE_BASE64` | the `.jks` file, base64-encoded on one line |
+| `FOCUSFENCE_KEYSTORE_PASSWORD` | the keystore password |
+| `FOCUSFENCE_KEY_ALIAS` | `focusfence` |
+
+With those set, every push builds a signed APK (artifact `focus-fence-apk`). Pushing a tag like
+`v2.1.0` — or creating a release with that tag on GitHub — also publishes it on the Releases page.
+Without the secrets (e.g. pull requests from forks), CI builds a debug APK instead.
+
+**Back up the keystore and its password somewhere safe.** Android only accepts an update signed
+with the same key as the installed app. Lose the key and every user has to uninstall and start
+over; leak it and someone else can ship "updates".
+
+To cut a release: bump `versionCode` and `versionName` in `app/build.gradle.kts`, merge, then
+tag `v<versionName>`.
 
 ## Usage tips
 

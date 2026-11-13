@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug builds install as a separate app (app.focusfence.debug); label them so the
+         two are distinguishable in the launcher, VPN and accessibility settings. -->
+    <string name="app_name">Focus Fence (debug)</string>
+    <string name="section_service_label">App &amp; section blocking (debug)</string>
+</resources>

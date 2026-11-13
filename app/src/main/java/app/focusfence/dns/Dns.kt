@@ -106,21 +106,6 @@ object Dns {
         return resp
     }
 
-    /**
-     * Builds an NXDOMAIN response for the query in [msg]: same ID and question,
-     * QR/RA set, RCODE=3, no answer records. Note: without an SOA record this
-     * is not cacheable by clients; prefer [buildBlockedResponse] for blocking.
-     */
-    fun buildNxDomain(msg: ByteArray, offset: Int, questionEnd: Int): ByteArray {
-        val resp = ByteArray(questionEnd)
-        System.arraycopy(msg, offset, resp, 0, questionEnd)
-        resp[2] = 0x81.toByte() // QR=1, opcode=query, RD=1
-        resp[3] = 0x83.toByte() // RA=1, RCODE=3 (NXDOMAIN)
-        // ANCOUNT / NSCOUNT / ARCOUNT = 0 (drops any EDNS OPT the client sent).
-        for (j in 6..11) resp[j] = 0
-        return resp
-    }
-
     private fun readU16(b: ByteArray, i: Int): Int =
         ((b[i].toInt() and 0xff) shl 8) or (b[i + 1].toInt() and 0xff)
 }

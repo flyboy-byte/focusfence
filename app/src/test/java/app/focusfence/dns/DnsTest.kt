@@ -89,24 +89,8 @@ class DnsTest {
     }
 
     @Test
-    fun nxDomainResponseKeepsIdAndQuestion() {
-        val q = query("reddit.com")
-        val parsed = Dns.parseQuestion(q, 0, q.size)!!
-        val resp = Dns.buildNxDomain(q, 0, parsed.questionEnd)
-
-        assertEquals(q.size, resp.size)
-        assertEquals(q[0], resp[0]) // ID preserved
-        assertEquals(q[1], resp[1])
-        assertEquals(0x81.toByte(), resp[2]) // QR set
-        assertEquals(0x83.toByte(), resp[3]) // RCODE=3
-        assertEquals(0x00.toByte(), resp[7]) // ANCOUNT=0
-        // Question section copied verbatim.
-        for (i in 12 until q.size) assertEquals(q[i], resp[i])
-    }
-
-    @Test
     fun blockedReplyPacketRoundTrips() {
-        // Wrap a query in an IPv4/UDP packet, build the NXDOMAIN reply, and re-parse it.
+        // Wrap a query in an IPv4/UDP packet, build the block reply, and re-parse it.
         val dnsQuery = query("facebook.com")
         val src = byteArrayOf(10, 111, 222.toByte(), 1)
         val dst = byteArrayOf(10, 111, 222.toByte(), 3)
@@ -132,7 +116,7 @@ class DnsTest {
         val parsed = Dns.parseQuestion(udp.packet, udp.payloadOffset, udp.payloadLength)!!
         assertEquals("facebook.com", parsed.qname)
 
-        val reply = Packets.buildUdpReply(udp, Dns.buildNxDomain(udp.packet, udp.payloadOffset, parsed.questionEnd))
+        val reply = Packets.buildUdpReply(udp, Dns.buildBlockedResponse(udp.packet, udp.payloadOffset, parsed, 60))
         val replyUdp = Packets.parseUdp(reply, reply.size)
         assertNotNull(replyUdp)
         // Addresses and ports are swapped in the reply.

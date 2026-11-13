@@ -76,7 +76,7 @@ data class BlockRule(
 object Blocklist {
 
     /**
-     * DoH bootstrap hosts that are always answered NXDOMAIN while the VPN runs, so
+     * DoH bootstrap hosts that are always blocked (0.0.0.0 / ::) while the VPN runs, so
      * browsers cannot silently bypass the filter with their own encrypted DNS.
      * "use-application-dns.net" is the standard canary that tells Firefox to
      * disable its built-in DoH.

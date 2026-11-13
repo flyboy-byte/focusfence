@@ -50,13 +50,11 @@ Two details in there are easy to "fix" into a regression:
 **The tun fd is explicitly blocking.** `establish()` returns a non-blocking fd by default,
 which turns the reader loop into a busy spin that pins a core.
 
-**Blocked queries are not answered NXDOMAIN**, despite what the README and one KDoc comment
-still say. A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
+**Blocked queries are not answered NXDOMAIN.** A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
 continuously — this was measured waking the service thousands of times a day. Blocked A/AAAA
 queries now get a real answer of `0.0.0.0` / `::` with an explicit TTL; other query types get
 NODATA. TTLs are split deliberately: **1 hour** for ad and DoH-guard blocks, which are stable,
 and **60 seconds** for user rules, which change as schedules and budgets do.
-`Dns.buildNxDomain` still exists but is no longer on the block path.
 
 ## Layering
 
