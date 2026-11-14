@@ -10,8 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Focus Fence — an Android app (Kotlin, views + ViewBinding, no DI/Compose) that blocks distracting
-websites via a DNS-only `VpnService`. Fully on-device: no accounts, no servers, nothing leaves the
-phone. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
+websites via a DNS-only `VpnService`, and keeps a local activity/diagnostics log. On-device: no
+accounts, no servers; allowed DNS is forwarded to public resolvers, and logs leave the phone
+only via user-initiated export. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
 
 ## Commands
 
@@ -35,20 +36,22 @@ Three enforcement layers, each covering what the others cannot:
    servers (`10.111.222.3`, `fd66:f0cf:0:1::53`) and routes *only those two addresses*, so normal
    traffic never enters the app. That is the entire reason battery/throughput cost is negligible;
    any change that widens the routes breaks the core premise. Blocked queries get a locally
-   synthesized NXDOMAIN; everything else is relayed over a `protect()`ed socket to
+   synthesized cacheable `0.0.0.0`/`::` (NODATA for other types; `Dns.buildBlockedResponse`,
+   TTL 1h for ads/guards, 60s for user rules); everything else is relayed over a `protect()`ed socket to
    1.1.1.1/8.8.8.8 (+ v6), tracking a `preferredUpstream` so dead resolvers aren't re-probed.
 2. **Accessibility service** (`accessibility/UrlFilterService.kt`) — enforces per-path "section"
    rules (allow `facebook.com/marketplace`, block the rest) by reading browser address bars and
    pressing Back, and bounces blocked apps to the home screen. DNS sees hostnames only and TLS
    hides paths, so section rules *must* leave the domain resolvable — hence
    `ruleBlocks()` returns false for `hasPathExceptions` rules.
-3. **DoH guards** (`Blocklist.DOH_BYPASS_GUARDS`) — NXDOMAINs browser DoH bootstrap hosts and
+3. **DoH guards** (`Blocklist.DOH_BYPASS_GUARDS`) — blocks browser DoH bootstrap hosts and
    answers the `use-application-dns.net` canary so browsers can't bypass the filter.
 
 ### Purity boundary
 
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
-`Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`) so it can be
+`Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
+logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -82,19 +85,40 @@ always allowed. Enforcement is spread across call sites — `DnsVpnService.onSta
 `ACTION_STOP` while locked, and UI paths check `StrictStore.isLocked` and route through
 `UiUtil.showStrictLockedDialog`. New destructive UI actions must add their own check.
 
+### Logging (activity + diag)
+
+`data/EventLog` is a process singleton writing JSON lines to `files/logs/` in two channels:
+**activity** (detection record + integrity trail: `dns`, `url`, `app`, `screen`, `enforce`,
+`svc`, `integ`) and **diag** (`bat`, `perf`, `err`). The schema lives only in `dns/LogEvents`,
+documented in `docs/specs/event-log.md`; change both together. Rules that matter:
+
+- Never write to disk from the DNS reader thread: `EventLog` buffers and flushes on its own
+  thread. Lifecycle/integrity records pass `urgent = true` so they hit disk immediately.
+- A protection gap must never be silent: a new protection component needs a key in
+  `Monitor.integrityState` and its own `svc` lifecycle records.
+- `monitor/Monitor` samples battery only from system broadcasts (battery changed, screen
+  on/off), never a timer, and closes a `PerfWindow` on each sample. Services count into
+  `Monitor.perf`; a new sensor should add counters for its volume and miss rate.
+- Recording settings (`LogSettings`) live in the `focusfence` prefs file and are handled in the
+  services' prefs listeners, like rules. Turning recording off and clearing logs are loosening
+  actions and check strict mode.
+- `UsageCollector` *pulls* UsageStats (no wakeups) and turns it into a fg/bg timeline via the
+  pure `AppTimeline`.
+
 ### Battery-sensitive code
 
 Several non-obvious details exist purely for battery/CPU and should not be "cleaned up" without
 understanding them: `setBlocking(true)` on the tunnel builder (a non-blocking fd turns the reader
 into a busy spin); the accessibility service narrowing `serviceInfo.packageNames`/`eventTypes` to
 only the packages it acts on, requesting the high-volume content-changed events only while
-section rules exist; batched stats flushes; and split block TTLs (ads cached 1h, user rules 60s).
+section rules exist (or URL recording is on); batched stats flushes; and split block TTLs (ads cached 1h, user rules 60s).
 
 ### UI
 
 `MainActivity` is a bottom-nav host swapping four fragments (`ui/HomeFragment`,
 `BlocklistFragment`, `StatsFragment`, `SettingsFragment`); `DomainDetailActivity` is the per-domain
-rule editor and `OnboardingActivity`/`HelpActivity` are standalone. Shared dialogs, permission
+rule editor, `DiagnosticsActivity` (from Settings) shows/export/clears the logs, and
+`OnboardingActivity`/`HelpActivity` are standalone. Shared dialogs, permission
 prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
 `ACTION_STATE_CHANGED` package-scoped broadcast plus a 1s ticker for counters/countdowns.
 

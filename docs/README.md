@@ -20,6 +20,11 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 | [`audits/03-foss-ecosystem.md`](audits/03-foss-ecosystem.md) | Survey of uBlock Origin, Rethink, NetGuard, AdAway, PCAPdroid, DNS66 and the filter-list ecosystem, plus matching/storage strategy at scale and licensing analysis. |
 | [`audits/04-cloudveil-repos.md`](audits/04-cloudveil-repos.md) | Repository-by-repository review of CloudVeil's open-source filtering stack: what's worth studying, what to avoid. |
 | [`plans/00-roadmap.md`](plans/00-roadmap.md) | Suggested sequencing derived from the above. **Suggestions, not decisions.** |
+| [`plans/01-base-assessment.md`](plans/01-base-assessment.md) | Is Focus Fence the right base for an Ever Accountable–class accountability app? (Yes, with two conditions.) |
+| [`plans/02-ever-accountable-parity.md`](plans/02-ever-accountable-parity.md) | Feature-by-feature gap matrix against Ever Accountable on Android, and a phased build order with measurement gates. |
+| [`plans/03-measurement-plan.md`](plans/03-measurement-plan.md) | How to use the new logs to measure reliability and battery cost, and what each result decides. |
+| [`specs/event-log.md`](specs/event-log.md) | **Implemented.** Schema and guarantees of the activity and diagnostics logs, export format. |
+| [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Proposed component specs: categories, in-app capture, screenshots, integrity/heartbeat, backend, settings lock, Device Owner mode. Open decisions listed. |
 
 ## How to read it
 

@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import app.focusfence.DiagnosticsActivity
 import app.focusfence.HelpActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
@@ -51,6 +52,9 @@ class SettingsFragment : Fragment() {
         }
         binding.accessibilityButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        binding.diagnosticsButton.setOnClickListener {
+            startActivity(Intent(requireContext(), DiagnosticsActivity::class.java))
         }
         binding.guideButton.setOnClickListener {
             startActivity(Intent(requireContext(), HelpActivity::class.java))

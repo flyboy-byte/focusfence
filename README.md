@@ -1,8 +1,9 @@
 # Focus Fence
 
 An Android app that blocks distracting websites **you** choose — social media, news, anything —
-using an on-device VPN. No root, no account, no external server: nothing about your browsing
-ever leaves your phone.
+using an on-device VPN. No root, no account, no policy server, no telemetry: every filtering
+decision is made on your phone. Lookups that aren't blocked are resolved by a public DNS
+resolver, as they would be anyway.
 
 ## How it works (and why it's efficient)
 
@@ -14,13 +15,16 @@ but it is *not* a real VPN — no traffic is sent to any server. The tunnel is c
   routes *only* those two addresses through the tunnel. All of your normal traffic (web, video,
   apps) takes the regular network path, untouched.
 - The app reads DNS queries off the tunnel. Queries for a blocked domain (or any of its
-  subdomains) are answered locally with `NXDOMAIN`, so the site simply fails to resolve.
+  subdomains) are answered locally with a cacheable `0.0.0.0` / `::` address (an empty answer
+  for other record types), so the site fails to load and the phone doesn't keep re-asking.
 - Everything else is relayed to a real resolver (Cloudflare `1.1.1.1`, with Google `8.8.8.8` as
   fallback) over a socket that bypasses the tunnel, and the answer is written back.
 
-Because only DNS (a few small packets per page load) traverses the app, battery and throughput
-impact is effectively zero. This is the same architecture used by well-known apps like
-DNS66 and personalDNSfilter.
+Because only DNS (a few small packets per page load) traverses the app, the architecture is
+cheap to run by design. The same approach is used by well-known apps like DNS66 and
+personalDNSfilter. Rather than claim a number, the app measures it: **Settings → Logs &
+diagnostics** records battery drain per screen state, the app's own CPU time, and resolver
+latency and failures (see [`docs/specs/event-log.md`](docs/specs/event-log.md)).
 
 ## Features
 
@@ -58,6 +62,22 @@ DNS66 and personalDNSfilter.
   active, so Firefox/Chrome can't silently bypass the filter with their own encrypted DNS.
 - Foreground notification + live counter of blocked lookups.
 - Works with Android's **always-on VPN** setting for enforcement that survives reboots.
+
+## Logs & diagnostics
+
+Settings → **Logs & diagnostics** keeps two local logs:
+
+- **Activity**: every DNS lookup and whether it was blocked (and by which rule or list), the
+  foreground-app timeline (with Usage access), browser addresses (opt-in), enforcement actions,
+  and every change to the protection itself: VPN or accessibility stopping, Private DNS
+  changes, reboots, log clears.
+- **Diagnostics**: battery and CPU samples, DNS latency and failure rates, accessibility event
+  volume, and errors. It shows how well the app works and what it costs.
+
+Both stay on the phone until you export them (a zip shared through the system share sheet).
+`tools/analyze_logs.py` summarizes an export, and `tools/battery-baseline.sh` takes the
+matching adb `batterystats` measurement. With strict mode on, turning recording off or
+clearing the logs needs an unlock like any other loosening.
 
 ## Building
 

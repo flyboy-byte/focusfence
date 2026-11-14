@@ -10,8 +10,13 @@ import android.widget.Toast
 import app.focusfence.R
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.EventLog
+import app.focusfence.data.LogSettings
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.LogEvents
+import app.focusfence.dns.UrlDeduper
 import app.focusfence.dns.UrlFilter
+import app.focusfence.monitor.Monitor
 
 /**
  * Enforces "allow only specific sections" rules by watching browser address
@@ -20,8 +25,12 @@ import app.focusfence.dns.UrlFilter
  * them), so this is the only self-contained way to block part of a website
  * while allowing another part.
  *
- * Reads only browser address bars for matching against the user's own rules;
- * nothing is stored or transmitted.
+ * Reads only browser address bars. They are matched against the user's own
+ * rules and, only if the owner turned on "Record browser addresses"
+ * ([LogSettings.KEY_LOG_URLS]), written to the on-device activity log as
+ * host + path (query strings and fragments are dropped). Nothing is
+ * transmitted. Every enforcement action and the service's own lifecycle are
+ * logged too: this service going away is a protection gap.
  */
 class UrlFilterService : AccessibilityService() {
 
@@ -44,6 +53,7 @@ class UrlFilterService : AccessibilityService() {
         private const val BACK_DEBOUNCE_MS = 1500L
         private const val APP_BLOCK_DEBOUNCE_MS = 2000L
         private const val MAX_FALLBACK_NODES = 250
+        private const val COMP = "a11y"
     }
 
     @Volatile
@@ -55,21 +65,42 @@ class UrlFilterService : AccessibilityService() {
     @Volatile
     private var blockedApps: Set<String> = emptySet()
 
+    @Volatile
+    private var logUrls = false
+
+    private val urlDeduper = UrlDeduper()
+
     private var lastCheckAt = 0L
     private var lastBackAt = 0L
     private var lastAppBlockAt = 0L
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS) reloadRules()
+        if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS ||
+            key == LogSettings.KEY_LOG_URLS
+        ) {
+            reloadRules()
+        }
     }
 
     override fun onServiceConnected() {
         reloadRules()
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
+        Monitor.a11yConnected = true
+        EventLog.activity(
+            LogEvents.service(
+                System.currentTimeMillis(), COMP, "connected",
+                "section_rules=$hasSectionRules,blocked_apps=${blockedApps.size},log_urls=$logUrls",
+            ),
+            urgent = true,
+        )
+        Monitor.attach(this, COMP)
     }
 
     override fun onDestroy() {
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
+        Monitor.a11yConnected = false
+        EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "destroyed"), urgent = true)
+        Monitor.detach(COMP)
         super.onDestroy()
     }
 
@@ -78,6 +109,7 @@ class UrlFilterService : AccessibilityService() {
         rules = loaded
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
         blockedApps = BlockedAppsStore.get(this)
+        logUrls = LogSettings.logUrls(this)
         applyEventFilter()
     }
 
@@ -86,17 +118,20 @@ class UrlFilterService : AccessibilityService() {
      * never wakes this process for other apps' UI changes, which matters
      * enormously for battery. With nothing configured, listen only to our own
      * package (i.e. effectively nothing). Content-changed events (high volume)
-     * are requested only while section rules exist.
+     * are requested only while section rules exist or the owner opted into
+     * recording browser addresses — that opt-in is the one place this service
+     * widens, and the diag log measures what it costs (a11y_ev per window).
      */
     private fun applyEventFilter() {
         val info = serviceInfo ?: return
+        val watchBrowsers = hasSectionRules || logUrls
         val targets = HashSet<String>()
-        if (hasSectionRules) targets += URL_BAR_IDS.keys
+        if (watchBrowsers) targets += URL_BAR_IDS.keys
         targets += blockedApps
         info.packageNames =
             if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-            (if (hasSectionRules) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
+            (if (watchBrowsers) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
         // Batch event delivery: URL changes are human-speed, no need for more
         // than a couple of wakeups per second while scrolling.
         info.notificationTimeout = 600
@@ -106,6 +141,7 @@ class UrlFilterService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val eventPackage = event.packageName?.toString() ?: return
         if (eventPackage == packageName) return
+        Monitor.perf.count("a11y_ev")
 
         // Whole-app blocking: bounce to the home screen.
         if (eventPackage in blockedApps) {
@@ -114,27 +150,50 @@ class UrlFilterService : AccessibilityService() {
                 lastAppBlockAt = now
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 Toast.makeText(this, R.string.app_blocked_toast, Toast.LENGTH_SHORT).show()
+                EventLog.activity(LogEvents.enforce(System.currentTimeMillis(), "app_home", eventPackage))
             }
             return
         }
 
-        // Section rules: only meaningful inside known browsers.
-        if (!hasSectionRules || eventPackage !in URL_BAR_IDS) return
+        // Section rules and URL recording: only meaningful inside known browsers.
+        if (!(hasSectionRules || logUrls) || eventPackage !in URL_BAR_IDS) return
         val now = SystemClock.uptimeMillis()
         if (now - lastCheckAt < EVENT_THROTTLE_MS) return
         lastCheckAt = now
 
-        val url = findUrl(eventPackage) ?: return
-        if (!UrlFilter.shouldBlock(url, rules)) return
+        val url = findUrl(eventPackage)
+        if (url == null) {
+            // A browser event with no readable address bar: either the page has
+            // no toolbar showing (fullscreen, menus) or the browser changed its
+            // view IDs. A high rate here is the signal to update URL_BAR_IDS.
+            Monitor.perf.count("url_miss")
+            return
+        }
+        Monitor.perf.count("url_read")
+        val parts = LogEvents.splitUrl(url)
+        if (logUrls && parts != null && urlDeduper.accept(eventPackage, parts.first, parts.second)) {
+            EventLog.activity(
+                LogEvents.url(System.currentTimeMillis(), eventPackage, parts.first, parts.second)
+            )
+        }
+        if (!hasSectionRules || !UrlFilter.shouldBlock(url, rules)) return
 
         if (now - lastBackAt >= BACK_DEBOUNCE_MS) {
             lastBackAt = now
             performGlobalAction(GLOBAL_ACTION_BACK)
             Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
+            EventLog.activity(
+                LogEvents.enforce(
+                    System.currentTimeMillis(), "section_back", eventPackage,
+                    parts?.first, parts?.second,
+                )
+            )
         }
     }
 
-    override fun onInterrupt() {}
+    override fun onInterrupt() {
+        EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "interrupt"))
+    }
 
     private fun findUrl(packageName: String): String? {
         val root = rootInActiveWindow ?: return null

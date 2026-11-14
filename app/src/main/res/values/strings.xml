@@ -118,13 +118,13 @@
     <string name="onboarding_progress">%1$d of %2$d</string>
 
     <string name="help_how_title">How Focus Fence works</string>
-    <string name="help_how_body"><![CDATA[Focus Fence blocks distracting sites for your <b>whole phone</b> using a local VPN that filters only DNS — the phone\'s address lookups. Nothing you browse leaves your phone: no account, no server, and battery impact is basically zero.<br><br>Flip the switch on the main screen and accept Android\'s VPN prompt to start blocking.<br><br><b>Tip:</b> for blocking that survives reboots, enable <b>Always-on VPN</b> for Focus Fence in Android\'s network settings.]]></string>
+    <string name="help_how_body"><![CDATA[Focus Fence blocks distracting sites for your <b>whole phone</b> using a local VPN that filters only DNS — the phone\'s address lookups. All filtering decisions happen on your phone: no account, no server. Lookups that aren\'t blocked go to a public DNS resolver (Cloudflare or Google), as they normally would. It\'s designed to use very little battery, and <b>Settings → Logs &amp; diagnostics</b> measures how much it actually uses.<br><br>Flip the switch on the main screen and accept Android\'s VPN prompt to start blocking.<br><br><b>Tip:</b> for blocking that survives reboots, enable <b>Always-on VPN</b> for Focus Fence in Android\'s network settings.]]></string>
 
     <string name="help_rules_title">Four ways to block a site</string>
     <string name="help_rules_body"><![CDATA[On the <b>Blocklist</b> tab, tap <b>+</b> to add a domain like reddit.com, and pick how it\'s blocked:<br><br>• <b>Block always</b> — the default.<br><br>• <b>Block during set hours</b> — for example 9:00–18:00 every day. Windows can wrap midnight, like 22:00–06:00.<br><br>• <b>Daily time limit</b> — for example 10 minutes per day, then it\'s blocked until midnight.<br><br>• <b>Allow only specific sections</b> — block a site except the parts you choose (next page).<br><br>Tap any domain in the list to change its rule later. Blocking a domain always covers its subdomains too: reddit.com also blocks old.reddit.com.]]></string>
 
     <string name="help_sections_title">Allow only parts of a site</string>
-    <string name="help_sections_body"><![CDATA[Want Facebook Marketplace without the feed? That\'s a <b>section rule</b>:<br><br>1. On the Blocklist tab, tap <b>+</b> and enter <b>facebook.com</b> (or tap an existing domain).<br><br>2. Choose <b>Allow only specific sections</b>.<br><br>3. Type <b>/marketplace</b> — the "section" is whatever comes after the domain in the address, so facebook.com/marketplace → /marketplace. Add several separated by commas, like <i>/marketplace, /events</i>.<br><br>4. When prompted, enable the <b>Focus Fence accessibility service</b>. Section rules work by reading your browser\'s address bar, and Android requires that permission for it. The address bar is only compared against your own rules; nothing is stored or sent anywhere.<br><br>From then on, any facebook.com page that isn\'t under /marketplace is backed out of automatically, with a small "Blocked by Focus Fence" notice.<br><br><b>Browsers only:</b> the Facebook <i>app</i> has no address bar to read, so open marketplace in your browser (Chrome, Firefox, Brave, Edge, Samsung Internet and others all work).]]></string>
+    <string name="help_sections_body"><![CDATA[Want Facebook Marketplace without the feed? That\'s a <b>section rule</b>:<br><br>1. On the Blocklist tab, tap <b>+</b> and enter <b>facebook.com</b> (or tap an existing domain).<br><br>2. Choose <b>Allow only specific sections</b>.<br><br>3. Type <b>/marketplace</b> — the "section" is whatever comes after the domain in the address, so facebook.com/marketplace → /marketplace. Add several separated by commas, like <i>/marketplace, /events</i>.<br><br>4. When prompted, enable the <b>Focus Fence accessibility service</b>. Section rules work by reading your browser\'s address bar, and Android requires that permission for it. The address bar is compared against your own rules and is not sent anywhere. It is saved on this phone only if you turn on <b>Record browser addresses</b> in Logs &amp; diagnostics.<br><br>From then on, any facebook.com page that isn\'t under /marketplace is backed out of automatically, with a small "Blocked by Focus Fence" notice.<br><br><b>Browsers only:</b> the Facebook <i>app</i> has no address bar to read, so open marketplace in your browser (Chrome, Firefox, Brave, Edge, Samsung Internet and others all work).]]></string>
 
     <string name="help_limits_title">What it can\'t do</string>
     <string name="help_limits_body"><![CDATA[Honesty section — the limits of DNS-based blocking:<br><br>• Pages your phone looked up recently may still load for a few minutes after you block them (DNS caching).<br><br>• <b>Time limits are estimates</b> based on lookup activity — accurate to within a minute or two, and only screen-on time counts.<br><br>• Time limits count and enforce only a site\'s main web addresses (facebook.com, www., m. …) — hidden app/SDK traffic like graph.facebook.com neither drains a budget nor breaks when it runs out. Changing a limit resets that day\'s count.<br><br>• Apps in <b>VPN exclusions</b> bypass the filter entirely — use it for your own apps that talk to a limited site\'s servers.<br><br>• Turn <b>off Private DNS</b> in Android\'s network settings, or it will carry lookups around the filter. (The common browser tricks are already guarded against.)<br><br>• Android allows only <b>one VPN at a time</b>, so Focus Fence can\'t run alongside a regular VPN.<br><br>• Video ads on YouTube or Twitch can\'t be removed — they come from the same domains as the videos themselves.<br><br>• And you can always just switch it off. It\'s a fence, not a prison — Always-on VPN adds friction if you want more commitment.]]></string>
@@ -141,4 +141,24 @@
     <string name="adlist_downloading">Downloading filter list…</string>
     <string name="adlist_update">Update</string>
     <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
+
+    <!-- Logs & diagnostics -->
+    <string name="diag_title">Logs &amp; diagnostics</string>
+    <string name="diag_settings_summary">What happened on this phone, how well protection is working, and battery cost. Stored only on this phone until you export it.</string>
+    <string name="diag_open">Open logs &amp; diagnostics</string>
+    <string name="diag_recording">What gets recorded</string>
+    <string name="diag_log_allowed">Record allowed lookups, not just blocked ones</string>
+    <string name="diag_log_urls">Record browser addresses</string>
+    <string name="diag_log_urls_hint">Uses the accessibility service in supported browsers. Saves the site and page path only, never search terms. Costs some battery: the diagnostics report shows how much.</string>
+    <string name="diag_usage_granted">App timeline: on (Usage access granted)</string>
+    <string name="diag_usage_missing">App timeline: off. Grant Usage access to record which apps are used and when.</string>
+    <string name="diag_usage_button">Usage access settings</string>
+    <string name="diag_refresh">Refresh</string>
+    <string name="diag_export">Export logs</string>
+    <string name="diag_clear">Clear</string>
+    <string name="diag_clear_title">Clear all logs?</string>
+    <string name="diag_clear_message">This deletes the activity and diagnostics logs on this phone. The fact that they were cleared is recorded.</string>
+    <string name="diag_loading">Reading logs…</string>
+    <string name="diag_storage">Log storage: %1$s. The report below covers all diagnostics and the last 24 hours of activity; export for the full history.</string>
+    <string name="diag_error">Couldn\'t read the logs: %1$s</string>
 </resources>

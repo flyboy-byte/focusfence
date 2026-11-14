@@ -8,15 +8,19 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.EventLog
 import app.focusfence.data.ExcludedAppsStore
+import app.focusfence.data.LogSettings
 import app.focusfence.data.StatsStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
@@ -24,8 +28,10 @@ import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Dns
+import app.focusfence.dns.LogEvents
 import app.focusfence.dns.Packets
 import app.focusfence.dns.UsageTracker
+import app.focusfence.monitor.Monitor
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -44,9 +50,14 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * The tunnel is configured so that ONLY packets addressed to the tunnel's virtual
  * DNS servers are routed into it — all other traffic takes the normal network path,
- * which is why running this costs essentially no battery or throughput. Queries for
- * blocked domains are answered NXDOMAIN locally; everything else is relayed to a
- * real resolver over a protected socket.
+ * which is why the architecture is cheap to run (measured, not assumed, by the
+ * diag log — see docs/specs/event-log.md). Queries for blocked domains get a
+ * locally synthesized cacheable 0.0.0.0/:: answer (see [Dns.buildBlockedResponse]);
+ * everything else is relayed to a real resolver over a protected socket.
+ *
+ * Every query is also a detection event: decisions go to the activity log
+ * (allowed ones too, unless the owner turns that off), and resolver health
+ * goes to [Monitor.perf] for the diag log.
  */
 class DnsVpnService : VpnService() {
 
@@ -77,7 +88,20 @@ class DnsVpnService : VpnService() {
             private set
 
         val blockedCount = AtomicLong(0)
+
+        /** "on", "lockdown", "off", or "unknown" (pre-Android 10 / not running). */
+        @Volatile
+        var alwaysOnState = "unknown"
+            private set
+
+        private const val COMP = "vpn"
     }
+
+    /** Decision for one query: which layer matched, the covering user rule, and whether it blocks. */
+    private class Verdict(val blocks: Boolean, val reason: String?, val rule: BlockRule?)
+
+    @Volatile
+    private var logAllowed = true
 
     private var tunFd: ParcelFileDescriptor? = null
     private var readerThread: Thread? = null
@@ -120,6 +144,7 @@ class DnsVpnService : VpnService() {
                 preloadBudgetUsage()
             }
             AdListStore.KEY_ENABLED, AdListStore.KEY_COUNT -> reloadAdHostsAsync()
+            LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
         }
     }
 
@@ -136,7 +161,16 @@ class DnsVpnService : VpnService() {
 
     private fun reloadAdHostsAsync() {
         Thread({
+            // Until this finishes, ad-list domains resolve normally — a real (if
+            // brief) filtering gap after every start, so its length is measured.
+            val started = SystemClock.elapsedRealtime()
             adHosts = if (AdListStore.isEnabled(this)) AdListStore.load(this) else emptySet()
+            EventLog.diag(
+                LogEvents.service(
+                    System.currentTimeMillis(), "adlist", "loaded",
+                    "n=${adHosts.size},ms=${SystemClock.elapsedRealtime() - started}",
+                )
+            )
         }, "focusfence-adlist-load").start()
     }
 
@@ -145,9 +179,17 @@ class DnsVpnService : VpnService() {
         if (intent?.action == ACTION_STOP) {
             // Strict mode: refuse to stop until an unlock window is open.
             if (StrictStore.isLocked(this)) {
+                EventLog.activity(
+                    LogEvents.service(System.currentTimeMillis(), COMP, "stop_refused", "strict"),
+                    urgent = true,
+                )
                 broadcastState()
                 return START_STICKY
             }
+            EventLog.activity(
+                LogEvents.service(System.currentTimeMillis(), COMP, "stop", "user"),
+                urgent = true,
+            )
             stopVpn()
             stopSelf()
             return START_NOT_STICKY
@@ -158,11 +200,15 @@ class DnsVpnService : VpnService() {
 
     override fun onRevoke() {
         // Another app took the VPN slot, or the user disabled it from settings.
+        EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "revoked"), urgent = true)
         stopVpn()
         stopSelf()
     }
 
     override fun onDestroy() {
+        if (isRunning) {
+            EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "destroyed"), urgent = true)
+        }
         stopVpn()
         super.onDestroy()
     }
@@ -171,6 +217,7 @@ class DnsVpnService : VpnService() {
         if (isRunning) return
 
         powerManager = getSystemService(PowerManager::class.java)
+        logAllowed = LogSettings.logAllowedDns(this)
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
@@ -192,6 +239,7 @@ class DnsVpnService : VpnService() {
                 .addRoute(VPN6_DNS, 128)
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "IPv6 tunnel config rejected, continuing with IPv4 only", e)
+            EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "ipv6_rejected", e.message))
         }
         for (pkg in ExcludedAppsStore.get(this)) {
             try {
@@ -204,6 +252,10 @@ class DnsVpnService : VpnService() {
         val fd = builder.establish()
         if (fd == null) {
             Log.e(TAG, "VpnService.Builder.establish() returned null (no user consent?)")
+            EventLog.activity(
+                LogEvents.service(System.currentTimeMillis(), COMP, "establish_failed"),
+                urgent = true,
+            )
             stopSelf()
             return
         }
@@ -213,6 +265,24 @@ class DnsVpnService : VpnService() {
         pool = Executors.newFixedThreadPool(4)
         isRunning = true
         blockedCount.set(0)
+        alwaysOnState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            when {
+                isLockdownEnabled -> "lockdown"
+                isAlwaysOn -> "on"
+                else -> "off"
+            }
+        } else {
+            "unknown"
+        }
+        EventLog.activity(
+            LogEvents.service(
+                System.currentTimeMillis(), COMP, "start",
+                "rules=${rules.size},excluded=${ExcludedAppsStore.get(this).size}," +
+                    "adlist=${AdListStore.isEnabled(this)},always_on=$alwaysOnState",
+            ),
+            urgent = true,
+        )
+        Monitor.attach(this, COMP)
 
         startForeground(NOTIFICATION_ID, buildNotification())
 
@@ -226,6 +296,8 @@ class DnsVpnService : VpnService() {
     private fun stopVpn() {
         if (!isRunning && tunFd == null) return
         isRunning = false
+        alwaysOnState = "unknown"
+        Monitor.detach(COMP)
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
         for ((domain, state) in usageTracker.snapshot()) {
             UsageStore.save(this, domain, state.first, state.second)
@@ -243,6 +315,7 @@ class DnsVpnService : VpnService() {
         tunOut = null
         readerThread = null
         stopForeground(STOP_FOREGROUND_REMOVE)
+        EventLog.flushAsync()
         broadcastState()
     }
 
@@ -253,7 +326,12 @@ class DnsVpnService : VpnService() {
             val n = try {
                 input.read(buf)
             } catch (e: IOException) {
-                break // fd closed by stopVpn()
+                // Expected when stopVpn() closes the fd; anything else is a
+                // silent end of filtering and must be visible.
+                if (isRunning) {
+                    EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "tun_read", e.toString()))
+                }
+                break
             }
             if (n < 0) break
             if (n == 0) continue
@@ -262,12 +340,38 @@ class DnsVpnService : VpnService() {
     }
 
     private fun handlePacket(packet: ByteArray) {
-        val udp = Packets.parseUdp(packet, packet.size) ?: return
-        if (udp.dstPort != 53) return
+        val udp = Packets.parseUdp(packet, packet.size)
+        if (udp == null) {
+            Monitor.perf.count("pkt_unparsed")
+            return
+        }
+        if (udp.dstPort != 53) {
+            Monitor.perf.count("pkt_not_dns")
+            return
+        }
+        Monitor.perf.count("q")
 
         val question = Dns.parseQuestion(udp.packet, udp.payloadOffset, udp.payloadLength)
+        if (question == null) Monitor.perf.count("q_unparsed")
         if (question != null) {
-            val reason = blockReason(question.qname)
+            val verdict = verdict(question.qname)
+            if (verdict.blocks) {
+                Monitor.perf.count("blk_" + verdict.reason)
+                EventLog.activity(
+                    LogEvents.dns(
+                        System.currentTimeMillis(), question.qname, question.qtype,
+                        LogEvents.DECISION_BLOCKED, verdict.reason, verdict.rule,
+                    )
+                )
+            } else if (logAllowed) {
+                EventLog.activity(
+                    LogEvents.dns(
+                        System.currentTimeMillis(), question.qname, question.qtype,
+                        LogEvents.DECISION_ALLOWED, verdict.reason, verdict.rule,
+                    )
+                )
+            }
+            val reason = statsBucket(verdict)
             if (reason != null) {
                 blockedCount.incrementAndGet()
                 recordStat(reason)
@@ -288,13 +392,29 @@ class DnsVpnService : VpnService() {
         pool?.execute { forward(udp, query) }
     }
 
-    /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
-    private fun blockReason(qname: String): String? {
+    /**
+     * Same precedence as always — a blocking user rule, then the ad list, then
+     * the DoH guards — but the covering rule is kept even when it doesn't block
+     * (budget left, outside its window, section rule) so the log can say so.
+     */
+    private fun verdict(qname: String): Verdict {
         val rule = Blocklist.findRule(qname, rules)
-        if (rule != null && ruleBlocks(rule, qname)) return rule.domain
-        if (adHosts.isNotEmpty() && qname in adHosts) return StatsCodec.KEY_ADS
-        if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) return StatsCodec.KEY_GUARD
-        return null
+        if (rule != null && ruleBlocks(rule, qname)) return Verdict(true, LogEvents.REASON_RULE, rule)
+        if (adHosts.isNotEmpty() && qname in adHosts) return Verdict(true, LogEvents.REASON_ADS, rule)
+        if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) {
+            return Verdict(true, LogEvents.REASON_GUARD, rule)
+        }
+        return Verdict(false, if (rule != null) LogEvents.REASON_RULE else null, rule)
+    }
+
+    /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
+    private fun statsBucket(v: Verdict): String? {
+        if (!v.blocks) return null
+        return when (v.reason) {
+            LogEvents.REASON_ADS -> StatsCodec.KEY_ADS
+            LogEvents.REASON_GUARD -> StatsCodec.KEY_GUARD
+            else -> v.rule?.domain
+        }
     }
 
     private fun recordStat(bucket: String) {
@@ -353,10 +473,15 @@ class DnsVpnService : VpnService() {
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
         val first = preferredUpstream
         val order = upstreams.indices.sortedBy { if (it == first) -1 else it }
+        val started = SystemClock.elapsedRealtime()
         for (index in order) {
             try {
                 DatagramSocket().use { socket ->
-                    if (!protect(socket)) return
+                    if (!protect(socket)) {
+                        // Unprotected, the relay would loop back into the tunnel.
+                        Monitor.perf.count("fwd_unprotected")
+                        return
+                    }
                     socket.soTimeout = UPSTREAM_TIMEOUT_MS
                     socket.send(
                         DatagramPacket(query, query.size, InetSocketAddress(upstreams[index], 53))
@@ -367,11 +492,18 @@ class DnsVpnService : VpnService() {
                     preferredUpstream = index
                     writeToTun(Packets.buildUdpReply(udp, respBuf, resp.length))
                 }
+                Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
+                Monitor.perf.count("fwd")
+                if (index != first) Monitor.perf.count("fwd_failover")
                 return
             } catch (e: IOException) {
                 // Timeout or network error: try the next upstream.
+                Monitor.perf.count("fwd_attempt_fail")
             }
         }
+        // Every resolver failed: the client gets no answer. Often just "offline",
+        // but a high rate while online means the relay itself is broken.
+        Monitor.perf.count("fwd_fail")
     }
 
     private fun writeToTun(packet: ByteArray) {
@@ -380,6 +512,7 @@ class DnsVpnService : VpnService() {
             synchronized(tunWriteLock) { out.write(packet) }
         } catch (e: IOException) {
             Log.w(TAG, "writing to tun", e)
+            Monitor.perf.count("tun_write_fail")
         }
     }
 
