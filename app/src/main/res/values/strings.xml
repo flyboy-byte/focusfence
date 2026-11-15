@@ -182,4 +182,40 @@
     <string name="allowlist_hint">Domain to allow (e.g. example.com)</string>
     <string name="allowlist_add">Add</string>
     <string name="allowlist_invalid">Enter a valid domain</string>
+
+    <!-- Capture indicator (always shown while capturing) -->
+    <string name="capture_channel">Monitoring active</string>
+    <string name="capture_channel_desc">Shown whenever Focus Fence is capturing screenshots or on-screen text.</string>
+    <string name="capture_active_title">Focus Fence monitoring is on</string>
+    <string name="capture_active_both">Capturing screenshots and on-screen text for accountability</string>
+    <string name="capture_active_shots">Capturing screenshots for accountability</string>
+    <string name="capture_active_text">Capturing on-screen text for accountability</string>
+
+    <!-- Monitoring (experimental) -->
+    <string name="monitor_title">Monitoring (experimental)</string>
+    <string name="monitor_open">Monitoring (experimental)</string>
+    <string name="monitor_settings_summary">Screenshots and on-screen text from chosen apps, for accountability. While on, a permanent notification shows it is running.</string>
+    <string name="monitor_banner">This records what is on your screen.</string>
+    <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
+    <string name="monitor_shots">Capture screenshots</string>
+    <string name="monitor_shots_hint">Sparse, random screenshots of watched apps, classified on your phone. Only flagged images are kept (encrypted to your partner), depending on the retention setting.</string>
+    <string name="monitor_shots_unavailable">Screenshot capture needs Android 11 or newer. Text capture still works.</string>
+    <string name="monitor_text">Capture on-screen text</string>
+    <string name="monitor_text_hint">Visible text from watched apps (passwords skipped). Useful where screenshots are blocked.</string>
+    <string name="monitor_watched_apps">Watched apps (%1$d)</string>
+    <string name="monitor_level">Screenshot frequency</string>
+    <string name="monitor_level_low">Low (~every 4 min)</string>
+    <string name="monitor_level_standard">Standard (~every 90 s)</string>
+    <string name="monitor_level_high">High (~every 45 s)</string>
+    <string name="monitor_retention">What to keep</string>
+    <string name="monitor_retain_score">Score only (no images)</string>
+    <string name="monitor_retain_flagged">Flagged images only</string>
+    <string name="monitor_retain_all">All sampled images</string>
+    <string name="monitor_partner_key">Partner encryption key</string>
+    <string name="monitor_key_set">A partner key is set. Kept images are encrypted so only your partner can open them.</string>
+    <string name="monitor_key_unset">No partner key yet. Without one, images are not kept — only scores.</string>
+    <string name="monitor_partner_key_hint">Paste partner public key (Base64)</string>
+    <string name="monitor_partner_key_save">Save key</string>
+    <string name="monitor_key_invalid">That doesn\'t look like a valid public key.</string>
+    <string name="watched_dialog_title">Apps to monitor</string>
 </resources>

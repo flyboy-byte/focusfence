@@ -47,5 +47,10 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.android.material:material:1.12.0")
 
+    // On-device screenshot classifier (optional at runtime: capture works with
+    // no model present, it just produces score-less shots). Model is supplied
+    // by the owner into filesDir, never bundled.
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+
     testImplementation("junit:junit:4.13.2")
 }

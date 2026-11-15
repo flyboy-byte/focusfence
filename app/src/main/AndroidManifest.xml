@@ -59,6 +59,11 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".MonitoringActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
         <!-- Shares log exports (cache/export/ only) with the app the user picks. -->
         <provider
             android:name="androidx.core.content.FileProvider"

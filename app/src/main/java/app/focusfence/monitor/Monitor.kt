@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import app.focusfence.UiUtil
 import app.focusfence.data.EventLog
+import app.focusfence.data.MonitorSettings
 import app.focusfence.dns.BatteryPolicy
 import app.focusfence.dns.BatterySample
 import app.focusfence.dns.LogEvents
@@ -190,6 +191,10 @@ object Monitor {
         }
         state["a11y_enabled"] = UiUtil.isUrlFilterEnabled(context).toString()
         state["usage_access"] = UsageCollector.hasAccess(context).toString()
+        // Capture state in the integrity trail: turning monitoring on or off is
+        // itself an accountability event.
+        state["capture_screenshots"] = MonitorSettings.screenshotsEnabled(context).toString()
+        state["capture_text"] = MonitorSettings.textEnabled(context).toString()
         // Private DNS carries lookups around the filter. The key is not public
         // API; some builds refuse to expose it, which we record as "unknown".
         state["private_dns"] = try {

@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.ExcludedAppsStore
+import app.focusfence.data.MonitorSettings
 import app.focusfence.data.StrictStore
 import app.focusfence.dns.StrictLock
 import app.focusfence.vpn.DnsVpnService
@@ -149,6 +150,38 @@ object UiUtil {
                     .toSet()
                 ExcludedAppsStore.set(context, selected)
                 restartVpnIfRunning(context)
+                onDone()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    fun chooseWatchedApps(context: Context, onDone: () -> Unit) {
+        val launchables = launchableApps(context)
+        if (launchables.isEmpty()) return
+        val current = MonitorSettings.watchedApps(context)
+        val labels = launchables.map { it.second }.toTypedArray()
+        val checked = BooleanArray(launchables.size) { launchables[it].first in current }
+        val original = checked.copyOf()
+        val locked = StrictStore.isLocked(context)
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.watched_dialog_title)
+            .setMultiChoiceItems(labels, checked) { dialog, index, isChecked ->
+                // Removing an app from monitoring is the loosening direction.
+                if (locked && !isChecked && original[index]) {
+                    checked[index] = true
+                    (dialog as AlertDialog).listView.setItemChecked(index, true)
+                    Toast.makeText(context, R.string.strict_locked_toast, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val selected = launchables.indices
+                    .filter { checked[it] }
+                    .map { launchables[it].first }
+                    .toSet()
+                MonitorSettings.setWatchedApps(context, selected)
+                if (selected.isNotEmpty() && !isUrlFilterEnabled(context)) promptEnableUrlFilter(context)
                 onDone()
             }
             .setNegativeButton(android.R.string.cancel, null)
