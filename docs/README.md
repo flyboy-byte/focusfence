@@ -25,6 +25,9 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 | [`plans/03-measurement-plan.md`](plans/03-measurement-plan.md) | How to use the new logs to measure reliability and battery cost, and what each result decides. |
 | [`specs/event-log.md`](specs/event-log.md) | **Implemented.** Schema and guarantees of the activity and diagnostics logs, export format. |
 | [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Proposed component specs: categories, in-app capture, screenshots, integrity/heartbeat, backend, settings lock, Device Owner mode. Open decisions listed. |
+| [`specs/bundles.md`](specs/bundles.md) | **Implemented.** Curated filter-bundle set, strictness tier, bypass guard, defaults. |
+| [`specs/friction-tiers.md`](specs/friction-tiers.md) | **Implemented.** Per-action guard levels (None/Delay/Own PIN/Partner PIN). |
+| [`specs/device-owner.md`](specs/device-owner.md) | **Implemented, not device-tested.** Managed mode (detect-not-block), the Private-DNS strategy switch, package suspension, network logging. |
 | [`../server/`](../server) | **Prototype** Kotlin/Ktor accountability backend (enroll, signed ingest, heartbeat, Resend reports, E2EE screenshots). Not CI-built. |
 
 ## How to read it

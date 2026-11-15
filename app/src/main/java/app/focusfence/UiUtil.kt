@@ -274,6 +274,23 @@ object UiUtil {
             .show()
     }
 
+    fun stopVpn(context: Context) {
+        context.applicationContext.startService(
+            Intent(context.applicationContext, DnsVpnService::class.java).setAction(DnsVpnService.ACTION_STOP)
+        )
+    }
+
+    /** Starts the tunnel if VPN consent is already granted; returns false if consent is needed. */
+    fun startVpnIfPrepared(context: Context): Boolean {
+        val appContext = context.applicationContext
+        if (VpnService.prepare(appContext) != null) return false
+        ContextCompat.startForegroundService(
+            appContext,
+            Intent(appContext, DnsVpnService::class.java).setAction(DnsVpnService.ACTION_START),
+        )
+        return true
+    }
+
     /** Exclusion changes only take effect on a fresh tunnel. */
     fun restartVpnIfRunning(context: Context) {
         if (!DnsVpnService.isRunning) return

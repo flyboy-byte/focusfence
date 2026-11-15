@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Device-admin policies. Device-owner powers (Private DNS, network logging,
+     package suspension) come from being provisioned as device owner via adb or
+     QR, not from these flags; these cover the admin-level capabilities used. -->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android"
+    android:visible="true">
+    <uses-policies>
+        <watch-login />
+        <disable-keyguard-features />
+    </uses-policies>
+</device-admin>

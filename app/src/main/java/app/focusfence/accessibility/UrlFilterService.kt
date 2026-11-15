@@ -18,6 +18,7 @@ import app.focusfence.dns.BlockRule
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.UrlDeduper
 import app.focusfence.dns.UrlFilter
+import app.focusfence.admin.AppSuspension
 import app.focusfence.monitor.CaptureIndicator
 import app.focusfence.monitor.Monitor
 import app.focusfence.monitor.ScreenCapture
@@ -143,6 +144,8 @@ class UrlFilterService : AccessibilityService() {
         // The indicator must reflect capture state exactly: show while capturing,
         // gone otherwise. Never hidden while capture is on (self-accountability).
         CaptureIndicator.refresh(this)
+        // Managed mode: keep OS-level app suspension in step with blocked apps.
+        AppSuspension.reconcile(this)
     }
 
     /**

@@ -69,6 +69,26 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".DeviceOwnerActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- Managed mode. We never block uninstall; this receiver exists to run
+             device-owner policies (Private DNS, network logging, suspension) and
+             to log every admin lifecycle event. -->
+        <receiver
+            android:name=".admin.FocusFenceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Shares log exports (cache/export/ only) with the app the user picks. -->
         <provider
             android:name="androidx.core.content.FileProvider"

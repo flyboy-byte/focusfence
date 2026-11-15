@@ -254,4 +254,31 @@
     <string name="guard_level_delay">Timed delay</string>
     <string name="guard_level_own_pin">Your PIN</string>
     <string name="guard_level_partner_pin">Partner PIN</string>
+
+    <!-- Managed mode / Device Owner -->
+    <string name="owner_title">Device protection (advanced)</string>
+    <string name="owner_open">Device protection (advanced)</string>
+    <string name="owner_settings_summary">Optional managed mode: locked Private DNS so you can run another VPN, OS-level app blocking, and per-app DNS logging. Set up over adb.</string>
+    <string name="owner_intro">We never block uninstalling the app. Managed mode adds stronger enforcement and logs any attempt to remove protection. Removal stays possible, behind friction.</string>
+    <string name="owner_enable_howto">Not set up yet. With USB or wireless debugging, run this once on a device with no other accounts:</string>
+    <string name="owner_status_owner">Managed mode active (device owner)</string>
+    <string name="owner_status_admin">Device admin active (not device owner)</string>
+    <string name="owner_status_none">Managed mode not set up</string>
+    <string name="owner_strategy_title">Filtering strategy</string>
+    <string name="owner_strategy_intro">Switch to Private DNS to free the VPN slot for another VPN while category filtering continues. Needs managed mode.</string>
+    <string name="owner_strategy_hint">Strategy</string>
+    <string name="owner_strategy_vpn">Focus Fence VPN (full filtering)</string>
+    <string name="owner_strategy_private_dns">Private DNS (frees the VPN slot)</string>
+    <string name="owner_dot_hint">Private DNS host (DoT)</string>
+    <string name="owner_dot_save">Save DNS host</string>
+    <string name="owner_dot_saved">Saved</string>
+    <string name="owner_dot_invalid">Enter a valid DoT hostname</string>
+    <string name="owner_network_logging">Per-app DNS logging (network logging)</string>
+    <string name="owner_suspend_apps">Suspend blocked apps at the OS level</string>
+    <string name="owner_suspend_hint">Stronger than the default home-screen bounce: blocked apps can\'t open at all.</string>
+    <string name="owner_need_owner">Private DNS strategy needs managed mode (device owner).</string>
+    <string name="owner_strategy_failed">Couldn\'t set Private DNS. Check managed mode.</string>
+    <string name="owner_remove">Remove managed mode</string>
+    <string name="owner_removed">Managed mode removed</string>
+    <string name="admin_disable_warning">Removing Focus Fence protection will be recorded. Your accountability partner can see that protection was turned off.</string>
 </resources>

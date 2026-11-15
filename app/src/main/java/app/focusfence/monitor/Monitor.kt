@@ -191,6 +191,13 @@ object Monitor {
         }
         state["a11y_enabled"] = UiUtil.isUrlFilterEnabled(context).toString()
         state["usage_access"] = UsageCollector.hasAccess(context).toString()
+        // Managed mode: losing device-owner, or network logging being turned
+        // off, weakens protection and must show in the trail.
+        state["device_owner"] = app.focusfence.admin.DeviceAdmin.isDeviceOwner(context).toString()
+        state["admin_active"] = app.focusfence.admin.DeviceAdmin.isAdminActive(context).toString()
+        if (app.focusfence.admin.DeviceAdmin.isDeviceOwner(context)) {
+            state["network_logging"] = app.focusfence.admin.DeviceAdmin.isNetworkLoggingEnabled(context).toString()
+        }
         // Capture state in the integrity trail: turning monitoring on or off is
         // itself an accountability event.
         state["capture_screenshots"] = MonitorSettings.screenshotsEnabled(context).toString()
