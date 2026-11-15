@@ -9,20 +9,20 @@ reporting side.
 
 Statuses: ✅ exists · 🟡 partial / local only · ❌ missing · ➕ FF goes beyond EA.
 
-**Build status (this branch):** Phase 0 (logging) and Phase 1 (categories, allowlist, PIN/crypto core) are implemented and pass CI. The backend is a written prototype under `server/` (not CI-built, not yet wired to the phone). Device-side capture (screenshots, in-app text) and the upload client are not built yet.
+**Build status (this branch):** Phase 0 (logging), Phase 1 (categories, allowlist), the PIN-unlock UI, and the device-side capture of Phase 2/4 (in-app text; screenshots with an on-device classifier, flagged-only encrypted retention, and a permanent capture indicator) are implemented and pass CI. The backend is a written prototype under `server/` (not CI-built). The device→server upload client is the remaining unbuilt piece.
 
 ## Feature matrix
 
 | Capability | Ever Accountable (Android) | Focus Fence now | Status | Gap to close |
 |---|---|---|---|---|
 | **Websites visited** | Reported. Read from browsers via accessibility. | DNS hostnames for every lookup (all apps). Browser host+path when "Record browser addresses" is on. | 🟡 | Local only; needs sync + report. Firefox/Chromium URL-bar IDs need ongoing maintenance (diag `url_miss` measures it). |
-| **Content inside apps** ("snippets of text") | Reported from many popular apps via accessibility. | Not captured. | ❌ | Accessibility text capture for chosen apps. Highest battery/privacy cost item: needs per-app adapters, sampling, and measurement first. |
+| **Content inside apps** ("snippets of text") | Reported from many popular apps via accessibility. | Visible on-screen text captured from watched apps (passwords skipped), local only. | 🟡 | Built (MonitoringActivity). Per-app adapters + upload still to come; measure battery via diag. |
 | **Time spent in all apps** | Reported (Usage Stats permission). | Foreground timeline from UsageStats in the activity log. | 🟡 | Local only. Summarise into per-app daily totals for reports. |
-| **Screenshots** | Optional, periodic, adjustable resolution, optional blur. | None. | ❌ | Accessibility screenshot API (Android 11+) or MediaProjection, plus on-device classifier. Retention mode choice (`specs/accountability-architecture.md` §Screenshots). |
-| **Concerning-content flagging** | On-device AI flags; incident reports. | Category of a *domain* only (ad list, user rules). | ❌ | Domain category lists (adult etc.) as *labels* (detect, optionally block); later image classifier. |
+| **Screenshots** | Optional, periodic, adjustable resolution, optional blur. | Sparse randomized capture (API 30+), on-device classifier, flagged-only encrypted retention, frequency levels; permanent capture indicator. Local only. | 🟡 | Built (MonitoringActivity). Owner supplies the model; upload still to come. |
+| **Concerning-content flagging** | On-device AI flags; incident reports. | Domain categories (adult/gambling/…) as labels, plus on-device screenshot classifier (flagged shots). | 🟡 | Both built; tune thresholds and ship a model. |
 | **Weekly report to partner** | Yes; partners chosen by user. | Local diagnostics report + export only. | ❌ | Backend, partner accounts, scheduled email report. |
 | **Alerts: protection disabled / uninstall** | Uninstall alerts; alert when filtering disabled; partners notified when sharing stops. | Integrity trail logs VPN/a11y/Usage-access/Private-DNS changes, process restarts, reboots, log clears, setting changes, locally. | 🟡 | Needs delivery: server heartbeat (silence = alert) + immediate upload of integrity events. Uninstall can only be detected server-side (silence) or prevented (Device Admin/Owner). |
-| **Settings lock** (StrongHold) | PIN sent to someone else, local PIN, or timer delay. | Strict mode = timer delay (10 min + 5 min window). Covers turning off logging and clearing logs on this branch. | 🟡 | Add partner-held PIN and own-PIN unlock to the same `StrictLock` state machine. |
+| **Settings lock** (StrongHold) | PIN sent to someone else, local PIN, or timer delay. | Strict mode: timer delay **plus** own-PIN and partner-held-PIN unlock (StrictModeActivity); timer always a fallback. Gates logging, clearing, categories, monitoring, exclusions. | ✅ | — |
 | **Uninstall resistance** | Device Administrator. | None. | ❌ | Device Admin (cheap, weak) or Device Owner (strong; see managed mode). |
 | **App exclusions from reports** | User can exclude apps / whitelist apps. | VPN exclusions exist (filtering); no report exclusions. | ❌ | Report-exclusion list; exclusions themselves reported to partner. |
 | **Web filtering** | DNS filter for porn/malware, not customisable. | Per-domain rules, schedules, budgets, section rules, ad list, DoH guards, **content categories (Off/Report/Block) + allowlist**. | ➕ | Category lists wired and in the UI; HaGeZi URLs set, download on demand. |

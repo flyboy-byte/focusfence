@@ -38,6 +38,8 @@ export.
 | `app` | `pkg`, `state` (`fg`/`bg`) | The foreground package changes (UsageStats; needs Usage access) |
 | `screen` | `state` (`on`/`off`) | Screen interactivity changes (UsageStats) |
 | `enforce` | `action` (`app_home`, `section_back`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule |
+| `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped) | Experimental text capture, watched apps only, while the capture indicator shows |
+| `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`? | Experimental screenshot capture: one classified screenshot |
 | `svc` | `comp`, `state`, `detail`? | Component lifecycle (table below) |
 | `integ` | `key`, `value`, `was` (null = first observation) | An observed protection state changed (table below). Always flushed immediately. |
 
@@ -61,6 +63,7 @@ export.
 | `a11y_bound` | `true`/`false` | Whether the service is actually connected. Enabled-but-unbound means the OEM killed it. Startup grace as for `vpn` |
 | `usage_access` | `true`/`false` | |
 | `private_dns` | `off`/`opportunistic`/`hostname`/`default`/`unknown` | Private DNS routes lookups around the filter |
+| `capture_screenshots`, `capture_text` | `true`/`false` | Experimental capture turned on/off (an accountability event) |
 
 Integrity is checked when the app process starts, when either service attaches or detaches, on
 every battery sample, and when the diagnostics screen opens or an export runs.
@@ -89,6 +92,8 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `fwd_unprotected` | `protect()` failed |
 | `tun_write_fail` | Reply couldn't be written to the tunnel |
 | `a11y_ev` | Accessibility events delivered (the battery-relevant number) |
+| `shot`, `shot_flagged`, `shot_fail`, `shot_decode_fail`, `shot_save_fail`, `shot_no_partner_key` | Screenshots captured / flagged / failures at each stage |
+| `text_captured`, `text_empty` | Text captures written / screens with no text |
 | `url_read`, `url_miss` | Browser address bar read / not found |
 | `lat_n` | Latencies recorded (percentiles use at most 4096 per window) |
 | `log_dropped` | Log lines that failed to write |
