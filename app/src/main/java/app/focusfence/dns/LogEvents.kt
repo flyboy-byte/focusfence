@@ -28,6 +28,10 @@ object LogEvents {
     const val TYPE_URL = "url"
     const val TYPE_APP = "app"
     const val TYPE_SCREEN = "screen"
+    /** Experimental: visible text captured from a watched app. */
+    const val TYPE_TEXT = "text"
+    /** Experimental: a classified screenshot (score; image only if retained). */
+    const val TYPE_SHOT = "shot"
     const val TYPE_ENFORCE = "enforce"
     const val TYPE_SERVICE = "svc"
     const val TYPE_INTEGRITY = "integ"
@@ -44,6 +48,10 @@ object LogEvents {
     const val REASON_RULE = "rule"
     const val REASON_ADS = "ads"
     const val REASON_GUARD = "guard"
+    /** Matched a content category (blocked only under a BLOCK policy). */
+    const val REASON_CATEGORY = "cat"
+    /** Allowed because the user allowlisted it over an imported list. */
+    const val REASON_ALLOW = "allow"
 
     fun ruleMode(rule: BlockRule): String = when {
         rule.hasPathExceptions -> "section"
@@ -65,11 +73,16 @@ object LogEvents {
         decision: String,
         reason: String? = null,
         rule: BlockRule? = null,
+        categories: List<String> = emptyList(),
+        /** Requesting app, when known (Device Owner network logs only). */
+        pkg: String? = null,
     ): Map<String, Any?> = linkedMapOf<String, Any?>(
         "t" to t, "type" to TYPE_DNS, "host" to host, "qtype" to qtypeName(qtype),
         "decision" to decision,
     ).apply {
         if (reason != null) put("reason", reason)
+        if (categories.isNotEmpty()) put("cat", categories.joinToString(","))
+        if (pkg != null) put("pkg", pkg)
         if (rule != null) {
             put("rule", rule.domain)
             put("mode", ruleMode(rule))
@@ -83,6 +96,21 @@ object LogEvents {
     /** App moved to foreground ("fg") or background ("bg"), from UsageStats. */
     fun app(t: Long, pkg: String, state: String): Map<String, Any?> =
         linkedMapOf("t" to t, "type" to TYPE_APP, "pkg" to pkg, "state" to state)
+
+    /** Experimental: visible text from [pkg], already length-capped by the capturer. */
+    fun text(t: Long, pkg: String, text: String): Map<String, Any?> =
+        linkedMapOf("t" to t, "type" to TYPE_TEXT, "pkg" to pkg, "text" to text)
+
+    /**
+     * Experimental: one screenshot was classified. [score] is the top risky
+     * class probability (null without a model), [label] its class, [kept]
+     * whether an encrypted image was retained, under id [shotId].
+     */
+    fun shot(t: Long, pkg: String?, score: Double?, label: String?, kept: Boolean, shotId: String?, model: String?): Map<String, Any?> =
+        linkedMapOf<String, Any?>("t" to t, "type" to TYPE_SHOT, "pkg" to pkg, "score" to score, "label" to label, "kept" to kept).apply {
+            if (shotId != null) put("id", shotId)
+            if (model != null) put("model", model)
+        }
 
     /** Screen became interactive ("on") or not ("off"), from UsageStats. */
     fun screen(t: Long, state: String): Map<String, Any?> =

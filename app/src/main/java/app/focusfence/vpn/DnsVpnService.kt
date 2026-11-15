@@ -17,7 +17,9 @@ import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.data.AdListStore
+import app.focusfence.data.AllowlistStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.CategoryStore
 import app.focusfence.data.EventLog
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.LogSettings
@@ -27,6 +29,7 @@ import app.focusfence.data.UsageStore
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
+import app.focusfence.dns.Categories
 import app.focusfence.dns.Dns
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.Packets
@@ -97,9 +100,6 @@ class DnsVpnService : VpnService() {
         private const val COMP = "vpn"
     }
 
-    /** Decision for one query: which layer matched, the covering user rule, and whether it blocks. */
-    private class Verdict(val blocks: Boolean, val reason: String?, val rule: BlockRule?)
-
     @Volatile
     private var logAllowed = true
 
@@ -114,6 +114,18 @@ class DnsVpnService : VpnService() {
 
     @Volatile
     private var adHosts: Set<String> = emptySet()
+
+    // Content-category classification (adult, gambling, …). Lists label a host;
+    // the per-category policy decides whether a label blocks. Loaded off-thread.
+    @Volatile
+    private var categoryLists: Map<String, Set<String>> = emptyMap()
+
+    @Volatile
+    private var categoryPolicies: Map<String, Categories.Policy> = emptyMap()
+
+    // Overrides imported-list blocks only (never user rules or DoH guards).
+    @Volatile
+    private var allowlist: Set<String> = emptySet()
 
     private val usageTracker = UsageTracker()
     private val lastPersistedUsage = HashMap<String, Long>()
@@ -144,6 +156,8 @@ class DnsVpnService : VpnService() {
                 preloadBudgetUsage()
             }
             AdListStore.KEY_ENABLED, AdListStore.KEY_COUNT -> reloadAdHostsAsync()
+            CategoryStore.KEY_VERSION -> reloadCategoriesAsync()
+            AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
             LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
         }
     }
@@ -172,6 +186,20 @@ class DnsVpnService : VpnService() {
                 )
             )
         }, "focusfence-adlist-load").start()
+    }
+
+    private fun reloadCategoriesAsync() {
+        Thread({
+            val started = SystemClock.elapsedRealtime()
+            categoryPolicies = CategoryStore.policies(this)
+            categoryLists = CategoryStore.loadActive(this)
+            EventLog.diag(
+                LogEvents.service(
+                    System.currentTimeMillis(), "categories", "loaded",
+                    "cats=${categoryLists.size},ms=${SystemClock.elapsedRealtime() - started}",
+                )
+            )
+        }, "focusfence-category-load").start()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -221,6 +249,8 @@ class DnsVpnService : VpnService() {
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
+        reloadCategoriesAsync()
+        allowlist = AllowlistStore.get(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
 
@@ -354,24 +384,24 @@ class DnsVpnService : VpnService() {
         val question = Dns.parseQuestion(udp.packet, udp.payloadOffset, udp.payloadLength)
         if (question == null) Monitor.perf.count("q_unparsed")
         if (question != null) {
-            val verdict = verdict(question.qname)
-            if (verdict.blocks) {
-                Monitor.perf.count("blk_" + verdict.reason)
+            val decision = decide(question.qname)
+            if (decision.blocks) {
+                Monitor.perf.count("blk_" + decision.reason)
                 EventLog.activity(
                     LogEvents.dns(
                         System.currentTimeMillis(), question.qname, question.qtype,
-                        LogEvents.DECISION_BLOCKED, verdict.reason, verdict.rule,
+                        LogEvents.DECISION_BLOCKED, decision.reason, decision.rule, decision.categories,
                     )
                 )
             } else if (logAllowed) {
                 EventLog.activity(
                     LogEvents.dns(
                         System.currentTimeMillis(), question.qname, question.qtype,
-                        LogEvents.DECISION_ALLOWED, verdict.reason, verdict.rule,
+                        LogEvents.DECISION_ALLOWED, decision.reason, decision.rule, decision.categories,
                     )
                 )
             }
-            val reason = statsBucket(verdict)
+            val reason = statsBucket(decision)
             if (reason != null) {
                 blockedCount.incrementAndGet()
                 recordStat(reason)
@@ -393,27 +423,32 @@ class DnsVpnService : VpnService() {
     }
 
     /**
-     * Same precedence as always — a blocking user rule, then the ad list, then
-     * the DoH guards — but the covering rule is kept even when it doesn't block
-     * (budget left, outside its window, section rule) so the log can say so.
+     * The full precedence lives in the pure [Categories.decide]: a blocking user
+     * rule, then DoH guards, then the allowlist (overriding imported lists),
+     * then a BLOCK-policy category, then the ad list. The covering rule and all
+     * matched category labels are kept even when nothing blocks, so the log can
+     * record what a host *is*, not only what was stopped.
      */
-    private fun verdict(qname: String): Verdict {
-        val rule = Blocklist.findRule(qname, rules)
-        if (rule != null && ruleBlocks(rule, qname)) return Verdict(true, LogEvents.REASON_RULE, rule)
-        if (adHosts.isNotEmpty() && qname in adHosts) return Verdict(true, LogEvents.REASON_ADS, rule)
-        if (Blocklist.matches(qname, Blocklist.DOH_BYPASS_GUARDS)) {
-            return Verdict(true, LogEvents.REASON_GUARD, rule)
-        }
-        return Verdict(false, if (rule != null) LogEvents.REASON_RULE else null, rule)
-    }
+    private fun decide(qname: String): Categories.Decision = Categories.decide(
+        qname = qname,
+        rule = Blocklist.findRule(qname, rules),
+        ruleBlocks = { ruleBlocks(it, qname) },
+        allowlist = allowlist,
+        categoryLists = categoryLists,
+        policies = categoryPolicies,
+        adHosts = adHosts,
+        guards = Blocklist.DOH_BYPASS_GUARDS,
+    )
 
-    /** Null if allowed; otherwise the stats bucket: the rule's domain, ads, or DoH guard. */
-    private fun statsBucket(v: Verdict): String? {
-        if (!v.blocks) return null
-        return when (v.reason) {
+    /** Null if allowed; otherwise the stats bucket: ads, DoH guard, category id, or the rule's domain. */
+    private fun statsBucket(d: Categories.Decision): String? {
+        if (!d.blocks) return null
+        return when (d.reason) {
             LogEvents.REASON_ADS -> StatsCodec.KEY_ADS
             LogEvents.REASON_GUARD -> StatsCodec.KEY_GUARD
-            else -> v.rule?.domain
+            LogEvents.REASON_CATEGORY -> d.categories.firstOrNull { categoryPolicies[it] == Categories.Policy.BLOCK }
+                ?.let { "cat:$it" } ?: StatsCodec.KEY_ADS
+            else -> d.rule?.domain
         }
     }
 
