@@ -165,8 +165,8 @@
     <!-- Categories & allowlist -->
     <string name="categories_title">Categories &amp; allowlist</string>
     <string name="categories_open">Categories &amp; allowlist</string>
-    <string name="categories_settings_summary">Detect (and optionally block) whole categories like adult or gambling from downloaded lists, and allow specific sites past them.</string>
-    <string name="categories_intro">Each category can be Off, Report (recorded but not blocked), or Block. Lists are downloaded on demand and checked on your phone.</string>
+    <string name="categories_settings_summary">Curated blocklist bundles: security and bypass protection on by default, with adult, gambling and more you can switch on.</string>
+    <string name="categories_intro">Toggle curated lists Off, Report (recorded only) or Block. You don\'t manage individual sites; the allowlist below is just for the rare false positive.</string>
     <string name="policy_hint">Policy</string>
     <string name="policy_off">Off</string>
     <string name="policy_report">Report only</string>

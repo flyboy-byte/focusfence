@@ -33,7 +33,21 @@
                 android:text="@string/categories_intro"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-            <!-- One card per category is added here at runtime. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:hint="@string/base_tier_hint">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/baseTierDropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- One card per bundle is added here at runtime. -->
             <LinearLayout
                 android:id="@+id/categoryContainer"
                 android:layout_width="match_parent"

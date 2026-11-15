@@ -17,17 +17,19 @@ import java.io.IOException
 import java.text.NumberFormat
 
 /**
- * Manage content categories (adult, gambling, social) and the allowlist.
+ * Manage filter bundles and the allowlist. The owner toggles curated bundles
+ * Off / Report / Block rather than editing domains; the allowlist is only a
+ * false-positive escape hatch.
  *
- * Each category has a three-way policy — Off / Report / Block — making the
- * detection-vs-enforcement split visible to the user: "Report" records matches
- * without blocking, "Block" also blocks. Removing a category from Block, or
- * removing an allowlist entry, is a loosening action and goes through strict
- * mode like any other.
+ * Each bundle's policy is three-way — Off / Report (recorded, not blocked) /
+ * Block — making the detect-vs-enforce split visible. Loosening a bundle (down
+ * from Block) or removing an allowlist entry is a strict-mode-gated action.
+ * The base tier sets the Security bundle's strictness.
  */
 class CategoriesActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCategoriesBinding
+    private val rows = HashMap<String, RowCategoryBinding>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,11 +38,11 @@ class CategoriesActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        for (source in Categories.DEFAULT_SOURCES) addCategoryRow(source)
+        setupTierDropdown()
+        for (bundle in Categories.BUNDLES) addBundleRow(bundle)
 
         binding.allowlistAddButton.setOnClickListener {
-            val raw = binding.allowlistInput.text?.toString().orEmpty()
-            val norm = Blocklist.normalize(raw)
+            val norm = Blocklist.normalize(binding.allowlistInput.text?.toString().orEmpty())
             if (norm == null) {
                 Toast.makeText(this, R.string.allowlist_invalid, Toast.LENGTH_SHORT).show()
             } else {
@@ -61,20 +63,37 @@ class CategoriesActivity : AppCompatActivity() {
         return true
     }
 
-    private fun addCategoryRow(source: Categories.Source) {
+    private fun setupTierDropdown() {
+        val tiers = Categories.BaseTier.values().toList()
+        val labels = tiers.map { it.label }
+        binding.baseTierDropdown.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, labels))
+        binding.baseTierDropdown.setText(CategoryStore.baseTier(this).label, false)
+        binding.baseTierDropdown.setOnItemClickListener { _, _, pos, _ ->
+            CategoryStore.setBaseTier(this, tiers[pos])
+            // The security list must be re-fetched at the new tier if it's on.
+            rows["security"]?.let { row ->
+                if (CategoryStore.policy(this, "security") != Categories.Policy.OFF) {
+                    download(Categories.bundle("security")!!, row)
+                }
+            }
+        }
+    }
+
+    private fun addBundleRow(bundle: Categories.Bundle) {
         val row = RowCategoryBinding.inflate(layoutInflater, binding.categoryContainer, true)
-        row.categoryLabel.text = source.label
-        row.categoryLicense.text = source.license
+        rows[bundle.id] = row
+        row.categoryLabel.text = bundle.label
+        row.categoryLicense.text = bundle.description
 
         val policies = listOf(Categories.Policy.OFF, Categories.Policy.REPORT, Categories.Policy.BLOCK)
         val labels = listOf(getString(R.string.policy_off), getString(R.string.policy_report), getString(R.string.policy_block))
         row.policyDropdown.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, labels))
         fun showPolicy(p: Categories.Policy) = row.policyDropdown.setText(labels[policies.indexOf(p)], false)
-        showPolicy(CategoryStore.policy(this, source.id))
+        showPolicy(CategoryStore.policy(this, bundle.id))
 
         row.policyDropdown.setOnItemClickListener { _, _, pos, _ ->
             val chosen = policies[pos]
-            val current = CategoryStore.policy(this, source.id)
+            val current = CategoryStore.policy(this, bundle.id)
             // Off/Report are looser than Block: moving down from Block needs an unlock.
             if (current == Categories.Policy.BLOCK && chosen != Categories.Policy.BLOCK &&
                 StrictStore.isLocked(this)
@@ -83,29 +102,24 @@ class CategoriesActivity : AppCompatActivity() {
                 UiUtil.showStrictLockedDialog(this)
                 return@setOnItemClickListener
             }
-            CategoryStore.setPolicy(this, source.id, chosen)
-            maybeOfferDownload(source, row)
+            CategoryStore.setPolicy(this, bundle.id, chosen)
+            maybeOfferDownload(bundle, row)
         }
 
-        row.categoryDownload.setOnClickListener { download(source, row) }
-        if (source.url.isBlank()) {
-            row.categoryDownload.isEnabled = false
-            row.categoryStatus.text = getString(R.string.category_no_list)
-        } else {
-            refreshCategoryStatus(source, row)
-        }
+        row.categoryDownload.setOnClickListener { download(bundle, row) }
+        refreshBundleStatus(bundle, row)
     }
 
-    private fun maybeOfferDownload(source: Categories.Source, row: RowCategoryBinding) {
-        if (CategoryStore.policy(this, source.id) != Categories.Policy.OFF &&
-            source.url.isNotBlank() && !CategoryStore.file(this, source.id).exists()
+    private fun maybeOfferDownload(bundle: Categories.Bundle, row: RowCategoryBinding) {
+        if (CategoryStore.policy(this, bundle.id) != Categories.Policy.OFF &&
+            CategoryStore.url(this, bundle).isNotBlank() && !CategoryStore.file(this, bundle.id).exists()
         ) {
-            download(source, row)
+            download(bundle, row)
         }
     }
 
-    private fun refreshCategoryStatus(source: Categories.Source, row: RowCategoryBinding) {
-        val count = CategoryStore.entryCount(this, source.id)
+    private fun refreshBundleStatus(bundle: Categories.Bundle, row: RowCategoryBinding) {
+        val count = CategoryStore.entryCount(this, bundle.id)
         row.categoryStatus.text = if (count <= 0) {
             getString(R.string.category_not_downloaded)
         } else {
@@ -113,13 +127,13 @@ class CategoriesActivity : AppCompatActivity() {
         }
     }
 
-    private fun download(source: Categories.Source, row: RowCategoryBinding) {
+    private fun download(bundle: Categories.Bundle, row: RowCategoryBinding) {
         row.categoryDownload.isEnabled = false
         row.categoryStatus.text = getString(R.string.category_downloading)
         val app = applicationContext
         Thread {
             val error = try {
-                CategoryStore.download(app, source); null
+                CategoryStore.download(app, bundle); null
             } catch (e: IOException) {
                 e.message ?: "error"
             }
@@ -129,7 +143,7 @@ class CategoriesActivity : AppCompatActivity() {
                 if (error != null) {
                     Toast.makeText(this, getString(R.string.category_download_failed, error), Toast.LENGTH_LONG).show()
                 }
-                refreshCategoryStatus(source, row)
+                refreshBundleStatus(bundle, row)
             }
         }.start()
     }

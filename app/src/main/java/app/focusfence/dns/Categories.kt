@@ -1,20 +1,24 @@
 package app.focusfence.dns
 
 /**
- * Content categories (adult, gambling, …) from imported domain lists, applied
- * as **labels first**: every lookup that matches a category is recorded with
- * it, and only categories whose policy is [Policy.BLOCK] are blocked.
- * Classification ("what is this host?") is deliberately separate from policy
- * ("what do we do about it?") — a list saying a domain is adult never on its
- * own means "block forever".
+ * Curated filter **bundles** and the decision precedence over them.
  *
- * Precedence, highest first (see [decide]): a blocking user rule; the user
- * allowlist; a BLOCK-policy category; the ad list; the DoH guards. The
- * allowlist exists to override *imported* lists' false positives, so it never
- * overrides the user's own rules or the DoH guards (those protect the filter
- * itself). Pure JVM.
+ * The product choice (see docs/specs/bundles.md) is bundles over hand-curated
+ * allow/deny lists: the owner toggles a few well-maintained lists Off / Report
+ * / Block, and never edits individual domains. A bundle labels a host; the
+ * per-bundle [Policy] decides what happens — classification is kept separate
+ * from policy, so a list calling a domain "adult" never on its own means
+ * "block forever".
+ *
+ * Precedence, highest first (see [decide]): a blocking user rule; the DoH
+ * guards; the user allowlist; a BLOCK-policy bundle; the ad list. The allowlist
+ * overrides *imported lists* (bundles, ads) for false positives only — never
+ * the user's own rules and never the guards, which protect the filter itself.
+ * Pure JVM.
  */
 object Categories {
+
+    private const val RAW = "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard"
 
     enum class Policy { OFF, REPORT, BLOCK;
         companion object {
@@ -22,21 +26,96 @@ object Categories {
         }
     }
 
-    /** One downloadable source. [url] is user-editable; nothing about a source is hardcoded at match time. */
-    data class Source(val id: String, val label: String, val url: String, val license: String)
+    enum class Kind { SECURITY, BYPASS, CONTENT }
 
     /**
-     * Built-in defaults only — the owner can point any category at another
-     * list URL. Lists are downloaded at runtime, never bundled, so the app
-     * doesn't redistribute them; check a list's license before bundling one.
+     * One toggleable bundle. [url] is the on-device default (a size-optimised
+     * "mini"/onlydomains variant where one exists, to keep the phone's matcher
+     * small); [fullUrl] is a heavier opt-in variant. [defaultPolicy] is applied
+     * until the owner changes it, so security-class bundles are on out of the
+     * box. [tiered] bundles take their URL from the chosen [BaseTier] instead
+     * of [url]. All HaGeZi lists are GPL-3.0 and downloaded at runtime (never
+     * bundled into the APK), so they impose no license on this repo.
      */
-    val DEFAULT_SOURCES = listOf(
-        Source("adult", "Adult", "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/nsfw.txt", "GPL-3.0 (HaGeZi)"),
-        Source("gambling", "Gambling", "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/gambling.txt", "GPL-3.0 (HaGeZi)"),
-        Source("social", "Social media", "", "user-supplied"),
+    data class Bundle(
+        val id: String,
+        val label: String,
+        val description: String,
+        val kind: Kind,
+        val defaultPolicy: Policy,
+        val url: String,
+        val fullUrl: String? = null,
+        val license: String = "GPL-3.0 (HaGeZi)",
+        val tiered: Boolean = false,
     )
 
-    /** Categories (sorted) whose list contains [qname] or a parent of it. */
+    /** Strictness of the base Security bundle. Mini variants on device by default. */
+    enum class BaseTier(val label: String, val url: String) {
+        LIGHT("Light — lightest, fewest false positives", "$RAW/light-onlydomains.txt"),
+        PRO("Pro — recommended", "$RAW/pro.mini-onlydomains.txt"),
+        PRO_FULL("Pro (full) — larger, more coverage", "$RAW/pro-onlydomains.txt"),
+        ULTIMATE("Ultimate — aggressive, may break sites", "$RAW/ultimate.mini-onlydomains.txt");
+
+        companion object {
+            val DEFAULT = PRO
+            fun parse(s: String?): BaseTier = values().firstOrNull { it.name == s } ?: DEFAULT
+        }
+    }
+
+    /**
+     * The curated set. Security + Threat + Bypass default to BLOCK (the bypass
+     * bundle is the accountability-critical one: it stops DoH/VPN/Tor/proxy
+     * circumvention of the filter). Content bundles default Off; the owner
+     * turns them to Report or Block.
+     */
+    val BUNDLES = listOf(
+        Bundle(
+            "security", "Security — ads, trackers, malware",
+            "The base list. Blocks ads, trackers and known-bad domains. Strictness is set by the tier below.",
+            Kind.SECURITY, Policy.BLOCK, url = BaseTier.DEFAULT.url, tiered = true,
+        ),
+        Bundle(
+            "threat", "Threat intelligence (malware / phishing)",
+            "HaGeZi's threat-intelligence feed. Extra malware and phishing coverage.",
+            Kind.SECURITY, Policy.BLOCK,
+            url = "$RAW/tif.mini-onlydomains.txt", fullUrl = "$RAW/tif.medium-onlydomains.txt",
+        ),
+        Bundle(
+            "bypass", "Bypass guard (DoH / VPN / Tor / proxy)",
+            "Blocks the public resolvers, proxies and VPN/Tor bootstrap hosts used to route around the filter. Recommended for accountability.",
+            Kind.BYPASS, Policy.BLOCK, url = "$RAW/doh-vpn-proxy-bypass-onlydomains.txt",
+        ),
+        Bundle(
+            "adult", "Adult / NSFW",
+            "Adult content domains.",
+            Kind.CONTENT, Policy.OFF, url = "$RAW/nsfw-onlydomains.txt",
+        ),
+        Bundle(
+            "gambling", "Gambling",
+            "Gambling and betting domains.",
+            Kind.CONTENT, Policy.OFF,
+            url = "$RAW/gambling.mini-onlydomains.txt", fullUrl = "$RAW/gambling-onlydomains.txt",
+        ),
+        Bundle(
+            "social", "Social media",
+            "Social-network domains.",
+            Kind.CONTENT, Policy.OFF, url = "$RAW/social-onlydomains.txt",
+        ),
+        Bundle(
+            "piracy", "Piracy",
+            "Piracy and illegal-streaming domains.",
+            Kind.CONTENT, Policy.OFF, url = "$RAW/anti.piracy-onlydomains.txt",
+        ),
+        Bundle(
+            "scam", "Scam & fake sites",
+            "Scams, fake shops, fake news and rip-offs.",
+            Kind.CONTENT, Policy.OFF, url = "$RAW/fake-onlydomains.txt",
+        ),
+    )
+
+    fun bundle(id: String): Bundle? = BUNDLES.firstOrNull { it.id == id }
+
+    /** Bundles (sorted) whose list contains [qname] or a parent of it. */
     fun match(qname: String, lists: Map<String, Set<String>>): List<String> {
         if (lists.isEmpty()) return emptyList()
         var out: MutableList<String>? = null

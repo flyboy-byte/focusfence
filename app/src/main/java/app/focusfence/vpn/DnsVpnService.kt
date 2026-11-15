@@ -192,11 +192,14 @@ class DnsVpnService : VpnService() {
         Thread({
             val started = SystemClock.elapsedRealtime()
             categoryPolicies = CategoryStore.policies(this)
+            // Fetch any enabled-but-missing bundle (the default-on security ones
+            // on first run) so defaults take effect without opening the UI.
+            val fetched = CategoryStore.ensureDefaultsDownloaded(this)
             categoryLists = CategoryStore.loadActive(this)
             EventLog.diag(
                 LogEvents.service(
                     System.currentTimeMillis(), "categories", "loaded",
-                    "cats=${categoryLists.size},ms=${SystemClock.elapsedRealtime() - started}",
+                    "cats=${categoryLists.size},fetched=$fetched,ms=${SystemClock.elapsedRealtime() - started}",
                 )
             )
         }, "focusfence-category-load").start()
