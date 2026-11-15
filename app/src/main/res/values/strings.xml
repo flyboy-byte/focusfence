@@ -161,4 +161,25 @@
     <string name="diag_loading">Reading logs…</string>
     <string name="diag_storage">Log storage: %1$s. The report below covers all diagnostics and the last 24 hours of activity; export for the full history.</string>
     <string name="diag_error">Couldn\'t read the logs: %1$s</string>
+
+    <!-- Categories & allowlist -->
+    <string name="categories_title">Categories &amp; allowlist</string>
+    <string name="categories_open">Categories &amp; allowlist</string>
+    <string name="categories_settings_summary">Detect (and optionally block) whole categories like adult or gambling from downloaded lists, and allow specific sites past them.</string>
+    <string name="categories_intro">Each category can be Off, Report (recorded but not blocked), or Block. Lists are downloaded on demand and checked on your phone.</string>
+    <string name="policy_hint">Policy</string>
+    <string name="policy_off">Off</string>
+    <string name="policy_report">Report only</string>
+    <string name="policy_block">Block</string>
+    <string name="category_update">Update list</string>
+    <string name="category_downloading">Downloading…</string>
+    <string name="category_not_downloaded">List not downloaded yet</string>
+    <string name="category_downloaded">%1$s domains</string>
+    <string name="category_no_list">Set a list URL to use this category</string>
+    <string name="category_download_failed">Download failed: %1$s</string>
+    <string name="allowlist_title">Allowlist</string>
+    <string name="allowlist_intro">Sites here are never blocked by downloaded lists (categories or ads). Your own block rules and bypass protections still apply.</string>
+    <string name="allowlist_hint">Domain to allow (e.g. example.com)</string>
+    <string name="allowlist_add">Add</string>
+    <string name="allowlist_invalid">Enter a valid domain</string>
 </resources>

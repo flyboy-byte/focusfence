@@ -25,8 +25,12 @@ object CategoryStore {
     const val KEY_VERSION = "category_version"
     private const val KEY_POLICY_PREFIX = "catpolicy_"
     private const val KEY_URL_PREFIX = "caturl_"
+    private const val KEY_COUNT_PREFIX = "catcount_"
 
-    private fun file(context: Context, id: String) = File(context.filesDir, "category_$id.txt")
+    fun file(context: Context, id: String) = File(context.filesDir, "category_$id.txt")
+
+    fun entryCount(context: Context, id: String): Int =
+        BlocklistStore.prefs(context).getInt(KEY_COUNT_PREFIX + id, 0)
 
     fun policy(context: Context, id: String): Categories.Policy =
         Categories.Policy.parse(BlocklistStore.prefs(context).getString(KEY_POLICY_PREFIX + id, null))
@@ -93,7 +97,10 @@ object CategoryStore {
             file(context, source.id).delete()
             if (!tmp.renameTo(file(context, source.id))) throw IOException("Could not save ${source.label} list")
         }
-        BlocklistStore.prefs(context).edit().putLong(KEY_VERSION, System.currentTimeMillis()).apply()
+        BlocklistStore.prefs(context).edit()
+            .putInt(KEY_COUNT_PREFIX + source.id, count)
+            .putLong(KEY_VERSION, System.currentTimeMillis())
+            .apply()
         return count
     }
 }
