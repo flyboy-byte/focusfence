@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import app.focusfence.CategoriesActivity
 import app.focusfence.DiagnosticsActivity
 import app.focusfence.MonitoringActivity
+import app.focusfence.StrictModeActivity
 import app.focusfence.HelpActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
@@ -60,6 +61,9 @@ class SettingsFragment : Fragment() {
         }
         binding.monitoringButton.setOnClickListener {
             startActivity(Intent(requireContext(), MonitoringActivity::class.java))
+        }
+        binding.strictButton.setOnClickListener {
+            startActivity(Intent(requireContext(), StrictModeActivity::class.java))
         }
         binding.diagnosticsButton.setOnClickListener {
             startActivity(Intent(requireContext(), DiagnosticsActivity::class.java))

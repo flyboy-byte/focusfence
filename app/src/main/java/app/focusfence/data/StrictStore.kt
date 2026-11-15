@@ -34,6 +34,15 @@ object StrictStore {
             .apply()
     }
 
+    /**
+     * Opens the unlock window immediately (used by a correct PIN unlock). The
+     * timed path still exists as a fallback for a forgotten PIN, so a PIN never
+     * permanently locks the user out.
+     */
+    fun unlockNow(context: Context, now: Long = System.currentTimeMillis()) {
+        BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, now).apply()
+    }
+
     fun cancelUnlock(context: Context) {
         BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, 0L).apply()
     }

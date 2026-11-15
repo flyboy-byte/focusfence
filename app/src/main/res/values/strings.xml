@@ -218,4 +218,30 @@
     <string name="monitor_partner_key_save">Save key</string>
     <string name="monitor_key_invalid">That doesn\'t look like a valid public key.</string>
     <string name="watched_dialog_title">Apps to monitor</string>
+
+    <!-- Strict mode configuration + PIN unlock -->
+    <string name="strict_open">Strict mode</string>
+    <string name="strict_settings_summary">Make loosening changes wait out a delay, or require a PIN you or your partner hold.</string>
+    <string name="strict_enable">Strict mode</string>
+    <string name="strict_explain">While on, turning off protection, clearing logs, or reducing monitoring takes a delay (or a PIN). Adding protection is always allowed.</string>
+    <string name="strict_unlock_mode">How to unlock</string>
+    <string name="strict_mode_timer">Timed delay (10 min)</string>
+    <string name="strict_mode_owner">My PIN</string>
+    <string name="strict_mode_partner">Partner\'s PIN</string>
+    <string name="strict_set_owner_pin">Set my PIN</string>
+    <string name="strict_change_owner_pin">Change my PIN</string>
+    <string name="strict_owner_pin_message">Enter a PIN (at least 4 digits). You\'ll use it to unlock immediately.</string>
+    <string name="strict_gen_partner_pin">Generate partner PIN</string>
+    <string name="strict_regen_partner_pin">Regenerate partner PIN</string>
+    <string name="strict_partner_pin_title">Give this to your partner</string>
+    <string name="strict_partner_pin_message">Partner PIN: %1$s\n\nWrite it down and give it to your accountability partner. It is shown once and not stored anywhere you can read it back. Unlocking will require it.</string>
+    <string name="strict_pin_too_short">PIN must be at least 4 digits.</string>
+    <string name="strict_pin_fallback_note">If a PIN is lost, the timed delay still works as a fallback, so you can never be locked out permanently.</string>
+    <string name="strict_pin_hint">PIN</string>
+    <string name="strict_pin_owner_prompt">Enter your PIN to unlock.</string>
+    <string name="strict_pin_partner_prompt">Enter the partner PIN to unlock.</string>
+    <string name="strict_pin_unlock">Unlock</string>
+    <string name="strict_pin_use_timer">Use timed unlock</string>
+    <string name="strict_pin_ok">Unlocked. You have 5 minutes.</string>
+    <string name="strict_pin_wrong">Wrong PIN.</string>
 </resources>

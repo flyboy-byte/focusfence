@@ -48,6 +48,8 @@ object PinStore {
 
     fun hasPartnerPin(context: Context): Boolean = prefs(context).contains(KEY_PARTNER)
 
+    fun hasOwnerPin(context: Context): Boolean = prefs(context).contains(KEY_OWNER)
+
     private fun store(context: Context, key: String, h: Pin.Hashed) {
         prefs(context).edit().putString(key, "${h.saltB64}:${h.hashB64}:${h.iterations}").apply()
     }

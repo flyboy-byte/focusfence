@@ -13,6 +13,7 @@ import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.MonitorSettings
+import app.focusfence.data.PinStore
 import app.focusfence.data.StrictStore
 import app.focusfence.dns.StrictLock
 import app.focusfence.vpn.DnsVpnService
@@ -40,6 +41,19 @@ object UiUtil {
 
     fun showStrictLockedDialog(context: Context, onChanged: (() -> Unit)? = null) {
         val state = StrictStore.state(context)
+        // With a PIN configured, the correct PIN unlocks immediately; the timed
+        // delay remains as a fallback so a forgotten PIN can't lock you out.
+        if (state is StrictLock.State.Locked) {
+            when (PinStore.mode(context)) {
+                PinStore.UnlockMode.OWNER_PIN ->
+                    return showPinUnlockDialog(context, R.string.strict_pin_owner_prompt,
+                        { PinStore.verifyOwner(context, it) }, onChanged)
+                PinStore.UnlockMode.PARTNER_PIN ->
+                    return showPinUnlockDialog(context, R.string.strict_pin_partner_prompt,
+                        { PinStore.verifyPartner(context, it) }, onChanged)
+                PinStore.UnlockMode.TIMER -> Unit
+            }
+        }
         val message = if (state is StrictLock.State.Pending) {
             context.getString(R.string.strict_dialog_pending, formatCountdown(state.remainingMs))
         } else {
@@ -56,6 +70,38 @@ object UiUtil {
             }
         }
         builder.show()
+    }
+
+    private fun showPinUnlockDialog(
+        context: Context,
+        promptRes: Int,
+        verify: (String) -> Boolean,
+        onChanged: (() -> Unit)?,
+    ) {
+        val input = android.widget.EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = context.getString(R.string.strict_pin_hint)
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.strict_title)
+            .setMessage(promptRes)
+            .setView(input)
+            .setPositiveButton(R.string.strict_pin_unlock) { _, _ ->
+                if (verify(input.text?.toString().orEmpty())) {
+                    StrictStore.unlockNow(context)
+                    Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                    onChanged?.invoke()
+                } else {
+                    Toast.makeText(context, R.string.strict_pin_wrong, Toast.LENGTH_LONG).show()
+                }
+            }
+            // Fallback so a lost PIN can't permanently lock the user out.
+            .setNeutralButton(R.string.strict_pin_use_timer) { _, _ ->
+                StrictStore.requestUnlock(context)
+                onChanged?.invoke()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     fun promptEnableUrlFilter(context: Context, onDismiss: (() -> Unit)? = null) {
