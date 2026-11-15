@@ -10,6 +10,7 @@ import android.widget.CompoundButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
@@ -93,18 +94,21 @@ class DiagnosticsActivity : AppCompatActivity() {
         sw.setOnCheckedChangeListener(null)
         sw.isChecked = value
         sw.setOnCheckedChangeListener { _, checked ->
-            if (!checked && StrictStore.isLocked(this)) {
-                // Re-bind from the stored (unchanged) values; flipping the switch
-                // back directly would re-enter this listener and log a fake change.
+            fun persist(on: Boolean) {
+                apply(on)
+                EventLog.activity(
+                    LogEvents.service(System.currentTimeMillis(), "log", "setting", "$name=$on"),
+                    urgent = true,
+                )
+            }
+            if (!checked) {
+                // Turning a recording switch off is a loosening action. Revert the
+                // visual now; the guard re-applies it only once satisfied.
                 bindSwitches()
-                UiUtil.showStrictLockedDialog(this)
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_LOGGING) { persist(false); bindSwitches() }
                 return@setOnCheckedChangeListener
             }
-            apply(checked)
-            EventLog.activity(
-                LogEvents.service(System.currentTimeMillis(), "log", "setting", "$name=$checked"),
-                urgent = true,
-            )
+            persist(true)
         }
     }
 
@@ -234,10 +238,10 @@ class DiagnosticsActivity : AppCompatActivity() {
     }
 
     private fun confirmClear() {
-        if (StrictStore.isLocked(this)) {
-            UiUtil.showStrictLockedDialog(this)
-            return
-        }
+        UiUtil.guard(this, GuardPolicy.Action.DISABLE_LOGGING) { showClearConfirm() }
+    }
+
+    private fun showClearConfirm() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.diag_clear_title)
             .setMessage(R.string.diag_clear_message)

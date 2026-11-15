@@ -6,9 +6,12 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import app.focusfence.dns.GuardPolicy
+import app.focusfence.data.GuardStore
 import app.focusfence.data.PinStore
 import app.focusfence.data.StrictStore
 import app.focusfence.databinding.ActivityStrictBinding
+import app.focusfence.databinding.RowGuardBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -36,9 +39,9 @@ class StrictModeActivity : AppCompatActivity() {
 
         binding.strictSwitch.setOnCheckedChangeListener { _, on ->
             // Disabling strict mode is the loosening direction.
-            if (!on && StrictStore.isLocked(this)) {
-                UiUtil.showStrictLockedDialog(this) { bind() }
-                bind()
+            if (!on) {
+                bind() // revert; disable only once the guard is satisfied
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_STRICT) { StrictStore.setEnabled(this, false); bind() }
                 return@setOnCheckedChangeListener
             }
             StrictStore.setEnabled(this, on)
@@ -74,6 +77,42 @@ class StrictModeActivity : AppCompatActivity() {
             if (guardedByLock()) return@setOnClickListener
             promptGeneratePartnerPin { bind() }
         }
+
+        setupGuardRows()
+    }
+
+    /**
+     * One row per guarded action. Raising friction is always allowed; lowering
+     * it (making an action easier) is a loosening and is gated by the lock, so
+     * strict mode can't be quietly weakened action-by-action.
+     */
+    private fun setupGuardRows() {
+        val levels = GuardPolicy.Level.values()
+        val labels = levels.map { getString(levelLabel(it)) }
+        for (action in GuardPolicy.Action.values()) {
+            val row = RowGuardBinding.inflate(layoutInflater, binding.guardContainer, true)
+            row.guardLabel.text = action.label
+            row.guardDropdown.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, labels))
+            fun show(level: GuardPolicy.Level) = row.guardDropdown.setText(labels[levels.indexOf(level)], false)
+            show(GuardStore.level(this, action))
+            row.guardDropdown.setOnItemClickListener { _, _, pos, _ ->
+                val chosen = levels[pos]
+                val current = GuardStore.level(this, action)
+                if (chosen.ordinal < current.ordinal && StrictStore.isLocked(this)) {
+                    show(current) // revert; weakening a guard needs an unlock
+                    UiUtil.showStrictLockedDialog(this)
+                    return@setOnItemClickListener
+                }
+                GuardStore.setLevel(this, action, chosen)
+            }
+        }
+    }
+
+    private fun levelLabel(level: GuardPolicy.Level) = when (level) {
+        GuardPolicy.Level.NONE -> R.string.guard_level_none
+        GuardPolicy.Level.DELAY -> R.string.guard_level_delay
+        GuardPolicy.Level.OWN_PIN -> R.string.guard_level_own_pin
+        GuardPolicy.Level.PARTNER_PIN -> R.string.guard_level_partner_pin
     }
 
     override fun onResume() {

@@ -46,11 +46,23 @@ object UiUtil {
         if (state is StrictLock.State.Locked) {
             when (PinStore.mode(context)) {
                 PinStore.UnlockMode.OWNER_PIN ->
-                    return showPinUnlockDialog(context, R.string.strict_pin_owner_prompt,
-                        { PinStore.verifyOwner(context, it) }, onChanged)
+                    return showPinDialog(context, R.string.strict_pin_owner_prompt,
+                        { PinStore.verifyOwner(context, it) },
+                        onVerified = {
+                            StrictStore.unlockNow(context)
+                            Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                            onChanged?.invoke()
+                        },
+                        timerFallback = { StrictStore.requestUnlock(context); onChanged?.invoke() })
                 PinStore.UnlockMode.PARTNER_PIN ->
-                    return showPinUnlockDialog(context, R.string.strict_pin_partner_prompt,
-                        { PinStore.verifyPartner(context, it) }, onChanged)
+                    return showPinDialog(context, R.string.strict_pin_partner_prompt,
+                        { PinStore.verifyPartner(context, it) },
+                        onVerified = {
+                            StrictStore.unlockNow(context)
+                            Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                            onChanged?.invoke()
+                        },
+                        timerFallback = { StrictStore.requestUnlock(context); onChanged?.invoke() })
                 PinStore.UnlockMode.TIMER -> Unit
             }
         }
@@ -72,11 +84,12 @@ object UiUtil {
         builder.show()
     }
 
-    private fun showPinUnlockDialog(
+    private fun showPinDialog(
         context: Context,
         promptRes: Int,
         verify: (String) -> Boolean,
-        onChanged: (() -> Unit)?,
+        onVerified: () -> Unit,
+        timerFallback: () -> Unit,
     ) {
         val input = android.widget.EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -88,20 +101,47 @@ object UiUtil {
             .setView(input)
             .setPositiveButton(R.string.strict_pin_unlock) { _, _ ->
                 if (verify(input.text?.toString().orEmpty())) {
-                    StrictStore.unlockNow(context)
-                    Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
-                    onChanged?.invoke()
+                    onVerified()
                 } else {
                     Toast.makeText(context, R.string.strict_pin_wrong, Toast.LENGTH_LONG).show()
                 }
             }
             // Fallback so a lost PIN can't permanently lock the user out.
-            .setNeutralButton(R.string.strict_pin_use_timer) { _, _ ->
-                StrictStore.requestUnlock(context)
-                onChanged?.invoke()
-            }
+            .setNeutralButton(R.string.strict_pin_use_timer) { _, _ -> timerFallback() }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /**
+     * Runs [onAllowed] if [action]'s friction is satisfied, otherwise prompts
+     * for it: a PIN level prompts the owner/partner PIN *now* (and on success
+     * runs the action without opening the global unlock window, so unlocking a
+     * weaker action never grants this one); a delay level routes through the
+     * timed strict dialog and the owner retries once the window opens. Call
+     * this at every loosening site in place of a bare strict-lock check.
+     */
+    fun guard(context: Context, action: app.focusfence.dns.GuardPolicy.Action, onAllowed: () -> Unit) {
+        when (val req = app.focusfence.data.GuardStore.requirement(context, action)) {
+            is app.focusfence.dns.GuardPolicy.Requirement.Allowed -> onAllowed()
+            is app.focusfence.dns.GuardPolicy.Requirement.TimedUnlock -> showStrictLockedDialog(context)
+            is app.focusfence.dns.GuardPolicy.Requirement.Pin -> {
+                val prompt = if (req.partner) R.string.strict_pin_partner_prompt else R.string.strict_pin_owner_prompt
+                val verify: (String) -> Boolean = if (req.partner) {
+                    { PinStore.verifyPartner(context, it) }
+                } else {
+                    { PinStore.verifyOwner(context, it) }
+                }
+                showPinDialog(
+                    context, prompt, verify,
+                    onVerified = {
+                        Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                        onAllowed()
+                    },
+                    // Lost-PIN fallback: open the timed path instead of this action.
+                    timerFallback = { StrictStore.requestUnlock(context); showStrictLockedDialog(context) },
+                )
+            }
+        }
     }
 
     fun promptEnableUrlFilter(context: Context, onDismiss: (() -> Unit)? = null) {

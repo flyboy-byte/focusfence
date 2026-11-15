@@ -245,4 +245,13 @@
     <string name="strict_pin_use_timer">Use timed unlock</string>
     <string name="strict_pin_ok">Unlocked. You have 5 minutes.</string>
     <string name="strict_pin_wrong">Wrong PIN.</string>
+
+    <!-- Per-action friction (guard levels) -->
+    <string name="guard_title">Per-action friction</string>
+    <string name="guard_intro">Set how hard each change is while strict mode is on. Partner PIN needs a code your partner holds; it is off everywhere by default.</string>
+    <string name="guard_level_hint">Friction</string>
+    <string name="guard_level_none">None</string>
+    <string name="guard_level_delay">Timed delay</string>
+    <string name="guard_level_own_pin">Your PIN</string>
+    <string name="guard_level_partner_pin">Partner PIN</string>
 </resources>

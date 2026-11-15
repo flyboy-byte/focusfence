@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.data.AllowlistStore
 import app.focusfence.data.CategoryStore
 import app.focusfence.data.StrictStore
@@ -94,16 +95,18 @@ class CategoriesActivity : AppCompatActivity() {
         row.policyDropdown.setOnItemClickListener { _, _, pos, _ ->
             val chosen = policies[pos]
             val current = CategoryStore.policy(this, bundle.id)
-            // Off/Report are looser than Block: moving down from Block needs an unlock.
-            if (current == Categories.Policy.BLOCK && chosen != Categories.Policy.BLOCK &&
-                StrictStore.isLocked(this)
-            ) {
-                showPolicy(current)
-                UiUtil.showStrictLockedDialog(this)
+            fun applyPolicy() {
+                CategoryStore.setPolicy(this, bundle.id, chosen)
+                showPolicy(chosen)
+                maybeOfferDownload(bundle, row)
+            }
+            // Off/Report are looser than Block: moving down from Block is gated.
+            if (current == Categories.Policy.BLOCK && chosen != Categories.Policy.BLOCK) {
+                showPolicy(current) // revert until the guard is satisfied
+                UiUtil.guard(this, GuardPolicy.Action.LOOSEN_BUNDLE) { applyPolicy() }
                 return@setOnItemClickListener
             }
-            CategoryStore.setPolicy(this, bundle.id, chosen)
-            maybeOfferDownload(bundle, row)
+            applyPolicy()
         }
 
         row.categoryDownload.setOnClickListener { download(bundle, row) }
@@ -157,9 +160,7 @@ class CategoriesActivity : AppCompatActivity() {
                 text = domain
                 isCloseIconVisible = true
                 setOnCloseIconClickListener {
-                    if (StrictStore.isLocked(this@CategoriesActivity)) {
-                        UiUtil.showStrictLockedDialog(this@CategoriesActivity)
-                    } else {
+                    UiUtil.guard(this@CategoriesActivity, GuardPolicy.Action.REMOVE_ALLOWLIST) {
                         AllowlistStore.remove(this@CategoriesActivity, domain)
                         refreshAllowlist()
                     }

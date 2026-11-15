@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.data.MonitorSettings
 import app.focusfence.data.StrictStore
 import app.focusfence.databinding.ActivityMonitoringBinding
@@ -37,12 +38,20 @@ class MonitoringActivity : AppCompatActivity() {
         }
 
         binding.screenshotsSwitch.setOnCheckedChangeListener { _, on ->
-            if (!guardLoosen(on, MonitorSettings.screenshotsEnabled(this))) { bind(); return@setOnCheckedChangeListener }
-            MonitorSettings.setScreenshots(this, on)
+            if (!on) {
+                bind()
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_CAPTURE) { MonitorSettings.setScreenshots(this, false); bind() }
+            } else {
+                MonitorSettings.setScreenshots(this, true)
+            }
         }
         binding.textSwitch.setOnCheckedChangeListener { _, on ->
-            if (!guardLoosen(on, MonitorSettings.textEnabled(this))) { bind(); return@setOnCheckedChangeListener }
-            MonitorSettings.setText(this, on)
+            if (!on) {
+                bind()
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_CAPTURE) { MonitorSettings.setText(this, false); bind() }
+            } else {
+                MonitorSettings.setText(this, true)
+            }
         }
         binding.watchedAppsButton.setOnClickListener {
             UiUtil.chooseWatchedApps(this) { bind() }
@@ -61,8 +70,12 @@ class MonitoringActivity : AppCompatActivity() {
         binding.retentionDropdown.setOnItemClickListener { _, _, pos, _ ->
             val chosen = modes[pos]
             // Keeping more imagery is a loosening of privacy protection; gate it.
-            if (!guardLoosen(chosen.ordinal > MonitorSettings.retention(this).ordinal, false)) { bind(); return@setOnItemClickListener }
-            MonitorSettings.setRetention(this, chosen)
+            if (chosen.ordinal > MonitorSettings.retention(this).ordinal) {
+                bind()
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_CAPTURE) { MonitorSettings.setRetention(this, chosen); bind() }
+            } else {
+                MonitorSettings.setRetention(this, chosen)
+            }
         }
 
         binding.partnerKeySaveButton.setOnClickListener { savePartnerKey() }
@@ -75,15 +88,6 @@ class MonitoringActivity : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean {
         finish()
-        return true
-    }
-
-    /** False (and shows the strict dialog) when this change loosens monitoring under a lock. */
-    private fun guardLoosen(isLoosening: Boolean, @Suppress("UNUSED_PARAMETER") prev: Boolean): Boolean {
-        if (isLoosening && StrictStore.isLocked(this)) {
-            UiUtil.showStrictLockedDialog(this)
-            return false
-        }
         return true
     }
 

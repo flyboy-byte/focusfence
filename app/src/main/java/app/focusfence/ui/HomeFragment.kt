@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.MainActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
@@ -66,11 +67,9 @@ class HomeFragment : Fragment() {
             if (checked == DnsVpnService.isRunning) return@setOnCheckedChangeListener
             if (checked) {
                 requestVpn()
-            } else if (StrictStore.isLocked(requireContext())) {
-                binding.vpnSwitch.isChecked = true
-                UiUtil.showStrictLockedDialog(requireContext()) { refreshStrict() }
             } else {
-                stopVpn()
+                binding.vpnSwitch.isChecked = true // revert; stop only once the guard is satisfied
+                UiUtil.guard(requireContext(), GuardPolicy.Action.TURN_OFF_VPN) { stopVpn() }
             }
         }
 
@@ -79,14 +78,14 @@ class HomeFragment : Fragment() {
             if (checked == StrictStore.isEnabled(context)) return@setOnCheckedChangeListener
             if (checked) {
                 StrictStore.setEnabled(context, true)
-            } else if (StrictStore.isLocked(context)) {
-                binding.strictSwitch.isChecked = true
-                UiUtil.showStrictLockedDialog(context) { refreshStrict() }
-                return@setOnCheckedChangeListener
+                refreshStrict()
             } else {
-                StrictStore.setEnabled(context, false)
+                binding.strictSwitch.isChecked = true // revert; disable only once the guard is satisfied
+                UiUtil.guard(context, GuardPolicy.Action.DISABLE_STRICT) {
+                    StrictStore.setEnabled(context, false)
+                    refreshStrict()
+                }
             }
-            refreshStrict()
         }
 
         binding.strictActionButton.setOnClickListener {
