@@ -126,7 +126,7 @@ less.
 
 ## 6. Backend
 
-Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images.
+Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A Kotlin/Ktor prototype exists under [`../../server/`](../../server) — flat-file store, Ed25519-signed sequence-checked ingest, heartbeat/staleness, Resend email, ciphertext-only screenshots. Not yet wired to the phone.*
 
 | Endpoint | Purpose |
 |---|---|

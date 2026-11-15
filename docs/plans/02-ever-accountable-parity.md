@@ -9,6 +9,8 @@ reporting side.
 
 Statuses: ✅ exists · 🟡 partial / local only · ❌ missing · ➕ FF goes beyond EA.
 
+**Build status (this branch):** Phase 0 (logging) and Phase 1 (categories, allowlist, PIN/crypto core) are implemented and pass CI. The backend is a written prototype under `server/` (not CI-built, not yet wired to the phone). Device-side capture (screenshots, in-app text) and the upload client are not built yet.
+
 ## Feature matrix
 
 | Capability | Ever Accountable (Android) | Focus Fence now | Status | Gap to close |
@@ -23,7 +25,7 @@ Statuses: ✅ exists · 🟡 partial / local only · ❌ missing · ➕ FF goes 
 | **Settings lock** (StrongHold) | PIN sent to someone else, local PIN, or timer delay. | Strict mode = timer delay (10 min + 5 min window). Covers turning off logging and clearing logs on this branch. | 🟡 | Add partner-held PIN and own-PIN unlock to the same `StrictLock` state machine. |
 | **Uninstall resistance** | Device Administrator. | None. | ❌ | Device Admin (cheap, weak) or Device Owner (strong; see managed mode). |
 | **App exclusions from reports** | User can exclude apps / whitelist apps. | VPN exclusions exist (filtering); no report exclusions. | ❌ | Report-exclusion list; exclusions themselves reported to partner. |
-| **Web filtering** | DNS filter for porn/malware, not customisable. | Per-domain rules, schedules, budgets, section rules, ad list, DoH guards. | ➕ | Add category sources (HaGeZi NSFW etc.) and an allowlist (`00-roadmap.md` Tier 1). |
+| **Web filtering** | DNS filter for porn/malware, not customisable. | Per-domain rules, schedules, budgets, section rules, ad list, DoH guards, **content categories (Off/Report/Block) + allowlist**. | ➕ | Category lists wired and in the UI; HaGeZi URLs set, download on demand. |
 | **App blocking** | Not a core feature. | Accessibility bounce. | ➕ | Device Owner `setPackagesSuspended` in managed mode. |
 | **Self-hosting / FOSS** | No. | Possible by design. | ➕ | Keep the backend small and self-hostable. |
 | **Measurement of own reliability** | Not exposed. | Diag log: battery/CPU, resolver latency & failures, a11y event volume, URL-read miss rate, log loss. | ➕ | — |
