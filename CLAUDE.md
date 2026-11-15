@@ -51,7 +51,7 @@ Three enforcement layers, each covering what the others cannot:
 
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
-logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`) so it can be
+logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
