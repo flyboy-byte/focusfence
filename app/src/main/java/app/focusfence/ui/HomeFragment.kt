@@ -15,6 +15,17 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import app.focusfence.CategoriesActivity
+import app.focusfence.DeviceOwnerActivity
+import app.focusfence.DiagnosticsActivity
+import app.focusfence.MonitoringActivity
+import app.focusfence.StrictModeActivity
+import app.focusfence.admin.DeviceAdmin
+import app.focusfence.data.CategoryStore
+import app.focusfence.data.MonitorSettings
+import app.focusfence.databinding.RowStatusBinding
+import app.focusfence.dns.Categories
+import app.focusfence.monitor.UsageCollector
 import app.focusfence.dns.GuardPolicy
 import app.focusfence.MainActivity
 import app.focusfence.R
@@ -117,6 +128,7 @@ class HomeFragment : Fragment() {
         refreshState()
         refreshStrict()
         refreshAttention()
+        refreshStatusRows()
         binding.root.postDelayed(ticker, 1000)
     }
 
@@ -170,6 +182,73 @@ class HomeFragment : Fragment() {
                 b.strictActionButton.visibility = View.GONE
             }
         }
+    }
+
+    /**
+     * Status at a glance: one row per protection component with its current
+     * state, each opening the screen that controls it. Rebuilt on resume (states
+     * only change in those screens), not on the 1s ticker.
+     */
+    private fun refreshStatusRows() {
+        val b = _binding ?: return
+        val context = requireContext()
+        b.statusContainer.removeAllViews()
+
+        fun row(labelRes: Int, on: Boolean, value: String, target: Class<*>) {
+            val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
+            r.statusDot.text = if (on) "\u25CF" else "\u25CB"
+            r.statusLabel.setText(labelRes)
+            r.statusValue.text = value
+            r.root.setOnClickListener { startActivity(Intent(context, target)) }
+        }
+
+        val policies = CategoryStore.policies(context).values
+        val bundlesOn = policies.count { it != Categories.Policy.OFF }
+        val bundlesBlocking = policies.count { it == Categories.Policy.BLOCK }
+        row(
+            R.string.home_row_bundles, bundlesOn > 0,
+            if (bundlesOn == 0) getString(R.string.home_none_on)
+            else resources.getQuantityString(R.plurals.home_bundles_on, bundlesOn, bundlesOn, bundlesBlocking),
+            CategoriesActivity::class.java,
+        )
+
+        val shots = MonitorSettings.screenshotsEnabled(context)
+        val text = MonitorSettings.textEnabled(context)
+        row(
+            R.string.home_row_monitoring, shots || text,
+            getString(
+                when {
+                    shots && text -> R.string.home_mon_both
+                    shots -> R.string.home_mon_shots
+                    text -> R.string.home_mon_text
+                    else -> R.string.home_off
+                }
+            ),
+            MonitoringActivity::class.java,
+        )
+
+        val timeline = UsageCollector.hasAccess(context)
+        row(
+            R.string.home_row_timeline, timeline,
+            getString(if (timeline) R.string.home_timeline_on else R.string.home_timeline_off),
+            DiagnosticsActivity::class.java,
+        )
+
+        val strict = StrictStore.isEnabled(context)
+        row(
+            R.string.home_row_strict, strict,
+            getString(if (strict) R.string.home_on else R.string.home_off),
+            StrictModeActivity::class.java,
+        )
+
+        val managed = DeviceAdmin.isDeviceOwner(context)
+        row(
+            R.string.home_row_managed, managed,
+            getString(if (managed) R.string.home_managed_on else R.string.home_managed_off),
+            DeviceOwnerActivity::class.java,
+        )
+
+        row(R.string.home_row_log, true, getString(R.string.home_log_value), DiagnosticsActivity::class.java)
     }
 
     private fun refreshAttention() {

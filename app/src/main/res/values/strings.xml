@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Focus Fence AC</string>
-    <string name="blocking_switch_label">Blocking</string>
+    <string name="blocking_switch_label">Protection</string>
     <string name="status_inactive">Off — not filtering or recording</string>
     <string name="status_active">Active — filtering and recording (%1$d blocked this session)</string>
     <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
@@ -283,4 +283,30 @@
     <string name="owner_remove">Remove managed mode</string>
     <string name="owner_removed">Managed mode removed</string>
     <string name="admin_disable_warning">Removing Focus Fence protection will be recorded. Your accountability partner can see that protection was turned off.</string>
+
+    <!-- Home status card + settings groups -->
+    <string name="home_status_title">Status</string>
+    <string name="home_row_bundles">Filter bundles</string>
+    <string name="home_row_monitoring">Monitoring</string>
+    <string name="home_row_timeline">App timeline</string>
+    <string name="home_row_strict">Friction (strict mode)</string>
+    <string name="home_row_managed">Managed mode</string>
+    <string name="home_row_log">Activity log</string>
+    <plurals name="home_bundles_on">
+        <item quantity="one">%1$d bundle on (%2$d blocking)</item>
+        <item quantity="other">%1$d bundles on (%2$d blocking)</item>
+    </plurals>
+    <string name="home_none_on">None on</string>
+    <string name="home_mon_both">Screenshots and on-screen text</string>
+    <string name="home_mon_shots">Screenshots</string>
+    <string name="home_mon_text">On-screen text</string>
+    <string name="home_off">Off</string>
+    <string name="home_on">On</string>
+    <string name="home_timeline_on">Recording which apps are used</string>
+    <string name="home_timeline_off">Off: grant Usage access</string>
+    <string name="home_managed_on">Active (device owner)</string>
+    <string name="home_managed_off">Not set up</string>
+    <string name="home_log_value">View, export, battery and health</string>
+    <string name="settings_group_accountability">Accountability</string>
+    <string name="settings_group_filtering">Filtering</string>
 </resources>
