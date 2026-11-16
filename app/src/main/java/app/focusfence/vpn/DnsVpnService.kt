@@ -46,6 +46,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -127,6 +128,14 @@ class DnsVpnService : VpnService() {
     @Volatile
     private var allowlist: Set<String> = emptySet()
 
+    // Category (bundle) reloads are serialized on one daemon thread and
+    // coalesced, so first-run auto-downloads (each bumping the version and
+    // re-triggering a reload) can't spawn a herd of concurrent list builds.
+    private val categoryReloadExec = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "focusfence-category-load").apply { isDaemon = true }
+    }
+    private val categoryReloadPending = AtomicBoolean(false)
+
     private val usageTracker = UsageTracker()
     private val lastPersistedUsage = HashMap<String, Long>()
     private lateinit var powerManager: PowerManager
@@ -189,7 +198,12 @@ class DnsVpnService : VpnService() {
     }
 
     private fun reloadCategoriesAsync() {
-        Thread({
+        // Coalesce: if a reload is already queued, let it pick up the new state.
+        if (!categoryReloadPending.compareAndSet(false, true)) return
+        categoryReloadExec.execute {
+            // Cleared at the start of the run so a change arriving mid-reload
+            // queues exactly one more pass instead of being lost or piling up.
+            categoryReloadPending.set(false)
             val started = SystemClock.elapsedRealtime()
             categoryPolicies = CategoryStore.policies(this)
             // Fetch any enabled-but-missing bundle (the default-on security ones
@@ -202,7 +216,7 @@ class DnsVpnService : VpnService() {
                     "cats=${categoryLists.size},fetched=$fetched,ms=${SystemClock.elapsedRealtime() - started}",
                 )
             )
-        }, "focusfence-category-load").start()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
