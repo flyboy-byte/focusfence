@@ -85,6 +85,47 @@ class DeviceOwnerActivity : AppCompatActivity() {
             }
         }
 
+        // Each managed-mode protection: turning on is immediate, turning off is a
+        // loosening and goes through the friction guard.
+        guardedSwitch(
+            binding.alwaysOnSwitch,
+            enable = {
+                StrategyStore.setAlwaysOnVpn(this, true)
+                if (StrategyStore.strategy(this) == StrategyStore.Strategy.LOCAL_DNS_VPN) {
+                    if (!DeviceAdmin.setAlwaysOnVpn(this, true)) {
+                        Toast.makeText(this, R.string.owner_strategy_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            disable = {
+                // Settings lock without always-on would leave the user unable to
+                // fix VPN settings at all; drop both together.
+                DeviceAdmin.setNetworkSettingsLocked(this, false)
+                StrategyStore.setAlwaysOnVpn(this, false)
+                DeviceAdmin.setAlwaysOnVpn(this, false)
+            },
+        )
+        guardedSwitch(
+            binding.lockSettingsSwitch,
+            enable = {
+                if (!StrategyStore.alwaysOnVpn(this)) {
+                    Toast.makeText(this, R.string.owner_lock_needs_always_on, Toast.LENGTH_LONG).show()
+                } else {
+                    DeviceAdmin.setNetworkSettingsLocked(this, true)
+                }
+            },
+            disable = { DeviceAdmin.setNetworkSettingsLocked(this, false) },
+        )
+        guardedSwitch(
+            binding.fallbackSwitch,
+            enable = { StrategyStore.setPrivateDnsFallback(this, true) },
+            disable = {
+                StrategyStore.setPrivateDnsFallback(this, false)
+                // Turning the fallback off while it's active undoes it now.
+                app.focusfence.admin.DnsFallback.release(this)
+            },
+        )
+
         binding.removeButton.setOnClickListener {
             UiUtil.guard(this, GuardPolicy.Action.REMOVE_PROTECTION) {
                 if (DeviceAdmin.relinquish(this)) {
@@ -109,6 +150,8 @@ class DeviceOwnerActivity : AppCompatActivity() {
         when (chosen) {
             StrategyStore.Strategy.PRIVATE_DNS -> {
                 if (DeviceAdmin.setPrivateDns(this, StrategyStore.privateDnsHost(this))) {
+                    // This Private DNS is the chosen strategy, not our fallback.
+                    StrategyStore.setFallbackActive(this, false)
                     UiUtil.stopVpn(this) // free the single VPN slot for another VPN
                     StrategyStore.setStrategy(this, chosen)
                 } else {
@@ -122,6 +165,22 @@ class DeviceOwnerActivity : AppCompatActivity() {
             }
         }
         bind()
+    }
+
+    private fun guardedSwitch(sw: CompoundButton, enable: () -> Unit, disable: () -> Unit) {
+        sw.setOnCheckedChangeListener(null)
+        sw.setOnClickListener {
+            if (sw.isChecked) {
+                enable()
+                bind()
+            } else {
+                sw.isChecked = true // revert until the guard is satisfied
+                UiUtil.guard(this, GuardPolicy.Action.LOOSEN_MANAGED) {
+                    disable()
+                    bind()
+                }
+            }
+        }
     }
 
     private fun bindSwitch(sw: CompoundButton, apply: (Boolean) -> Unit) {
@@ -153,6 +212,13 @@ class DeviceOwnerActivity : AppCompatActivity() {
         binding.suspendAppsSwitch.isEnabled = owner
         binding.suspendAppsSwitch.isChecked = StrategyStore.suspendBlockedApps(this)
         binding.removeButton.isEnabled = owner || admin
+
+        binding.alwaysOnSwitch.isEnabled = owner
+        binding.alwaysOnSwitch.isChecked = owner && StrategyStore.alwaysOnVpn(this)
+        binding.lockSettingsSwitch.isEnabled = owner
+        binding.lockSettingsSwitch.isChecked = owner && DeviceAdmin.isNetworkSettingsLocked(this)
+        binding.fallbackSwitch.isEnabled = owner
+        binding.fallbackSwitch.isChecked = StrategyStore.privateDnsFallback(this)
     }
 
     private fun strategyLabel(s: StrategyStore.Strategy) = when (s) {

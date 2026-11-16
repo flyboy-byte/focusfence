@@ -78,3 +78,31 @@ ultimate fallback. No recovery code is required precisely because nothing here i
   suspension varies.
 - Custom-rule Private DNS needs the backend's DoT endpoint.
 - Shizuku provisioning not yet built.
+
+## VPN and DNS together
+
+Strict Private DNS and our DNS VPN can't both filter at once: with Private DNS in
+hostname mode, Android sends DoT straight to that host, outside the tunnel, and
+the filter sees nothing (the health detector reports this as `bypassed`). So the
+two run as a hand-off, not side by side:
+
+- **Always-on VPN** (`setAlwaysOnVpnPackage`, never lockdown): the OS starts the
+  tunnel at boot and keeps it up. Lockdown is avoided because the tunnel routes
+  only DNS; lockdown would cut all traffic whenever it restarts.
+- **Private DNS fallback** (`DnsFallback`): whenever the VPN goes down (turned
+  off in-app, revoked, another VPN took the slot, failed to start), Private DNS
+  is locked to the fallback host; when the VPN starts, our fallback is undone.
+  A flag records that *we* set it, so a user's own setting is never cleared.
+- **Settings lock** (`DISALLOW_CONFIG_VPN`, `DISALLOW_CONFIG_PRIVATE_DNS`):
+  stops flipping either from system Settings. Turning it off in-app goes through
+  the `LOOSEN_MANAGED` friction guard; relinquishing ownership clears it.
+
+## Health detection
+
+`dns/VpnHealth` (pure, tested) classifies the running filter from relay outcomes,
+query arrivals, screen state and Private DNS mode. A change writes an urgent
+`svc vpn health` record, rewrites the ongoing notification, and posts a separate
+alert while there's a real problem. Unrequested stops (`revoked`,
+`establish_failed`) post a "Protection stopped" alert. Evaluation rides the relay
+path (throttled to 5 s) and Monitor's existing battery/screen broadcasts — no
+timers or wakeups.

@@ -55,7 +55,11 @@ class HomeFragment : Fragment() {
         }
 
     private val stateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) = refreshState()
+        override fun onReceive(context: Context?, intent: Intent?) {
+            refreshState()
+            // Health changes arrive as state broadcasts too.
+            if (_binding != null && isAdded) refreshStatusRows()
+        }
     }
 
     private val ticker = object : Runnable {
@@ -201,6 +205,23 @@ class HomeFragment : Fragment() {
             r.statusValue.text = value
             r.root.setOnClickListener { startActivity(Intent(context, target)) }
         }
+
+        val health = DnsVpnService.health
+        row(
+            R.string.home_row_health, health == "ok",
+            getString(
+                when (health) {
+                    "ok" -> R.string.home_health_ok
+                    "offline" -> R.string.home_health_offline
+                    "degraded" -> R.string.home_health_degraded
+                    "upstream_down" -> R.string.home_health_down
+                    "silent" -> R.string.home_health_silent
+                    "bypassed" -> R.string.home_health_bypassed
+                    else -> R.string.home_health_off
+                }
+            ),
+            DiagnosticsActivity::class.java,
+        )
 
         val policies = CategoryStore.policies(context).values
         val bundlesOn = policies.count { it != Categories.Policy.OFF }

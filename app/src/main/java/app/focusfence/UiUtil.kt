@@ -296,7 +296,9 @@ object UiUtil {
         if (!DnsVpnService.isRunning) return
         val appContext = context.applicationContext
         appContext.startService(
-            Intent(appContext, DnsVpnService::class.java).setAction(DnsVpnService.ACTION_STOP)
+            Intent(appContext, DnsVpnService::class.java)
+                .setAction(DnsVpnService.ACTION_STOP)
+                .putExtra(DnsVpnService.EXTRA_RESTART, true)
         )
         Handler(Looper.getMainLooper()).postDelayed({
             if (VpnService.prepare(appContext) == null) {

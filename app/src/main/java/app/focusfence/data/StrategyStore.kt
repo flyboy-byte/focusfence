@@ -23,6 +23,9 @@ object StrategyStore {
     private const val KEY_DOT_HOST = "private_dns_host"
     private const val KEY_SUSPEND_APPS = "suspend_blocked_apps"
     private const val KEY_SUSPENDED = "suspended_packages"
+    private const val KEY_ALWAYS_ON = "always_on_vpn"
+    private const val KEY_FALLBACK = "private_dns_fallback"
+    private const val KEY_FALLBACK_ACTIVE = "private_dns_fallback_active"
 
     fun strategy(context: Context): Strategy = runCatching {
         Strategy.valueOf(BlocklistStore.prefs(context).getString(KEY_STRATEGY, null) ?: "")
@@ -52,5 +55,33 @@ object StrategyStore {
 
     fun setSuspended(context: Context, packages: Set<String>) {
         BlocklistStore.prefs(context).edit().putStringSet(KEY_SUSPENDED, packages).apply()
+    }
+
+    /** Device owner: keep our VPN as the OS always-on VPN. */
+    fun alwaysOnVpn(context: Context): Boolean =
+        BlocklistStore.prefs(context).getBoolean(KEY_ALWAYS_ON, false)
+
+    fun setAlwaysOnVpn(context: Context, on: Boolean) {
+        BlocklistStore.prefs(context).edit().putBoolean(KEY_ALWAYS_ON, on).apply()
+    }
+
+    /**
+     * Device owner: whenever the VPN goes down (turned off, revoked, another VPN
+     * took the slot), lock Private DNS to [privateDnsHost] until it comes back,
+     * so filtering degrades to category-level instead of stopping.
+     */
+    fun privateDnsFallback(context: Context): Boolean =
+        BlocklistStore.prefs(context).getBoolean(KEY_FALLBACK, true)
+
+    fun setPrivateDnsFallback(context: Context, on: Boolean) {
+        BlocklistStore.prefs(context).edit().putBoolean(KEY_FALLBACK, on).apply()
+    }
+
+    /** True while *we* set Private DNS as a fallback (so we only undo our own change). */
+    fun fallbackActive(context: Context): Boolean =
+        BlocklistStore.prefs(context).getBoolean(KEY_FALLBACK_ACTIVE, false)
+
+    fun setFallbackActive(context: Context, on: Boolean) {
+        BlocklistStore.prefs(context).edit().putBoolean(KEY_FALLBACK_ACTIVE, on).commit()
     }
 }

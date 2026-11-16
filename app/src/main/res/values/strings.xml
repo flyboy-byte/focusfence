@@ -309,4 +309,33 @@
     <string name="home_log_value">View, export, battery and health</string>
     <string name="settings_group_accountability">Accountability</string>
     <string name="settings_group_filtering">Filtering</string>
+
+    <!-- Filter health / VPN error detection -->
+    <string name="alert_channel_name">Protection problems</string>
+    <string name="alert_stopped_title">Protection stopped</string>
+    <string name="alert_stopped_revoked">The filter VPN was turned off or replaced by another VPN. Tap to turn it back on.</string>
+    <string name="alert_stopped_establish">The filter VPN couldn\'t start. Tap to open Focus Fence and turn it on.</string>
+    <string name="alert_health_title">Filter problem</string>
+    <string name="health_offline">Running — no network right now</string>
+    <string name="health_degraded">Running, but many lookups are failing — sites may be slow</string>
+    <string name="health_upstream_down">Running, but lookups are failing — sites may not load</string>
+    <string name="health_silent">Running, but no lookups are reaching the filter — something is bypassing it</string>
+    <string name="health_bypassed">Bypassed — Private DNS is set to a hostname, so lookups skip the filter. Set Private DNS to Automatic.</string>
+    <string name="home_row_health">Filter health</string>
+    <string name="home_health_off">Off</string>
+    <string name="home_health_ok">Working</string>
+    <string name="home_health_offline">No network</string>
+    <string name="home_health_degraded">Slow / failing</string>
+    <string name="home_health_down">Lookups failing</string>
+    <string name="home_health_silent">Bypassed (no traffic)</string>
+    <string name="home_health_bypassed">Bypassed by Private DNS</string>
+    <!-- Managed mode: VPN + DNS together -->
+    <string name="owner_vpn_title">VPN and DNS</string>
+    <string name="owner_always_on">Always-on VPN</string>
+    <string name="owner_always_on_hint">Android starts the filter at boot and keeps it running. Not lockdown: the internet never gets cut off if the filter restarts.</string>
+    <string name="owner_lock_settings">Lock VPN and Private DNS settings</string>
+    <string name="owner_lock_hint">Blocks turning the VPN off, or setting a Private DNS host that skips the filter, from system Settings. Turning it off here still works, with your friction setting.</string>
+    <string name="owner_lock_needs_always_on">Turn on Always-on VPN first.</string>
+    <string name="owner_fallback">Private DNS fallback</string>
+    <string name="owner_fallback_hint">Whenever the VPN is off (turned off, or another VPN takes over), lookups go to the DNS host above instead, so filtering continues at category level. Undone automatically when the VPN comes back.</string>
 </resources>

@@ -113,6 +113,49 @@
                 android:layout_height="wrap_content"
                 android:text="@string/owner_dot_save" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/owner_vpn_title"
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/alwaysOnSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/owner_always_on" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/owner_always_on_hint"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/lockSettingsSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/owner_lock_settings" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/owner_lock_hint"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/fallbackSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/owner_fallback" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/owner_fallback_hint"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary" />
+
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/networkLoggingSwitch"
                 android:layout_width="match_parent"

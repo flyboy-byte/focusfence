@@ -28,7 +28,8 @@ object GuardPolicy {
         REMOVE_ALLOWLIST("guard_remove_allow", "Remove an allowlisted site", Level.DELAY),
         UNBLOCK_APP("guard_unblock_app", "Unblock an app", Level.DELAY),
         DISABLE_STRICT("guard_disable_strict", "Turn off strict mode", Level.DELAY),
-        REMOVE_PROTECTION("guard_remove_protection", "Remove device protection", Level.DELAY);
+        REMOVE_PROTECTION("guard_remove_protection", "Remove device protection", Level.DELAY),
+        LOOSEN_MANAGED("guard_loosen_managed", "Loosen managed-mode protection", Level.DELAY);
 
         companion object {
             fun fromKey(key: String): Action? = values().firstOrNull { it.key == key }

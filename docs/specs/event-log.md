@@ -47,7 +47,7 @@ export.
 
 | `comp` | `state` values |
 |---|---|
-| `vpn` | `start` (detail: rule count, exclusions, ad list, always-on), `stop` (user), `stop_refused` (strict), `revoked`, `destroyed`, `establish_failed` |
+| `vpn` | `start` (detail: rule count, exclusions, ad list, always-on), `stop` (`user` or `restart`), `stop_refused` (strict), `revoked`, `destroyed`, `establish_failed`, `health` (detail: `ok`/`offline`/`degraded`/`upstream_down`/`silent`/`bypassed`, `fail_pct`, `was`) |
 | `a11y` | `connected` (detail: scope), `destroyed` |
 | `app` | `process_start` (detail: boot count, version), `updated` (from/to) |
 | `device` | `rebooted` |

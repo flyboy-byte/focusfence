@@ -5,17 +5,23 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
+import app.focusfence.admin.DeviceAdmin
+import app.focusfence.admin.DnsFallback
 import app.focusfence.data.AdListStore
 import app.focusfence.data.AllowlistStore
 import app.focusfence.data.BlocklistStore
@@ -24,6 +30,7 @@ import app.focusfence.data.EventLog
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.LogSettings
 import app.focusfence.data.StatsStore
+import app.focusfence.data.StrategyStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.dns.StatsCodec
@@ -34,6 +41,7 @@ import app.focusfence.dns.Dns
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.Packets
 import app.focusfence.dns.UsageTracker
+import app.focusfence.dns.VpnHealth
 import app.focusfence.monitor.Monitor
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -73,6 +81,8 @@ class DnsVpnService : VpnService() {
         const val ACTION_START = "app.focusfence.action.START"
         const val ACTION_STOP = "app.focusfence.action.STOP"
         const val ACTION_STATE_CHANGED = "app.focusfence.action.STATE_CHANGED"
+        /** On ACTION_STOP: a stop-then-start restart, not the user turning protection off. */
+        const val EXTRA_RESTART = "restart"
 
         private const val VPN4_ADDRESS = "10.111.222.1"
         private const val VPN4_DNS = "10.111.222.3"
@@ -82,6 +92,10 @@ class DnsVpnService : VpnService() {
         private const val MTU = 8192
         private const val NOTIFICATION_CHANNEL = "vpn_status"
         private const val NOTIFICATION_ID = 1
+        private const val ALERT_CHANNEL = "vpn_alert"
+        private const val ALERT_ID = 2
+        /** Health is re-evaluated at most this often from the relay path. */
+        private const val HEALTH_EVAL_INTERVAL_MS = 5_000L
 
         private const val UPSTREAM_TIMEOUT_MS = 2500
         /** Ad/tracker blocks are stable — let clients cache them for an hour. */
@@ -101,7 +115,66 @@ class DnsVpnService : VpnService() {
             private set
 
         private const val COMP = "vpn"
+
+        /** [VpnHealth.State.key] of the running filter; "off" when stopped. */
+        @Volatile
+        var health = "off"
+            private set
+
+        @Volatile
+        private var instance: DnsVpnService? = null
+
+        /** From [Monitor]'s screen broadcasts (no receiver of our own). */
+        fun onScreen(on: Boolean) {
+            val svc = instance ?: return
+            svc.healthMonitor.recordScreen(on, System.currentTimeMillis())
+            if (on) svc.evaluateHealth(force = true)
+        }
+
+        /** From [Monitor]'s battery samples: catches silence with no relay traffic. */
+        fun pollHealth() {
+            instance?.evaluateHealth(force = true)
+        }
+
+        /**
+         * Tells the user protection stopped when they didn't ask for it (revoked,
+         * failed to start). Shown even with the app closed — a silent gap is the
+         * failure mode this whole log exists to prevent.
+         */
+        fun postStoppedAlert(context: Context, reasonRes: Int) {
+            val nm = context.getSystemService(NotificationManager::class.java) ?: return
+            ensureAlertChannel(context, nm)
+            val open = PendingIntent.getActivity(
+                context, 1, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
+            )
+            nm.notify(
+                ALERT_ID,
+                NotificationCompat.Builder(context, ALERT_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_shield)
+                    .setContentTitle(context.getString(R.string.alert_stopped_title))
+                    .setContentText(context.getString(reasonRes))
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(reasonRes)))
+                    .setContentIntent(open)
+                    .setAutoCancel(true)
+                    .build(),
+            )
+        }
+
+        private fun ensureAlertChannel(context: Context, nm: NotificationManager) {
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    ALERT_CHANNEL,
+                    context.getString(R.string.alert_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                )
+            )
+        }
     }
+
+    private val healthMonitor = VpnHealth()
+    private val lastHealthEval = AtomicLong(0)
+    @Volatile
+    private var healthState = VpnHealth.State.OK
 
     @Volatile
     private var logAllowed = true
@@ -238,10 +311,18 @@ class DnsVpnService : VpnService() {
                 broadcastState()
                 return START_STICKY
             }
+            val restart = intent.getBooleanExtra(EXTRA_RESTART, false)
             EventLog.activity(
-                LogEvents.service(System.currentTimeMillis(), COMP, "stop", "user"),
+                LogEvents.service(System.currentTimeMillis(), COMP, "stop", if (restart) "restart" else "user"),
                 urgent = true,
             )
+            if (!restart) {
+                // Always-on would have the OS bring the tunnel straight back; drop
+                // it for this stop (startVpn re-applies it), and hand filtering to
+                // the Private DNS fallback while we're down.
+                if (DeviceAdmin.isAlwaysOnVpnOurs(this)) DeviceAdmin.setAlwaysOnVpn(this, false)
+                DnsFallback.engage(this)
+            }
             stopVpn()
             stopSelf()
             return START_NOT_STICKY
@@ -253,6 +334,8 @@ class DnsVpnService : VpnService() {
     override fun onRevoke() {
         // Another app took the VPN slot, or the user disabled it from settings.
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "revoked"), urgent = true)
+        postStoppedAlert(this, R.string.alert_stopped_revoked)
+        DnsFallback.engage(this)
         stopVpn()
         stopSelf()
     }
@@ -277,6 +360,10 @@ class DnsVpnService : VpnService() {
         allowlist = AllowlistStore.get(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
+
+        // Our own Private DNS fallback must go before the tunnel is up: strict
+        // Private DNS sends lookups around it.
+        DnsFallback.release(this)
 
         val builder = Builder()
             .setSession(getString(R.string.app_name))
@@ -310,6 +397,8 @@ class DnsVpnService : VpnService() {
                 LogEvents.service(System.currentTimeMillis(), COMP, "establish_failed"),
                 urgent = true,
             )
+            postStoppedAlert(this, R.string.alert_stopped_establish)
+            DnsFallback.engage(this)
             stopSelf()
             return
         }
@@ -338,6 +427,17 @@ class DnsVpnService : VpnService() {
         )
         Monitor.attach(this, COMP)
 
+        healthMonitor.reset(System.currentTimeMillis(), powerManager.isInteractive)
+        healthState = VpnHealth.State.OK
+        health = healthState.key
+        instance = this
+        getSystemService(NotificationManager::class.java)?.cancel(ALERT_ID)
+        if (StrategyStore.alwaysOnVpn(this) && !DeviceAdmin.isAlwaysOnVpnOurs(this) &&
+            StrategyStore.strategy(this) == StrategyStore.Strategy.LOCAL_DNS_VPN
+        ) {
+            DeviceAdmin.setAlwaysOnVpn(this, true)
+        }
+
         startForeground(NOTIFICATION_ID, buildNotification())
 
         readerThread = Thread({ readLoop(fd) }, "focusfence-tun-reader").also {
@@ -351,6 +451,9 @@ class DnsVpnService : VpnService() {
         if (!isRunning && tunFd == null) return
         isRunning = false
         alwaysOnState = "unknown"
+        instance = null
+        health = "off"
+        getSystemService(NotificationManager::class.java)?.cancel(ALERT_ID)
         Monitor.detach(COMP)
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
         for ((domain, state) in usageTracker.snapshot()) {
@@ -404,6 +507,7 @@ class DnsVpnService : VpnService() {
             return
         }
         Monitor.perf.count("q")
+        healthMonitor.recordQuery(System.currentTimeMillis())
 
         val question = Dns.parseQuestion(udp.packet, udp.payloadOffset, udp.payloadLength)
         if (question == null) Monitor.perf.count("q_unparsed")
@@ -545,6 +649,8 @@ class DnsVpnService : VpnService() {
                 Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
                 Monitor.perf.count("fwd")
                 if (index != first) Monitor.perf.count("fwd_failover")
+                healthMonitor.recordForward(true)
+                evaluateHealth(force = false)
                 return
             }
             Monitor.perf.count("fwd_attempt_fail")
@@ -552,6 +658,83 @@ class DnsVpnService : VpnService() {
         // Every resolver failed: the client gets no answer. Often just "offline",
         // but a high rate while online means the relay itself is broken.
         Monitor.perf.count("fwd_fail")
+        healthMonitor.recordForward(false)
+        evaluateHealth(force = false)
+    }
+
+    /**
+     * Re-derives filter health and acts on a change: an urgent `svc vpn health`
+     * record, the ongoing notification's text, and a separate alert while there's
+     * a real problem. Throttled on the relay path; forced from broadcasts.
+     */
+    private fun evaluateHealth(force: Boolean) {
+        if (!isRunning) return
+        val now = System.currentTimeMillis()
+        val last = lastHealthEval.get()
+        if (!force && now - last < HEALTH_EVAL_INTERVAL_MS) return
+        if (!lastHealthEval.compareAndSet(last, now)) return
+        val next = healthMonitor.evaluate(now, privateDnsStrict(), ::hasUnderlyingNetwork)
+        val prev = healthState
+        if (next == prev) return
+        healthState = next
+        health = next.key
+        val rate = healthMonitor.failureRate()
+        EventLog.activity(
+            LogEvents.service(
+                now, COMP, "health",
+                next.key + (if (rate != null) ",fail_pct=${(rate * 100).toInt()}" else "") + ",was=${prev.key}",
+            ),
+            urgent = true,
+        )
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        if (isRunning) nm.notify(NOTIFICATION_ID, buildNotification())
+        if (next.problem) {
+            ensureAlertChannel(this, nm)
+            val open = PendingIntent.getActivity(
+                this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
+            )
+            nm.notify(
+                ALERT_ID,
+                NotificationCompat.Builder(this, ALERT_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_shield)
+                    .setContentTitle(getString(R.string.alert_health_title))
+                    .setContentText(getString(healthText(next)))
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(getString(healthText(next))))
+                    .setContentIntent(open)
+                    .setOnlyAlertOnce(true)
+                    .build(),
+            )
+        } else {
+            nm.cancel(ALERT_ID)
+        }
+        broadcastState()
+    }
+
+    private fun healthText(state: VpnHealth.State): Int = when (state) {
+        VpnHealth.State.OK -> R.string.notification_text
+        VpnHealth.State.OFFLINE -> R.string.health_offline
+        VpnHealth.State.DEGRADED -> R.string.health_degraded
+        VpnHealth.State.UPSTREAM_DOWN -> R.string.health_upstream_down
+        VpnHealth.State.SILENT -> R.string.health_silent
+        VpnHealth.State.BYPASSED -> R.string.health_bypassed
+    }
+
+    /** Strict ("hostname") Private DNS bypasses the tunnel. Not public API; unreadable = false. */
+    private fun privateDnsStrict(): Boolean = try {
+        Settings.Global.getString(contentResolver, "private_dns_mode") == "hostname"
+    } catch (e: SecurityException) {
+        false
+    }
+
+    /** Is any real (non-VPN) network with internet up? Only asked when relays fail. */
+    @Suppress("DEPRECATION")
+    private fun hasUnderlyingNetwork(): Boolean {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return true
+        return cm.allNetworks.any { n ->
+            val caps = cm.getNetworkCapabilities(n) ?: return@any false
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        }
     }
 
     /**
@@ -613,7 +796,7 @@ class DnsVpnService : VpnService() {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text))
+            .setContentText(getString(healthText(healthState)))
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .build()

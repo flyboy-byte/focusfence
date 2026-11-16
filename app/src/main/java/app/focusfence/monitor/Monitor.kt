@@ -71,6 +71,7 @@ object Monitor {
                 Intent.ACTION_BATTERY_CHANGED -> worker.execute { onBattery(context, intent) }
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_SCREEN_OFF -> {
                     screenOn = intent.action == Intent.ACTION_SCREEN_ON
+                    DnsVpnService.onScreen(screenOn)
                     worker.execute { onBattery(context, stickyBattery(context)) }
                 }
             }
@@ -159,6 +160,7 @@ object Monitor {
                 .takeIf { it != Int.MIN_VALUE },
         )
         lastSample = sample
+        DnsVpnService.pollHealth()
         EventLog.diag(LogEvents.battery(now, sample))
         closePerfWindow()
         checkIntegrity(context)
@@ -197,6 +199,9 @@ object Monitor {
         state["admin_active"] = app.focusfence.admin.DeviceAdmin.isAdminActive(context).toString()
         if (app.focusfence.admin.DeviceAdmin.isDeviceOwner(context)) {
             state["network_logging"] = app.focusfence.admin.DeviceAdmin.isNetworkLoggingEnabled(context).toString()
+            state["always_on_vpn_ours"] = app.focusfence.admin.DeviceAdmin.isAlwaysOnVpnOurs(context).toString()
+            state["network_settings_locked"] =
+                app.focusfence.admin.DeviceAdmin.isNetworkSettingsLocked(context).toString()
         }
         // Capture state in the integrity trail: turning monitoring on or off is
         // itself an accountability event.
