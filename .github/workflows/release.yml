@@ -1,8 +1,8 @@
 name: Release
 
-# Cuts a signed release when you push a tag like v2.1.0-accountable.
-# Requires four repo secrets (Settings -> Secrets and variables -> Actions):
-#   KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+# Cuts an UNSIGNED release APK when you push a tag like v2.1.0-accountable.
+# No secrets needed. An unsigned APK must be signed before it can be installed
+# (see the release notes), or add signing secrets and restore the signing step.
 on:
   push:
     tags: ['v*']
@@ -26,31 +26,23 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Decode signing keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-
-      - name: Build signed release APK
-        env:
-          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Build unsigned release APK
         run: ./gradlew assembleRelease
 
       - name: Name the APK by tag
-        run: cp app/build/outputs/apk/release/app-release.apk "focus-fence-accountable-${{ github.ref_name }}.apk"
+        run: cp app/build/outputs/apk/release/app-release-unsigned.apk "focus-fence-accountable-${{ github.ref_name }}-unsigned.apk"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           name: "Focus Fence AC ${{ github.ref_name }}"
-          files: focus-fence-accountable-*.apk
+          files: focus-fence-accountable-*-unsigned.apk
           body: |
             **Focus Fence AC** — accountability build, separate from the original Focus Fence.
 
-            - App id `app.focusfence.accountable` (installs alongside the original, does not replace it)
-            - Release-signed APK attached below
-            - Pre-release: not device-tested across OEMs yet
+            - App id `app.focusfence.accountable` (installs alongside the original)
+            - **Unsigned** release APK. Android will not install it until it is signed.
+              Sign it with your own key, e.g.:
+              `apksigner sign --ks your.jks --out focus-fence-accountable-signed.apk focus-fence-accountable-*-unsigned.apk`
+            - Pre-release: not device-tested across OEMs yet.
