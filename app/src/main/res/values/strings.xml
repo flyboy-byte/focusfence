@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">Focus Fence</string>
     <string name="blocking_switch_label">Blocking</string>
-    <string name="status_inactive">Off — distracting sites are reachable</string>
-    <string name="status_active">Active — %1$d lookups blocked this session</string>
+    <string name="status_inactive">Off — not filtering or recording</string>
+    <string name="status_active">Active — filtering and recording (%1$d blocked this session)</string>
     <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
     <string name="add_button">Add</string>
     <string name="preset_button">Add social media presets</string>
@@ -117,8 +117,10 @@
     <string name="onboarding_done">Get started</string>
     <string name="onboarding_progress">%1$d of %2$d</string>
 
+    <string name="help_overview_title">Filtering + accountability</string>
+    <string name="help_overview_body"><![CDATA[This app does two jobs on your phone:<br><br><b>Accountability</b> — it keeps a private record of what happens: sites looked up, apps used, content flagged from curated lists (adult, gambling and more), and any time its own protection is turned off. Optionally it can capture screenshots and on-screen text. You choose whether that record stays on this phone or goes to an accountability partner.<br><br><b>Filtering</b> — it can also block sites and apps outright, from the same curated lists or your own rules.<br><br>Everything runs on your phone; nothing leaves it unless you set up reporting. The next pages show how each part works.]]></string>
     <string name="help_how_title">How Focus Fence works</string>
-    <string name="help_how_body"><![CDATA[Focus Fence blocks distracting sites for your <b>whole phone</b> using a local VPN that filters only DNS — the phone\'s address lookups. All filtering decisions happen on your phone: no account, no server. Lookups that aren\'t blocked go to a public DNS resolver (Cloudflare or Google), as they normally would. It\'s designed to use very little battery, and <b>Settings → Logs &amp; diagnostics</b> measures how much it actually uses.<br><br>Flip the switch on the main screen and accept Android\'s VPN prompt to start blocking.<br><br><b>Tip:</b> for blocking that survives reboots, enable <b>Always-on VPN</b> for Focus Fence in Android\'s network settings.]]></string>
+    <string name="help_how_body"><![CDATA[Focus Fence filters and records activity for your <b>whole phone</b> using a local VPN that filters only DNS — the phone\'s address lookups. All filtering decisions happen on your phone: no account, no server. Lookups that aren\'t blocked go to a public DNS resolver (Cloudflare or Google), as they normally would. It\'s designed to use very little battery, and <b>Settings → Logs &amp; diagnostics</b> measures how much it actually uses.<br><br>Flip the switch on the main screen and accept Android\'s VPN prompt to start blocking.<br><br><b>Tip:</b> for blocking that survives reboots, enable <b>Always-on VPN</b> for Focus Fence in Android\'s network settings.]]></string>
 
     <string name="help_rules_title">Four ways to block a site</string>
     <string name="help_rules_body"><![CDATA[On the <b>Blocklist</b> tab, tap <b>+</b> to add a domain like reddit.com, and pick how it\'s blocked:<br><br>• <b>Block always</b> — the default.<br><br>• <b>Block during set hours</b> — for example 9:00–18:00 every day. Windows can wrap midnight, like 22:00–06:00.<br><br>• <b>Daily time limit</b> — for example 10 minutes per day, then it\'s blocked until midnight.<br><br>• <b>Allow only specific sections</b> — block a site except the parts you choose (next page).<br><br>Tap any domain in the list to change its rule later. Blocking a domain always covers its subdomains too: reddit.com also blocks old.reddit.com.]]></string>
