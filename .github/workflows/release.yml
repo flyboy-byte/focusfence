@@ -26,23 +26,39 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Build unsigned release APK
+      - name: Generate a signing key for this build
+        # No repo secrets needed: a key is generated per build so the published
+        # APK installs directly. Trade-off: the key differs each build, so to
+        # install a newer build over an older one, uninstall the old first.
+        # For stable updates, add KEYSTORE_* secrets and sign with those instead.
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
+            -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass ci-release -keypass ci-release \
+            -dname "CN=Focus Fence AC, O=focusfence"
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ci-release
+          KEY_ALIAS: ci
+          KEY_PASSWORD: ci-release
         run: ./gradlew assembleRelease
 
       - name: Name the APK by tag
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk "focus-fence-accountable-${{ github.ref_name }}-unsigned.apk"
+        run: cp app/build/outputs/apk/release/app-release.apk "focus-fence-accountable-${{ github.ref_name }}.apk"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           name: "Focus Fence AC ${{ github.ref_name }}"
-          files: focus-fence-accountable-*-unsigned.apk
+          files: focus-fence-accountable-*.apk
           body: |
             **Focus Fence AC** — accountability build, separate from the original Focus Fence.
 
             - App id `app.focusfence.accountable` (installs alongside the original)
-            - **Unsigned** release APK. Android will not install it until it is signed.
-              Sign it with your own key, e.g.:
-              `apksigner sign --ks your.jks --out focus-fence-accountable-signed.apk focus-fence-accountable-*-unsigned.apk`
+            - Signed and installable directly. The signing key is generated per
+              build, so to install a newer build over an older one, uninstall the
+              old first. Add KEYSTORE_* secrets to sign with a stable key instead.
             - Pre-release: not device-tested across OEMs yet.

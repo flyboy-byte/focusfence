@@ -37,8 +37,11 @@ Three enforcement layers, each covering what the others cannot:
    traffic never enters the app. That is the entire reason battery/throughput cost is negligible;
    any change that widens the routes breaks the core premise. Blocked queries get a locally
    synthesized cacheable `0.0.0.0`/`::` (NODATA for other types; `Dns.buildBlockedResponse`,
-   TTL 1h for ads/guards, 60s for user rules); everything else is relayed over a `protect()`ed socket to
-   1.1.1.1/8.8.8.8 (+ v6), tracking a `preferredUpstream` so dead resolvers aren't re-probed.
+   TTL 1h for ads/guards, 60s for user rules); everything else is relayed upstream over **DNS-over-HTTPS**
+   (`dohQuery`, RFC 8484) to `https://1.1.1.1` / `https://8.8.8.8` (IP-literal, so no bootstrap DNS),
+   tracking a `preferredUpstream`. DoH is used because plain UDP:53 relaying failed on hardened/DoT
+   networks (diagnostics showed ~75% of forwards failing); the endpoint IPs aren't in the tunnel routes,
+   so that egress isn't captured and needs no `protect()`.
 2. **Accessibility service** (`accessibility/UrlFilterService.kt`) — enforces per-path "section"
    rules (allow `facebook.com/marketplace`, block the rest) by reading browser address bars and
    pressing Back, and bounces blocked apps to the home screen. DNS sees hostnames only and TLS

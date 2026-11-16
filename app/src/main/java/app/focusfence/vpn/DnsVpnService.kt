@@ -42,10 +42,12 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.URL
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.net.ssl.HttpsURLConnection
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -146,11 +148,16 @@ class DnsVpnService : VpnService() {
     private var statsPending = 0
     private var lastStatsFlush = 0L
 
-    private val upstreams: List<InetAddress> = listOf(
-        InetAddress.getByName("1.1.1.1"),
-        InetAddress.getByName("8.8.8.8"),
-        InetAddress.getByName("2606:4700:4700::1111"),
-        InetAddress.getByName("2001:4860:4860::8888"),
+    // DNS-over-HTTPS upstreams, addressed by IP literal so resolving the endpoint
+    // itself needs no bootstrap DNS (Cloudflare/Google certs carry the IP as a
+    // SAN, so TLS verification against the literal succeeds). HTTPS/443 keeps
+    // working on networks that block or hijack plain UDP:53 — which the plain
+    // relay failed on (diagnostics showed ~75% of forwards failing). Keep-alive
+    // reuses the TLS connection across queries, so latency stays low after the
+    // first. v4 only: a dead v6 upstream otherwise burns a full timeout.
+    private val dohEndpoints: List<String> = listOf(
+        "https://1.1.1.1/dns-query",
+        "https://8.8.8.8/dns-query",
     )
 
     /** Index of the upstream that most recently answered; tried first so a dead
@@ -524,38 +531,55 @@ class DnsVpnService : VpnService() {
 
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
         val first = preferredUpstream
-        val order = upstreams.indices.sortedBy { if (it == first) -1 else it }
+        val order = dohEndpoints.indices.sortedBy { if (it == first) -1 else it }
         val started = SystemClock.elapsedRealtime()
         for (index in order) {
-            try {
-                DatagramSocket().use { socket ->
-                    if (!protect(socket)) {
-                        // Unprotected, the relay would loop back into the tunnel.
-                        Monitor.perf.count("fwd_unprotected")
-                        return
-                    }
-                    socket.soTimeout = UPSTREAM_TIMEOUT_MS
-                    socket.send(
-                        DatagramPacket(query, query.size, InetSocketAddress(upstreams[index], 53))
-                    )
-                    val respBuf = ByteArray(MTU - 48)
-                    val resp = DatagramPacket(respBuf, respBuf.size)
-                    socket.receive(resp)
-                    preferredUpstream = index
-                    writeToTun(Packets.buildUdpReply(udp, respBuf, resp.length))
-                }
+            val answer = try {
+                dohQuery(dohEndpoints[index], query)
+            } catch (e: IOException) {
+                null
+            }
+            if (answer != null) {
+                preferredUpstream = index
+                writeToTun(Packets.buildUdpReply(udp, answer, answer.size))
                 Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
                 Monitor.perf.count("fwd")
                 if (index != first) Monitor.perf.count("fwd_failover")
                 return
-            } catch (e: IOException) {
-                // Timeout or network error: try the next upstream.
-                Monitor.perf.count("fwd_attempt_fail")
             }
+            Monitor.perf.count("fwd_attempt_fail")
         }
         // Every resolver failed: the client gets no answer. Often just "offline",
         // but a high rate while online means the relay itself is broken.
         Monitor.perf.count("fwd_fail")
+    }
+
+    /**
+     * Relays one raw DNS query to a DoH endpoint (RFC 8484: POST the wire-format
+     * query as application/dns-message, get the wire-format answer back) and
+     * returns the answer bytes, or null if the endpoint didn't give a usable
+     * one. The endpoint IP isn't in the tunnel's routes, so this egress isn't
+     * captured by our own VPN and needs no protect().
+     */
+    private fun dohQuery(endpoint: String, query: ByteArray): ByteArray? {
+        val conn = (URL(endpoint).openConnection() as HttpsURLConnection).apply {
+            connectTimeout = UPSTREAM_TIMEOUT_MS
+            readTimeout = UPSTREAM_TIMEOUT_MS
+            doOutput = true
+            requestMethod = "POST"
+            setRequestProperty("Content-Type", "application/dns-message")
+            setRequestProperty("Accept", "application/dns-message")
+            setFixedLengthStreamingMode(query.size)
+        }
+        return try {
+            conn.outputStream.use { it.write(query) }
+            if (conn.responseCode != 200) return null
+            val bytes = conn.inputStream.use { it.readBytes() }
+            // Must fit a synthesized UDP reply; DNS answers are far smaller.
+            if (bytes.isEmpty() || bytes.size > MTU - 48) null else bytes
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun writeToTun(packet: ByteArray) {
