@@ -33,7 +33,10 @@ class DeviceOwnerActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        binding.adbCommand.text = "adb shell dpm set-device-owner \\\n  $packageName/.admin.FocusFenceAdminReceiver"
+        // Full component — the app id can differ from the namespace, so a
+        // ".Class" shorthand would resolve to the wrong receiver.
+        binding.adbCommand.text =
+            "adb shell dpm set-device-owner \\\n  " + DeviceAdmin.component(this).flattenToShortString()
 
         binding.strategyDropdown.setAdapter(
             ArrayAdapter(this, android.R.layout.simple_list_item_1,

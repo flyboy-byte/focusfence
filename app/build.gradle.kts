@@ -8,20 +8,43 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "app.focusfence"
+        // Separate app id from the original Focus Fence so this
+        // accountability build installs alongside it, not over it.
+        applicationId = "app.focusfence.accountable"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.0.1"
+        versionCode = 7
+        versionName = "2.1.0-accountable"
+    }
+
+    // Release signing is driven by environment variables so the keystore and
+    // passwords live only in CI secrets, never in the repo. Without them
+    // (e.g. local debug builds) the release config is simply unsigned.
+    signingConfigs {
+        create("release") {
+            val ksFile = System.getenv("KEYSTORE_FILE")
+            if (ksFile != null) {
+                storeFile = file(ksFile)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            // Minification is off for the first signed release so obfuscation
+            // can't break reflection/native paths (TFLite); re-enable with
+            // proguard rules once verified on a device.
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (System.getenv("KEYSTORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

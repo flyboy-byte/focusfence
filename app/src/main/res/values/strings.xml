@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Focus Fence</string>
+    <string name="app_name">Focus Fence AC</string>
     <string name="blocking_switch_label">Blocking</string>
     <string name="status_inactive">Off — not filtering or recording</string>
     <string name="status_active">Active — filtering and recording (%1$d blocked this session)</string>
