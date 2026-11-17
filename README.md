@@ -17,11 +17,11 @@ but it is *not* a real VPN — no traffic is sent to any server. The tunnel is c
 - The app reads DNS queries off the tunnel. Queries for a blocked domain (or any of its
   subdomains) are answered locally with a cacheable `0.0.0.0` / `::` address (an empty answer
   for other record types), so the site fails to load and the phone doesn't keep re-asking.
-- Everything else is relayed upstream over **DNS-over-HTTPS** (RFC 8484) to Cloudflare
-  (`https://1.1.1.1`, Google `https://8.8.8.8` as fallback) and the answer is written back.
-  HTTPS is used instead of plain UDP:53 so lookups keep working on networks that block or
-  hijack port‑53 DNS. The endpoint IPs sit outside the tunnel's routes, so this traffic leaves
-  the phone normally.
+- Everything else is relayed to the current network's own DNS servers (the resolver every
+  network allows), falling back to DNS-over-HTTPS (Cloudflare `https://1.1.1.1`, Google
+  `https://8.8.8.8`) if that fails, and the answer is written back.
+- Don't turn on Android's **"Block connections without VPN"** for this app: the tunnel only
+  carries DNS, so that setting blocks all other traffic. The app warns if it's on.
 
 Because only DNS (a few small packets per page load) traverses the app, the architecture is
 cheap to run by design. The same approach is used by well-known apps like DNS66 and

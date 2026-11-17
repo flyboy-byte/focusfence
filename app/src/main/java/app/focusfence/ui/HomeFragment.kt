@@ -217,6 +217,7 @@ class HomeFragment : Fragment() {
                     "upstream_down" -> R.string.home_health_down
                     "silent" -> R.string.home_health_silent
                     "bypassed" -> R.string.home_health_bypassed
+                    "lockdown" -> R.string.home_health_lockdown
                     else -> R.string.home_health_off
                 }
             ),

@@ -17,14 +17,22 @@ class VpnHealthTest {
     fun startsOk() {
         val h = fresh()
         h.recordQuery(1_000)
-        assertEquals(VpnHealth.State.OK, h.evaluate(2_000, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(2_000, false, false, online))
+    }
+
+    @Test
+    fun lockdownBeatsEverything() {
+        val h = fresh()
+        repeat(30) { h.recordForward(true) }
+        assertEquals(VpnHealth.State.LOCKDOWN, h.evaluate(1_000, true, true, online))
+        assertTrue(VpnHealth.State.LOCKDOWN.problem)
     }
 
     @Test
     fun strictPrivateDnsIsBypassedEvenWhenRelaysWork() {
         val h = fresh()
         repeat(30) { h.recordForward(true) }
-        assertEquals(VpnHealth.State.BYPASSED, h.evaluate(1_000, true, online))
+        assertEquals(VpnHealth.State.BYPASSED, h.evaluate(1_000, false, true, online))
         assertTrue(VpnHealth.State.BYPASSED.problem)
     }
 
@@ -33,7 +41,7 @@ class VpnHealthTest {
         val h = fresh()
         repeat(6) { h.recordForward(false) }
         h.recordQuery(1_000)
-        assertEquals(VpnHealth.State.UPSTREAM_DOWN, h.evaluate(2_000, false, online))
+        assertEquals(VpnHealth.State.UPSTREAM_DOWN, h.evaluate(2_000, false, false, online))
     }
 
     @Test
@@ -41,7 +49,7 @@ class VpnHealthTest {
         val h = fresh()
         repeat(10) { h.recordForward(false) }
         h.recordQuery(1_000)
-        val s = h.evaluate(2_000, false, offline)
+        val s = h.evaluate(2_000, false, false, offline)
         assertEquals(VpnHealth.State.OFFLINE, s)
         assertFalse(s.problem)
     }
@@ -54,7 +62,7 @@ class VpnHealthTest {
         repeat(5) { h.recordForward(false) }
         h.recordQuery(1_000)
         // 10 fails / 11 samples is under minSamples, and no 6-streak.
-        assertEquals(VpnHealth.State.OK, h.evaluate(2_000, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(2_000, false, false, online))
     }
 
     @Test
@@ -68,7 +76,7 @@ class VpnHealthTest {
         }
         assertEquals(0.333, h.failureRate()!!, 0.01)
         h.recordQuery(1_000)
-        assertEquals(VpnHealth.State.DEGRADED, h.evaluate(2_000, false, online))
+        assertEquals(VpnHealth.State.DEGRADED, h.evaluate(2_000, false, false, online))
     }
 
     @Test
@@ -90,8 +98,8 @@ class VpnHealthTest {
     fun screenOnWithNoQueriesIsSilent() {
         val h = fresh()
         val tenMin = 10 * 60_000L
-        assertEquals(VpnHealth.State.OK, h.evaluate(tenMin - 1, false, online))
-        assertEquals(VpnHealth.State.SILENT, h.evaluate(tenMin, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(tenMin - 1, false, false, online))
+        assertEquals(VpnHealth.State.SILENT, h.evaluate(tenMin, false, false, online))
     }
 
     @Test
@@ -100,20 +108,20 @@ class VpnHealthTest {
         h.recordScreen(false, 1_000)
         // An hour with the screen off: no queries is normal.
         h.recordScreen(true, 3_600_000)
-        assertEquals(VpnHealth.State.OK, h.evaluate(3_600_000 + 60_000, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(3_600_000 + 60_000, false, false, online))
     }
 
     @Test
     fun screenOffNeverSilent() {
         val h = fresh()
         h.recordScreen(false, 1_000)
-        assertEquals(VpnHealth.State.OK, h.evaluate(5 * 3_600_000L, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(5 * 3_600_000L, false, false, online))
     }
 
     @Test
     fun aQueryClearsSilence() {
         val h = fresh()
         h.recordQuery(9 * 60_000L)
-        assertEquals(VpnHealth.State.OK, h.evaluate(12 * 60_000L, false, online))
+        assertEquals(VpnHealth.State.OK, h.evaluate(12 * 60_000L, false, false, online))
     }
 }

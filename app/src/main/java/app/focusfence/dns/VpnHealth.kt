@@ -14,6 +14,9 @@ package app.focusfence.dns
  *  - [State.UPSTREAM_DOWN]: a run of relays all failed while the phone is online,
  *    so allowed sites don't load.
  *  - [State.DEGRADED]: a high failure share over the recent window (slow/flaky).
+ *  - [State.LOCKDOWN]: Android's "Block connections without VPN" is on. Our
+ *    tunnel carries only DNS, so lockdown drops all other traffic — the phone
+ *    has no internet at all while the VPN runs. Worst case, checked first.
  * Failures while there's no non-VPN network are [State.OFFLINE], not an alarm.
  */
 class VpnHealth(
@@ -31,6 +34,7 @@ class VpnHealth(
         UPSTREAM_DOWN("upstream_down", true),
         SILENT("silent", true),
         BYPASSED("bypassed", true),
+        LOCKDOWN("lockdown", true),
     }
 
     private val outcomes = BooleanArray(window)
@@ -85,7 +89,8 @@ class VpnHealth(
      * [online] is only consulted when relays are failing (it costs a system
      * call); [privateDnsStrict] is true when Private DNS is in hostname mode.
      */
-    fun evaluate(now: Long, privateDnsStrict: Boolean, online: () -> Boolean): State {
+    fun evaluate(now: Long, lockdown: Boolean, privateDnsStrict: Boolean, online: () -> Boolean): State {
+        if (lockdown) return State.LOCKDOWN
         if (privateDnsStrict) return State.BYPASSED
         val (silent, down, rate) = synchronized(this) {
             val quietSince = maxOf(lastQueryAt, screenOnSince, startedAt)

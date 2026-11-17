@@ -1,8 +1,14 @@
 name: Release
 
-# Cuts an UNSIGNED release APK when you push a tag like v2.1.0-accountable.
-# No secrets needed. An unsigned APK must be signed before it can be installed
-# (see the release notes), or add signing secrets and restore the signing step.
+# Cuts a signed release APK when you push a tag like v2.1.3-accountable.
+#
+# Signing:
+#  - If the repo has the KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS /
+#    KEY_PASSWORD secrets, the APK is signed with that stable key, so each new
+#    release installs over the previous one.
+#  - Otherwise a throwaway key is generated for this build. It still installs,
+#    but a newer build can't install over an older one (uninstall first).
+# The release notes say which key was used and its SHA-256 fingerprint.
 on:
   push:
     tags: ['v*']
@@ -26,27 +32,49 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Generate a signing key for this build
-        # No repo secrets needed: a key is generated per build so the published
-        # APK installs directly. Trade-off: the key differs each build, so to
-        # install a newer build over an older one, uninstall the old first.
-        # For stable updates, add KEYSTORE_* secrets and sign with those instead.
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
-            -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass ci-release -keypass ci-release \
-            -dname "CN=Focus Fence AC, O=focusfence"
+          ks="$RUNNER_TEMP/release.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$ks"
+            {
+              echo "KEYSTORE_FILE=$ks"
+              echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "KEY_ALIAS=$KEY_ALIAS"
+              echo "KEY_PASSWORD=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+              echo "SIGNING_KIND=stable"
+            } >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -keystore "$ks" \
+              -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass ci-release -keypass ci-release \
+              -dname "CN=Focus Fence AC, O=focusfence"
+            {
+              echo "KEYSTORE_FILE=$ks"
+              echo "KEYSTORE_PASSWORD=ci-release"
+              echo "KEY_ALIAS=ci"
+              echo "KEY_PASSWORD=ci-release"
+              echo "SIGNING_KIND=throwaway"
+            } >> "$GITHUB_ENV"
+          fi
 
       - name: Build signed release APK
-        env:
-          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
-          KEYSTORE_PASSWORD: ci-release
-          KEY_ALIAS: ci
-          KEY_PASSWORD: ci-release
         run: ./gradlew assembleRelease
 
-      - name: Name the APK by tag
-        run: cp app/build/outputs/apk/release/app-release.apk "focus-fence-accountable-${{ github.ref_name }}.apk"
+      - name: Verify signature and name the APK
+        run: |
+          apk="focus-fence-accountable-${{ github.ref_name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          # Fails the job if the APK isn't validly signed.
+          "$signer" verify --print-certs "$apk" | tee signer.txt
+          fp=$(grep -m1 'SHA-256 digest' signer.txt | awk '{print $NF}')
+          echo "CERT_SHA256=$fp" >> "$GITHUB_ENV"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -58,7 +86,7 @@ jobs:
             **Focus Fence AC** — accountability build, separate from the original Focus Fence.
 
             - App id `app.focusfence.accountable` (installs alongside the original)
-            - Signed and installable directly. The signing key is generated per
-              build, so to install a newer build over an older one, uninstall the
-              old first. Add KEYSTORE_* secrets to sign with a stable key instead.
+            - Signing key: **${{ env.SIGNING_KIND }}** (cert SHA-256 `${{ env.CERT_SHA256 }}`)
+              - stable: installs over earlier stable releases
+              - throwaway: uninstall the previous build first
             - Pre-release: not device-tested across OEMs yet.

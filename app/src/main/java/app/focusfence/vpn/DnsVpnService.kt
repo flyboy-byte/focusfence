@@ -9,13 +9,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
-import android.provider.Settings
+import android.provider.Settings as AndroidSettings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
@@ -98,6 +99,10 @@ class DnsVpnService : VpnService() {
         private const val HEALTH_EVAL_INTERVAL_MS = 5_000L
 
         private const val UPSTREAM_TIMEOUT_MS = 2500
+        /** The network's own resolver is close; give up on it fast and fail over. */
+        private const val UDP_TIMEOUT_MS = 1500
+        /** How long a looked-up underlying network + its DNS servers is trusted. */
+        private const val UNDERLYING_TTL_MS = 15_000L
         /** Ad/tracker blocks are stable — let clients cache them for an hour. */
         private const val AD_BLOCK_TTL_SECONDS = 3600
         /** User rules change with schedules/budgets — keep their cache short. */
@@ -221,22 +226,41 @@ class DnsVpnService : VpnService() {
     private var statsPending = 0
     private var lastStatsFlush = 0L
 
-    // DNS-over-HTTPS upstreams, addressed by IP literal so resolving the endpoint
-    // itself needs no bootstrap DNS (Cloudflare/Google certs carry the IP as a
-    // SAN, so TLS verification against the literal succeeds). HTTPS/443 keeps
-    // working on networks that block or hijack plain UDP:53 — which the plain
-    // relay failed on (diagnostics showed ~75% of forwards failing). Keep-alive
-    // reuses the TLS connection across queries, so latency stays low after the
-    // first. v4 only: a dead v6 upstream otherwise burns a full timeout.
-    private val dohEndpoints: List<String> = listOf(
-        "https://1.1.1.1/dns-query",
-        "https://8.8.8.8/dns-query",
+    /**
+     * One place a query can be relayed. Order of preference (see [upstreams]):
+     * the current network's own DNS servers over plain UDP — the resolver every
+     * network is guaranteed to allow, which is why mainstream DNS-filter VPNs use
+     * it — then public DoH by IP literal as a fallback for networks whose own
+     * resolver is broken. Public resolvers alone failed on the user's network:
+     * plain UDP to 1.1.1.1/8.8.8.8 failed ~75% of the time and the DoH-only relay
+     * that replaced it left the phone with no working DNS.
+     */
+    private sealed class Upstream(val key: String) {
+        class Udp(val address: InetAddress) : Upstream("udp:" + address.hostAddress)
+        class Doh(val url: String) : Upstream("doh:$url")
+    }
+
+    private val dohUpstreams: List<Upstream> = listOf(
+        Upstream.Doh("https://1.1.1.1/dns-query"),
+        Upstream.Doh("https://8.8.8.8/dns-query"),
     )
 
-    /** Index of the upstream that most recently answered; tried first so a dead
-     *  or unreachable server isn't re-probed on every single query. */
+    /** Key of the upstream that most recently answered; tried first so a dead
+     *  server isn't re-probed on every query. */
     @Volatile
-    private var preferredUpstream = 0
+    private var preferredUpstream: String? = null
+
+    // The real (non-VPN) network and its DNS servers, re-read at most every
+    // [UNDERLYING_TTL_MS] so a Wi-Fi <-> mobile switch is picked up quickly
+    // without a system call per query.
+    @Volatile
+    private var underlying: Network? = null
+
+    @Volatile
+    private var underlyingDns: List<Upstream> = emptyList()
+
+    @Volatile
+    private var underlyingCheckedAt = 0L
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
@@ -405,7 +429,9 @@ class DnsVpnService : VpnService() {
 
         tunFd = fd
         tunOut = FileOutputStream(fd.fileDescriptor)
-        pool = Executors.newFixedThreadPool(4)
+        // Relays block on network I/O (up to a few seconds when an upstream is
+        // dead), so a small pool backs the queue up and every lookup stalls.
+        pool = Executors.newFixedThreadPool(12)
         isRunning = true
         blockedCount.set(0)
         alwaysOnState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -439,12 +465,17 @@ class DnsVpnService : VpnService() {
         }
 
         startForeground(NOTIFICATION_ID, buildNotification())
+        refreshUnderlying(force = true)
 
         readerThread = Thread({ readLoop(fd) }, "focusfence-tun-reader").also {
             it.isDaemon = true
             it.start()
         }
+        // Device owner can repair lockdown itself: re-apply always-on without it.
+        if (lockdownOn() && DeviceAdmin.isDeviceOwner(this)) DeviceAdmin.setAlwaysOnVpn(this, true)
         broadcastState()
+        // Flag a broken setup (lockdown, strict Private DNS) right away.
+        evaluateHealth(force = true)
     }
 
     private fun stopVpn() {
@@ -634,27 +665,37 @@ class DnsVpnService : VpnService() {
     }
 
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
+        refreshUnderlying(force = false)
+        val all = underlyingDns + dohUpstreams
         val first = preferredUpstream
-        val order = dohEndpoints.indices.sortedBy { if (it == first) -1 else it }
+        val order = all.sortedBy { if (it.key == first) 0 else 1 }
         val started = SystemClock.elapsedRealtime()
-        for (index in order) {
+        for (upstream in order) {
             val answer = try {
-                dohQuery(dohEndpoints[index], query)
-            } catch (e: IOException) {
+                when (upstream) {
+                    is Upstream.Udp -> udpQuery(upstream.address, query)
+                    is Upstream.Doh -> dohQuery(upstream.url, query)
+                }
+            } catch (e: Exception) {
+                // Any failure (I/O, TLS, a vanished network) means "try the next
+                // one" — an escaping exception would silently drop the query.
                 null
             }
             if (answer != null) {
-                preferredUpstream = index
+                preferredUpstream = upstream.key
                 writeToTun(Packets.buildUdpReply(udp, answer, answer.size))
                 Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
                 Monitor.perf.count("fwd")
-                if (index != first) Monitor.perf.count("fwd_failover")
+                Monitor.perf.count(if (upstream is Upstream.Udp) "fwd_net" else "fwd_doh")
+                if (upstream.key != first) Monitor.perf.count("fwd_failover")
                 healthMonitor.recordForward(true)
                 evaluateHealth(force = false)
                 return
             }
             Monitor.perf.count("fwd_attempt_fail")
         }
+        // The network may have changed under us; re-read it for the next query.
+        refreshUnderlying(force = true)
         // Every resolver failed: the client gets no answer. Often just "offline",
         // but a high rate while online means the relay itself is broken.
         Monitor.perf.count("fwd_fail")
@@ -673,7 +714,7 @@ class DnsVpnService : VpnService() {
         val last = lastHealthEval.get()
         if (!force && now - last < HEALTH_EVAL_INTERVAL_MS) return
         if (!lastHealthEval.compareAndSet(last, now)) return
-        val next = healthMonitor.evaluate(now, privateDnsStrict(), ::hasUnderlyingNetwork)
+        val next = healthMonitor.evaluate(now, lockdownOn(), privateDnsStrict(), ::hasUnderlyingNetwork)
         val prev = healthState
         if (next == prev) return
         healthState = next
@@ -690,9 +731,13 @@ class DnsVpnService : VpnService() {
         if (isRunning) nm.notify(NOTIFICATION_ID, buildNotification())
         if (next.problem) {
             ensureAlertChannel(this, nm)
-            val open = PendingIntent.getActivity(
-                this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
-            )
+            // Lockdown can only be turned off in system VPN settings; go there.
+            val target = if (next == VpnHealth.State.LOCKDOWN) {
+                Intent(AndroidSettings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } else {
+                Intent(this, MainActivity::class.java)
+            }
+            val open = PendingIntent.getActivity(this, 1, target, PendingIntent.FLAG_IMMUTABLE)
             nm.notify(
                 ALERT_ID,
                 NotificationCompat.Builder(this, ALERT_CHANNEL)
@@ -717,11 +762,19 @@ class DnsVpnService : VpnService() {
         VpnHealth.State.UPSTREAM_DOWN -> R.string.health_upstream_down
         VpnHealth.State.SILENT -> R.string.health_silent
         VpnHealth.State.BYPASSED -> R.string.health_bypassed
+        VpnHealth.State.LOCKDOWN -> R.string.health_lockdown
     }
+
+    /**
+     * "Block connections without VPN". Our tunnel routes only DNS, so lockdown
+     * drops every other packet: the phone has DNS but no internet.
+     */
+    private fun lockdownOn(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && isLockdownEnabled
 
     /** Strict ("hostname") Private DNS bypasses the tunnel. Not public API; unreadable = false. */
     private fun privateDnsStrict(): Boolean = try {
-        Settings.Global.getString(contentResolver, "private_dns_mode") == "hostname"
+        AndroidSettings.Global.getString(contentResolver, "private_dns_mode") == "hostname"
     } catch (e: SecurityException) {
         false
     }
@@ -737,15 +790,33 @@ class DnsVpnService : VpnService() {
         }
     }
 
+    /** Plain UDP to the network's own resolver, on a socket bound to that network. */
+    private fun udpQuery(server: InetAddress, query: ByteArray): ByteArray? {
+        DatagramSocket().use { socket ->
+            // Bound to the real network so it can't loop back into the tunnel.
+            val net = underlying
+            if (net != null) net.bindSocket(socket) else if (!protect(socket)) return null
+            socket.soTimeout = UDP_TIMEOUT_MS
+            socket.send(DatagramPacket(query, query.size, InetSocketAddress(server, 53)))
+            val buf = ByteArray(MTU - 48)
+            val resp = DatagramPacket(buf, buf.size)
+            socket.receive(resp)
+            // Mismatched transaction id = stray packet; treat as a failure.
+            if (resp.length < 2 || buf[0] != query[0] || buf[1] != query[1]) return null
+            return buf.copyOf(resp.length)
+        }
+    }
+
     /**
-     * Relays one raw DNS query to a DoH endpoint (RFC 8484: POST the wire-format
-     * query as application/dns-message, get the wire-format answer back) and
-     * returns the answer bytes, or null if the endpoint didn't give a usable
-     * one. The endpoint IP isn't in the tunnel's routes, so this egress isn't
-     * captured by our own VPN and needs no protect().
+     * RFC 8484 DoH: POST the wire-format query as application/dns-message. Opened
+     * on the real network explicitly, and the connection is NOT disconnect()ed —
+     * on Android that closes the socket, forcing a fresh TCP+TLS handshake for
+     * every lookup. Draining and closing the streams lets keep-alive reuse it.
      */
     private fun dohQuery(endpoint: String, query: ByteArray): ByteArray? {
-        val conn = (URL(endpoint).openConnection() as HttpsURLConnection).apply {
+        val url = URL(endpoint)
+        val net = underlying
+        val conn = ((net?.openConnection(url) ?: url.openConnection()) as HttpsURLConnection).apply {
             connectTimeout = UPSTREAM_TIMEOUT_MS
             readTimeout = UPSTREAM_TIMEOUT_MS
             doOutput = true
@@ -754,15 +825,40 @@ class DnsVpnService : VpnService() {
             setRequestProperty("Accept", "application/dns-message")
             setFixedLengthStreamingMode(query.size)
         }
-        return try {
-            conn.outputStream.use { it.write(query) }
-            if (conn.responseCode != 200) return null
-            val bytes = conn.inputStream.use { it.readBytes() }
-            // Must fit a synthesized UDP reply; DNS answers are far smaller.
-            if (bytes.isEmpty() || bytes.size > MTU - 48) null else bytes
-        } finally {
-            conn.disconnect()
+        conn.outputStream.use { it.write(query) }
+        if (conn.responseCode != 200) {
+            runCatching { conn.errorStream?.use { it.readBytes() } }
+            return null
         }
+        val bytes = conn.inputStream.use { it.readBytes() }
+        // Must fit a synthesized UDP reply; DNS answers are far smaller.
+        return if (bytes.isEmpty() || bytes.size > MTU - 48) null else bytes
+    }
+
+    /** Re-reads the real network and its resolvers (cheap, but not per query). */
+    @Suppress("DEPRECATION")
+    private fun refreshUnderlying(force: Boolean) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && now - underlyingCheckedAt < UNDERLYING_TTL_MS) return
+        underlyingCheckedAt = now
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return
+        val candidates = cm.allNetworks.mapNotNull { n ->
+            val caps = cm.getNetworkCapabilities(n) ?: return@mapNotNull null
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return@mapNotNull null
+            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@mapNotNull null
+            n to caps
+        }
+        // Prefer a validated, unmetered (Wi-Fi) network, like the system does.
+        val best = candidates.sortedWith(
+            compareByDescending<Pair<Network, NetworkCapabilities>> {
+                it.second.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            }.thenByDescending { it.second.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) }
+        ).firstOrNull()?.first
+        underlying = best
+        underlyingDns = best?.let { cm.getLinkProperties(it)?.dnsServers }.orEmpty()
+            .filter { it.hostAddress != VPN4_DNS && !it.hostAddress.orEmpty().startsWith("fd66:f0cf") }
+            .take(2)
+            .map { Upstream.Udp(it) }
     }
 
     private fun writeToTun(packet: ByteArray) {

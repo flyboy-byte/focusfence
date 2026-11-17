@@ -321,6 +321,8 @@
     <string name="health_upstream_down">Running, but lookups are failing — sites may not load</string>
     <string name="health_silent">Running, but no lookups are reaching the filter — something is bypassing it</string>
     <string name="health_bypassed">Bypassed — Private DNS is set to a hostname, so lookups skip the filter. Set Private DNS to Automatic.</string>
+    <string name="health_lockdown">No internet: \"Block connections without VPN\" is on for Focus Fence. This filter only carries DNS, so that setting blocks everything else. Tap, open Focus Fence\'s VPN settings, and turn it off (keep Always-on).</string>
+    <string name="home_health_lockdown">Blocking internet — turn off lockdown</string>
     <string name="home_row_health">Filter health</string>
     <string name="home_health_off">Off</string>
     <string name="home_health_ok">Working</string>
