@@ -131,6 +131,8 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
 | Endpoint | Purpose |
 |---|---|
 | `POST /v1/enroll` | Enrollment code + device public key → device id |
+| `POST /v1/invites` | Device creates a partner invite → one-time code (see *Partner linking*) |
+| `POST /v1/invites/{code}/accept` | Partner app/web redeems the code + partner public key |
 | `POST /v1/batches` | Signed batch: `{device, first_seq, last_seq, prev_hash, records[]}` → ack `{last_seq}` |
 | `POST /v1/heartbeat` | Signed `{device, t, last_seq, integrity_summary}` |
 | `GET  /v1/policy` | Pull-based policy/config for the device (WorkManager) |
@@ -143,6 +145,32 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
   staleness. A daily digest is optional.
 - An optional LLM summary runs over *aggregated counts only* (handoff §15), never per-event or
   per-image.
+
+### Partner linking (invite secret)
+
+App → backend → partner, with a one-time secret the user sends over any message app:
+
+1. The user taps *Invite partner*. The device asks the backend for an invite and gets a short
+   code (e.g. 8 chars, ~40 bits) that expires in 24 h and works once. The app offers a share
+   sheet: "Install Focus Fence and enter code XXXX-XXXX" (or a link containing it).
+2. The partner enters the code in the partner app (or the web page). They choose how to be
+   notified: **email** (default) and/or **SMS**, and confirm the address/number.
+3. Both sides now hold the link. The partner's public key is sent to the device on its next
+   policy pull, so screenshots can be encrypted to it (P3) and partner PINs can be verified.
+4. The device shows "Linked to <partner name>" and logs an `integ partner_linked` record.
+   Unlinking is a loosening action: it goes through the friction guard and **the partner is
+   notified** — it can't be done silently.
+
+Rate-limit code redemption (codes are short) and never put the code in logs. Email stays the
+primary channel; the partner app is optional and can come later (web page first).
+
+### Notification channels
+
+- **Email** (Resend, already in the prototype): weekly report, alerts, invite confirmation.
+- **SMS** (scope addition): alerts only — protection off, uninstall/stale heartbeat, unlink,
+  partner-PIN requests. Weekly reports stay email (too long for SMS). Provider behind one
+  interface (`Notifier`) so Twilio / Vonage / Telnyx are swappable; costs per message, and the
+  partner must opt in by replying/confirming (carrier rules require consent).
 
 **Decision:** backend language. Kotlin/Ktor would let the `dns/` schema code be shared, which is
 a real advantage. Go is the smallest to operate. Python is the fastest to write. The deciding
@@ -167,9 +195,10 @@ Every unlock request, grant and loosening action becomes an activity record.
 
 - A `DeviceAdminReceiver`, provisioned via `adb shell dpm set-device-owner` (development) or QR
   code. Shizuku-assisted provisioning is an option (Déchaîner's pattern).
-- Policies:
-  - uninstall block
-  - always-on VPN + lockdown
+- Policies (as built — see [`device-owner.md`](device-owner.md)):
+  - uninstall is **not** blocked; it's detected (integrity trail + heartbeat) and reported
+  - always-on VPN **without lockdown** — lockdown drops all non-DNS traffic with our DNS-only
+    routes (it caused a real no-internet bug)
   - `DISALLOW_CONFIG_VPN`, Private DNS restriction
   - `setPackagesSuspended` for blocked apps
   - unknown-sources restriction
