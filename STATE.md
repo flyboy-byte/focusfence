@@ -1,6 +1,6 @@
 # State of the project
 
-_Last updated: 2026-11-17. Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-18. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -9,9 +9,10 @@ This branch turns Focus Fence (a DNS-only website blocker) into **Focus Fence AC
 self-accountability app benchmarked against **Ever Accountable** (EA) on Android. The phone side
 is mostly built: filtering with curated bundles, an activity log for accountability, a diagnostics
 log for "is it working", filter-health detection, settings friction, device admin / device owner
-modes, and opt-in text and screenshot capture. **Nothing reaches an accountability partner yet**:
-the backend is a prototype and the phone doesn't upload. That loop is EA's core feature and the
-next major piece of work.
+modes, and opt-in text and screenshot capture. The **partner loop is now built end to end in
+code** — email/web partners via a server, and app-to-app pairing through a blind mailbox — and
+passes its tests, but **no server is deployed yet**, so none of it has run for real. Deploying the
+server and trying it on two phones is the next step.
 
 ## Where the code is
 
@@ -23,7 +24,8 @@ next major piece of work.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Latest release | `v2.1.3-accountable` (versionCode 9), GitHub pre-release, signed with the stable key |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | 106 JVM unit tests (21 classes in `app/src/test/`); CI green |
+| Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
+| Next version on branch | `2.2.0-accountable` (versionCode 11), not yet tagged |
 
 ## Verification levels
 
@@ -67,24 +69,31 @@ without evidence.
 | Device owner: always-on VPN (no lockdown), VPN/Private DNS settings lock, Private DNS fallback, strategy switch, network logging | 🧪 | Needs adb and all accounts removed while provisioning. `specs/device-owner.md`. |
 
 ### Partner side
+Everything here needs a deployed server (`server/README.md`); none of it has run outside tests.
+
 | Feature | Status | Notes |
 |---|---|---|
-| Backend (enroll, signed ingest, heartbeat, Resend email, encrypted screenshots) | 📝 | `server/`, Kotlin/Ktor, flat-file store. |
-| Phone → server upload client + heartbeat | ❌ | **Next.** |
-| Instant alerts (protection off, stale heartbeat, unlink) | ❌ | Email first, SMS later. |
-| Weekly report email | ❌ | EA parity. |
-| Partner linking by one-time invite code | ❌ | Designed: `specs/accountability-architecture.md` §6. |
-| SMS alerts via a provider | ❌ | Designed (same section). |
+| Server (Kotlin/Ktor, flat files): signed ingest, heartbeat, invites, partner pages, alerts, weekly report, blind mailbox | 🧪 | 9 server tests in CI. Not deployed. Compiles the phone's `dns/` code so alert rules are shared. |
+| Phone upload + heartbeat (WorkManager, 15 min, hardware-backed P-256 key, hash chain, cursor resync) | 🧪 | `sync/SyncWorker`. Starts from "now" at enrollment, not old history. |
+| Email partners: one-time invite code → `/join` → private report page | 🧪 | |
+| Instant alerts (filter off/revoked, a11y/usage access off, log cleared, records missing, partner removed, health problems, silence) | 🧪 | One rule: `Digest.alertText`. |
+| Weekly report email | 🧪 | |
+| SMS alerts (Twilio/Telnyx, opt-in, code-verified, throttled) | 🧪 | Provider account + number needed. |
+| App-to-app pairing by shared key; blind mailbox; partner app view | 🧪 | `dns/Pairing`, `AccountabilityActivity`, `PartnerReportActivity`. Both phones must use the same server. |
+| Partner unlock codes (partner PIN without handing over a PIN) | 🧪 | Rotating 8-digit code in the partner's app, verified offline. |
+| Removing a partner is guarded, logged, and tells them | 🧪 | |
 | Exclude apps from reports | ❌ | EA has it. |
+| Screenshot upload to partner | ❌ | Server endpoint exists; phone doesn't send yet. |
 
 ## What's weak (read before trusting anything)
 
-1. **No partner loop.** Everything stays on the phone. Without it, this is a well-instrumented
-   filter, not an accountability app.
+1. **The partner loop has never run for real.** It passes unit and server tests, but no server is
+   deployed and no two phones have paired. Expect first-contact bugs.
 2. **Most features are 🧪, not 📱.** The relay looked fine in tests twice and failed on the phone
    twice. Assume any 🧪 item can fail the same way.
-3. **Silent removal.** Without device admin/owner, uninstall or "Clear storage" wipes the app and
-   its log. Only a server-side heartbeat can catch that, and it doesn't exist yet.
+3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
+   check-in; the partner app after 14 h without a message. Doze can delay background work for
+   hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
 4. **No screenshot model.** The pipeline runs, but nothing is flagged until a model is bundled.
 5. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
 
@@ -92,8 +101,8 @@ without evidence.
 
 | Decision | Options / recommendation |
 |---|---|
-| Backend hosting | Logan's VPS (Resend already there) — recommended for the prototype |
-| Domain | For the partner page and invite links |
+| Backend hosting | Logan's VPS (Resend already there) — recommended for the prototype. **Blocks everything on the partner side.** |
+| Domain + HTTPS | Needed: the app only talks to `https://` servers |
 | SMS provider + monthly budget | Twilio / Telnyx / Vonage, behind one `Notifier` interface |
 | Privacy tier | Recommend P3: server-readable records, end-to-end-encrypted screenshots |
 | Log retention after upload | Keep N days locally vs delete on acknowledgement |
@@ -103,10 +112,11 @@ without evidence.
 
 ## Next steps, in order
 
-1. Phone: confirm blocking + health row on v2.1.3; send a diagnostics export after a day of use.
-2. Settle hosting / domain / privacy tier.
-3. Upload client + heartbeat (WorkManager, signed batches, matching `server/`).
-4. Email alerts → weekly report → invite-code linking → SMS.
+1. Deploy `server/` on the VPS behind HTTPS (`server/README.md`).
+2. Tag `v2.2.0-accountable`, install, set the server address, invite an email partner, and pair
+   a second phone. Send a diagnostics export after a day.
+3. Fix what first contact finds; tune the silence thresholds.
+4. Then: report exclusions, screenshot upload, UI polish.
 
 ## Incidents (what went wrong, so it isn't repeated)
 
