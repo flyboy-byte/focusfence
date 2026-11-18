@@ -96,6 +96,7 @@ object ScreenCapture {
 
                 override fun onFailure(errorCode: Int) {
                     Monitor.perf.count("shot_fail")
+                    app.focusfence.data.CaptureStats.recordFailure(service)
                     inFlight.set(false)
                 }
             })
@@ -152,6 +153,7 @@ object ScreenCapture {
             )
         )
         if (flagged) Monitor.perf.count("shot_flagged")
+        app.focusfence.data.CaptureStats.recordShot(context, System.currentTimeMillis(), pkg, verdict?.label, verdict?.score, flagged)
     }
 
     private fun ensureClassifier(context: android.content.Context) {

@@ -408,4 +408,5 @@
     <string name="dns_fallback">If it doesn\'t answer, fall back to automatic (keeps the internet working)</string>
     <string name="dns_bad_lines">Ignored (not a server address): %1$s</string>
     <string name="dns_need_entry">Add at least one server, or pick another option.</string>
+    <string name="capture_status_title">Is capture working?</string>
 </resources>

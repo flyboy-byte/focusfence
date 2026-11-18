@@ -91,7 +91,49 @@ class MonitoringActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        statusTicker.run()
         bind()
+    }
+
+    override fun onPause() {
+        statusHandler.removeCallbacks(statusTicker)
+        super.onPause()
+    }
+
+    // Captures land every minute or two; refresh the status while the screen is open.
+    private val statusHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val statusTicker = object : Runnable {
+        override fun run() {
+            bindCaptureStatus()
+            statusHandler.postDelayed(this, 10_000)
+        }
+    }
+
+    private fun bindCaptureStatus() {
+        val snap = app.focusfence.data.CaptureStats.snapshot(this)
+        val status = app.focusfence.dns.CaptureStatus.describe(
+            app.focusfence.dns.CaptureStatus.Inputs(
+                screenshotsOn = MonitorSettings.screenshotsEnabled(this),
+                supported = ScreenCapture.available,
+                accessibilityOn = app.focusfence.monitor.Monitor.a11yConnected,
+                watchedApps = MonitorSettings.watchedApps(this).size,
+                aiOn = MonitorSettings.aiEnabled(this),
+                partnerKeySet = MonitorSettings.partnerKeySpki(this) != null,
+                lastShotAt = snap.lastAt,
+                lastPkg = snap.lastPkg?.let { pkg ->
+                    runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+                },
+                lastLabel = snap.lastLabel,
+                lastScore = snap.lastScore,
+                lastFlagged = snap.lastFlagged,
+                taken = snap.taken,
+                flagged = snap.flagged,
+                failed = snap.failed,
+                aiLoadFailed = snap.aiLoadFailed,
+            ),
+            System.currentTimeMillis(),
+        ) { t -> android.text.format.DateUtils.getRelativeTimeSpanString(t).toString() }
+        binding.captureStatus.text = status.text
     }
 
     override fun onSupportNavigateUp(): Boolean {

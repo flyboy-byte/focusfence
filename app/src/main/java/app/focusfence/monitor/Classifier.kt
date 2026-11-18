@@ -49,10 +49,12 @@ object Classifiers {
                 TfliteClassifier(model, labels)
             }
             Monitor.perf.count("clf_load_ms", android.os.SystemClock.elapsedRealtime() - started)
+            app.focusfence.data.CaptureStats.setAiLoadFailed(context, false)
             c
         } catch (e: Throwable) {
             Log.w(TAG, "classifier load failed, running without a model", e)
             Monitor.perf.count("clf_load_fail")
+            app.focusfence.data.CaptureStats.setAiLoadFailed(context, true)
             NullClassifier
         }
     }
