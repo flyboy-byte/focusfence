@@ -156,6 +156,27 @@ class HomeFragment : Fragment() {
         } else {
             getString(R.string.status_inactive)
         }
+        // A filter problem (bypassed, lockdown, failing) shows as "not protected"
+        // too: the hero must never look green while filtering isn't working.
+        val problem = running && DnsVpnService.health !in setOf("ok", "offline")
+        val good = running && !problem
+        b.heroTitle.setText(
+            when {
+                good -> R.string.hero_on
+                problem -> R.string.hero_problem
+                else -> R.string.hero_off
+            }
+        )
+        fun c(attr: Int) = com.google.android.material.color.MaterialColors.getColor(b.heroCard, attr)
+        val container = c(if (good) com.google.android.material.R.attr.colorPrimaryContainer else com.google.android.material.R.attr.colorErrorContainer)
+        val onContainer = c(if (good) com.google.android.material.R.attr.colorOnPrimaryContainer else com.google.android.material.R.attr.colorOnErrorContainer)
+        val accent = c(if (good) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorError)
+        val onAccent = c(if (good) com.google.android.material.R.attr.colorOnPrimary else com.google.android.material.R.attr.colorOnError)
+        b.heroCard.setCardBackgroundColor(container)
+        b.heroTitle.setTextColor(onContainer)
+        b.statusText.setTextColor(onContainer)
+        b.heroIconBg.background.mutate().setTint(accent)
+        b.heroIcon.setColorFilter(onAccent)
     }
 
     private fun refreshStrict() {
@@ -201,6 +222,13 @@ class HomeFragment : Fragment() {
         fun row(labelRes: Int, on: Boolean, value: String, target: Class<*>) {
             val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
             r.statusDot.text = if (on) "\u25CF" else "\u25CB"
+            // Shape carries the state (filled/hollow); colour reinforces it.
+            r.statusDot.setTextColor(
+                com.google.android.material.color.MaterialColors.getColor(
+                    r.statusDot,
+                    if (on) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorOutline,
+                )
+            )
             r.statusLabel.setText(labelRes)
             r.statusValue.text = value
             r.root.setOnClickListener { startActivity(Intent(context, target)) }

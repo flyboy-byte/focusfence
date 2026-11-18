@@ -414,4 +414,7 @@
     <string name="watch_by_type">Choose by type (browsers, social, video…)</string>
     <string name="watch_pick">Choose individual apps</string>
     <string name="watch_exclude">All apps, except…</string>
+    <string name="hero_on">Protected</string>
+    <string name="hero_off">Not protected</string>
+    <string name="hero_problem">Needs attention</string>
 </resources>
