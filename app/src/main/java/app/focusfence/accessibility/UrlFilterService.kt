@@ -89,6 +89,10 @@ class UrlFilterService : AccessibilityService() {
     @Volatile
     private var watchSkip: Set<String> = emptySet()
 
+    /** Keyboard / status bar: windows over the app in front, not a switch of app. */
+    @Volatile
+    private var overlayPkgs: Set<String> = emptySet()
+
     @Volatile
     private var captureScreenshots = false
 
@@ -152,6 +156,7 @@ class UrlFilterService : AccessibilityService() {
         watchMode = MonitorSettings.watchMode(this)
         watchExcluded = MonitorSettings.excludedApps(this)
         watchSkip = app.focusfence.monitor.AppCatalog.alwaysSkip(this)
+        overlayPkgs = app.focusfence.monitor.AppCatalog.overlays(this)
         captureScreenshots = MonitorSettings.screenshotsEnabled(this)
         captureText = MonitorSettings.textEnabled(this)
         applyEventFilter()
@@ -198,6 +203,16 @@ class UrlFilterService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val eventPackage = event.packageName?.toString() ?: return
+        // Which app is in front drives the screenshot timer. Our own windows count
+        // too (they're in front), just never watched.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventPackage !in overlayPkgs && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        ) {
+            app.focusfence.monitor.ScreenCapture.onForeground(
+                this, eventPackage,
+                captureScreenshots && app.focusfence.dns.WatchScope.watches(eventPackage, watchMode, captureApps, watchExcluded, watchSkip),
+            )
+        }
         if (eventPackage == packageName) return
         Monitor.perf.count("a11y_ev")
 

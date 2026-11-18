@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Branch is at `2.3.1-accountable` (code 14): monitoring banner contrast fix. |
+| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Branch is at `2.3.2-accountable` (code 15): screenshot capture fix (missing `canTakeScreenshot`, timer-driven capture). |
 
 ## Verification levels
 
@@ -42,7 +42,7 @@ without evidence.
 | Feature | Status | Notes |
 |---|---|---|
 | DNS server choice: Automatic / Cloudflare / Cloudflare Families / Quad9 / Google / your own (UDP, hostname or DoH), optional fallback to Automatic | 🧪 | Settings → DNS server. Filtering happens before forwarding, so the choice never weakens blocking. Diag `fwd_chosen_failed` counts when your server didn't answer and the fallback did. |
-| DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | v2.1.3 runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
+| DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | 2026-11-18 export: 2.0% forward failure (was 75.6% before the relay fix), median latency fine. v2.1.3+ runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
 | User allowlist | 🧪 | |
@@ -58,9 +58,9 @@ without evidence.
 | App-time timeline (UsageStats) | 🧪 | |
 | Filter health (`VpnHealth`): lockdown, bypassed, silent, failing, degraded, offline | 🧪 | Alert + home row + `svc vpn health` record. |
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
-| In-app text capture | 🧪 | Opt-in, `MonitoringActivity`. |
+| In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 🧪 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
-| On-device AI flagging (optional, off by default) | 🧪 | Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
+| On-device AI flagging (optional, off by default) | 🧪 | Model **loads on the Pixel 9** (1.0 s, 2026-11-18 export); no screenshot has been scored yet. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
 ### Tamper resistance and friction
 | Feature | Status | Notes |
@@ -128,4 +128,5 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 | 2026-11-16 | 75% of relays failing, slow browsing | Plain UDP to 1.1.1.1/8.8.8.8 unreliable on the test network | (superseded) |
 | v2.1.1 | No DNS at all | DoH-only relay; also `disconnect()` killed keep-alive | v2.1.3: network's own resolver first, DoH fallback |
 | v2.1.x | No internet while VPN on | Android lockdown ("Block connections without VPN") drops non-tunnel traffic | Health state `lockdown` + alert; never enable lockdown |
+| v2.2–2.3.1 | Screenshots never taken, and no failure shown | Accessibility config lacked `canTakeScreenshot`; a thrown refusal wasn't counted; capture only ran on screen-change events, so a still page never triggered it | 2.3.2: capability added, every refusal logged (`err capture`), timer-driven capture while a watched app is in front |
 | v2.1.0 | APK wouldn't install | Release was unsigned | CI signs; stable key via repo secrets |

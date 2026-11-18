@@ -60,25 +60,87 @@ object ScreenCapture {
         }
     }
 
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    @Volatile private var foregroundWatched = false
+    private var service: AccessibilityService? = null
+
     /**
-     * Called by the accessibility service when a *watched* app produces a window
-     * event. Decides (via [CapturePolicy]) whether a capture is due and, if so,
-     * requests one. Cheap and non-blocking on the calling thread.
+     * Captures run on a timer while a watched app is in front and the screen is
+     * on — not only when the screen changes. A page sitting still sends no
+     * accessibility events, so event-only triggering never captured a static
+     * screen (seen on the owner's phone). The timer exists only in that state:
+     * no watched app in front, or screen off, means nothing is scheduled.
+     */
+    private val tick = Runnable { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) onTimer() }
+
+    /** Screen back on: resume the timer if a watched app is still in front. */
+    fun onScreenOn() {
+        if (foregroundWatched && service != null) main.post { schedule() }
+    }
+
+    /**
+     * The accessibility service reports which app is in front (window-state
+     * events, keyboard and status bar already filtered out) and whether capture
+     * watches it.
      */
     @RequiresApi(Build.VERSION_CODES.R)
-    fun onWatchedWindow(service: AccessibilityService, pkg: String) {
-        if (!MonitorSettings.screenshotsEnabled(service)) return
-        val now = System.currentTimeMillis()
-        if (pkg != lastForeground) {
-            // New watched app in front: arm the next capture from now, so entering
-            // an app doesn't instantly snapshot it.
-            lastForeground = pkg
-            nextDueAt = CapturePolicy.nextDueAt(now, MonitorSettings.level(service), Math.random())
+    fun onForeground(service: AccessibilityService, pkg: String, watched: Boolean) {
+        this.service = service
+        val changed = pkg != lastForeground
+        lastForeground = pkg
+        foregroundWatched = watched && MonitorSettings.screenshotsEnabled(service)
+        if (!foregroundWatched) {
+            main.removeCallbacks(tick)
             return
         }
-        if (!CapturePolicy.shouldCapture(true, true, now, nextDueAt)) return
+        if (changed) {
+            // Arm from now, so entering an app doesn't instantly snapshot it.
+            nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random())
+        }
+        schedule()
+    }
+
+    /** A watched app's window changed (scrolling, new content): capture now if due. */
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun onWatchedWindow(service: AccessibilityService, pkg: String) {
+        if (pkg != lastForeground || !foregroundWatched) return
+        if (!MonitorSettings.screenshotsEnabled(service)) return
+        if (!CapturePolicy.shouldCapture(true, true, System.currentTimeMillis(), nextDueAt)) return
+        capture(service, pkg)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun onTimer() {
+        val svc = service ?: return
+        val pkg = lastForeground ?: return
+        if (!foregroundWatched || !MonitorSettings.screenshotsEnabled(svc)) return
+        val pm = svc.getSystemService(android.os.PowerManager::class.java)
+        if (pm != null && !pm.isInteractive) return // screen off: stop until the app is in front again
+        // Window events may not reach us for every app (chosen-apps mode filters
+        // them), so confirm what's actually in front before a timed capture.
+        val active = runCatching { svc.rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        if (active != null && active != pkg && active != "com.android.systemui") {
+            foregroundWatched = false
+            Monitor.perf.count("shot_timer_left_app")
+            return
+        }
+        if (CapturePolicy.shouldCapture(true, true, System.currentTimeMillis(), nextDueAt)) {
+            Monitor.perf.count("shot_timer")
+            capture(svc, pkg)
+        }
+        schedule()
+    }
+
+    private fun schedule() {
+        main.removeCallbacks(tick)
+        val delay = (nextDueAt - System.currentTimeMillis()).coerceAtLeast(1_000L)
+        main.postDelayed(tick, delay)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun capture(service: AccessibilityService, pkg: String) {
         if (!inFlight.compareAndSet(false, true)) return
-        nextDueAt = CapturePolicy.nextDueAt(now, MonitorSettings.level(service), Math.random())
+        nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random())
         requestScreenshot(service, pkg)
     }
 
@@ -95,13 +157,22 @@ object ScreenCapture {
                 }
 
                 override fun onFailure(errorCode: Int) {
+                    // Codes: 1 internal, 2 no accessibility access (missing
+                    // canTakeScreenshot), 3 interval too short, 4 invalid display,
+                    // 5 invalid window, 6 secure window (app blocks screenshots).
                     Monitor.perf.count("shot_fail")
+                    EventLog.diag(LogEvents.error(System.currentTimeMillis(), "capture", "shot_fail", "code=$errorCode pkg=$pkg"))
                     app.focusfence.data.CaptureStats.recordFailure(service)
                     inFlight.set(false)
                 }
             })
         } catch (e: RuntimeException) {
+            // A refusal can arrive as an exception instead of onFailure; it must
+            // still show up as a failure, never as silence.
             Log.w(TAG, "takeScreenshot", e)
+            Monitor.perf.count("shot_fail")
+            EventLog.diag(LogEvents.error(System.currentTimeMillis(), "capture", "shot_exception", "${e.javaClass.simpleName}: ${e.message}"))
+            app.focusfence.data.CaptureStats.recordFailure(service)
             inFlight.set(false)
         }
     }

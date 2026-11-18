@@ -33,6 +33,20 @@ object AppCatalog {
         ).map { it.activityInfo.packageName }.toSet()
 
     /**
+     * Windows that sit *over* the app in front (keyboard, status bar/shade) rather
+     * than replacing it. Their window events must not count as "switched apps",
+     * or typing would keep resetting the capture timer.
+     */
+    fun overlays(context: Context): Set<String> {
+        val s = HashSet<String>()
+        s += "com.android.systemui"
+        runCatching {
+            context.getSystemService(InputMethodManager::class.java)?.enabledInputMethodList?.forEach { s += it.packageName }
+        }
+        return s
+    }
+
+    /**
      * Never captured, even in "all apps": nothing there is meaningful to an
      * accountability partner, and the keyboard would only capture typing.
      * (Settings is skipped too; the integrity trail already records changes there.)

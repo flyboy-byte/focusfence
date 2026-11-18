@@ -72,7 +72,10 @@ object Monitor {
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_SCREEN_OFF -> {
                     screenOn = intent.action == Intent.ACTION_SCREEN_ON
                     DnsVpnService.onScreen(screenOn)
-                    if (screenOn) app.focusfence.sync.Sync.kickIfDue(context)
+                    if (screenOn) {
+                        app.focusfence.sync.Sync.kickIfDue(context)
+                        ScreenCapture.onScreenOn()
+                    }
                     worker.execute { onBattery(context, stickyBattery(context)) }
                 }
             }
