@@ -409,4 +409,9 @@
     <string name="dns_bad_lines">Ignored (not a server address): %1$s</string>
     <string name="dns_need_entry">Add at least one server, or pick another option.</string>
     <string name="capture_status_title">Is capture working?</string>
+    <string name="monitor_watching">Watching: %1$s</string>
+    <string name="watch_all">All apps (recommended)</string>
+    <string name="watch_by_type">Choose by type (browsers, social, video…)</string>
+    <string name="watch_pick">Choose individual apps</string>
+    <string name="watch_exclude">All apps, except…</string>
 </resources>

@@ -7,7 +7,7 @@ import org.junit.Test
 class CaptureStatusTest {
 
     private val base = CaptureStatus.Inputs(
-        screenshotsOn = true, supported = true, accessibilityOn = true, watchedApps = 2,
+        screenshotsOn = true, supported = true, accessibilityOn = true, watchAll = false, watchedApps = 2,
         aiOn = true, partnerKeySet = true, lastShotAt = 0, lastPkg = null, lastLabel = null,
         lastScore = null, lastFlagged = false, taken = 0, flagged = 0, failed = 0, aiLoadFailed = false,
     )
@@ -22,6 +22,11 @@ class CaptureStatusTest {
         assertTrue(d(base.copy(watchedApps = 0)).text.contains("choose at least one app"))
         // Accessibility is reported before the app list.
         assertTrue(d(base.copy(accessibilityOn = false, watchedApps = 0)).text.contains("accessibility"))
+    }
+
+    @Test
+    fun allAppsModeNeedsNoChosenApps() {
+        assertEquals(CaptureStatus.Level.WAITING, d(base.copy(watchAll = true, watchedApps = 0)).level)
     }
 
     @Test

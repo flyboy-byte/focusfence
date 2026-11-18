@@ -15,6 +15,8 @@ object CaptureStatus {
         val screenshotsOn: Boolean,
         val supported: Boolean,
         val accessibilityOn: Boolean,
+        /** True in "all apps" mode; then [watchedApps] (chosen count) doesn't matter. */
+        val watchAll: Boolean,
         val watchedApps: Int,
         val aiOn: Boolean,
         val partnerKeySet: Boolean,
@@ -37,7 +39,7 @@ object CaptureStatus {
         if (!i.supported) return Status(Level.BLOCKED, "Screenshots need Android 11 or newer.")
         if (!i.screenshotsOn) return Status(Level.OFF, "Screenshots are off.")
         if (!i.accessibilityOn) return Status(Level.BLOCKED, "Not capturing: turn on Focus Fence's accessibility service (Settings → Accessibility).")
-        if (i.watchedApps == 0) return Status(Level.BLOCKED, "Not capturing: choose at least one app to watch.")
+        if (!i.watchAll && i.watchedApps == 0) return Status(Level.BLOCKED, "Not capturing: choose at least one app to watch.")
         if (i.lastShotAt == 0L && i.failed > 0) {
             return Status(
                 Level.WARNING,

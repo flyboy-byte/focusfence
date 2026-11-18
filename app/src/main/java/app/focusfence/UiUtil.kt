@@ -15,7 +15,10 @@ import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.MonitorSettings
 import app.focusfence.data.PinStore
 import app.focusfence.data.StrictStore
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.dns.StrictLock
+import app.focusfence.dns.WatchScope
+import app.focusfence.monitor.AppCatalog
 import app.focusfence.vpn.DnsVpnService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Locale
@@ -242,33 +245,104 @@ object UiUtil {
             .show()
     }
 
-    fun chooseWatchedApps(context: Context, onDone: () -> Unit) {
-        val launchables = launchableApps(context)
-        if (launchables.isEmpty()) return
-        val current = MonitorSettings.watchedApps(context)
-        val labels = launchables.map { it.second }.toTypedArray()
-        val checked = BooleanArray(launchables.size) { launchables[it].first in current }
-        val original = checked.copyOf()
-        val locked = StrictStore.isLocked(context)
-
+    /**
+     * What capture watches: all apps (default), apps picked by type (auto-sorted),
+     * individual apps, or exclusions from "all". Narrowing what's watched is the
+     * loosening direction, so it goes through the capture friction guard.
+     */
+    fun chooseWatchScope(context: Context, onDone: () -> Unit) {
+        val options = arrayOf(
+            context.getString(R.string.watch_all),
+            context.getString(R.string.watch_by_type),
+            context.getString(R.string.watch_pick),
+            context.getString(R.string.watch_exclude),
+        )
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.watched_dialog_title)
-            .setMultiChoiceItems(labels, checked) { dialog, index, isChecked ->
-                // Removing an app from monitoring is the loosening direction.
-                if (locked && !isChecked && original[index]) {
-                    checked[index] = true
-                    (dialog as AlertDialog).listView.setItemChecked(index, true)
-                    Toast.makeText(context, R.string.strict_locked_toast, Toast.LENGTH_SHORT).show()
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        MonitorSettings.setWatch(context, WatchScope.Mode.ALL, MonitorSettings.watchedApps(context))
+                        afterWatchChange(context, onDone)
+                    }
+                    1 -> pickByType(context, onDone)
+                    2 -> pickApps(context, onDone)
+                    3 -> pickExclusions(context, onDone)
                 }
             }
+            .show()
+    }
+
+    private fun afterWatchChange(context: Context, onDone: () -> Unit) {
+        if (!isUrlFilterEnabled(context)) promptEnableUrlFilter(context)
+        onDone()
+    }
+
+    /** Narrowing (fewer apps watched than now) needs the capture guard. */
+    private fun applyNarrowing(context: Context, narrows: Boolean, apply: () -> Unit, onDone: () -> Unit) {
+        if (narrows) {
+            guard(context, GuardPolicy.Action.DISABLE_CAPTURE) { apply(); afterWatchChange(context, onDone) }
+        } else {
+            apply(); afterWatchChange(context, onDone)
+        }
+    }
+
+    private fun pickByType(context: Context, onDone: () -> Unit) {
+        val apps = AppCatalog.apps(context)
+        val groups = WatchScope.Group.values().filter { g -> apps.any { it.group == g } }
+        val labels = groups.map { g -> "${g.label} (${apps.count { it.group == g }})" }.toTypedArray()
+        val checked = BooleanArray(groups.size) { groups[it] != WatchScope.Group.OTHER }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.watch_by_type)
+            .setMultiChoiceItems(labels, checked) { _, i, on -> checked[i] = on }
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val selected = launchables.indices
-                    .filter { checked[it] }
-                    .map { launchables[it].first }
-                    .toSet()
-                MonitorSettings.setWatchedApps(context, selected)
-                if (selected.isNotEmpty() && !isUrlFilterEnabled(context)) promptEnableUrlFilter(context)
-                onDone()
+                val chosenGroups = groups.filterIndexed { i, _ -> checked[i] }.toSet()
+                val selected = apps.filter { it.group in chosenGroups }.map { it.pkg }.toSet()
+                val narrows = MonitorSettings.watchMode(context) == WatchScope.Mode.ALL ||
+                    !selected.containsAll(MonitorSettings.watchedApps(context))
+                applyNarrowing(context, narrows, { MonitorSettings.setWatch(context, WatchScope.Mode.CHOSEN, selected) }, onDone)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun pickApps(context: Context, onDone: () -> Unit) {
+        val apps = AppCatalog.apps(context)
+        if (apps.isEmpty()) return
+        val wasAll = MonitorSettings.watchMode(context) == WatchScope.Mode.ALL
+        val current = MonitorSettings.watchedApps(context)
+        // Coming from "all", start with everything ticked so unticking is explicit.
+        val checked = BooleanArray(apps.size) { wasAll || apps[it].pkg in current }
+        val labels = apps.map { "${it.label}  ·  ${it.group.label}" }.toTypedArray()
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.watch_pick)
+            .setMultiChoiceItems(labels, checked) { _, i, on -> checked[i] = on }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val selected = apps.indices.filter { checked[it] }.map { apps[it].pkg }.toSet()
+                val narrows = wasAll || !selected.containsAll(current)
+                applyNarrowing(context, narrows, { MonitorSettings.setWatch(context, WatchScope.Mode.CHOSEN, selected) }, onDone)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun pickExclusions(context: Context, onDone: () -> Unit) {
+        val apps = AppCatalog.apps(context)
+        if (apps.isEmpty()) return
+        val current = MonitorSettings.excludedApps(context)
+        val checked = BooleanArray(apps.size) { apps[it].pkg in current }
+        val labels = apps.map { "${it.label}  ·  ${it.group.label}" }.toTypedArray()
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.watch_exclude)
+            .setMultiChoiceItems(labels, checked) { _, i, on -> checked[i] = on }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val excluded = apps.indices.filter { checked[it] }.map { apps[it].pkg }.toSet()
+                // Excluding more is narrowing; switching to ALL widens or keeps scope.
+                val narrows = !current.containsAll(excluded)
+                applyNarrowing(context, narrows, {
+                    MonitorSettings.setExcludedApps(context, excluded)
+                    MonitorSettings.setWatch(context, WatchScope.Mode.ALL, MonitorSettings.watchedApps(context))
+                }, onDone)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

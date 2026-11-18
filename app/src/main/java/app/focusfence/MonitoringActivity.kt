@@ -62,7 +62,7 @@ class MonitoringActivity : AppCompatActivity() {
             }
         }
         binding.watchedAppsButton.setOnClickListener {
-            UiUtil.chooseWatchedApps(this) { bind() }
+            UiUtil.chooseWatchScope(this) { bind() }
         }
 
         val levels = CapturePolicy.Level.values()
@@ -116,6 +116,7 @@ class MonitoringActivity : AppCompatActivity() {
                 screenshotsOn = MonitorSettings.screenshotsEnabled(this),
                 supported = ScreenCapture.available,
                 accessibilityOn = app.focusfence.monitor.Monitor.a11yConnected,
+                watchAll = MonitorSettings.watchMode(this) == app.focusfence.dns.WatchScope.Mode.ALL,
                 watchedApps = MonitorSettings.watchedApps(this).size,
                 aiOn = MonitorSettings.aiEnabled(this),
                 partnerKeySet = MonitorSettings.partnerKeySpki(this) != null,
@@ -148,7 +149,12 @@ class MonitoringActivity : AppCompatActivity() {
         binding.aiSwitch.isChecked = MonitorSettings.aiEnabled(this) && ScreenCapture.available
         binding.levelDropdown.setText(getString(levelLabel(MonitorSettings.level(this))), false)
         binding.retentionDropdown.setText(getString(retentionLabel(MonitorSettings.retention(this))), false)
-        binding.watchedAppsButton.text = getString(R.string.monitor_watched_apps, MonitorSettings.watchedApps(this).size)
+        binding.watchedAppsButton.text = getString(
+            R.string.monitor_watching,
+            app.focusfence.dns.WatchScope.describe(
+                MonitorSettings.watchMode(this), MonitorSettings.watchedApps(this).size, MonitorSettings.excludedApps(this).size,
+            ),
+        )
         binding.partnerKeyStatus.setText(
             if (MonitorSettings.partnerKeySpki(this) != null) R.string.monitor_key_set else R.string.monitor_key_unset
         )

@@ -80,6 +80,16 @@ class UrlFilterService : AccessibilityService() {
     private var captureApps: Set<String> = emptySet()
 
     @Volatile
+    private var watchMode = app.focusfence.dns.WatchScope.Mode.ALL
+
+    @Volatile
+    private var watchExcluded: Set<String> = emptySet()
+
+    /** Home screen, system UI, keyboards, ourselves: never captured. Recomputed on reload. */
+    @Volatile
+    private var watchSkip: Set<String> = emptySet()
+
+    @Volatile
     private var captureScreenshots = false
 
     @Volatile
@@ -98,7 +108,8 @@ class UrlFilterService : AccessibilityService() {
             key == LogSettings.KEY_LOG_URLS ||
             key == MonitorSettings.KEY_SCREENSHOTS || key == MonitorSettings.KEY_TEXT ||
             key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL ||
-            key == MonitorSettings.KEY_AI
+            key == MonitorSettings.KEY_AI || key == MonitorSettings.KEY_WATCH_MODE ||
+            key == MonitorSettings.KEY_WATCH_EXCLUDED
         ) {
             reloadRules()
         }
@@ -138,6 +149,9 @@ class UrlFilterService : AccessibilityService() {
         blockedApps = BlockedAppsStore.get(this)
         logUrls = LogSettings.logUrls(this)
         captureApps = MonitorSettings.watchedApps(this)
+        watchMode = MonitorSettings.watchMode(this)
+        watchExcluded = MonitorSettings.excludedApps(this)
+        watchSkip = app.focusfence.monitor.AppCatalog.alwaysSkip(this)
         captureScreenshots = MonitorSettings.screenshotsEnabled(this)
         captureText = MonitorSettings.textEnabled(this)
         applyEventFilter()
@@ -160,14 +174,20 @@ class UrlFilterService : AccessibilityService() {
      */
     private fun applyEventFilter() {
         val info = serviceInfo ?: return
-        val capturing = captureApps.isNotEmpty() && (captureScreenshots || captureText)
+        val watchAll = watchMode == app.focusfence.dns.WatchScope.Mode.ALL
+        val capturing = (captureScreenshots || captureText) && (watchAll || captureApps.isNotEmpty())
         val watchBrowsers = hasSectionRules || logUrls
         val targets = HashSet<String>()
         if (watchBrowsers) targets += URL_BAR_IDS.keys
         targets += blockedApps
         if (capturing) targets += captureApps
-        info.packageNames =
-            if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
+        info.packageNames = when {
+            // "All apps" capture is the one case that needs every package's events.
+            // Its cost is measured, not assumed: diag a11y_ev per window.
+            capturing && watchAll -> null
+            targets.isEmpty() -> arrayOf(packageName)
+            else -> targets.toTypedArray()
+        }
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
             (if (watchBrowsers || capturing) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
         // Batch event delivery: URL changes are human-speed, no need for more
@@ -194,7 +214,11 @@ class UrlFilterService : AccessibilityService() {
         }
 
         // Experimental capture: watched apps only, while the indicator is showing.
-        if (eventPackage in captureApps) maybeCapture(eventPackage)
+        if ((captureScreenshots || captureText) &&
+            app.focusfence.dns.WatchScope.watches(eventPackage, watchMode, captureApps, watchExcluded, watchSkip)
+        ) {
+            maybeCapture(eventPackage)
+        }
 
         // Section rules and URL recording: only meaningful inside known browsers.
         if (!(hasSectionRules || logUrls) || eventPackage !in URL_BAR_IDS) return

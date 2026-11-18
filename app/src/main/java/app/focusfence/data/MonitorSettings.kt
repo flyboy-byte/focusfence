@@ -23,6 +23,8 @@ object MonitorSettings {
     const val KEY_RETENTION = "mon_retention"
     const val KEY_THRESHOLD = "mon_threshold"
     const val KEY_WATCHED = "mon_watched_apps"
+    const val KEY_WATCH_MODE = "mon_watch_mode"
+    const val KEY_WATCH_EXCLUDED = "mon_watch_excluded"
     const val KEY_PARTNER_KEY = "mon_partner_key_spki"
     const val KEY_AI = "mon_ai"
 
@@ -63,6 +65,29 @@ object MonitorSettings {
 
     fun setWatchedApps(c: Context, apps: Set<String>) =
         prefs(c).edit().putStringSet(KEY_WATCHED, apps).apply()
+
+    /**
+     * ALL by default. Someone who picked apps before this setting existed keeps
+     * their list (CHOSEN), so an update never silently widens what's watched.
+     */
+    fun watchMode(c: Context): app.focusfence.dns.WatchScope.Mode {
+        val raw = prefs(c).getString(KEY_WATCH_MODE, null)
+        return when {
+            raw != null -> runCatching { app.focusfence.dns.WatchScope.Mode.valueOf(raw) }.getOrDefault(app.focusfence.dns.WatchScope.Mode.ALL)
+            watchedApps(c).isNotEmpty() -> app.focusfence.dns.WatchScope.Mode.CHOSEN
+            else -> app.focusfence.dns.WatchScope.Mode.ALL
+        }
+    }
+
+    fun setWatch(c: Context, mode: app.focusfence.dns.WatchScope.Mode, chosen: Set<String>) =
+        prefs(c).edit().putStringSet(KEY_WATCHED, chosen).putString(KEY_WATCH_MODE, mode.name).apply()
+
+    /** Apps never captured in ALL mode. */
+    fun excludedApps(c: Context): Set<String> =
+        prefs(c).getStringSet(KEY_WATCH_EXCLUDED, emptySet())?.toSet() ?: emptySet()
+
+    fun setExcludedApps(c: Context, apps: Set<String>) =
+        prefs(c).edit().putStringSet(KEY_WATCH_EXCLUDED, apps).apply()
 
     /** Base64 SPKI of the partner's P-256 public key; null until the owner sets one. */
     fun partnerKeySpki(c: Context): String? = prefs(c).getString(KEY_PARTNER_KEY, null)?.ifBlank { null }
