@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.2.0-accountable` (full release, stable key). Branch is at `2.3.0-accountable` (code 13): capture status, all-apps watching with auto-sorted presets, visual refresh. |
+| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Branch is at `2.3.1-accountable` (code 14): monitoring banner contrast fix. |
 
 ## Verification levels
 

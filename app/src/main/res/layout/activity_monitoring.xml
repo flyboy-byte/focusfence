@@ -44,6 +44,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/monitor_banner"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnTertiaryContainer"
                         android:textStyle="bold" />
 
                     <TextView
@@ -52,7 +53,7 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/monitor_banner_detail"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnTertiaryContainer" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
