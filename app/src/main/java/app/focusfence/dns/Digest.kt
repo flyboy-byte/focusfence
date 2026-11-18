@@ -1,0 +1,207 @@
+package app.focusfence.dns
+
+/**
+ * The partner-facing summary of a stretch of the activity log, sent app-to-app
+ * through the blind mailbox (see [Pairing]). It is built on the phone, from the
+ * same records the phone keeps, and only the summary leaves — never raw lines.
+ *
+ * Protection comes first on purpose: a quiet report means nothing if filtering
+ * was off, so off-time, integrity changes and record gaps lead.
+ *
+ * Messages are flat [LogJson] objects. List-valued fields are encoded as lines
+ * ("key\tcount" per line) so the one tiny codec covers both ends. Pure JVM.
+ */
+class Digest(private val fromT: Long) {
+
+    private var lookups = 0L
+    private var blocked = 0L
+    private val blockedBy = LinkedHashMap<String, Long>()
+    private val categories = LinkedHashMap<String, Long>()
+    private val categoryHosts = HashMap<String, Long>()
+    private val blockedHosts = HashMap<String, Long>()
+    private val sites = HashMap<String, Long>()
+    private val appMs = HashMap<String, Long>()
+    private val appSince = HashMap<String, Long>()
+    private val events = ArrayList<String>()
+    private var enforcements = 0L
+    private var flaggedShots = 0L
+    private var firstSeq = -1L
+    private var lastSeq = -1L
+    private var missing = 0L
+    private var offSince = -1L
+    private var offMs = 0L
+    private var lastT = fromT
+
+    fun add(f: Map<String, Any?>) {
+        val t = f["t"] as? Long ?: return
+        if (t < fromT) return
+        if (t > lastT) lastT = t
+        (f["seq"] as? Long)?.let { seq ->
+            if (firstSeq < 0) firstSeq = seq
+            if (lastSeq >= 0 && seq > lastSeq + 1) missing += seq - lastSeq - 1
+            if (seq > lastSeq) lastSeq = seq
+        }
+        when (f["type"]) {
+            LogEvents.TYPE_DNS -> {
+                lookups++
+                val host = f["host"] as? String ?: return
+                val cats = (f["cat"] as? String)?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+                for (c in cats) categories.inc(c)
+                if (cats.isNotEmpty()) categoryHosts.inc("$host [${cats.joinToString(",")}]")
+                if (f["decision"] == "blocked") {
+                    blocked++
+                    blockedBy.inc(f["reason"] as? String ?: "?")
+                    blockedHosts.inc(host)
+                }
+            }
+            LogEvents.TYPE_URL -> (f["host"] as? String)?.let { sites.inc(it) }
+            LogEvents.TYPE_APP -> {
+                val pkg = f["pkg"] as? String ?: return
+                if (f["state"] == "fg") {
+                    appSince[pkg] = t
+                } else {
+                    appSince.remove(pkg)?.let { start ->
+                        // Cap one span at 4 h: a missed "bg" must not invent a day of use.
+                        appMs[pkg] = (appMs[pkg] ?: 0L) + (t - start).coerceIn(0L, 4 * 3_600_000L)
+                    }
+                }
+            }
+            LogEvents.TYPE_ENFORCE -> enforcements++
+            LogEvents.TYPE_SHOT -> if (f["kept"] == true) flaggedShots++
+            LogEvents.TYPE_SERVICE -> {
+                if (f["comp"] == "vpn") {
+                    when (f["state"]) {
+                        "start" -> if (offSince >= 0) {
+                            offMs += t - offSince
+                            offSince = -1
+                        }
+                        "stop" -> if (f["detail"] != "restart" && offSince < 0) offSince = t
+                        "revoked", "destroyed", "establish_failed" -> if (offSince < 0) offSince = t
+                    }
+                }
+                alertText(f)?.let { events += it }
+            }
+            LogEvents.TYPE_INTEGRITY -> alertText(f)?.let { events += it }
+        }
+    }
+
+    /** The digest message covering [fromT]..[toT]. */
+    fun build(toT: Long): Map<String, Any?> {
+        val stillOff = if (offSince >= 0) toT - offSince else 0L
+        return linkedMapOf(
+            "kind" to KIND_DIGEST,
+            "v" to 1,
+            "from" to fromT,
+            "to" to toT,
+            "off_min" to (offMs + stillOff) / 60_000,
+            "missing" to missing,
+            "seq_first" to firstSeq,
+            "seq_last" to lastSeq,
+            "events" to events.takeLast(MAX_EVENTS).joinToString("\n"),
+            "lookups" to lookups,
+            "blocked" to blocked,
+            "blocked_by" to pairs(blockedBy.entries.map { it.key to it.value }),
+            "cats" to pairs(categories.entries.map { it.key to it.value }),
+            "cat_hosts" to pairs(top(categoryHosts, TOP)),
+            "top_blocked" to pairs(top(blockedHosts, TOP)),
+            "sites" to pairs(top(sites, TOP)),
+            "apps_min" to pairs(top(appMs, TOP).map { it.first to it.second / 60_000 }.filter { it.second > 0 }),
+            "enforce" to enforcements,
+            "flagged_shots" to flaggedShots,
+        )
+    }
+
+    private fun MutableMap<String, Long>.inc(k: String) {
+        this[k] = (this[k] ?: 0L) + 1
+    }
+
+    companion object {
+        const val KIND_DIGEST = "digest"
+        const val KIND_ALERT = "alert"
+        private const val TOP = 15
+        private const val MAX_EVENTS = 50
+
+        /**
+         * Human text for a record a partner should hear about immediately, or
+         * null. The same rule decides digest "events" and instant alerts.
+         */
+        fun alertText(f: Map<String, Any?>): String? {
+            val type = f["type"]
+            if (type == LogEvents.TYPE_INTEGRITY) {
+                val key = f["key"] as? String ?: return null
+                val was = f["was"] as? String ?: return null // first observation, not a change
+                return "$key changed: $was → ${f["value"]}"
+            }
+            if (type != LogEvents.TYPE_SERVICE) return null
+            val comp = f["comp"]
+            val state = f["state"] as? String ?: return null
+            return when {
+                comp == "vpn" && state == "stop" -> if (f["detail"] == "restart") null else "Filter turned off"
+                comp == "vpn" && state == "revoked" -> "Filter VPN revoked or replaced by another VPN"
+                comp == "vpn" && state == "establish_failed" -> "Filter failed to start"
+                comp == "vpn" && state == "health" -> {
+                    val d = f["detail"] as? String ?: return null
+                    val now = d.substringBefore(',')
+                    if (now in PROBLEM_HEALTH) "Filter problem: $now" else null
+                }
+                comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection being removed"
+                comp == "admin" && state == "admin_enabled" -> "Uninstall protection turned on"
+                comp == "admin" -> "Managed mode: $state" + detail(f)
+                comp == "app" && state == "updated" -> "App updated" + detail(f)
+                comp == "log" && state == "cleared" -> "Activity log cleared"
+                comp == "log" && state == "setting" -> "Recording setting changed" + detail(f)
+                else -> null
+            }
+        }
+
+        private val PROBLEM_HEALTH = setOf("degraded", "upstream_down", "silent", "bypassed", "lockdown")
+
+        private fun detail(f: Map<String, Any?>): String =
+            (f["detail"] as? String)?.takeIf { it.isNotBlank() && it != "user" }?.let { " ($it)" } ?: ""
+
+        fun alert(t: Long, text: String): Map<String, Any?> =
+            linkedMapOf("kind" to KIND_ALERT, "v" to 1, "t" to t, "text" to text)
+
+        fun pairs(items: List<Pair<String, Long>>): String =
+            items.joinToString("\n") { "${it.first.replace('\t', ' ').replace('\n', ' ')}\t${it.second}" }
+
+        fun parsePairs(s: String?): List<Pair<String, Long>> =
+            s.orEmpty().lineSequence().filter { it.isNotBlank() }.mapNotNull { line ->
+                val i = line.lastIndexOf('\t')
+                if (i < 0) null else line.substring(0, i) to (line.substring(i + 1).toLongOrNull() ?: return@mapNotNull null)
+            }.toList()
+
+        private fun top(m: Map<String, Long>, n: Int): List<Pair<String, Long>> =
+            m.entries.sortedByDescending { it.value }.take(n).map { it.key to it.value }
+
+        /** Plain-text rendering for the partner's report screen. */
+        fun render(d: Map<String, Any?>, formatTime: (Long) -> String): String = buildString {
+            val off = d["off_min"] as? Long ?: 0L
+            val missing = d["missing"] as? Long ?: 0L
+            append("${formatTime(d["from"] as? Long ?: 0)} – ${formatTime(d["to"] as? Long ?: 0)}\n\n")
+            append(if (off == 0L) "Protection: on the whole time\n" else "Protection: OFF for $off min\n")
+            if (missing > 0) append("⚠ $missing records missing from the log (deleted or lost)\n")
+            val events = (d["events"] as? String).orEmpty().lines().filter { it.isNotBlank() }
+            if (events.isNotEmpty()) {
+                append("\nChanges:\n")
+                events.forEach { append("• ").append(it).append('\n') }
+            }
+            append("\nLookups ${d["lookups"] ?: 0}, blocked ${d["blocked"] ?: 0}")
+            val flagged = d["flagged_shots"] as? Long ?: 0L
+            if (flagged > 0) append(", flagged screenshots $flagged")
+            append('\n')
+            section("Categories", d["cats"])
+            section("Category sites", d["cat_hosts"])
+            section("App time (min)", d["apps_min"])
+            section("Browser sites", d["sites"])
+            section("Top blocked", d["top_blocked"])
+        }
+
+        private fun StringBuilder.section(title: String, raw: Any?) {
+            val items = parsePairs(raw as? String)
+            if (items.isEmpty()) return
+            append("\n$title:\n")
+            items.forEach { (k, v) -> append("  $k  $v\n") }
+        }
+    }
+}

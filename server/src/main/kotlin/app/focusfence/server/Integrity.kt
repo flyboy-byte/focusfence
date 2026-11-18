@@ -13,23 +13,26 @@ import java.util.Base64
  * that it used to send, nor silently rewrite history that was already uploaded.
  *
  * Three independent checks:
- *  - **sequence continuity**: per-device `seq` must advance by exactly the batch
- *    size; a gap means lines never arrived (shown to the partner, not hidden).
+ *  - **sequence continuity**: records carry the phone's own activity-log `seq`;
+ *    a gap means lines never arrived or were deleted (shown, not hidden).
  *  - **hash chain**: each batch carries the previous batch's hash; a rewrite or
  *    reorder of already-uploaded data breaks the chain.
- *  - **Ed25519 signature**: batches are signed by the device key registered at
- *    enrollment, so another party can't inject records for a device.
+ *  - **signature**: ECDSA P-256 / SHA-256 by the device key registered at
+ *    enrollment. P-256 rather than Ed25519 because Android's hardware-backed
+ *    keystore supports it back to our minSdk 26; Ed25519 needs API 33.
  */
 object Integrity {
 
     fun publicKeyFromBase64Spki(b64: String): PublicKey {
         val der = Base64.getDecoder().decode(b64)
-        // Ed25519 SPKI; JDK 15+ provides the "Ed25519" KeyFactory.
-        return KeyFactory.getInstance("Ed25519").generatePublic(X509EncodedKeySpec(der))
+        val key = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(der))
+        require(key.encoded.size in 88..95) { "expected a P-256 key" }
+        return key
     }
 
+    /** DER-encoded ECDSA signature (what Android's keystore produces), base64. */
     fun verifySignature(key: PublicKey, message: ByteArray, signatureB64: String): Boolean = try {
-        Signature.getInstance("Ed25519").run {
+        Signature.getInstance("SHA256withECDSA").run {
             initVerify(key)
             update(message)
             verify(Base64.getDecoder().decode(signatureB64))
@@ -40,7 +43,11 @@ object Integrity {
 
     /** Canonical bytes a device signs: device id, seq range, prev hash, and the raw records. */
     fun batchMessage(deviceId: String, firstSeq: Long, lastSeq: Long, prevHash: String, recordsRaw: String): ByteArray =
-        "$deviceId|$firstSeq|$lastSeq|$prevHash|$recordsRaw".toByteArray()
+        "batch|$deviceId|$firstSeq|$lastSeq|$prevHash|$recordsRaw".toByteArray()
+
+    /** Canonical bytes for a small signed request: `action|deviceId|t|extra`. */
+    fun requestMessage(action: String, deviceId: String, t: Long, extra: String = ""): ByteArray =
+        "$action|$deviceId|$t|$extra".toByteArray()
 
     fun hashBatch(prevHash: String, recordsRaw: String): String {
         val md = MessageDigest.getInstance("SHA-256")
@@ -48,6 +55,9 @@ object Integrity {
         md.update(recordsRaw.toByteArray())
         return Base64.getUrlEncoder().withoutPadding().encodeToString(md.digest())
     }
+
+    fun sha256(s: String): String =
+        Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
 
     sealed class Result {
         data class Ok(val newHash: String, val gap: Long) : Result()
@@ -73,6 +83,7 @@ object Integrity {
         if (prevHash != knownPrevHash) return Result.Reject("hash chain broken")
         if (lastSeq < firstSeq) return Result.Reject("inverted seq range")
         if (firstSeq < expectedNextSeq) return Result.Reject("replayed/overlapping seq")
+        if (recordsRaw.isBlank()) return Result.Reject("empty batch")
         val gap = firstSeq - expectedNextSeq
         return Result.Ok(hashBatch(prevHash, recordsRaw), gap)
     }

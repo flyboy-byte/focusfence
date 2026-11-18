@@ -1,5 +1,5 @@
-// PROTOTYPE accountability backend. Not built by the app's CI (which builds
-// only :app). Run locally with `./gradlew run` from this directory.
+// PROTOTYPE accountability backend. Built and tested by CI (`./gradlew -p server test`
+// from the repo root). Run locally with `../gradlew -p . run`.
 plugins {
     kotlin("jvm") version "1.9.24"
     kotlin("plugin.serialization") version "1.9.24"
@@ -19,7 +19,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("ch.qos.logback:logback-classic:1.5.6")
     testImplementation(kotlin("test"))
+    testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
 }
 
+// The phone's pure-Kotlin decision code (no Android types) is compiled in too, so
+// the server alerts on exactly what the phone's Digest.alertText alerts on, and
+// pairing hashes match by construction. One source of truth for both ends.
+kotlin {
+    jvmToolchain(17)
+    sourceSets["main"].kotlin.srcDir("../app/src/main/java/app/focusfence/dns")
+}
+
+tasks.test { useJUnitPlatform() }
+
 application { mainClass.set("app.focusfence.server.MainKt") }
-kotlin { jvmToolchain(17) }
