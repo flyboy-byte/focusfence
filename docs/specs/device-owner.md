@@ -106,3 +106,16 @@ alert while there's a real problem. Unrequested stops (`revoked`,
 `establish_failed`) post a "Protection stopped" alert. Evaluation rides the relay
 path (throttled to 5 s) and Monitor's existing battery/screen broadcasts — no
 timers or wakeups.
+
+## Device admin (the lighter tier)
+
+Ever Accountable uses plain **device admin**, and so can we, with no adb: Device Owner screen →
+*Uninstall protection* → *Turn on* opens Android's own consent screen
+(`ACTION_ADD_DEVICE_ADMIN`). While admin is active, Android refuses to uninstall the app until
+admin is turned off in system settings. That second step shows our warning
+(`onDisableRequested`) and is logged (`svc admin admin_disable_requested` / `admin_disabled`,
+plus the `admin_active` integrity key). It gives none of the device-owner policies (always-on
+VPN, settings lock, suspension, Private DNS); it only makes removal deliberate and visible.
+
+Recommended default: device admin for everyone (EA parity, no setup cost); device owner as the
+opt-in strong mode.

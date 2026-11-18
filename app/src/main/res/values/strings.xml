@@ -264,6 +264,10 @@
     <string name="owner_intro">We never block uninstalling the app. Managed mode adds stronger enforcement and logs any attempt to remove protection. Removal stays possible, behind friction.</string>
     <string name="owner_enable_howto">Not set up yet. With USB or wireless debugging, run this once on a device with no other accounts:</string>
     <string name="owner_status_owner">Managed mode active (device owner)</string>
+    <string name="admin_card_title">Uninstall protection</string>
+    <string name="admin_card_body">The same protection Ever Accountable uses. One tap, no computer. While it\'s on, Focus Fence can\'t be uninstalled until you turn it off first in system settings — a deliberate second step that gets recorded (and, once reports exist, sent to your partner). For more (always-on VPN, locked settings, app suspension), set up device owner below.</string>
+    <string name="admin_activate">Turn on</string>
+    <string name="admin_add_explanation">Makes uninstalling Focus Fence a two-step action that is recorded for your accountability partner. It does not lock you out: you can turn this off at any time.</string>
     <string name="owner_status_admin">Device admin active (not device owner)</string>
     <string name="owner_status_none">Managed mode not set up</string>
     <string name="owner_strategy_title">Filtering strategy</string>

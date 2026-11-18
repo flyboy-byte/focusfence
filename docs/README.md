@@ -10,6 +10,9 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 
 ## What's here
 
+**Current status lives in [`../STATE.md`](../STATE.md)**; rules for AI agents in
+[`../AGENTS.md`](../AGENTS.md). The audits below predate most of the implementation work.
+
 | Path | What it is |
 |---|---|
 | [`architecture.md`](architecture.md) | How the app works as built today, and why the non-obvious parts are the way they are. Descriptive — no proposals. |
@@ -19,15 +22,15 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 | [`audits/02-android-platform.md`](audits/02-android-platform.md) | What Android actually permits: VPN, accessibility, UsageStats, Shizuku, Device Owner, and why HTTPS interception fails a cost/benefit test. **The most reliable of the five.** |
 | [`audits/03-foss-ecosystem.md`](audits/03-foss-ecosystem.md) | Survey of uBlock Origin, Rethink, NetGuard, AdAway, PCAPdroid, DNS66 and the filter-list ecosystem, plus matching/storage strategy at scale and licensing analysis. |
 | [`audits/04-cloudveil-repos.md`](audits/04-cloudveil-repos.md) | Repository-by-repository review of CloudVeil's open-source filtering stack: what's worth studying, what to avoid. |
-| [`plans/00-roadmap.md`](plans/00-roadmap.md) | Suggested sequencing derived from the above. **Suggestions, not decisions.** |
+| [`plans/00-roadmap.md`](plans/00-roadmap.md) | Suggested sequencing derived from the audits. **Historical** — Tiers 0–1 were largely done on this branch; see `STATE.md`. |
 | [`plans/01-base-assessment.md`](plans/01-base-assessment.md) | Is Focus Fence the right base for an Ever Accountable–class accountability app? (Yes, with two conditions.) |
 | [`plans/02-ever-accountable-parity.md`](plans/02-ever-accountable-parity.md) | Feature-by-feature gap matrix against Ever Accountable on Android, and a phased build order with measurement gates. |
 | [`plans/03-measurement-plan.md`](plans/03-measurement-plan.md) | How to use the new logs to measure reliability and battery cost, and what each result decides. |
 | [`specs/event-log.md`](specs/event-log.md) | **Implemented.** Schema and guarantees of the activity and diagnostics logs, export format. |
-| [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Proposed component specs: categories, in-app capture, screenshots, integrity/heartbeat, backend, settings lock, Device Owner mode. Open decisions listed. |
+| [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Component specs: categories, capture, screenshots, integrity/heartbeat, backend (incl. partner linking by invite code, email + SMS), settings lock, Device Owner. Device side mostly built; backend parts proposed. Open decisions listed. |
 | [`specs/bundles.md`](specs/bundles.md) | **Implemented.** Curated filter-bundle set, strictness tier, bypass guard, defaults. |
 | [`specs/friction-tiers.md`](specs/friction-tiers.md) | **Implemented.** Per-action guard levels (None/Delay/Own PIN/Partner PIN). |
-| [`specs/device-owner.md`](specs/device-owner.md) | **Implemented, not device-tested.** Managed mode (detect-not-block), the Private-DNS strategy switch, package suspension, network logging. |
+| [`specs/device-owner.md`](specs/device-owner.md) | **Implemented, not device-tested.** Managed mode (detect-not-block), always-on VPN (no lockdown), settings lock, Private DNS fallback, the strategy switch, package suspension, network logging, filter health detection. |
 | [`../server/`](../server) | **Prototype** Kotlin/Ktor accountability backend (enroll, signed ingest, heartbeat, Resend reports, E2EE screenshots). Not CI-built. |
 
 ## How to read it
@@ -44,10 +47,8 @@ Two things in it need no debate and cost nothing:
 
 - **The repo has no `LICENSE` file.** For a project whose identity is FOSS, source
   visibility isn't a license grant. This blocks nothing today and is a five-minute fix.
-- **Two README claims are not accurate** — "nothing about your browsing ever leaves your
-  phone" (DNS is forwarded to 1.1.1.1/8.8.8.8) and "battery impact is effectively zero"
-  (an inference, not a measurement). Both are fixable with more precise wording that is,
-  if anything, more convincing.
+- ~~Two README claims are not accurate~~ — fixed on this branch: the README now says where
+  DNS goes and points to the measured battery numbers instead of asserting them.
 
 Everything else is a judgement call and belongs to the maintainer.
 

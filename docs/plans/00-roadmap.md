@@ -4,7 +4,10 @@
 [`../audits/findings.md`](../audits/findings.md) — only from claims that survived
 verification — and every one of them is separable. Take any, reorder them, drop the rest.
 
-Nothing here has been implemented. This PR adds documentation only.
+> **Historical.** Written before implementation. On `claude/logging-and-accountability-plan`,
+> Tier 0 (stale doc claims, ad-list comment) and Tier 1 (user allowlist) are done, as are filter
+> sources with categories (bundles). The `LICENSE` file is still missing. Current status:
+> [`../../STATE.md`](../../STATE.md).
 
 The ordering principle is boring on purpose: fix things that are *wrong* before adding things
 that are *new*, and keep anything that would touch the DNS hot path or the accessibility

@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Start with [`STATE.md`](STATE.md)** (where things stand) and [`AGENTS.md`](AGENTS.md) (how to
+> work here — rules for any AI agent). This file is the architecture reference.
+>
 > **Contributed by @flyboy-byte, not the maintainer.** It describes the codebase as it exists —
 > architecture, invariants, commands — and deliberately contains no proposals or opinions about
 > where the project should go. Those live in [`docs/`](docs/), which nothing auto-loads.
@@ -11,8 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Focus Fence — an Android app (Kotlin, views + ViewBinding, no DI/Compose) that blocks distracting
 websites via a DNS-only `VpnService`, and keeps a local activity/diagnostics log. On-device: no
-accounts, no servers; allowed DNS is forwarded to public resolvers, and logs leave the phone
-only via user-initiated export. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
+accounts, no servers yet (a backend prototype lives in `server/`, not wired up); allowed DNS is
+relayed to the network's own resolver (DoH to public resolvers as fallback), and logs leave the
+phone only via user-initiated export. This branch builds as **Focus Fence AC**
+(`applicationId app.focusfence.accountable`, namespace still `app.focusfence`). `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
 
 ## Commands
 
@@ -25,7 +30,8 @@ only via user-initiated export. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17
 ```
 
 CI (`.github/workflows/android.yml`) runs `testDebugUnitTest` then `assembleDebug` on every push
-and uploads the APK as artifact `focus-fence-debug-apk`. There are no instrumented tests — the
+and uploads the APK as artifact `focus-fence-debug-apk`. `.github/workflows/release.yml` builds a
+signed release APK on any `v*` tag and publishes a GitHub Release (see `AGENTS.md` → Releases). There are no instrumented tests — the
 only automated coverage is the JVM suite in `app/src/test/`.
 
 ## Architecture
@@ -57,7 +63,7 @@ Three enforcement layers, each covering what the others cannot:
 
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
-logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`) so it can be
+logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -90,6 +96,9 @@ requires requesting an unlock, waiting 10 min, then acting within a 5 min window
 always allowed. Enforcement is spread across call sites — `DnsVpnService.onStartCommand` refuses
 `ACTION_STOP` while locked, and UI paths check `StrictStore.isLocked` and route through
 `UiUtil.showStrictLockedDialog`. New destructive UI actions must add their own check.
+On this branch, loosening actions go through `UiUtil.guard(context, GuardPolicy.Action.X)`,
+which applies the per-action friction level (None / Delay / Own PIN / Partner PIN,
+`docs/specs/friction-tiers.md`) on top of the strict lock.
 
 ### Logging (activity + diag)
 

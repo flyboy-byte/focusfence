@@ -1,5 +1,7 @@
 package app.focusfence
 
+import android.app.admin.DevicePolicyManager
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
@@ -35,6 +37,17 @@ class DeviceOwnerActivity : AppCompatActivity() {
 
         // Full component — the app id can differ from the namespace, so a
         // ".Class" shorthand would resolve to the wrong receiver.
+        // Device admin, Ever Accountable's model: the system's own consent screen,
+        // no adb. While active, Android won't uninstall the app until admin is
+        // turned off first — a second, deliberate step that the receiver logs.
+        binding.adminActivateButton.setOnClickListener {
+            startActivity(
+                Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, DeviceAdmin.component(this))
+                    .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, getString(R.string.admin_add_explanation))
+            )
+        }
+
         binding.adbCommand.text =
             "adb shell dpm set-device-owner \\\n  " + DeviceAdmin.component(this).flattenToShortString()
 
@@ -198,6 +211,7 @@ class DeviceOwnerActivity : AppCompatActivity() {
             }
         )
         binding.enableCard.visibility = if (owner) View.GONE else View.VISIBLE
+        binding.adminCard.visibility = if (owner || admin) View.GONE else View.VISIBLE
 
         binding.strategyDropdown.setText(getString(strategyLabel(StrategyStore.strategy(this))), false)
         if (binding.dotHostInput.text.isNullOrEmpty()) {

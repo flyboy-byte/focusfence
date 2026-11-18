@@ -9,7 +9,7 @@ reporting side.
 
 Statuses: ✅ exists · 🟡 partial / local only · ❌ missing · ➕ FF goes beyond EA.
 
-**Build status (this branch):** Phase 0 (logging), Phase 1 (categories, allowlist), the PIN-unlock UI, and the device-side capture of Phase 2/4 (in-app text; screenshots with an on-device classifier, flagged-only encrypted retention, and a permanent capture indicator) are implemented and pass CI. The backend is a written prototype under `server/` (not CI-built). The device→server upload client is the remaining unbuilt piece.
+**Build status (this branch, v2.1.3-accountable):** Phase 0 (logging), Phase 1 (categories, allowlist), the friction guards / PIN unlock, managed mode (Device Owner) and filter-health detection, and the device-side capture of Phase 2/4 (in-app text; screenshots with an on-device classifier, flagged-only encrypted retention, and a permanent capture indicator) are implemented and pass CI. Only the core filter is confirmed on a real phone so far. The backend is a written prototype under `server/` (not CI-built). Everything that reaches a partner (upload client, heartbeat, reports, alerts, partner linking) is unbuilt — see [`../../STATE.md`](../../STATE.md).
 
 ## Feature matrix
 
@@ -24,7 +24,7 @@ Statuses: ✅ exists · 🟡 partial / local only · ❌ missing · ➕ FF goes 
 | **Filter health** | Not exposed. | `VpnHealth`: detects bypass (strict Private DNS, no traffic), failing/slow relay, offline; on-phone alert + activity record. | ➕ | Forward health changes to the partner once upload exists. |
 | **Alerts: protection disabled / uninstall** | Uninstall alerts; alert when filtering disabled; partners notified when sharing stops. | Integrity trail logs VPN/a11y/Usage-access/Private-DNS changes, process restarts, reboots, log clears, setting changes, locally. | 🟡 | Needs delivery: server heartbeat (silence = alert) + immediate upload of integrity events. Uninstall can only be detected server-side (silence) or prevented (Device Admin/Owner). |
 | **Settings lock** (StrongHold) | PIN sent to someone else, local PIN, or timer delay. | Strict mode: timer delay **plus** own-PIN and partner-held-PIN unlock (StrictModeActivity); timer always a fallback. Gates logging, clearing, categories, monitoring, exclusions. | ✅ | — |
-| **Uninstall resistance** | Device Administrator. | Device Owner managed mode (opt-in, adb): always-on VPN, locked VPN/Private DNS settings, Private DNS fallback. Uninstall itself deliberately not blocked; detected via integrity trail. | 🟡 | Partner notification on uninstall needs the server heartbeat. |
+| **Uninstall resistance** | Device Administrator. | **Device admin** (one tap, EA's model: uninstall needs admin turned off first; logged). **Device owner** (opt-in, adb): always-on VPN, locked VPN/Private DNS settings, Private DNS fallback. Uninstall never blocked outright. | 🟡 | Partner notification on admin-off / uninstall needs the server heartbeat. |
 | **App exclusions from reports** | User can exclude apps / whitelist apps. | VPN exclusions exist (filtering); no report exclusions. | ❌ | Report-exclusion list; exclusions themselves reported to partner. |
 | **Web filtering** | DNS filter for porn/malware, not customisable. | Per-domain rules, schedules, budgets, section rules, ad list, DoH guards, **content categories (Off/Report/Block) + allowlist**. | ➕ | Category lists wired and in the UI; HaGeZi URLs set, download on demand. |
 | **App blocking** | Not a core feature. | Accessibility bounce. | ➕ | Device Owner `setPackagesSuspended` in managed mode. |

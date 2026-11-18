@@ -40,6 +40,39 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:textColor="?android:attr/textColorSecondary" />
 
+            <!-- Device admin (Ever Accountable's model): one tap, no adb. Shown until active. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/adminCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="16dp"
+                app:contentPadding="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/admin_card_title"
+                        android:textAppearance="?attr/textAppearanceTitleSmall" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/admin_card_body"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?android:attr/textColorSecondary" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/adminActivateButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/admin_activate" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Shown only when not yet device owner: the provisioning command. -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/enableCard"

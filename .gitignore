@@ -11,3 +11,10 @@ captures/
 *.aab
 *.keystore
 !debug.keystore
+
+# Release signing material — never commit (see AGENTS.md)
+*.jks
+keystore.properties
+keystore.b64
+*-password.txt
+release-kit/
