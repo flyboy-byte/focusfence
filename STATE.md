@@ -42,6 +42,7 @@ without evidence.
 ### Filtering
 | Feature | Status | Notes |
 |---|---|---|
+| DNS server choice: Automatic / Cloudflare / Cloudflare Families / Quad9 / Google / your own (UDP, hostname or DoH), optional fallback to Automatic | 🧪 | Settings → DNS server. Filtering happens before forwarding, so the choice never weakens blocking. Diag `fwd_chosen_failed` counts when your server didn't answer and the fallback did. |
 | DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | v2.1.3 runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
@@ -59,7 +60,8 @@ without evidence.
 | Filter health (`VpnHealth`): lockdown, bypassed, silent, failing, degraded, offline | 🧪 | Alert + home row + `svc vpn health` record. |
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
 | In-app text capture | 🧪 | Opt-in, `MonitoringActivity`. |
-| Screenshots: sparse capture, classifier, flagged-only encrypted retention, always-on indicator | 🧪 | **No model bundled** — classifier is a stub until one is supplied. |
+| Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 🧪 | |
+| On-device AI flagging (optional, off by default) | 🧪 | Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
 ### Tamper resistance and friction
 | Feature | Status | Notes |
@@ -94,7 +96,7 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
    check-in; the partner app after 14 h without a message. Doze can delay background work for
    hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
-4. **No screenshot model.** The pipeline runs, but nothing is flagged until a model is bundled.
+4. **The AI's accuracy is the model author's number** (~92% on their validation set), not ours. It will miss some things and flag some innocent ones; that's why it only flags, never blocks.
 5. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
 
 ## Open decisions (owner / maintainer)

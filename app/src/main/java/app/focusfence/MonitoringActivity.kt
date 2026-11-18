@@ -45,6 +45,14 @@ class MonitoringActivity : AppCompatActivity() {
                 MonitorSettings.setScreenshots(this, true)
             }
         }
+        binding.aiSwitch.setOnCheckedChangeListener { _, on ->
+            if (!on) {
+                bind()
+                UiUtil.guard(this, GuardPolicy.Action.DISABLE_CAPTURE) { MonitorSettings.setAi(this, false); bind() }
+            } else {
+                MonitorSettings.setAi(this, true)
+            }
+        }
         binding.textSwitch.setOnCheckedChangeListener { _, on ->
             if (!on) {
                 bind()
@@ -94,6 +102,8 @@ class MonitoringActivity : AppCompatActivity() {
     private fun bind() {
         binding.screenshotsSwitch.isChecked = MonitorSettings.screenshotsEnabled(this) && ScreenCapture.available
         binding.textSwitch.isChecked = MonitorSettings.textEnabled(this)
+        binding.aiSwitch.isEnabled = ScreenCapture.available
+        binding.aiSwitch.isChecked = MonitorSettings.aiEnabled(this) && ScreenCapture.available
         binding.levelDropdown.setText(getString(levelLabel(MonitorSettings.level(this))), false)
         binding.retentionDropdown.setText(getString(retentionLabel(MonitorSettings.retention(this))), false)
         binding.watchedAppsButton.text = getString(R.string.monitor_watched_apps, MonitorSettings.watchedApps(this).size)

@@ -112,6 +112,17 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         latencyP95()?.let { appendLine("latency p95   median ${it.first} ms, worst window ${it.second} ms") }
         appendLine("a11y events   ${perfTotals["a11y_ev"] ?: 0}  url miss ${pct(urlMissRate())}")
         appendLine("log dropped   ${perfTotals["log_dropped"] ?: 0}")
+        val clf = perfTotals["clf"] ?: 0L
+        if (clf > 0 || (perfTotals["shot"] ?: 0L) > 0) {
+            // The AI is the costly part of capture; show its share so the owner can judge it.
+            val ms = perfTotals["clf_ms"] ?: 0L
+            appendLine(
+                "ai flagging   ${clf} screenshots scored, avg ${if (clf > 0) ms / clf else 0} ms, " +
+                    "total ${ms / 1000} s cpu, model load ${(perfTotals["clf_load_ms"] ?: 0L)} ms" +
+                    if ((perfTotals["clf_load_fail"] ?: 0L) > 0) ", LOAD FAILED" else ""
+            )
+            appendLine("screenshots   ${perfTotals["shot"] ?: 0} taken, ${perfTotals["shot_flagged"] ?: 0} flagged, ${perfTotals["shot_fail"] ?: 0} failed")
+        }
         if (errors.isNotEmpty()) appendLine("errors        ${errors.entries.joinToString { "${it.key}=${it.value}" }}")
         appendLine()
         appendLine("== detection (activity) ==")

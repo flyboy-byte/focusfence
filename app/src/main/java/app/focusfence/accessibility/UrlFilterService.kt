@@ -97,7 +97,8 @@ class UrlFilterService : AccessibilityService() {
         if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS ||
             key == LogSettings.KEY_LOG_URLS ||
             key == MonitorSettings.KEY_SCREENSHOTS || key == MonitorSettings.KEY_TEXT ||
-            key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL
+            key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL ||
+            key == MonitorSettings.KEY_AI
         ) {
             reloadRules()
         }

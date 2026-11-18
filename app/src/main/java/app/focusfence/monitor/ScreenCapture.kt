@@ -114,7 +114,13 @@ object ScreenCapture {
         Monitor.perf.count("shot")
 
         ensureClassifier(context)
+        // Battery: the AI is the expensive part of capture, so its volume and time are logged.
+        val clfStart = android.os.SystemClock.elapsedRealtime()
         val scores = classifier.classify(bitmap)
+        if (scores != null) {
+            Monitor.perf.count("clf")
+            Monitor.perf.count("clf_ms", android.os.SystemClock.elapsedRealtime() - clfStart)
+        }
         val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
         val mode = MonitorSettings.retention(context)
         val flagged = verdict?.flagged ?: false

@@ -43,7 +43,9 @@ tun fd (blocking)
    │     └─ otherwise                           → allow (labelled with any REPORT bundles)
    │
    ├─ blocked  → Dns.buildBlockedResponse, written straight back to the tun
-   └─ allowed  → handed to a 12-thread pool and relayed (forward):
+   └─ allowed  → handed to a 12-thread pool and relayed (forward), in Upstreams.order
+                 for the owner's choice (Automatic below; or a preset / own server first,
+                 optionally falling back to Automatic):
                    1. the real network's own DNS servers, UDP, socket bound to that network
                    2. DoH (RFC 8484) to https://1.1.1.1 then https://8.8.8.8, via
                       Network.openConnection, keep-alive (never disconnect())

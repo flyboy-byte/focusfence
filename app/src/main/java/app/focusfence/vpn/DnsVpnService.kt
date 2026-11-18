@@ -43,6 +43,8 @@ import app.focusfence.dns.LogEvents
 import app.focusfence.dns.Packets
 import app.focusfence.dns.UsageTracker
 import app.focusfence.dns.VpnHealth
+import app.focusfence.dns.Upstreams
+import app.focusfence.data.DnsUpstreamStore
 import app.focusfence.monitor.Monitor
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -226,24 +228,12 @@ class DnsVpnService : VpnService() {
     private var statsPending = 0
     private var lastStatsFlush = 0L
 
-    /**
-     * One place a query can be relayed. Order of preference (see [upstreams]):
-     * the current network's own DNS servers over plain UDP — the resolver every
-     * network is guaranteed to allow, which is why mainstream DNS-filter VPNs use
-     * it — then public DoH by IP literal as a fallback for networks whose own
-     * resolver is broken. Public resolvers alone failed on the user's network:
-     * plain UDP to 1.1.1.1/8.8.8.8 failed ~75% of the time and the DoH-only relay
-     * that replaced it left the phone with no working DNS.
-     */
-    private sealed class Upstream(val key: String) {
-        class Udp(val address: InetAddress) : Upstream("udp:" + address.hostAddress)
-        class Doh(val url: String) : Upstream("doh:$url")
-    }
+    /** The owner's resolver choice (Settings → DNS server); AUTO by default. See [Upstreams]. */
+    @Volatile
+    private var upstreamConfig: Upstreams.Config = Upstreams.DEFAULT
 
-    private val dohUpstreams: List<Upstream> = listOf(
-        Upstream.Doh("https://1.1.1.1/dns-query"),
-        Upstream.Doh("https://8.8.8.8/dns-query"),
-    )
+    /** Hostname-addressed custom servers, resolved on the real network and cached briefly. */
+    private val resolvedHosts = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, InetAddress>>()
 
     /** Key of the upstream that most recently answered; tried first so a dead
      *  server isn't re-probed on every query. */
@@ -257,7 +247,7 @@ class DnsVpnService : VpnService() {
     private var underlying: Network? = null
 
     @Volatile
-    private var underlyingDns: List<Upstream> = emptyList()
+    private var underlyingDns: List<Upstreams.Entry> = emptyList()
 
     @Volatile
     private var underlyingCheckedAt = 0L
@@ -272,6 +262,15 @@ class DnsVpnService : VpnService() {
             CategoryStore.KEY_VERSION -> reloadCategoriesAsync()
             AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
             LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
+            DnsUpstreamStore.KEY_REV -> {
+                upstreamConfig = DnsUpstreamStore.load(this)
+                preferredUpstream = null
+                resolvedHosts.clear()
+                EventLog.activity(
+                    LogEvents.service(System.currentTimeMillis(), COMP, "upstream", Upstreams.describe(upstreamConfig)),
+                    urgent = true,
+                )
+            }
         }
     }
 
@@ -384,6 +383,7 @@ class DnsVpnService : VpnService() {
         reloadAdHostsAsync()
         reloadCategoriesAsync()
         allowlist = AllowlistStore.get(this)
+        upstreamConfig = DnsUpstreamStore.load(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
 
@@ -669,15 +669,14 @@ class DnsVpnService : VpnService() {
 
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
         refreshUnderlying(force = false)
-        val all = underlyingDns + dohUpstreams
         val first = preferredUpstream
-        val order = all.sortedBy { if (it.key == first) 0 else 1 }
+        val order = Upstreams.order(upstreamConfig, underlyingDns, first)
         val started = SystemClock.elapsedRealtime()
-        for (upstream in order) {
+        for ((i, upstream) in order.withIndex()) {
             val answer = try {
                 when (upstream) {
-                    is Upstream.Udp -> udpQuery(upstream.address, query)
-                    is Upstream.Doh -> dohQuery(upstream.url, query)
+                    is Upstreams.Entry.Udp -> udpQuery(resolve(upstream.host) ?: continue, upstream.port, query)
+                    is Upstreams.Entry.Doh -> dohQuery(upstream.url, query)
                 }
             } catch (e: Exception) {
                 // Any failure (I/O, TLS, a vanished network) means "try the next
@@ -689,8 +688,13 @@ class DnsVpnService : VpnService() {
                 writeToTun(Packets.buildUdpReply(udp, answer, answer.size))
                 Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
                 Monitor.perf.count("fwd")
-                Monitor.perf.count(if (upstream is Upstream.Udp) "fwd_net" else "fwd_doh")
+                Monitor.perf.count(if (upstream is Upstreams.Entry.Udp) "fwd_udp" else "fwd_doh")
                 if (upstream.key != first) Monitor.perf.count("fwd_failover")
+                // The owner's chosen server didn't answer and a fallback did: worth
+                // knowing in diag ("is my own DNS server actually up?").
+                if (upstreamConfig.mode != Upstreams.Mode.AUTO && i > 0 && upstream.key !in chosenKeys()) {
+                    Monitor.perf.count("fwd_chosen_failed")
+                }
                 healthMonitor.recordForward(true)
                 evaluateHealth(force = false)
                 return
@@ -794,13 +798,34 @@ class DnsVpnService : VpnService() {
     }
 
     /** Plain UDP to the network's own resolver, on a socket bound to that network. */
-    private fun udpQuery(server: InetAddress, query: ByteArray): ByteArray? {
+    private fun chosenKeys(): Set<String> {
+        val c = upstreamConfig
+        return when (c.mode) {
+            Upstreams.Mode.AUTO -> emptySet()
+            Upstreams.Mode.PRESET -> Upstreams.PRESETS.firstOrNull { it.id == c.presetId }?.entries.orEmpty().map { it.key }.toSet()
+            Upstreams.Mode.CUSTOM -> c.custom.map { it.key }.toSet()
+        }
+    }
+
+    /** IP literals parse without a lookup; hostnames resolve on the real network (never via our tunnel). */
+    private fun resolve(host: String): InetAddress? {
+        val literal = host.contains(':') || host.all { it.isDigit() || it == '.' }
+        if (literal) return runCatching { InetAddress.getByName(host) }.getOrNull()
+        val now = SystemClock.elapsedRealtime()
+        resolvedHosts[host]?.let { (at, addr) -> if (now - at < 10 * 60_000L) return addr }
+        val addr = runCatching { (underlying?.getAllByName(host) ?: InetAddress.getAllByName(host)).firstOrNull() }.getOrNull()
+            ?: return null
+        resolvedHosts[host] = now to addr
+        return addr
+    }
+
+    private fun udpQuery(server: InetAddress, port: Int, query: ByteArray): ByteArray? {
         DatagramSocket().use { socket ->
             // Bound to the real network so it can't loop back into the tunnel.
             val net = underlying
             if (net != null) net.bindSocket(socket) else if (!protect(socket)) return null
             socket.soTimeout = UDP_TIMEOUT_MS
-            socket.send(DatagramPacket(query, query.size, InetSocketAddress(server, 53)))
+            socket.send(DatagramPacket(query, query.size, InetSocketAddress(server, port)))
             val buf = ByteArray(MTU - 48)
             val resp = DatagramPacket(buf, buf.size)
             socket.receive(resp)
@@ -861,7 +886,7 @@ class DnsVpnService : VpnService() {
         underlyingDns = best?.let { cm.getLinkProperties(it)?.dnsServers }.orEmpty()
             .filter { it.hostAddress != VPN4_DNS && !it.hostAddress.orEmpty().startsWith("fd66:f0cf") }
             .take(2)
-            .map { Upstream.Udp(it) }
+            .mapNotNull { a -> a.hostAddress?.let { Upstreams.Entry.Udp(it, 53) } }
     }
 
     private fun writeToTun(packet: ByteArray) {

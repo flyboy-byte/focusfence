@@ -57,6 +57,12 @@ android {
         jvmTarget = "17"
     }
 
+    // The bundled classifier is copied out via AssetManager.openFd, which only works
+    // for stored (uncompressed) assets. A .tflite barely compresses anyway.
+    androidResources {
+        noCompress += "tflite"
+    }
+
     buildFeatures {
         viewBinding = true
     }

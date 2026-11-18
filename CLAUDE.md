@@ -43,7 +43,8 @@ Three enforcement layers, each covering what the others cannot:
    traffic never enters the app. That is the entire reason battery/throughput cost is negligible;
    any change that widens the routes breaks the core premise. Blocked queries get a locally
    synthesized cacheable `0.0.0.0`/`::` (NODATA for other types; `Dns.buildBlockedResponse`,
-   TTL 1h for ads/guards, 60s for user rules); everything else is relayed upstream (`forward`): first the
+   TTL 1h for ads/guards, 60s for user rules); everything else is relayed upstream (`forward`) in the order `Upstreams.order` gives for the
+   owner's choice (Settings → DNS server, `DnsUpstreamStore`; default Automatic): first the
    real network's own DNS servers over UDP on a socket bound to that network (`udpQuery`,
    `refreshUnderlying`), then DoH (RFC 8484, `dohQuery`) to `https://1.1.1.1` / `https://8.8.8.8` via
    `Network.openConnection`, tracking a `preferredUpstream`. Public resolvers alone failed on the

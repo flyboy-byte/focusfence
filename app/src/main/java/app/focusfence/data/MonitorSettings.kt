@@ -24,6 +24,7 @@ object MonitorSettings {
     const val KEY_THRESHOLD = "mon_threshold"
     const val KEY_WATCHED = "mon_watched_apps"
     const val KEY_PARTNER_KEY = "mon_partner_key_spki"
+    const val KEY_AI = "mon_ai"
 
     fun screenshotsEnabled(c: Context) = prefs(c).getBoolean(KEY_SCREENSHOTS, false)
     fun textEnabled(c: Context) = prefs(c).getBoolean(KEY_TEXT, false)
@@ -31,6 +32,15 @@ object MonitorSettings {
 
     fun setScreenshots(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_SCREENSHOTS, on).apply()
     fun setText(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_TEXT, on).apply()
+
+    /**
+     * On-device AI flagging of screenshots. Off by default: it's the one
+     * monitoring feature with a real CPU cost (~one MobileNet inference per
+     * sampled screenshot), so it's opt-in and its cost is logged (diag perf
+     * `clf`, `clf_ms`, `clf_load_ms`). Off = screenshots are scored nothing.
+     */
+    fun aiEnabled(c: Context) = prefs(c).getBoolean(KEY_AI, false)
+    fun setAi(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_AI, on).apply()
 
     fun level(c: Context): CapturePolicy.Level =
         runCatching { CapturePolicy.Level.valueOf(prefs(c).getString(KEY_LEVEL, null) ?: "") }

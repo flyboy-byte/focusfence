@@ -201,6 +201,8 @@
     <string name="monitor_banner">This records what is on your screen.</string>
     <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
     <string name="monitor_shots">Capture screenshots</string>
+    <string name="monitor_ai">Flag screenshots with on-device AI</string>
+    <string name="monitor_ai_hint">Optional. A small image model on your phone (nothing is sent anywhere to be analysed) scores each sampled screenshot; only flagged ones are kept, encrypted. Costs a little battery per screenshot — Logs &amp; diagnostics shows how much.</string>
     <string name="monitor_shots_hint">Sparse, random screenshots of watched apps, classified on your phone. Only flagged images are kept (encrypted to your partner), depending on the retention setting.</string>
     <string name="monitor_shots_unavailable">Screenshot capture needs Android 11 or newer. Text capture still works.</string>
     <string name="monitor_text">Capture on-screen text</string>
@@ -395,4 +397,15 @@
     <string name="home_row_partners">Accountability partners</string>
     <string name="home_partners_none">Off (optional, needs a server)</string>
     <string name="home_partners_count">%1$d set up · synced %2$s</string>
+
+    <!-- DNS server choice -->
+    <string name="dns_title">DNS server</string>
+    <string name="dns_change">Change</string>
+    <string name="dns_intro">Where allowed lookups go after Focus Fence filters them. Your filter rules apply first either way, so this never weakens blocking.</string>
+    <string name="dns_auto">Automatic (recommended): your network\'s DNS, then Cloudflare/Google</string>
+    <string name="dns_custom">My own DNS server</string>
+    <string name="dns_custom_hint">One per line: 192.168.1.10, 10.0.0.2:5353, dns.example.com, or https://dns.example.com/dns-query</string>
+    <string name="dns_fallback">If it doesn\'t answer, fall back to automatic (keeps the internet working)</string>
+    <string name="dns_bad_lines">Ignored (not a server address): %1$s</string>
+    <string name="dns_need_entry">Add at least one server, or pick another option.</string>
 </resources>
