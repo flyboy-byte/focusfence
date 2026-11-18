@@ -86,7 +86,7 @@ class Config(
 @Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
 
 fun main() {
-    val env = System::getenv
+    val env: (String) -> String? = { System.getenv(it) }
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
@@ -230,14 +230,14 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     call.respond(HttpStatusCode.Conflict, CursorResponse(r.reason, device.expectedNextSeq, device.lastHash))
                 }
                 is Integrity.Result.Ok -> {
-                    store.appendRecords(device.id, req.recordsRaw, req.lastSeq, r.newHash, r.gap, cfg.now())
+                    // A device's first batch starts wherever its local log was at
+                    // enrollment; that jump isn't missing data.
+                    val gap = if (device.expectedNextSeq > 1) r.gap else 0
+                    store.appendRecords(device.id, req.recordsRaw, req.lastSeq, r.newHash, gap, cfg.now())
                     val lines = alerts.alertLines(req.recordsRaw).toMutableList()
-                    // Skip the gap alert for a device's very first batch (seq starts wherever the log was).
-                    if (r.gap > 0 && device.expectedNextSeq > 1) {
-                        lines += "${r.gap} activity records never arrived (deleted, or lost on the phone)"
-                    }
+                    if (gap > 0) lines += "$gap activity records never arrived (deleted, or lost on the phone)"
                     if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines)
-                    call.respond(BatchResponse(req.lastSeq, r.gap, r.newHash))
+                    call.respond(BatchResponse(req.lastSeq, gap, r.newHash))
                 }
             }
         }

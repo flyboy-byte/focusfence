@@ -150,6 +150,8 @@ class Digest(private val fromT: Long) {
                 comp == "app" && state == "updated" -> "App updated" + detail(f)
                 comp == "log" && state == "cleared" -> "Activity log cleared"
                 comp == "log" && state == "setting" -> "Recording setting changed" + detail(f)
+                comp == "partner" && (state == "partner_removed" || state == "pairing_removed") ->
+                    "A partner was removed" + detail(f)
                 else -> null
             }
         }
