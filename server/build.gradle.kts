@@ -20,6 +20,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.6")
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
+    testImplementation("io.ktor:ktor-client-core-jvm:$ktor")
 }
 
 // The phone's pure-Kotlin decision code (no Android types) is compiled in too, so
