@@ -1,56 +1,79 @@
 # Focus Fence accountability server (prototype)
 
-**Status: prototype. Not built by the app's CI** (which builds only `:app`), and not yet
-wired to the phone — the app does not sign or upload batches yet. This is the receiving half of
-the device→server→partner loop, here to prove the design in
-[`../docs/specs/accountability-architecture.md`](../docs/specs/accountability-architecture.md).
-Swap the flat-file store for Postgres + object storage before anything beyond personal use.
+**Status: prototype, built and tested by CI** (`./gradlew -p server test` from the repo root).
+Not deployed anywhere yet. Flat-file storage: fine for a person or a few, not for many.
 
-## What it does
+It compiles the phone's pure `app/src/main/java/app/focusfence/dns/` code too, so the server
+alerts on exactly what the phone's `Digest.alertText` alerts on, and the partner web page shows
+the same `Digest` the partner app does. One rule set for both ends.
 
-- **Enroll** a device by its Ed25519 public key and the partner's email.
-- **Ingest** signed batches of the *same* JSON-lines activity records the phone writes
-  (`docs/specs/event-log.md`), checking three things: the Ed25519 signature, a per-device
-  sequence with no silent gaps, and a hash chain so already-uploaded history can't be rewritten.
-  A sequence gap is *recorded and reported*, not hidden — missing data must be visible.
-- **Heartbeat** for liveness. A device that goes silent past `FF_STALE_MINUTES` triggers one
-  partner alert — the only way to catch uninstall, factory reset, or a powered-off phone.
-- **Email** the partner (via Resend) on integrity changes and staleness; a weekly report is the
-  same `Report` summary rendered to HTML.
-- **Screenshots** arrive as opaque ciphertext (`/v1/shots`). The server has no key and cannot
-  read them; the partner decrypts in their own key (the device encrypts with `dns/Ecies`).
+## Two ways to be a partner, side by side
 
-## Trust model
+**1. Web + email (+ optional SMS) — the default.**
+The phone enrolls a hardware-backed P-256 key, then uploads its activity log as signed,
+hash-chained batches every 15 minutes and heartbeats. The owner creates a one-time invite code
+in the app and sends it to their partner. The partner joins at `/join`, and gets:
+- an email alert when protection changes (filter off, accessibility off, log cleared, records
+  missing, partner removed, …) and when the phone goes silent;
+- a weekly report email;
+- a private report page at `/p/{token}` (the link is their login);
+- optional SMS alerts: opt-in, verified with a code, alerts only, throttled to one per 10 min.
 
-This is self-accountability: the phone's owner enrolls their *own* device and chooses the
-partner. The server is deliberately unable to read screenshots, and it cannot turn capture on —
-only the device does that, and the device shows that capture is running. The server's job is to
-make the record it receives tamper-evident, not to control the phone.
+**2. App to app — the equal option.**
+Both people run the app and pair with a key the owner sends over any message app. The key
+never reaches the server: the phone derives a mailbox id, an access token and an encryption key
+from it (`dns/Pairing`). The server is a **blind mailbox** — it stores ciphertext under an id it
+can't link to anyone, and keeps only a hash of the token. The partner's app polls, decrypts, shows
+the report, and raises its own notifications. It also shows a rotating unlock code that the
+owner's phone accepts offline as the partner PIN.
 
 ## Run
 
 ```sh
-cd server
-RESEND_API_KEY=... FF_MAIL_FROM="you@yourdomain" ./gradlew run
-# no RESEND_API_KEY → emails print to stdout, so it runs with no account
+# from the repo root
+FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@example.com \
+  ./gradlew -p server run
+# no RESEND_API_KEY → emails print to stdout; FF_SMS_PROVIDER=dev → texts print too
 ```
 
-Env: `FF_DATA_DIR` (default `./data`), `FF_PORT` (8080), `FF_STALE_MINUTES` (90),
-`RESEND_API_KEY`, `FF_MAIL_FROM`.
+| Env | Default | |
+|---|---|---|
+| `FF_PUBLIC_URL` | `http://localhost:8080` | Base for links in emails and invites |
+| `FF_PORT` | `8080` | |
+| `FF_DATA_DIR` | `./data` | Flat-file store |
+| `FF_STALE_MINUTES` | `240` | Silence before "phone went silent". Long enough for overnight Doze. |
+| `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
+| `FF_SMS_PROVIDER` | `none` | `twilio`, `telnyx`, or `dev` |
+| `FF_SMS_FROM` | — | Sending number |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | — | For `twilio` |
+| `TELNYX_API_KEY` | — | For `telnyx` |
+
+Put it behind HTTPS (Caddy or nginx). Android blocks plain-HTTP connections from the app by
+default, so the phone can only talk to an `https://` server.
 
 ## Endpoints
 
-| Method | Path | Body | Purpose |
-|---|---|---|---|
-| POST | `/v1/enroll` | `partnerEmail`, `publicKeySpki` | Register a device key → `deviceId` |
-| POST | `/v1/batches` | signed batch | Ingest records (seq + hash + signature checked) |
-| POST | `/v1/heartbeat` | signed `t`, `lastSeq` | Liveness |
-| POST | `/v1/shots` | `shotId`, `ciphertextB64`, signature | Store an encrypted screenshot |
-| GET | `/partner/{id}` | — | Minimal HTML report (put auth in front for real use) |
+Device requests are signed (`action|deviceId|t|extra`, ECDSA P-256) and must be within 10 minutes
+of server time.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/v1/enroll` | Register a device key → `deviceId` |
+| POST | `/v1/invites` | Signed. New one-time invite code (24 h, max 5 live) |
+| POST | `/v1/partners/list` | Signed. Partners (emails masked) |
+| POST | `/v1/partners/unlink` | Signed. Remove a partner — **they are emailed/texted** |
+| POST | `/v1/batches` | Signed batch: seq + hash chain + signature checked; 409 returns the server cursor |
+| POST | `/v1/heartbeat` | Signed liveness |
+| POST | `/v1/shots` | Signed encrypted screenshot (ciphertext only) |
+| POST | `/v1/mailbox/{id}` | Create a blind mailbox with a token hash |
+| POST/GET | `/v1/mailbox/{id}/msgs` | Post / read ciphertext (`X-FF-Token` header) |
+| GET/POST | `/join` | Partner joins with an invite code |
+| GET | `/p/{token}` | Partner's private report page |
+| POST | `/p/{token}/sms`, `/sms/verify`, `/sms/stop`, `/leave` | Partner settings |
 
 ## Not done
 
-- No auth on the partner view yet (prototype).
-- The device-side client (sign + batch + upload, heartbeat scheduling, blob encryption to the
-  partner key) is not built; `dns/Ecies` and `dns/Pin` are the crypto primitives it will use.
-- Flat-file store; fine for one person, not for many.
+- No deployment, backups, or admin tooling. Flat files.
+- Join rate-limiting is per client IP, in memory; behind a reverse proxy it needs the real IP.
+- Screenshots: the endpoint exists, but the phone doesn't upload them yet.
+- Report tokens are kept in the clear (so alert emails can link to the report).

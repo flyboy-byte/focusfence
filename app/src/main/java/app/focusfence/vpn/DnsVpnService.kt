@@ -341,6 +341,7 @@ class DnsVpnService : VpnService() {
                 urgent = true,
             )
             if (!restart) {
+                app.focusfence.sync.Sync.kick(this)
                 // Always-on would have the OS bring the tunnel straight back; drop
                 // it for this stop (startVpn re-applies it), and hand filtering to
                 // the Private DNS fallback while we're down.
@@ -359,6 +360,7 @@ class DnsVpnService : VpnService() {
         // Another app took the VPN slot, or the user disabled it from settings.
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "revoked"), urgent = true)
         postStoppedAlert(this, R.string.alert_stopped_revoked)
+        app.focusfence.sync.Sync.kick(this)
         DnsFallback.engage(this)
         stopVpn()
         stopSelf()
@@ -422,6 +424,7 @@ class DnsVpnService : VpnService() {
                 urgent = true,
             )
             postStoppedAlert(this, R.string.alert_stopped_establish)
+            app.focusfence.sync.Sync.kick(this)
             DnsFallback.engage(this)
             stopSelf()
             return

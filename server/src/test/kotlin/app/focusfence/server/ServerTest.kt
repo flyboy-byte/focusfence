@@ -1,14 +1,14 @@
 package app.focusfence.server
 
 import app.focusfence.dns.Pairing
-import io.ktor.http.HttpClient
-import io.ktor.http.request.forms.submitForm
-import io.ktor.http.request.get
-import io.ktor.http.request.header
-import io.ktor.http.request.post
-import io.ktor.http.request.setBody
-import io.ktor.http.statement.HttpResponse
-import io.ktor.http.statement.bodyAsText
+import io.ktor.client.HttpClient
+import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters

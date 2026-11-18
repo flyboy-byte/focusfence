@@ -224,6 +224,20 @@ class HomeFragment : Fragment() {
             DiagnosticsActivity::class.java,
         )
 
+        val partnerCount = app.focusfence.sync.SyncStore.ownPairings(context).size +
+            (if (app.focusfence.sync.SyncStore.deviceId(context) != null) 1 else 0)
+        val lastSync = app.focusfence.sync.SyncStore.lastOk(context)
+        row(
+            R.string.home_row_partners, partnerCount > 0 && app.focusfence.sync.SyncStore.lastError(context) == null,
+            if (partnerCount == 0) getString(R.string.home_partners_none)
+            else getString(
+                R.string.home_partners_count, partnerCount,
+                if (lastSync == 0L) getString(R.string.acc_status_never)
+                else android.text.format.DateUtils.getRelativeTimeSpanString(lastSync).toString(),
+            ),
+            app.focusfence.AccountabilityActivity::class.java,
+        )
+
         val policies = CategoryStore.policies(context).values
         val bundlesOn = policies.count { it != Categories.Policy.OFF }
         val bundlesBlocking = policies.count { it == Categories.Policy.BLOCK }

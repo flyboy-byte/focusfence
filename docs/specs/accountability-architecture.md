@@ -132,7 +132,8 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
 |---|---|
 | `POST /v1/enroll` | Enrollment code + device public key → device id |
 | `POST /v1/invites` | Device creates a partner invite → one-time code (see *Partner linking*) |
-| `POST /v1/invites/{code}/accept` | Partner app/web redeems the code + partner public key |
+| `GET/POST /join` | Partner redeems the code on the web |
+| `POST/GET /v1/mailbox/{id}[/msgs]` | Blind mailbox for app-to-app pairing |
 | `POST /v1/batches` | Signed batch: `{device, first_seq, last_seq, prev_hash, records[]}` → ack `{last_seq}` |
 | `POST /v1/heartbeat` | Signed `{device, t, last_seq, integrity_summary}` |
 | `GET  /v1/policy` | Pull-based policy/config for the device (WorkManager) |
@@ -146,31 +147,43 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
 - An optional LLM summary runs over *aggregated counts only* (handoff §15), never per-event or
   per-image.
 
-### Partner linking (invite secret)
+### Partner linking — two equal options (implemented, 🧪)
 
-App → backend → partner, with a one-time secret the user sends over any message app:
+**Email / web (default).** The owner taps *Invite a partner*; the phone (enrolled with a
+hardware-backed P-256 key) gets a one-time code from the server — 8 chars, 24 h, single use,
+max 5 live, join attempts rate-limited — and shares a join link. The partner enters the code,
+name and email at `/join` (and optionally a phone number for texts), and gets a private report
+page `/p/{token}`, alert emails, and a weekly report.
 
-1. The user taps *Invite partner*. The device asks the backend for an invite and gets a short
-   code (e.g. 8 chars, ~40 bits) that expires in 24 h and works once. The app offers a share
-   sheet: "Install Focus Fence and enter code XXXX-XXXX" (or a link containing it).
-2. The partner enters the code in the partner app (or the web page). They choose how to be
-   notified: **email** (default) and/or **SMS**, and confirm the address/number.
-3. Both sides now hold the link. The partner's public key is sent to the device on its next
-   policy pull, so screenshots can be encrypted to it (P3) and partner PINs can be verified.
-4. The device shows "Linked to <partner name>" and logs an `integ partner_linked` record.
-   Unlinking is a loosening action: it goes through the friction guard and **the partner is
-   notified** — it can't be done silently.
+**App to app (pairing key).** If both people use the app, the owner taps *Pair with a partner's
+app*. The phone makes a random 128-bit key and shows it as a 27-character code with a check
+character (`dns/Pairing`: typos and swapped neighbours are rejected at entry). The owner sends it,
+with the server address, over any message app; the partner types it into *I'm a partner for*.
+From the key both apps derive, independently:
+- a mailbox id (where they meet on the server),
+- an access token (the server stores only its SHA-256, so a server breach can't post),
+- an AES-256-GCM key (the server relays ciphertext it can't read), and
+- a seed for rotating 8-digit unlock codes (10-min steps, ±1 for skew). The partner's app shows
+  the current code; the owner's phone accepts it offline wherever a partner PIN is required.
 
-Rate-limit code redemption (codes are short) and never put the code in logs. Email stays the
-primary channel; the partner app is optional and can come later (web page first).
+The owner's phone posts instant alerts and a digest every 6 h; the partner's app polls every
+15 min, notifies on alerts, and flags 14 h of silence.
+
+**Removing a partner is never silent.** Both paths go through the `REMOVE_PARTNER` friction guard,
+log a `svc partner` record (which other partners are alerted about), and tell the removed partner:
+the server emails/texts an email partner; the phone posts a final message to a paired partner
+before forgetting the key (and their app flags the silence if that post fails).
 
 ### Notification channels
 
-- **Email** (Resend, already in the prototype): weekly report, alerts, invite confirmation.
-- **SMS** (scope addition): alerts only — protection off, uninstall/stale heartbeat, unlink,
-  partner-PIN requests. Weekly reports stay email (too long for SMS). Provider behind one
-  interface (`Notifier`) so Twilio / Vonage / Telnyx are swappable; costs per message, and the
-  partner must opt in by replying/confirming (carrier rules require consent).
+- **Email** (Resend): weekly report, alerts, invite confirmation.
+- **SMS** (Twilio or Telnyx behind one `Notifier` interface): alerts only, opt-in on the join form
+  or report page, confirmed with a 6-digit code (carrier consent), throttled to one per partner
+  per 10 min. Weekly reports stay email.
+- **Partner app**: its own notifications, from decrypted mailbox messages.
+
+All three alert on the same rule, `Digest.alertText`, compiled into the server from the phone's
+`dns/` sources.
 
 **Decision:** backend language. Kotlin/Ktor would let the `dns/` schema code be shared, which is
 a real advantage. Go is the smallest to operate. Python is the fastest to write. The deciding

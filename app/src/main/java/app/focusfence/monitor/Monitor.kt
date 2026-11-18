@@ -72,6 +72,7 @@ object Monitor {
                 Intent.ACTION_SCREEN_ON, Intent.ACTION_SCREEN_OFF -> {
                     screenOn = intent.action == Intent.ACTION_SCREEN_ON
                     DnsVpnService.onScreen(screenOn)
+                    if (screenOn) app.focusfence.sync.Sync.kickIfDue(context)
                     worker.execute { onBattery(context, stickyBattery(context)) }
                 }
             }
@@ -231,7 +232,11 @@ object Monitor {
                 editor.putString(prefKey, value)
                 changed = true
             }
-            if (changed) editor.apply()
+            if (changed) {
+                editor.apply()
+                // A partner should hear about a protection change now, not at the next period.
+                app.focusfence.sync.Sync.kick(context)
+            }
         }
     }
 

@@ -184,6 +184,57 @@ object EventLog {
         }
     }
 
+    /**
+     * Like [forEachLine], but for sync: skips whole files whose last line is at
+     * or before [afterSeq] / older than [sinceT] (read from the file's tail, so
+     * already-uploaded history costs nothing), and stops when [consumer]
+     * returns false. Battery: this runs every 15 minutes.
+     */
+    fun scan(channel: Channel, afterSeq: Long = -1, sinceT: Long = Long.MIN_VALUE, consumer: (String) -> Boolean) {
+        for (file in files(channel)) {
+            val last = lastLine(file)
+            if (last != null) {
+                val lastSeq = seqOf(last)
+                if (lastSeq != null && lastSeq <= afterSeq) continue
+                val lastT = LogJson.peekT(last)
+                if (lastT != null && lastT < sinceT) continue
+            }
+            try {
+                file.bufferedReader().useLines { lines ->
+                    for (line in lines) if (!consumer(line)) return
+                }
+            } catch (e: IOException) {
+                Log.w(TAG, "reading ${file.name}", e)
+            }
+        }
+    }
+
+    /** The newest seq handed out on [channel] (flushed or not). */
+    fun currentSeq(channel: Channel): Long {
+        if (!initialized) return 0
+        val buf = buffers.getValue(channel)
+        return synchronized(buf) { buf.seq }
+    }
+
+    private val SEQ_PREFIX = Regex("^\\{\"seq\":(\\d+)")
+
+    /** Every line starts with `{"seq":N` ([append] puts it first), so no decode is needed. */
+    fun seqOf(line: String): Long? = SEQ_PREFIX.find(line)?.groupValues?.get(1)?.toLongOrNull()
+
+    private fun lastLine(file: File): String? = try {
+        java.io.RandomAccessFile(file, "r").use { raf ->
+            val len = raf.length()
+            if (len == 0L) return null
+            val n = minOf(len, 8192L).toInt()
+            val buf = ByteArray(n)
+            raf.seek(len - n)
+            raf.readFully(buf)
+            String(buf, Charsets.UTF_8).trimEnd('\n').substringAfterLast('\n')
+        }
+    } catch (e: IOException) {
+        null
+    }
+
     /** Deletes every log file. Sequence numbers keep counting, so a reset is visible. */
     fun clearBlocking() {
         if (!initialized) return

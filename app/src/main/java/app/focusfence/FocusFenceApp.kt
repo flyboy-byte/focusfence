@@ -17,6 +17,7 @@ class FocusFenceApp : Application() {
         EventLog.init(this)
         logStartup()
         Monitor.checkIntegrityAsync(this)
+        app.focusfence.sync.Sync.schedule(this)
     }
 
     /**
