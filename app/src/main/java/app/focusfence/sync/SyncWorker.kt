@@ -20,7 +20,6 @@ import app.focusfence.R
 import app.focusfence.data.EventLog
 import app.focusfence.dns.B64
 import app.focusfence.dns.Digest
-import app.focusfence.dns.LogEvents
 import app.focusfence.dns.LogJson
 import app.focusfence.dns.Pairing
 import org.json.JSONObject
@@ -210,11 +209,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         for (i in 0 until msgs.length()) {
             val m = msgs.getJSONObject(i)
             val id = m.optLong("id")
-            val plain = Pairing.open(k.enc, B64.decode(m.optString("c")), k.mailboxId.toByteArray())
-            val fields = plain?.let { LogJson.decode(String(it)) }
+            val text = Pairing.open(k.enc, B64.decode(m.optString("c")), k.mailboxId.toByteArray())?.let { String(it) }
+            val fields = text?.let(LogJson::decode)
             w = w.copy(after = maxOf(w.after, id), lastMsgMs = maxOf(w.lastMsgMs, m.optLong("t")), staleNotified = false)
             when (fields?.get("kind")) {
-                Digest.KIND_DIGEST -> w = w.copy(digest = String(plain))
+                Digest.KIND_DIGEST -> w = w.copy(digest = text)
                 Digest.KIND_ALERT -> {
                     val text = fields["text"] as? String ?: continue
                     newAlerts += text
@@ -299,8 +298,4 @@ object Sync {
     fun kickIfDue(context: Context) {
         if (System.currentTimeMillis() - SyncStore.lastOk(context) > 20 * 60_000L) kick(context)
     }
-
-    /** Record types whose arrival should reach a partner promptly. */
-    fun isUrgent(fields: Map<String, Any?>): Boolean =
-        fields["type"] == LogEvents.TYPE_INTEGRITY || Digest.alertText(fields) != null
 }

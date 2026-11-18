@@ -31,6 +31,20 @@ kotlin {
     sourceSets["main"].kotlin.srcDir("../app/src/main/java/app/focusfence/dns")
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    testLogging { events("passed", "failed", "skipped") }
+    // Gradle 8 passes a run with zero tests; for a CI gate that's a silent hole.
+    var ran = 0L
+    addTestListener(object : TestListener {
+        override fun beforeSuite(suite: TestDescriptor) {}
+        override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+            if (suite.parent == null) ran = result.testCount
+        }
+        override fun beforeTest(testDescriptor: TestDescriptor) {}
+        override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) {}
+    })
+    doLast { if (ran == 0L) throw GradleException("no server tests ran") }
+}
 
 application { mainClass.set("app.focusfence.server.MainKt") }
