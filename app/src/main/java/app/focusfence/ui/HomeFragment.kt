@@ -277,10 +277,18 @@ class HomeFragment : Fragment() {
             StrictModeActivity::class.java,
         )
 
-        val managed = DeviceAdmin.isDeviceOwner(context)
+        // Device admin is the default protection (EA's model); device owner is the advanced tier.
+        val owner = DeviceAdmin.isDeviceOwner(context)
+        val admin = owner || DeviceAdmin.isAdminActive(context)
         row(
-            R.string.home_row_managed, managed,
-            getString(if (managed) R.string.home_managed_on else R.string.home_managed_off),
+            R.string.home_row_managed, admin,
+            getString(
+                when {
+                    owner -> R.string.home_managed_on
+                    admin -> R.string.home_managed_admin
+                    else -> R.string.home_managed_off
+                }
+            ),
             DeviceOwnerActivity::class.java,
         )
 

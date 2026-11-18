@@ -81,7 +81,8 @@ with `-R sidewinderzz/focusfence`).
 ## Releases
 
 - Push a tag `vX.Y.Z-accountable` → `.github/workflows/release.yml` runs tests, builds a release
-  APK, verifies the signature with `apksigner`, and publishes a GitHub pre-release.
+  APK, verifies the signature with `apksigner`, and publishes a GitHub Release — a full release
+  marked Latest, unless the tag contains `-rc`, `-beta` or `-test` (then a pre-release).
 - Signing: if repo secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
   exist, the stable key is used (updates install over each other). Otherwise a throwaway key is
   generated and the notes say so. The expected cert SHA-256 is in `STATE.md`.

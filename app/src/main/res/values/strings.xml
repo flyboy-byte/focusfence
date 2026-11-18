@@ -258,9 +258,9 @@
     <string name="guard_level_partner_pin">Partner PIN</string>
 
     <!-- Managed mode / Device Owner -->
-    <string name="owner_title">Device protection (advanced)</string>
-    <string name="owner_open">Device protection (advanced)</string>
-    <string name="owner_settings_summary">Optional managed mode: locked Private DNS so you can run another VPN, OS-level app blocking, and per-app DNS logging. Set up over adb.</string>
+    <string name="owner_title">Uninstall protection</string>
+    <string name="owner_open">Uninstall protection</string>
+    <string name="owner_settings_summary">One tap, like Ever Accountable: uninstalling Focus Fence then needs a deliberate extra step, and it\'s recorded. Advanced (optional, needs adb): device owner mode adds always-on VPN, locked settings and OS-level app blocking.</string>
     <string name="owner_intro">We never block uninstalling the app. Managed mode adds stronger enforcement and logs any attempt to remove protection. Removal stays possible, behind friction.</string>
     <string name="owner_enable_howto">Not set up yet. With USB or wireless debugging, run this once on a device with no other accounts:</string>
     <string name="owner_status_owner">Managed mode active (device owner)</string>
@@ -294,7 +294,7 @@
     <string name="home_row_monitoring">Monitoring</string>
     <string name="home_row_timeline">App timeline</string>
     <string name="home_row_strict">Friction (strict mode)</string>
-    <string name="home_row_managed">Managed mode</string>
+    <string name="home_row_managed">Uninstall protection</string>
     <string name="home_row_log">Activity log</string>
     <plurals name="home_bundles_on">
         <item quantity="one">%1$d bundle on (%2$d blocking)</item>
@@ -308,8 +308,9 @@
     <string name="home_on">On</string>
     <string name="home_timeline_on">Recording which apps are used</string>
     <string name="home_timeline_off">Off: grant Usage access</string>
-    <string name="home_managed_on">Active (device owner)</string>
-    <string name="home_managed_off">Not set up</string>
+    <string name="home_managed_on">On (device owner)</string>
+    <string name="home_managed_admin">On</string>
+    <string name="home_managed_off">Off — tap to turn on</string>
     <string name="home_log_value">View, export, battery and health</string>
     <string name="settings_group_accountability">Accountability</string>
     <string name="settings_group_filtering">Filtering</string>
@@ -392,6 +393,6 @@
     <string name="report_alerts">Recent alerts</string>
     <string name="report_no_digest">No report yet. Their phone sends one every few hours once it\'s online.</string>
     <string name="home_row_partners">Accountability partners</string>
-    <string name="home_partners_none">Not set up</string>
+    <string name="home_partners_none">Off (optional, needs a server)</string>
     <string name="home_partners_count">%1$d set up · synced %2$s</string>
 </resources>

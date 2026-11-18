@@ -9,6 +9,9 @@ name: Release
 #  - Otherwise a throwaway key is generated for this build. It still installs,
 #    but a newer build can't install over an older one (uninstall first).
 # The release notes say which key was used and its SHA-256 fingerprint.
+#
+# Tags containing -rc, -beta or -test publish as pre-releases; anything else is a
+# full release and becomes "Latest".
 on:
   push:
     tags: ['v*']
@@ -76,10 +79,18 @@ jobs:
           fp=$(grep -m1 'SHA-256 digest' signer.txt | awk '{print $NF}')
           echo "CERT_SHA256=$fp" >> "$GITHUB_ENV"
 
+      - name: Release type
+        run: |
+          case "${{ github.ref_name }}" in
+            *-rc*|*-beta*|*-test*) echo "PRERELEASE=true" >> "$GITHUB_ENV" ;;
+            *) echo "PRERELEASE=false" >> "$GITHUB_ENV" ;;
+          esac
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: true
+          prerelease: ${{ env.PRERELEASE }}
+          make_latest: ${{ env.PRERELEASE == 'false' }}
           name: "Focus Fence AC ${{ github.ref_name }}"
           files: focus-fence-accountable-*.apk
           body: |
@@ -89,4 +100,5 @@ jobs:
             - Signing key: **${{ env.SIGNING_KIND }}** (cert SHA-256 `${{ env.CERT_SHA256 }}`)
               - stable: installs over earlier stable releases
               - throwaway: uninstall the previous build first
-            - Pre-release: not device-tested across OEMs yet.
+            - Works on its own (filtering, logs, uninstall protection). Partner reports are optional and need a Focus Fence server (see `server/README.md`).
+            - Status of every feature, and how far it's been tested: `STATE.md` on the branch.

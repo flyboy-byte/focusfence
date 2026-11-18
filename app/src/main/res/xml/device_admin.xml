@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Device-admin policies. Device-owner powers (Private DNS, network logging,
-     package suspension) come from being provisioned as device owner via adb or
-     QR, not from these flags; these cover the admin-level capabilities used. -->
+<!-- No policies requested. Device admin is used only so Android makes uninstalling a
+     deliberate two-step action (turn admin off, then uninstall), which the receiver
+     logs. Requesting nothing keeps Android's consent screen honest: it lists no
+     powers over the phone, because we take none. Device-owner calls (Private DNS,
+     always-on VPN, restrictions) need no uses-policies entries. -->
 <device-admin xmlns:android="http://schemas.android.com/apk/res/android"
     android:visible="true">
-    <uses-policies>
-        <watch-login />
-        <disable-keyguard-features />
-    </uses-policies>
+    <uses-policies />
 </device-admin>

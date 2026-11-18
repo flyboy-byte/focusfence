@@ -25,7 +25,7 @@ server and trying it on two phones is the next step.
 | Latest release | `v2.1.3-accountable` (versionCode 9), GitHub pre-release, signed with the stable key |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Next version on branch | `2.2.0-accountable` (versionCode 11), not yet tagged |
+| Next version on branch | `2.2.0-accountable` (versionCode 11) — first **full** (non-pre) release, stable key |
 
 ## Verification levels
 
@@ -65,7 +65,7 @@ without evidence.
 | Feature | Status | Notes |
 |---|---|---|
 | Friction guards per action (None / Delay / Own PIN / Partner PIN) | 🧪 | `specs/friction-tiers.md`. Partner PIN is local until the backend exists. |
-| Device admin (EA's model: uninstall needs admin turned off first, logged) | 🧪 | One tap, no adb. Added 2026-11-17. |
+| Device admin (EA's model: uninstall needs admin turned off first, logged) | 🧪 | **The default protection.** One tap, no adb; requests no policies, so Android's consent screen lists none. Home row "Uninstall protection". |
 | Device owner: always-on VPN (no lockdown), VPN/Private DNS settings lock, Private DNS fallback, strategy switch, network logging | 🧪 | Needs adb and all accounts removed while provisioning. `specs/device-owner.md`. |
 
 ### Partner side
