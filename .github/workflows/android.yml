@@ -23,6 +23,13 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
+      # The classifier is copied out with AssetManager.openFd, which fails on a
+      # compressed asset. Fail the build rather than ship an AI that can't load.
+      - name: Check bundled AI model is present and stored uncompressed
+        run: |
+          unzip -v app/build/outputs/apk/debug/app-debug.apk | tee apk-list.txt | grep classifier/
+          grep -E "Stored .*assets/classifier/nsfw_mobilenet_v2_f16.tflite" apk-list.txt
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
