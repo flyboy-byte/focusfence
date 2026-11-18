@@ -22,7 +22,6 @@ server and trying it on two phones is the next step.
 | Working branch | `claude/logging-and-accountability-plan` — all of this work. Not merged anywhere. |
 | Based on | `claude/android-vpn-website-blocker-1otcbn` (repo default branch), 0 commits behind |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
-| Latest release | `v2.1.3-accountable` (versionCode 9), GitHub pre-release, signed with the stable key |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
 | Latest release | `v2.2.0-accountable` (full release, stable key). Branch is at `2.2.1-accountable` (code 12): capture status. |
