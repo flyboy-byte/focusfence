@@ -127,7 +127,8 @@ Several non-obvious details exist purely for battery/CPU and should not be "clea
 understanding them: `setBlocking(true)` on the tunnel builder (a non-blocking fd turns the reader
 into a busy spin); the accessibility service narrowing `serviceInfo.packageNames`/`eventTypes` to
 only the packages it acts on, requesting the high-volume content-changed events only while
-section rules exist (or URL recording is on); batched stats flushes; and split block TTLs (ads cached 1h, user rules 60s).
+section rules exist (URL recording, text capture and screenshots run on a foreground tick
+instead — content events cost ~75% of screen-on CPU in the 2026-11-19 export); batched stats flushes; and split block TTLs (ads cached 1h, user rules 60s).
 
 ### UI
 

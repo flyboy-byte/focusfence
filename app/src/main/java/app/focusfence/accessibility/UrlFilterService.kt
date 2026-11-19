@@ -45,6 +45,11 @@ class UrlFilterService : AccessibilityService() {
         private val URL_BAR_IDS = mapOf(
             "com.android.chrome" to "com.android.chrome:id/url_bar",
             "com.brave.browser" to "com.brave.browser:id/url_bar",
+            "com.brave.browser_beta" to "com.brave.browser_beta:id/url_bar",
+            "com.brave.browser_nightly" to "com.brave.browser_nightly:id/url_bar",
+            "com.chrome.beta" to "com.chrome.beta:id/url_bar",
+            "com.chrome.dev" to "com.chrome.dev:id/url_bar",
+            "com.chrome.canary" to "com.chrome.canary:id/url_bar",
             "com.vivaldi.browser" to "com.vivaldi.browser:id/url_bar",
             "com.kiwibrowser.browser" to "com.kiwibrowser.browser:id/url_bar",
             "com.microsoft.emmx" to "com.microsoft.emmx:id/url_bar",
@@ -58,10 +63,31 @@ class UrlFilterService : AccessibilityService() {
         private const val EVENT_THROTTLE_MS = 700L
         private const val BACK_DEBOUNCE_MS = 1500L
         private const val APP_BLOCK_DEBOUNCE_MS = 2000L
-        private const val TEXT_CAPTURE_THROTTLE_MS = 1500L
+        /**
+         * Text is read once when a screen opens and then at most this often while
+         * it stays in front. It was 1.5 s on every content change: the
+         * 2026-11-19 export showed 2,394 captures and ~41 s of CPU for it.
+         */
+        private const val TEXT_INTERVAL_MS = 30_000L
+        /** Address bar re-read interval while a browser is in front (replaces content events). */
+        private const val URL_POLL_MS = 4_000L
+        /** Foreground tick when only text capture needs it. */
+        private const val TEXT_POLL_MS = 15_000L
+
+        @Volatile
+        private var instance: UrlFilterService? = null
+
+        /** From Monitor's screen-on broadcast: resume the foreground tick. */
+        fun onScreenOn() {
+            instance?.let { svc -> svc.main.post { svc.onForegroundTick() } }
+        }
         private const val MAX_FALLBACK_NODES = 250
         private const val COMP = "a11y"
     }
+
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private var fgPkg: String? = null
+    private val fgTick = Runnable { onForegroundTick() }
 
     @Volatile
     private var rules: Map<String, BlockRule> = emptyMap()
@@ -131,11 +157,14 @@ class UrlFilterService : AccessibilityService() {
             urgent = true,
         )
         Monitor.attach(this, COMP)
+        instance = this
         ScreenCapture.refresh(this)
         CaptureIndicator.refresh(this)
     }
 
     override fun onDestroy() {
+        main.removeCallbacks(fgTick)
+        instance = null
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
         Monitor.a11yConnected = false
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "destroyed"), urgent = true)
@@ -193,8 +222,12 @@ class UrlFilterService : AccessibilityService() {
             targets.isEmpty() -> arrayOf(packageName)
             else -> targets.toTypedArray()
         }
+        // Battery: content-changed events are the firehose (93k in 32 h on the
+        // owner's phone, ~75% of the app's screen-on CPU across binder, main and
+        // GC threads). Capture and URL recording now run on a foreground tick,
+        // so only section rules — which must react instantly — still need them.
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-            (if (watchBrowsers || capturing) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
+            (if (hasSectionRules) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
         // Batch event delivery: URL changes are human-speed, no need for more
         // than a couple of wakeups per second while scrolling.
         info.notificationTimeout = 600
@@ -224,6 +257,9 @@ class UrlFilterService : AccessibilityService() {
                 captureScreenshots && app.focusfence.dns.WatchScope.watches(eventPackage, watchMode, captureApps, watchExcluded, watchSkip),
             )
         }
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && eventPackage !in overlayPkgs) {
+            onForegroundChanged(eventPackage)
+        }
         if (eventPackage == packageName) return
         Monitor.perf.count("a11y_ev")
 
@@ -246,17 +282,25 @@ class UrlFilterService : AccessibilityService() {
             maybeCapture(eventPackage)
         }
 
-        // Section rules and URL recording: only meaningful inside known browsers.
-        if (!(hasSectionRules || logUrls) || eventPackage !in URL_BAR_IDS) return
-        val now = SystemClock.uptimeMillis()
-        if (now - lastCheckAt < EVENT_THROTTLE_MS) return
-        lastCheckAt = now
+        // Section rules react to every event in a browser (they must be instant);
+        // URL recording alone rides the foreground tick instead.
+        if (hasSectionRules && eventPackage in URL_BAR_IDS) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastCheckAt >= EVENT_THROTTLE_MS) {
+                lastCheckAt = now
+                checkUrl(eventPackage)
+            }
+        }
+    }
 
+    /** Reads the address bar: records it (if enabled) and enforces section rules. */
+    private fun checkUrl(eventPackage: String) {
+        val now = SystemClock.uptimeMillis()
         val url = findUrl(eventPackage)
         if (url == null) {
-            // A browser event with no readable address bar: either the page has
-            // no toolbar showing (fullscreen, menus) or the browser changed its
-            // view IDs. A high rate here is the signal to update URL_BAR_IDS.
+            // A browser with no readable address bar: either the page has no
+            // toolbar showing (fullscreen, menus) or the browser changed its view
+            // IDs. A high rate here is the signal to update URL_BAR_IDS.
             Monitor.perf.count("url_miss")
             return
         }
@@ -287,22 +331,59 @@ class UrlFilterService : AccessibilityService() {
         }
     }
 
-    /**
-     * Screenshot and/or text capture for a watched app. Screenshot timing is the
-     * pure CapturePolicy inside ScreenCapture; text is throttled here and
-     * de-duplicated so a scrolling screen isn't logged repeatedly.
-     */
+    /** Screenshot timing on window events (ScreenCapture also has its own timer). */
     private fun maybeCapture(pkg: String) {
         if (captureScreenshots && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             ScreenCapture.onWatchedWindow(this, pkg)
         }
-        if (captureText) {
+    }
+
+    private fun tickNeeded(pkg: String): Boolean =
+        pkg != packageName && (
+            (logUrls && pkg in URL_BAR_IDS) ||
+                (captureText && app.focusfence.dns.WatchScope.watches(pkg, watchMode, captureApps, watchExcluded, watchSkip))
+            )
+
+    /** A new app came to the front: read it once now, then keep a slow tick while it stays. */
+    private fun onForegroundChanged(pkg: String) {
+        if (pkg == fgPkg) return
+        fgPkg = pkg
+        lastTextCaptureAt = 0L // a new screen gets its text read right away
+        main.removeCallbacks(fgTick)
+        if (tickNeeded(pkg)) onForegroundTick()
+    }
+
+    /**
+     * One pass while an app stays in front with the screen on: address bar (if
+     * recording URLs) and text (if watched, at most every [TEXT_INTERVAL_MS]).
+     * Stops on screen off and when no longer needed; resumes on the next
+     * window change or screen-on. Replaces per-content-change work.
+     */
+    private fun onForegroundTick() {
+        main.removeCallbacks(fgTick)
+        val pkg = fgPkg ?: return
+        if (!tickNeeded(pkg)) return
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        if (pm != null && !pm.isInteractive) return
+        // Window-state events can be missed; trust what's actually in front.
+        val active = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        if (active != null && active != pkg && active !in overlayPkgs) {
+            onForegroundChanged(active)
+            return
+        }
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        Monitor.perf.count("fg_tick")
+        val isBrowser = pkg in URL_BAR_IDS
+        if (logUrls && isBrowser) checkUrl(pkg)
+        if (captureText && app.focusfence.dns.WatchScope.watches(pkg, watchMode, captureApps, watchExcluded, watchSkip)) {
             val now = SystemClock.uptimeMillis()
-            if (now - lastTextCaptureAt >= TEXT_CAPTURE_THROTTLE_MS) {
+            if (lastTextCaptureAt == 0L || now - lastTextCaptureAt >= TEXT_INTERVAL_MS) {
                 lastTextCaptureAt = now
                 TextCapture.capture(pkg, rootInActiveWindow)
             }
         }
+        Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        main.postDelayed(fgTick, if (logUrls && isBrowser) URL_POLL_MS else TEXT_POLL_MS)
     }
 
     override fun onInterrupt() {
