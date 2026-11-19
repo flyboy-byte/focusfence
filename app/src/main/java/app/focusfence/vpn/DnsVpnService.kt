@@ -816,8 +816,12 @@ class DnsVpnService : VpnService() {
         val cm = getSystemService(ConnectivityManager::class.java) ?: return true
         return cm.allNetworks.any { n ->
             val caps = cm.getNetworkCapabilities(n) ?: return@any false
+            // VALIDATED, not just INTERNET: a captive portal (plane/hotel Wi-Fi) has
+            // "internet" but can't resolve anything, and that's the network's
+            // fault, not a filter problem (seen in the 2026-11-19 export).
             !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
-                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         }
     }
 

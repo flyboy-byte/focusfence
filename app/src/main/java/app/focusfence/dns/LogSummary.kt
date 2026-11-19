@@ -55,6 +55,13 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
                 services += "${f["comp"]}:${f["state"]}${f["detail"]?.let { " [$it]" } ?: ""} @$t"
             LogEvents.TYPE_ERROR -> errors.inc("${f["comp"]}:${f["what"]}")
             LogEvents.TYPE_BATTERY -> BatterySample.fromLog(f)?.let { battery += it }
+            LogEvents.TYPE_THREADS -> {
+                val on = f["screen"] == true
+                for ((k, v) in ThreadCpu.decodeTop(f["top"] as? String)) {
+                    val m = if (on) threadMsOn else threadMsOff
+                    m[k] = (m[k] ?: 0L) + v
+                }
+            }
             LogEvents.TYPE_PERF -> {
                 perfWindowMs += f["win"] as? Long ?: 0L
                 (f["p95"] as? Long)?.let { windowP95 += it }
@@ -65,6 +72,10 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
             }
         }
     }
+
+    /** CPU ms by thread name, split by screen state (from `thr` records). */
+    val threadMsOn = HashMap<String, Long>()
+    val threadMsOff = HashMap<String, Long>()
 
     fun battery(): BatterySummary.Result = BatterySummary.summarize(battery)
 
@@ -125,6 +136,7 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         }
         if (errors.isNotEmpty()) appendLine("errors        ${errors.entries.joinToString { "${it.key}=${it.value}" }}")
         appendCpu()
+        appendThreads()
         appendAi()
         appendOnScreen()
         appendLine()
@@ -157,6 +169,19 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         for ((name, us) in values) {
             if (us == 0L && name.startsWith("  ")) continue
             appendLine("%-13s %8.1f s  %3d%%".format(java.util.Locale.ROOT, name, us / 1e6, (us * 100 / total).toInt()))
+        }
+    }
+
+    /** Whole-process attribution by thread: the gap the hand timers leave. */
+    private fun StringBuilder.appendThreads() {
+        for ((title, m) in listOf("screen on" to threadMsOn, "screen off" to threadMsOff)) {
+            if (m.isEmpty()) continue
+            val total = m.values.sum().coerceAtLeast(1)
+            appendLine()
+            appendLine("== cpu by thread, $title (all threads, ${"%.1f".format(java.util.Locale.ROOT, total / 1000.0)} s) ==")
+            for ((k, v) in m.entries.sortedByDescending { it.value }.take(12)) {
+                appendLine("%-22s %7.1f s  %3d%%".format(java.util.Locale.ROOT, k.take(22), v / 1000.0, (v * 100 / total).toInt()))
+            }
         }
     }
 

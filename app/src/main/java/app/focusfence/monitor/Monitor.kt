@@ -163,12 +163,42 @@ object Monitor {
             tempDeciC = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
                 .takeIf { it != Int.MIN_VALUE },
         )
+        val wasScreenOn = lastSample?.screenOn ?: screenOn
         lastSample = sample
+        safely("thread cpu") { sampleThreads(now, wasScreenOn) }
         DnsVpnService.pollHealth()
         EventLog.diag(LogEvents.battery(now, sample))
         closePerfWindow()
         checkIntegrity(context)
         safely("usage pull") { UsageCollector.pull(context) }
+    }
+
+    private var lastThreads: Map<Int, app.focusfence.dns.ThreadCpu.Sample>? = null
+    private val msPerTick: Double by lazy {
+        val hz = runCatching { android.system.Os.sysconf(android.system.OsConstants._SC_CLK_TCK) }.getOrDefault(100L)
+        1000.0 / (if (hz > 0) hz else 100L)
+    }
+
+    /**
+     * Reads every thread's CPU from /proc (a few dozen tiny files, only on
+     * battery samples — no timer) and logs the delta by thread name. This is
+     * the whole process, so it catches what hand-placed timers miss: UI, GC,
+     * AI runtime threads, binder calls.
+     */
+    private fun sampleThreads(now: Long, screenWasOn: Boolean) {
+        val dir = java.io.File("/proc/self/task")
+        val snap = HashMap<Int, app.focusfence.dns.ThreadCpu.Sample>()
+        dir.listFiles()?.forEach { task ->
+            val line = runCatching { java.io.File(task, "stat").readText() }.getOrNull() ?: return@forEach
+            app.focusfence.dns.ThreadCpu.parseStat(line)?.let { snap[it.tid] = it }
+        }
+        val prev = lastThreads
+        lastThreads = snap
+        if (prev == null) return // first sample: baseline only
+        val delta = app.focusfence.dns.ThreadCpu.delta(prev, snap, msPerTick)
+        val total = delta.values.sum()
+        if (total <= 0) return
+        EventLog.diag(LogEvents.threads(now, app.focusfence.dns.ThreadCpu.encodeTop(delta), total, screenWasOn))
     }
 
     private fun closePerfWindow() {

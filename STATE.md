@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Branch is at `2.4.0-accountable` (code 16): screenshot capture fix + CPU attribution, full AI score logging, on-screen/address-bar bundle detection. |
+| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Released `v2.4.0-accountable` (screenshots confirmed working). Branch is at `2.4.1-accountable` (code 17): per-thread CPU attribution; captive-portal-aware health. |
 
 ## Verification levels
 
@@ -59,8 +59,8 @@ without evidence.
 | Filter health (`VpnHealth`): lockdown, bypassed, silent, failing, degraded, offline | 🧪 | Alert + home row + `svc vpn health` record. |
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
-| Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 🧪 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
-| On-device AI flagging (optional, off by default) | 🧪 | Model **loads on the Pixel 9** (1.0 s, 2026-11-18 export); no screenshot has been scored yet. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
+| Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
+| On-device AI flagging (optional, off by default) | 📱 | **Working on the Pixel 9** (2026-11-19 export): 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
 ### Tamper resistance and friction
 | Feature | Status | Notes |

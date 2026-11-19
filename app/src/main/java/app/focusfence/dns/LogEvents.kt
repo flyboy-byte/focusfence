@@ -37,6 +37,7 @@ object LogEvents {
     const val TYPE_INTEGRITY = "integ"
     const val TYPE_BATTERY = "bat"
     const val TYPE_PERF = "perf"
+    const val TYPE_THREADS = "thr"
     const val TYPE_ERROR = "err"
     const val TYPE_META = "meta"
 
@@ -182,6 +183,14 @@ object LogEvents {
         }
 
     /** Diag: counters and latency percentiles accumulated since the previous window. */
+    /**
+     * Per-thread CPU since the previous battery sample: [top] is
+     * [ThreadCpu.encodeTop] ("name=ms;…;other=ms"), [totalMs] the sum, [screen]
+     * the screen state the window started in. Diag channel.
+     */
+    fun threads(t: Long, top: String, totalMs: Long, screen: Boolean): Map<String, Any?> =
+        linkedMapOf("t" to t, "type" to TYPE_THREADS, "top" to top, "total" to totalMs, "screen" to screen)
+
     fun perf(t: Long, windowMs: Long, fields: Map<String, Any?>): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_PERF, "win" to windowMs).apply {
             putAll(fields)

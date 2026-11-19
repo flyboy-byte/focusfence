@@ -73,4 +73,17 @@ class LogSummaryTest {
         assertTrue(out, out.contains("text cats     gambling=1"))
         assertTrue(out, out.contains("address bar   2 visits"))
     }
+
+    @Test
+    fun aggregatesThreadCpuByScreenState() {
+        val s = LogSummary()
+        s.add(line(LogEvents.threads(1, "main=4000;HeapTaskDaemon=1000", 5000, screen = true)))
+        s.add(line(LogEvents.threads(2, "main=2000;other=500", 2500, screen = true)))
+        s.add(line(LogEvents.threads(3, "pool-N-thread-N=300", 300, screen = false)))
+        assertEquals(6000L, s.threadMsOn["main"])
+        assertEquals(300L, s.threadMsOff["pool-N-thread-N"])
+        val out = s.render()
+        assertTrue(out, out.contains("== cpu by thread, screen on (all threads, 7.5 s) =="))
+        assertTrue(out, out.contains("main                       6.0 s   80%"))
+    }
 }
