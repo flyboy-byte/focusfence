@@ -52,7 +52,7 @@
                         android:layout_marginTop="4dp"
                         android:visibility="gone"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                     <TextView
                         android:id="@+id/unlockCode"
                         android:layout_width="match_parent"
@@ -67,7 +67,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

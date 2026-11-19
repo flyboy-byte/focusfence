@@ -118,7 +118,7 @@
                         android:layout_weight="1"
                         android:text="@string/strict_off"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <Button
                         android:id="@+id/strictActionButton"
@@ -195,7 +195,7 @@
                         android:layout_weight="1"
                         android:text="@string/attention_accessibility"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <Button
                         android:id="@+id/accessibilityActionButton"
@@ -219,7 +219,7 @@
                         android:layout_weight="1"
                         android:text="@string/attention_adlist"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <Button
                         android:id="@+id/adlistActionButton"

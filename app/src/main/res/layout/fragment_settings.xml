@@ -44,7 +44,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/acc_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/accountabilityButton"
@@ -79,7 +79,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/monitor_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/monitoringButton"
@@ -114,7 +114,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/strict_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/strictButton"
@@ -149,7 +149,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/diag_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/diagnosticsButton"
@@ -165,7 +165,7 @@
                     android:layout_marginTop="16dp"
                     android:text="@string/owner_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/deviceOwnerButton"
@@ -209,7 +209,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/dnsButton"
@@ -244,7 +244,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/categories_settings_summary"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/categoriesButton"
@@ -300,7 +300,7 @@
                         android:layout_weight="1"
                         android:text="@string/adlist_none"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <Button
                         android:id="@+id/adUpdateButton"
@@ -335,7 +335,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?android:attr/textColorSecondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
                     android:id="@+id/accessibilityButton"

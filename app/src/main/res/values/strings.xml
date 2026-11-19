@@ -202,11 +202,11 @@
     <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
     <string name="monitor_shots">Capture screenshots</string>
     <string name="monitor_ai">Flag screenshots with on-device AI</string>
-    <string name="monitor_ai_hint">Optional. A small image model on your phone (nothing is sent anywhere to be analysed) scores each sampled screenshot; only flagged ones are kept, encrypted. Costs a little battery per screenshot — Logs &amp; diagnostics shows how much.</string>
-    <string name="monitor_shots_hint">Sparse, random screenshots of watched apps, classified on your phone. Only flagged images are kept (encrypted to your partner), depending on the retention setting.</string>
+    <string name="monitor_ai_hint">Scores each screenshot on this phone; nothing is uploaded for analysis. About 0.1 s of CPU per screenshot.</string>
+    <string name="monitor_shots_hint">Occasional screenshots of the apps you watch. Only flagged ones are kept, encrypted for your partner.</string>
     <string name="monitor_shots_unavailable">Screenshot capture needs Android 11 or newer. Text capture still works.</string>
     <string name="monitor_text">Capture on-screen text</string>
-    <string name="monitor_text_hint">Visible text from watched apps (passwords skipped). Useful where screenshots are blocked.</string>
+    <string name="monitor_text_hint">Visible text from watched apps, passwords skipped. Works where apps block screenshots.</string>
     <string name="monitor_watched_apps">Watched apps (%1$d)</string>
     <string name="monitor_level">Screenshot frequency</string>
     <string name="monitor_level_low">Low (~every 4 min)</string>
@@ -417,4 +417,7 @@
     <string name="hero_on">Protected</string>
     <string name="hero_off">Not protected</string>
     <string name="hero_problem">Needs attention</string>
+    <string name="monitor_section_capture">What to capture</string>
+    <string name="monitor_section_schedule">How often, and what to keep</string>
+    <string name="monitor_section_key">Partner encryption key</string>
 </resources>

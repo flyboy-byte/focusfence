@@ -47,7 +47,7 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/acc_server_hint"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
@@ -97,7 +97,7 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/acc_email_hint"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                     <Button
                         android:id="@+id/inviteButton"
                         android:layout_width="wrap_content"
@@ -134,7 +134,7 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/acc_app_hint"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                     <Button
                         android:id="@+id/pairButton"
                         android:layout_width="wrap_content"
@@ -171,7 +171,7 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/acc_watch_hint"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                     <Button
                         android:id="@+id/watchButton"
                         style="@style/Widget.Material3.Button.TonalButton"
