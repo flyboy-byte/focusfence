@@ -123,6 +123,15 @@ class DnsVpnService : VpnService() {
 
         private const val COMP = "vpn"
 
+        /**
+         * The loaded bundle lists, shared read-only with on-screen detection
+         * (text and address-bar hosts) so they aren't held in memory twice.
+         * Empty while the filter isn't running.
+         */
+        @Volatile
+        var detectionLists: Map<String, Set<String>> = emptyMap()
+            private set
+
         /** [VpnHealth.State.key] of the running filter; "off" when stopped. */
         @Volatile
         var health = "off"
@@ -313,6 +322,7 @@ class DnsVpnService : VpnService() {
             // on first run) so defaults take effect without opening the UI.
             val fetched = CategoryStore.ensureDefaultsDownloaded(this)
             categoryLists = CategoryStore.loadActive(this)
+            detectionLists = categoryLists
             EventLog.diag(
                 LogEvents.service(
                     System.currentTimeMillis(), "categories", "loaded",
@@ -487,6 +497,7 @@ class DnsVpnService : VpnService() {
         alwaysOnState = "unknown"
         instance = null
         health = "off"
+        detectionLists = emptyMap()
         getSystemService(NotificationManager::class.java)?.cancel(ALERT_ID)
         Monitor.detach(COMP)
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -526,7 +537,10 @@ class DnsVpnService : VpnService() {
             }
             if (n < 0) break
             if (n == 0) continue
+            // CPU attribution: parse + decide + local answers, on the reader thread.
+            val cpu0 = android.os.Debug.threadCpuTimeNanos()
             handlePacket(buf.copyOf(n))
+            Monitor.perf.count("dns_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         }
     }
 
@@ -667,7 +681,17 @@ class DnsVpnService : VpnService() {
         }
     }
 
+    /** CPU attribution for the relay (sockets, TLS for DoH), on pool threads. */
     private fun forward(udp: Packets.UdpDatagram, query: ByteArray) {
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        try {
+            forwardInner(udp, query)
+        } finally {
+            Monitor.perf.count("fwd_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        }
+    }
+
+    private fun forwardInner(udp: Packets.UdpDatagram, query: ByteArray) {
         refreshUnderlying(force = false)
         val first = preferredUpstream
         val order = Upstreams.order(upstreamConfig, underlyingDns, first)

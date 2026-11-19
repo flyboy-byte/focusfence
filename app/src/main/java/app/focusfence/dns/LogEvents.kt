@@ -90,26 +90,48 @@ object LogEvents {
     }
 
     /** A browser address seen by the accessibility service. Query/fragment are dropped. */
-    fun url(t: Long, pkg: String, host: String, path: String): Map<String, Any?> =
-        linkedMapOf("t" to t, "type" to TYPE_URL, "pkg" to pkg, "host" to host, "path" to path)
+    /** [cat]: bundle categories the address-bar host matches (a second detection path to DNS). */
+    fun url(t: Long, pkg: String, host: String, path: String, cat: String? = null): Map<String, Any?> =
+        linkedMapOf<String, Any?>("t" to t, "type" to TYPE_URL, "pkg" to pkg, "host" to host, "path" to path)
+            .apply { if (cat != null) put("cat", cat) }
 
     /** App moved to foreground ("fg") or background ("bg"), from UsageStats. */
     fun app(t: Long, pkg: String, state: String): Map<String, Any?> =
         linkedMapOf("t" to t, "type" to TYPE_APP, "pkg" to pkg, "state" to state)
 
     /** Experimental: visible text from [pkg], already length-capped by the capturer. */
-    fun text(t: Long, pkg: String, text: String): Map<String, Any?> =
-        linkedMapOf("t" to t, "type" to TYPE_TEXT, "pkg" to pkg, "text" to text)
+    /**
+     * [hits]: hostnames in the text that match a category bundle, "host:cat,cat;…";
+     * [cat]: those categories, comma-joined. Both absent when nothing matched.
+     */
+    fun text(t: Long, pkg: String, text: String, hits: String? = null, cat: String? = null): Map<String, Any?> =
+        linkedMapOf<String, Any?>("t" to t, "type" to TYPE_TEXT, "pkg" to pkg, "text" to text).apply {
+            if (hits != null) put("hits", hits)
+            if (cat != null) put("cat", cat)
+        }
 
     /**
      * Experimental: one screenshot was classified. [score] is the top risky
      * class probability (null without a model), [label] its class, [kept]
      * whether an encrypted image was retained, under id [shotId].
      */
-    fun shot(t: Long, pkg: String?, score: Double?, label: String?, kept: Boolean, shotId: String?, model: String?): Map<String, Any?> =
+    fun shot(
+        t: Long, pkg: String?, score: Double?, label: String?, kept: Boolean, shotId: String?, model: String?,
+        /** Every label's score ([Signals.scoresCompact]) — for tuning the threshold from real data. */
+        scores: String? = null,
+        flagged: Boolean? = null,
+        /** Inference wall time. */
+        ms: Long? = null,
+        /** "timer" or "event": what triggered the capture. */
+        trigger: String? = null,
+    ): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_SHOT, "pkg" to pkg, "score" to score, "label" to label, "kept" to kept).apply {
             if (shotId != null) put("id", shotId)
             if (model != null) put("model", model)
+            if (scores != null) put("scores", scores)
+            if (flagged != null) put("flagged", flagged)
+            if (ms != null) put("ms", ms)
+            if (trigger != null) put("trigger", trigger)
         }
 
     /** Screen became interactive ("on") or not ("off"), from UsageStats. */

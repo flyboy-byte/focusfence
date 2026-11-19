@@ -44,6 +44,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     override fun doWork(): Result {
         val ctx = applicationContext
         if (!SyncStore.hasWork(ctx)) return Result.success()
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
         // Periodic and kicked runs can overlap; uploads must not interleave.
         synchronized(LOCK) {
             EventLog.init(ctx)
@@ -75,6 +76,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 }
             }
             SyncStore.recordResult(ctx, now, error, heartbeat)
+            app.focusfence.monitor.Monitor.perf.count("sync")
+            if (error != null) app.focusfence.monitor.Monitor.perf.count("sync_fail")
+            app.focusfence.monitor.Monitor.perf.count("sync_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         }
         // Failures are recorded and retried on the next period; WorkManager's
         // exponential backoff would only delay the next heartbeat further.

@@ -202,6 +202,17 @@ class UrlFilterService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // CPU attribution: everything this service does per event (capture
+        // decisions, URL reads, text walks) runs inside this call.
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        try {
+            handleEvent(event)
+        } finally {
+            Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        }
+    }
+
+    private fun handleEvent(event: AccessibilityEvent) {
         val eventPackage = event.packageName?.toString() ?: return
         // Which app is in front drives the screenshot timer. Our own windows count
         // too (they're in front), just never watched.
@@ -253,7 +264,12 @@ class UrlFilterService : AccessibilityService() {
         val parts = LogEvents.splitUrl(url)
         if (logUrls && parts != null && urlDeduper.accept(eventPackage, parts.first, parts.second)) {
             EventLog.activity(
-                LogEvents.url(System.currentTimeMillis(), eventPackage, parts.first, parts.second)
+                LogEvents.url(
+                    System.currentTimeMillis(), eventPackage, parts.first, parts.second,
+                    cat = app.focusfence.dns.Categories.match(parts.first, app.focusfence.vpn.DnsVpnService.detectionLists)
+                        .takeIf { it.isNotEmpty() }?.joinToString(",")
+                        ?.also { Monitor.perf.count("url_cat_hits") },
+                )
             )
         }
         if (!hasSectionRules || !UrlFilter.shouldBlock(url, rules)) return

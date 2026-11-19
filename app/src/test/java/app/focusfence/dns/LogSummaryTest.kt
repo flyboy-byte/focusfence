@@ -50,4 +50,27 @@ class LogSummaryTest {
         assertTrue(s.render().contains("vpn=stopped (was running)"))
         assertNull(s.forwardFailureRate())
     }
+
+    @Test
+    fun rendersCpuAiAndOnScreenSections() {
+        val s = LogSummary()
+        s.add(line(mapOf(
+            "t" to 1L, "type" to "perf", "win" to 60_000L,
+            "dns_cpu_us" to 2_000_000L, "fwd_cpu_us" to 1_000_000L, "a11y_cpu_us" to 6_000_000L, "text_cpu_us" to 4_000_000L,
+            "shot_cpu_us" to 1_000_000L, "clf_cpu_us" to 800_000L,
+            "shot_req" to 5L, "shot_timer" to 4L, "shot" to 3L, "shot_fail" to 2L, "shot_fail_c6" to 2L,
+            "clf" to 3L, "clf_top_neutral" to 3L, "clf_risk_b0" to 2L, "clf_risk_b7" to 1L,
+            "text_captured" to 10L, "text_nodes" to 500L, "text_cat_hits" to 1L, "text_cat_gambling" to 1L, "url_cat_hits" to 2L,
+        )))
+        val out = s.render()
+        assertTrue(out, out.contains("== where the cpu goes"))
+        assertTrue(out, out.contains("a11y events        6.0 s   60%"))
+        assertTrue(out, out.contains("  of which ai"))
+        assertTrue(out, out.contains("fail codes    6=2"))
+        assertTrue(out, out.contains("top label     neutral=3"))
+        assertTrue(out, out.contains("0-9%:2  70-79%:1"))
+        assertTrue(out, out.contains("10 captures, 1 naming a bundle site, avg 50 nodes"))
+        assertTrue(out, out.contains("text cats     gambling=1"))
+        assertTrue(out, out.contains("address bar   2 visits"))
+    }
 }

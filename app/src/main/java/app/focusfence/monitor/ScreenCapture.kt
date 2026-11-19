@@ -106,7 +106,7 @@ object ScreenCapture {
         if (pkg != lastForeground || !foregroundWatched) return
         if (!MonitorSettings.screenshotsEnabled(service)) return
         if (!CapturePolicy.shouldCapture(true, true, System.currentTimeMillis(), nextDueAt)) return
-        capture(service, pkg)
+        capture(service, pkg, "event")
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -126,7 +126,7 @@ object ScreenCapture {
         }
         if (CapturePolicy.shouldCapture(true, true, System.currentTimeMillis(), nextDueAt)) {
             Monitor.perf.count("shot_timer")
-            capture(svc, pkg)
+            capture(svc, pkg, "timer")
         }
         schedule()
     }
@@ -138,19 +138,23 @@ object ScreenCapture {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun capture(service: AccessibilityService, pkg: String) {
-        if (!inFlight.compareAndSet(false, true)) return
+    private fun capture(service: AccessibilityService, pkg: String, trigger: String) {
+        if (!inFlight.compareAndSet(false, true)) {
+            Monitor.perf.count("shot_busy")
+            return
+        }
         nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random())
-        requestScreenshot(service, pkg)
+        Monitor.perf.count("shot_req")
+        requestScreenshot(service, pkg, trigger)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun requestScreenshot(service: AccessibilityService, pkg: String) {
+    private fun requestScreenshot(service: AccessibilityService, pkg: String, trigger: String) {
         try {
             service.takeScreenshot(Display.DEFAULT_DISPLAY, worker, object : AccessibilityService.TakeScreenshotCallback {
                 override fun onSuccess(result: AccessibilityService.ScreenshotResult) {
                     try {
-                        process(service, pkg, result)
+                        process(service, pkg, result, trigger)
                     } finally {
                         inFlight.set(false)
                     }
@@ -161,6 +165,8 @@ object ScreenCapture {
                     // canTakeScreenshot), 3 interval too short, 4 invalid display,
                     // 5 invalid window, 6 secure window (app blocks screenshots).
                     Monitor.perf.count("shot_fail")
+                    // Per-code counts: "secure window" (6) by app tells which apps block capture.
+                    Monitor.perf.count("shot_fail_c$errorCode")
                     EventLog.diag(LogEvents.error(System.currentTimeMillis(), "capture", "shot_fail", "code=$errorCode pkg=$pkg"))
                     app.focusfence.data.CaptureStats.recordFailure(service)
                     inFlight.set(false)
@@ -178,7 +184,18 @@ object ScreenCapture {
     }
 
     /** Runs on the capture worker. */
-    private fun process(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult) {
+    private fun process(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
+        // CPU attribution: this whole pipeline (copy, scale, AI, encrypt) runs on
+        // the capture worker thread, so thread CPU time is exactly its cost.
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        try {
+            processInner(context, pkg, result, trigger)
+        } finally {
+            Monitor.perf.count("shot_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        }
+    }
+
+    private fun processInner(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
         val bitmap = hardwareToSoftware(result) ?: run {
             Monitor.perf.count("shot_decode_fail")
             return
@@ -188,12 +205,18 @@ object ScreenCapture {
         ensureClassifier(context)
         // Battery: the AI is the expensive part of capture, so its volume and time are logged.
         val clfStart = android.os.SystemClock.elapsedRealtime()
+        val clfCpu0 = android.os.Debug.threadCpuTimeNanos()
         val scores = classifier.classify(bitmap)
+        val clfMs = android.os.SystemClock.elapsedRealtime() - clfStart
+        val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
         if (scores != null) {
             Monitor.perf.count("clf")
-            Monitor.perf.count("clf_ms", android.os.SystemClock.elapsedRealtime() - clfStart)
+            Monitor.perf.count("clf_ms", clfMs)
+            Monitor.perf.count("clf_cpu_us", (android.os.Debug.threadCpuTimeNanos() - clfCpu0) / 1000)
+            // Detection tuning: which label wins, and how risky scores are spread.
+            scores.maxByOrNull { it.value }?.let { Monitor.perf.count("clf_top_${it.key}") }
+            verdict?.let { Monitor.perf.count("clf_risk_b${app.focusfence.dns.Signals.bucket(it.score)}") }
         }
-        val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
         val mode = MonitorSettings.retention(context)
         val flagged = verdict?.flagged ?: false
         val keep = Classification.retainImage(mode, flagged)
@@ -221,6 +244,10 @@ object ScreenCapture {
             LogEvents.shot(
                 System.currentTimeMillis(), pkg, verdict?.score, verdict?.label,
                 kept = shotId != null, shotId = shotId, model = classifier.modelName,
+                scores = scores?.let(app.focusfence.dns.Signals::scoresCompact),
+                flagged = flagged,
+                ms = if (scores != null) clfMs else null,
+                trigger = trigger,
             )
         )
         if (flagged) Monitor.perf.count("shot_flagged")

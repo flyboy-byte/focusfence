@@ -124,6 +124,9 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
             appendLine("screenshots   ${perfTotals["shot"] ?: 0} taken, ${perfTotals["shot_flagged"] ?: 0} flagged, ${perfTotals["shot_fail"] ?: 0} failed")
         }
         if (errors.isNotEmpty()) appendLine("errors        ${errors.entries.joinToString { "${it.key}=${it.value}" }}")
+        appendCpu()
+        appendAi()
+        appendOnScreen()
         appendLine()
         appendLine("== detection (activity) ==")
         appendLine("dns           ${dnsDecisions.entries.joinToString { "${it.key}=${it.value}" }}")
@@ -136,6 +139,70 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         appendLine("== integrity / services (latest last) ==")
         for (line in (integrity.takeLast(15))) appendLine("integ  $line")
         for (line in (services.takeLast(15))) appendLine("svc    $line")
+    }
+
+    /** Thread-CPU attribution: which part of the app the battery goes to. */
+    private fun StringBuilder.appendCpu() {
+        val parts = linkedMapOf(
+            "dns reader" to "dns_cpu_us", "dns relay" to "fwd_cpu_us", "a11y events" to "a11y_cpu_us",
+            "  of which text" to "text_cpu_us", "screenshots" to "shot_cpu_us", "  of which ai" to "clf_cpu_us",
+            "sync" to "sync_cpu_us",
+        )
+        val values = parts.mapValues { perfTotals[it.value] ?: 0L }
+        if (values.values.all { it == 0L }) return
+        // Top-level parts only (the "of which" lines are inside their parent).
+        val total = values.filterKeys { !it.startsWith("  ") }.values.sum().coerceAtLeast(1)
+        appendLine()
+        appendLine("== where the cpu goes (thread cpu, this app) ==")
+        for ((name, us) in values) {
+            if (us == 0L && name.startsWith("  ")) continue
+            appendLine("%-13s %8.1f s  %3d%%".format(java.util.Locale.ROOT, name, us / 1e6, (us * 100 / total).toInt()))
+        }
+    }
+
+    private fun StringBuilder.appendAi() {
+        val req = perfTotals["shot_req"] ?: 0L
+        if (req == 0L && (perfTotals["clf"] ?: 0L) == 0L && (perfTotals["shot_fail"] ?: 0L) == 0L) return
+        appendLine()
+        appendLine("== screenshots & ai ==")
+        appendLine(
+            "captures      requested $req (timer ${perfTotals["shot_timer"] ?: 0}), ok ${perfTotals["shot"] ?: 0}, " +
+                "failed ${perfTotals["shot_fail"] ?: 0}, busy ${perfTotals["shot_busy"] ?: 0}, left app ${perfTotals["shot_timer_left_app"] ?: 0}"
+        )
+        val codes = perfTotals.filterKeys { it.startsWith("shot_fail_c") }
+        if (codes.isNotEmpty()) {
+            appendLine(
+                "fail codes    " + codes.entries.joinToString { "${it.key.removePrefix("shot_fail_c")}=${it.value}" } +
+                    "  (2 = no permission, 6 = app blocks screenshots)"
+            )
+        }
+        val tops = perfTotals.filterKeys { it.startsWith("clf_top_") }
+        if (tops.isNotEmpty()) {
+            appendLine("top label     " + tops.entries.sortedByDescending { it.value }.joinToString { "${it.key.removePrefix("clf_top_")}=${it.value}" })
+        }
+        val buckets = (0..9).map { perfTotals["clf_risk_b$it"] ?: 0L }
+        if (buckets.any { it > 0 }) {
+            appendLine("risk spread   " + buckets.mapIndexedNotNull { i, n -> if (n == 0L) null else "${i * 10}-${i * 10 + 9}%:$n" }.joinToString("  "))
+        }
+    }
+
+    private fun StringBuilder.appendOnScreen() {
+        val text = perfTotals["text_cat_hits"] ?: 0L
+        val url = perfTotals["url_cat_hits"] ?: 0L
+        val captured = perfTotals["text_captured"] ?: 0L
+        if (text == 0L && url == 0L && captured == 0L) return
+        appendLine()
+        appendLine("== on-screen detection ==")
+        val nodes = perfTotals["text_nodes"] ?: 0L
+        val truncated = perfTotals["text_truncated"] ?: 0L
+        appendLine(
+            "text          $captured captures, $text naming a bundle site" +
+                (if (captured > 0 && nodes > 0) ", avg ${nodes / captured} nodes" else "") +
+                (if (truncated > 0) ", $truncated truncated" else "")
+        )
+        val cats = perfTotals.filterKeys { it.startsWith("text_cat_") && it != "text_cat_hits" }
+        if (cats.isNotEmpty()) appendLine("text cats     " + cats.entries.joinToString { "${it.key.removePrefix("text_cat_")}=${it.value}" })
+        appendLine("address bar   $url visits matching a bundle")
     }
 
     private fun StringBuilder.appendTop(label: String, items: List<Pair<String, Long>>) {

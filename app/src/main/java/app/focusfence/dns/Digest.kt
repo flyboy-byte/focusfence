@@ -54,7 +54,23 @@ class Digest(private val fromT: Long) {
                     blockedHosts.inc(host)
                 }
             }
-            LogEvents.TYPE_URL -> (f["host"] as? String)?.let { sites.inc(it) }
+            LogEvents.TYPE_URL -> (f["host"] as? String)?.let { host ->
+                sites.inc(host)
+                // Address-bar hosts matching a bundle count like DNS category hits.
+                val cats = (f["cat"] as? String)?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+                for (c in cats) categories.inc(c)
+                if (cats.isNotEmpty()) categoryHosts.inc("$host [${cats.joinToString(",")}] (browser)")
+            }
+            LogEvents.TYPE_TEXT -> {
+                // Sites named on screen that match a bundle: shown, not necessarily visited.
+                val hits = (f["hits"] as? String).orEmpty()
+                for (h in hits.split(';').filter { it.isNotBlank() }) {
+                    val host = h.substringBefore(':')
+                    val cats = h.substringAfter(':', "").split(',').filter { it.isNotBlank() }
+                    for (c in cats) categories.inc(c)
+                    categoryHosts.inc("$host [${cats.joinToString(",")}] (on screen)")
+                }
+            }
             LogEvents.TYPE_APP -> {
                 val pkg = f["pkg"] as? String ?: return
                 if (f["state"] == "fg") {

@@ -24,6 +24,16 @@ object TextCapture {
 
     fun capture(pkg: String, root: AccessibilityNodeInfo?) {
         if (root == null) return
+        // CPU attribution: tree walks are the costly part of text capture.
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        try {
+            captureInner(pkg, root)
+        } finally {
+            Monitor.perf.count("text_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        }
+    }
+
+    private fun captureInner(pkg: String, root: AccessibilityNodeInfo) {
         val sb = StringBuilder()
         var visited = 0
 
@@ -40,6 +50,8 @@ object TextCapture {
             for (i in 0 until node.childCount) walk(node.getChild(i))
         }
         walk(root)
+        Monitor.perf.count("text_nodes", visited.toLong())
+        if (visited >= MAX_NODES) Monitor.perf.count("text_truncated")
 
         if (sb.isEmpty()) {
             Monitor.perf.count("text_empty")
@@ -49,6 +61,20 @@ object TextCapture {
         // Dedup keyed by a short digest so near-identical screens collapse.
         if (!deduper.accept(pkg, "text", text.hashCode().toString())) return
         Monitor.perf.count("text_captured")
-        EventLog.activity(LogEvents.text(System.currentTimeMillis(), pkg, text))
+        // Second detection path: sites named on screen, checked against the bundles.
+        val hits = app.focusfence.dns.Signals.categorize(
+            app.focusfence.dns.Signals.hostsIn(text), app.focusfence.vpn.DnsVpnService.detectionLists,
+        )
+        if (hits.isNotEmpty()) {
+            Monitor.perf.count("text_cat_hits")
+            app.focusfence.dns.Signals.categoriesOf(hits).forEach { Monitor.perf.count("text_cat_$it") }
+        }
+        EventLog.activity(
+            LogEvents.text(
+                System.currentTimeMillis(), pkg, text,
+                hits = hits.takeIf { it.isNotEmpty() }?.let(app.focusfence.dns.Signals::encodeHits),
+                cat = hits.takeIf { it.isNotEmpty() }?.let { app.focusfence.dns.Signals.categoriesOf(it).joinToString(",") },
+            )
+        )
     }
 }

@@ -98,4 +98,19 @@ class DigestTest {
         val text = Digest.render(back) { it.toString() }
         assertTrue(text, text.contains("Protection: on the whole time"))
     }
+
+    @Test
+    fun browserAndOnScreenCategoryHitsCount() {
+        val d = Digest(0)
+        d.add(rec(1, 10, "type" to "url", "pkg" to "b", "host" to "bet.example", "path" to "/", "cat" to "gambling"))
+        d.add(rec(2, 11, "type" to "text", "pkg" to "c", "text" to "…", "hits" to "x.example:adult,scam;y.example:adult", "cat" to "adult,scam"))
+        val m = d.build(100)
+        val cats = Digest.parsePairs(m["cats"] as String).toMap()
+        assertEquals(1L, cats["gambling"])
+        assertEquals(2L, cats["adult"])
+        assertEquals(1L, cats["scam"])
+        val hosts = Digest.parsePairs(m["cat_hosts"] as String).map { it.first }
+        assertTrue(hosts.toString(), "bet.example [gambling] (browser)" in hosts)
+        assertTrue(hosts.toString(), "x.example [adult,scam] (on screen)" in hosts)
+    }
 }
