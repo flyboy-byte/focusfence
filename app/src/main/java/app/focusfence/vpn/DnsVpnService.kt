@@ -418,6 +418,12 @@ class DnsVpnService : VpnService() {
             Log.w(TAG, "IPv6 tunnel config rejected, continuing with IPv4 only", e)
             EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "ipv6_rejected", e.message))
         }
+        // VPNs default to METERED on Android 10+, and the system treats the
+        // device as on a metered link while any VPN is up. That makes
+        // downloaders, the Play Store and Data Saver throttle or defer
+        // transfers even though none of that traffic touches this tunnel.
+        // false = inherit meteredness from the real (underlying) network.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
         for (pkg in ExcludedAppsStore.get(this)) {
             try {
                 builder.addDisallowedApplication(pkg)

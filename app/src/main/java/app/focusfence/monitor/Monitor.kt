@@ -233,6 +233,13 @@ object Monitor {
         state["device_owner"] = app.focusfence.admin.DeviceAdmin.isDeviceOwner(context).toString()
         state["admin_active"] = app.focusfence.admin.DeviceAdmin.isAdminActive(context).toString()
         // Battery optimization on = Doze/OEM savers may delay or kill protection.
+        // A metered-looking VPN makes apps throttle downloads (2.6.0 report:
+        // 14 kbps with the tunnel up). Should read "false" from 2.6.1 on.
+        state["vpn_metered"] = context.getSystemService(android.net.ConnectivityManager::class.java)?.let { cm ->
+            cm.allNetworks.mapNotNull { cm.getNetworkCapabilities(it) }
+                .firstOrNull { it.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) }
+                ?.let { (!it.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)).toString() }
+        } ?: "no_vpn"
         state["battery_exempt"] = (context.getSystemService(android.os.PowerManager::class.java)
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false).toString()
         if (app.focusfence.admin.DeviceAdmin.isDeviceOwner(context)) {
