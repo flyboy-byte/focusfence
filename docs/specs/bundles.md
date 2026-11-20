@@ -23,8 +23,8 @@ variants to keep the matcher small; heavier full variants are opt-in.
 | `security` | **Block** | Multi tier, set by the strictness dial (default Pro mini) |
 | `threat` | **Block** | `tif.mini-onlydomains` (full: `tif.medium`) |
 | `bypass` | **Block** | `doh-vpn-proxy-bypass-onlydomains` |
-| `adult` | Off | `nsfw-onlydomains` |
-| `gambling` | Off | `gambling.mini-onlydomains` (full: `gambling`) |
+| `adult` | Report (since 2.6.0) | `nsfw-onlydomains` |
+| `gambling` | Report (since 2.6.0) | `gambling.mini-onlydomains` (full: `gambling`) |
 | `social` | Off | `social-onlydomains` |
 | `piracy` | Off | `anti.piracy-onlydomains` |
 | `scam` | Off | `fake-onlydomains` |

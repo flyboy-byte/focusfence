@@ -148,6 +148,22 @@ object ScreenCapture {
         requestScreenshot(service, pkg, trigger)
     }
 
+    // Last scored screen, for skipping unchanged ones. Capture is serialized
+    // (inFlight), so plain fields are safe here.
+    private var lastHash: Long? = null
+    private var lastHashPkg: String? = null
+    private var lastHashAt = 0L
+    private var lastLabel: String? = null
+    private var lastScore: Double? = null
+
+    private fun fingerprint(bitmap: Bitmap): Long {
+        val small = Bitmap.createScaledBitmap(bitmap, app.focusfence.dns.ImageHash.W, app.focusfence.dns.ImageHash.H, true)
+        val px = IntArray(app.focusfence.dns.ImageHash.W * app.focusfence.dns.ImageHash.H)
+        small.getPixels(px, 0, app.focusfence.dns.ImageHash.W, 0, 0, app.focusfence.dns.ImageHash.W, app.focusfence.dns.ImageHash.H)
+        if (small !== bitmap) small.recycle()
+        return app.focusfence.dns.ImageHash.dHash(IntArray(px.size) { app.focusfence.dns.ImageHash.luma(px[it]) })
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     private fun requestScreenshot(service: AccessibilityService, pkg: String, trigger: String) {
         try {
@@ -202,6 +218,20 @@ object ScreenCapture {
         }
         Monitor.perf.count("shot")
 
+        // Same screen as last time (same app, recent)? Skip the model and reuse
+        // its verdict: a 9x8 fingerprint is ~1000x cheaper than an inference.
+        val hash = runCatching { fingerprint(bitmap) }.getOrNull()
+        val now = System.currentTimeMillis()
+        if (hash != null && app.focusfence.dns.ImageHash.unchanged(lastHash, lastHashPkg, lastHashAt, hash, pkg, now)) {
+            Monitor.perf.count("shot_same")
+            EventLog.activity(
+                LogEvents.shot(now, pkg, lastScore, lastLabel, kept = false, shotId = null, model = classifier.modelName, trigger = trigger, same = true)
+            )
+            app.focusfence.data.CaptureStats.recordShot(context, now, pkg, lastLabel, lastScore, flagged = false)
+            bitmap.recycle()
+            return
+        }
+
         ensureClassifier(context)
         // Battery: the AI is the expensive part of capture, so its volume and time are logged.
         val clfStart = android.os.SystemClock.elapsedRealtime()
@@ -209,6 +239,13 @@ object ScreenCapture {
         val scores = classifier.classify(bitmap)
         val clfMs = android.os.SystemClock.elapsedRealtime() - clfStart
         val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
+        if (scores != null && hash != null) {
+            lastHash = hash
+            lastHashPkg = pkg
+            lastHashAt = now
+            lastLabel = verdict?.label
+            lastScore = verdict?.score
+        }
         if (scores != null) {
             Monitor.perf.count("clf")
             Monitor.perf.count("clf_ms", clfMs)

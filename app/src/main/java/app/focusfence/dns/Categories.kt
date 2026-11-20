@@ -88,12 +88,14 @@ object Categories {
         Bundle(
             "adult", "Adult / NSFW",
             "Adult content domains.",
-            Kind.CONTENT, Policy.OFF, url = "$RAW/nsfw-onlydomains.txt",
+            // REPORT by default: detected and reported, not blocked — the
+            // accountability default; blocking stays a choice.
+            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt",
         ),
         Bundle(
             "gambling", "Gambling",
             "Gambling and betting domains.",
-            Kind.CONTENT, Policy.OFF,
+            Kind.CONTENT, Policy.REPORT,
             url = "$RAW/gambling.mini-onlydomains.txt", fullUrl = "$RAW/gambling-onlydomains.txt",
         ),
         Bundle(

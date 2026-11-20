@@ -38,8 +38,8 @@ export.
 | `app` | `pkg`, `state` (`fg`/`bg`) | The foreground package changes (UsageStats; needs Usage access) |
 | `screen` | `state` (`on`/`off`) | Screen interactivity changes (UsageStats) |
 | `enforce` | `action` (`app_home`, `section_back`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule |
-| `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped), `hits`? (`host:cat,cat;…` — sites named on screen that match a bundle), `cat`? | Experimental text capture, watched apps only, while the capture indicator shows |
-| `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`) | Experimental screenshot capture: one classified screenshot |
+| `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped), `hits`? (`host:cat,cat;…` — sites named on screen that match a bundle), `terms`? (`cat:word,word;…` — risky words, `RiskTerms`), `cat`? | Experimental text capture, watched apps only, while the capture indicator shows |
+| `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`), `same`? (screen unchanged since the last scored capture; AI skipped, previous verdict reused) | Experimental screenshot capture: one classified screenshot |
 | `svc` | `comp`, `state`, `detail`? | Component lifecycle (table below) |
 | `integ` | `key`, `value`, `was` (null = first observation) | An observed protection state changed (table below). Always flushed immediately. |
 
@@ -96,7 +96,8 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `shot`, `shot_flagged`, `shot_fail`, `shot_decode_fail`, `shot_save_fail`, `shot_no_partner_key` | Screenshots captured / flagged / failures at each stage |
 | `shot_req`, `shot_timer`, `shot_busy`, `shot_timer_left_app`, `shot_fail_c<code>` | Capture requests (and how many came from the timer), skipped while one was in flight, timer stopped because another app was in front, failures by Android error code (2 no permission, 6 app blocks screenshots) |
 | `clf`, `clf_ms`, `clf_cpu_us`, `clf_load_ms`, `clf_load_fail`, `clf_top_<label>`, `clf_risk_b<0-9>` | AI: inferences, wall and CPU time, model load, winning label counts, risk-score deciles (threshold tuning) |
-| `text_captured`, `text_empty`, `text_nodes`, `text_truncated`, `text_cat_hits`, `text_cat_<cat>`, `url_cat_hits` | On-screen text and address-bar detection: captures, nodes walked, bundle-site hits |
+| `shot_same` | Captures where the screen hadn't changed (dHash within 5 bits, same app, ≤10 min) so the AI was skipped |
+| `text_captured`, `text_empty`, `text_nodes`, `text_truncated`, `text_cat_hits`, `text_cat_<cat>`, `text_term_hits`, `text_term_<cat>`, `url_cat_hits`, `fg_tick` | On-screen text and address-bar detection: captures, nodes walked, bundle-site hits |
 | `thr` record (diag): `top` (`name=ms;…;other=ms`), `total`, `screen` | Whole-process CPU by thread since the previous battery sample, from /proc — catches UI, GC, AI runtime threads |
 | `dns_cpu_us`, `fwd_cpu_us`, `a11y_cpu_us`, `text_cpu_us`, `shot_cpu_us`, `sync_cpu_us`, `sync`, `sync_fail` | Thread-CPU attribution per component (µs), so battery cost can be traced to a part of the app |
 | `text_captured`, `text_empty` | Text captures written / screens with no text |

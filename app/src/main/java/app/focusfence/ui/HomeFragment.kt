@@ -88,6 +88,9 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // Per-action friction lives on its own screen; the card links there
+        // (it used to be a duplicate "Friction" status row).
+        binding.frictionButton.setOnClickListener { startActivity(Intent(requireContext(), StrictModeActivity::class.java)) }
         binding.strictSwitch.setOnCheckedChangeListener { _, checked ->
             val context = requireContext()
             if (checked == StrictStore.isEnabled(context)) return@setOnCheckedChangeListener
@@ -219,7 +222,7 @@ class HomeFragment : Fragment() {
         val context = requireContext()
         b.statusContainer.removeAllViews()
 
-        fun row(labelRes: Int, on: Boolean, value: String, target: Class<*>) {
+        fun row(labelRes: Int, on: Boolean, value: String, target: Class<*>?, onClick: (() -> Unit)? = null) {
             val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
             r.statusDot.text = if (on) "\u25CF" else "\u25CB"
             // Shape carries the state (filled/hollow); colour reinforces it.
@@ -231,8 +234,16 @@ class HomeFragment : Fragment() {
             )
             r.statusLabel.setText(labelRes)
             r.statusValue.text = value
-            r.root.setOnClickListener { startActivity(Intent(context, target)) }
+            r.root.setOnClickListener { if (onClick != null) onClick() else if (target != null) startActivity(Intent(context, target)) }
         }
+
+        // Battery optimization: the most common reason protection silently stops.
+        val exempt = UiUtil.isBatteryExempt(context)
+        row(
+            R.string.home_row_battery, exempt,
+            getString(if (exempt) R.string.home_battery_ok else R.string.home_battery_fix),
+            null,
+        ) { if (!exempt) UiUtil.requestBatteryExemption(requireContext()) }
 
         val health = DnsVpnService.health
         row(
@@ -298,12 +309,6 @@ class HomeFragment : Fragment() {
             DiagnosticsActivity::class.java,
         )
 
-        val strict = StrictStore.isEnabled(context)
-        row(
-            R.string.home_row_strict, strict,
-            getString(if (strict) R.string.home_on else R.string.home_off),
-            StrictModeActivity::class.java,
-        )
 
         // Device admin is the default protection (EA's model); device owner is the advanced tier.
         val owner = DeviceAdmin.isDeviceOwner(context)

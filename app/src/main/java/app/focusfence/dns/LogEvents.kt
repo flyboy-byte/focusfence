@@ -105,10 +105,15 @@ object LogEvents {
      * [hits]: hostnames in the text that match a category bundle, "host:cat,cat;…";
      * [cat]: those categories, comma-joined. Both absent when nothing matched.
      */
-    fun text(t: Long, pkg: String, text: String, hits: String? = null, cat: String? = null): Map<String, Any?> =
+    fun text(
+        t: Long, pkg: String, text: String, hits: String? = null, cat: String? = null,
+        /** Risky words found ([RiskTerms.encode]): "adult:nsfw;gambling:casino". */
+        terms: String? = null,
+    ): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_TEXT, "pkg" to pkg, "text" to text).apply {
             if (hits != null) put("hits", hits)
             if (cat != null) put("cat", cat)
+            if (terms != null) put("terms", terms)
         }
 
     /**
@@ -125,6 +130,8 @@ object LogEvents {
         ms: Long? = null,
         /** "timer" or "event": what triggered the capture. */
         trigger: String? = null,
+        /** True when the screen matched the previous capture and the AI was skipped. */
+        same: Boolean? = null,
     ): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_SHOT, "pkg" to pkg, "score" to score, "label" to label, "kept" to kept).apply {
             if (shotId != null) put("id", shotId)
@@ -133,6 +140,7 @@ object LogEvents {
             if (flagged != null) put("flagged", flagged)
             if (ms != null) put("ms", ms)
             if (trigger != null) put("trigger", trigger)
+            if (same != null) put("same", same)
         }
 
     /** Screen became interactive ("on") or not ("off"), from UsageStats. */

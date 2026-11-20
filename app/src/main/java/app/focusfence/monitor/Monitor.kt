@@ -232,6 +232,9 @@ object Monitor {
         // off, weakens protection and must show in the trail.
         state["device_owner"] = app.focusfence.admin.DeviceAdmin.isDeviceOwner(context).toString()
         state["admin_active"] = app.focusfence.admin.DeviceAdmin.isAdminActive(context).toString()
+        // Battery optimization on = Doze/OEM savers may delay or kill protection.
+        state["battery_exempt"] = (context.getSystemService(android.os.PowerManager::class.java)
+            ?.isIgnoringBatteryOptimizations(context.packageName) ?: false).toString()
         if (app.focusfence.admin.DeviceAdmin.isDeviceOwner(context)) {
             state["network_logging"] = app.focusfence.admin.DeviceAdmin.isNetworkLoggingEnabled(context).toString()
             state["always_on_vpn_ours"] = app.focusfence.admin.DeviceAdmin.isAlwaysOnVpnOurs(context).toString()

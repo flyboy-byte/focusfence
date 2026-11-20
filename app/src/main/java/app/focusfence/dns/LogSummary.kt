@@ -192,7 +192,8 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         appendLine("== screenshots & ai ==")
         appendLine(
             "captures      requested $req (timer ${perfTotals["shot_timer"] ?: 0}), ok ${perfTotals["shot"] ?: 0}, " +
-                "failed ${perfTotals["shot_fail"] ?: 0}, busy ${perfTotals["shot_busy"] ?: 0}, left app ${perfTotals["shot_timer_left_app"] ?: 0}"
+                "failed ${perfTotals["shot_fail"] ?: 0}, busy ${perfTotals["shot_busy"] ?: 0}, left app ${perfTotals["shot_timer_left_app"] ?: 0}, " +
+                "unchanged (ai skipped) ${perfTotals["shot_same"] ?: 0}"
         )
         val codes = perfTotals.filterKeys { it.startsWith("shot_fail_c") }
         if (codes.isNotEmpty()) {
@@ -225,6 +226,8 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
                 (if (captured > 0 && nodes > 0) ", avg ${nodes / captured} nodes" else "") +
                 (if (truncated > 0) ", $truncated truncated" else "")
         )
+        val terms = perfTotals.filterKeys { it.startsWith("text_term_") && it != "text_term_hits" }
+        if (terms.isNotEmpty()) appendLine("risky words   " + terms.entries.joinToString { "${it.key.removePrefix("text_term_")}=${it.value}" })
         val cats = perfTotals.filterKeys { it.startsWith("text_cat_") && it != "text_cat_hits" }
         if (cats.isNotEmpty()) appendLine("text cats     " + cats.entries.joinToString { "${it.key.removePrefix("text_cat_")}=${it.value}" })
         appendLine("address bar   $url visits matching a bundle")

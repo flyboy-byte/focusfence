@@ -420,4 +420,18 @@
     <string name="monitor_section_capture">What to capture</string>
     <string name="monitor_section_schedule">How often, and what to keep</string>
     <string name="monitor_section_key">Partner encryption key</string>
+    <string name="restricted_settings_hint">Switch greyed out, or "Restricted setting"? Android 13+ blocks this for apps not from the Play Store until you allow it: tap App info below → ⋮ (top right) → Allow restricted settings, then come back and turn it on.</string>
+    <string name="open_app_info">App info</string>
+    <string name="home_row_battery">Battery restrictions</string>
+    <string name="home_battery_ok">Unrestricted — protection can\'t be paused</string>
+    <string name="home_battery_fix">Restricted — tap to fix</string>
+    <string name="battery_exempt_title">Keep protection running</string>
+    <string name="battery_exempt_body">Android\'s battery optimization can pause Focus Fence in the background, which can stop filtering and capture without warning. Allowing it to run unrestricted keeps it reliable. Focus Fence is built to use little battery: it only sees DNS lookups, and its cost is measured in Logs &amp; diagnostics.</string>
+    <string name="battery_exempt_go">Allow</string>
+    <string name="oem_tip_samsung">Samsung also: Settings → Battery → Background usage limits → Never sleeping apps → add Focus Fence AC.</string>
+    <string name="oem_tip_xiaomi">Xiaomi/Redmi/POCO also: App info → Battery saver → No restrictions, and turn on Autostart.</string>
+    <string name="oem_tip_oppo">OnePlus/OPPO/realme also: App info → Battery → Allow background activity (and Auto launch).</string>
+    <string name="oem_tip_huawei">Huawei/Honor also: Settings → Battery → App launch → Focus Fence AC → Manage manually, all on.</string>
+    <string name="oem_tip_vivo">vivo also: Settings → Battery → Background power consumption → allow Focus Fence AC.</string>
+    <string name="friction_settings_button">Friction settings ›</string>
 </resources>

@@ -69,11 +69,19 @@ object TextCapture {
             Monitor.perf.count("text_cat_hits")
             app.focusfence.dns.Signals.categoriesOf(hits).forEach { Monitor.perf.count("text_cat_$it") }
         }
+        // Third path: risky words, no network or model needed.
+        val terms = app.focusfence.dns.RiskTerms.find(text)
+        if (terms.isNotEmpty()) {
+            Monitor.perf.count("text_term_hits")
+            terms.keys.forEach { Monitor.perf.count("text_term_$it") }
+        }
         EventLog.activity(
             LogEvents.text(
                 System.currentTimeMillis(), pkg, text,
                 hits = hits.takeIf { it.isNotEmpty() }?.let(app.focusfence.dns.Signals::encodeHits),
-                cat = hits.takeIf { it.isNotEmpty() }?.let { app.focusfence.dns.Signals.categoriesOf(it).joinToString(",") },
+                cat = (app.focusfence.dns.Signals.categoriesOf(hits) + terms.keys).distinct().sorted()
+                    .takeIf { it.isNotEmpty() }?.joinToString(","),
+                terms = terms.takeIf { it.isNotEmpty() }?.let(app.focusfence.dns.RiskTerms::encode),
             )
         )
     }

@@ -148,16 +148,67 @@ object UiUtil {
     }
 
     fun promptEnableUrlFilter(context: Context, onDismiss: (() -> Unit)? = null) {
+        // Android 13+ greys out accessibility for sideloaded apps until "Allow
+        // restricted settings" is tapped in App info — the usual reason the
+        // switch "doesn't work". Say so up front and offer the shortcut.
+        val restricted = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+        val message = context.getString(R.string.section_enable_message) +
+            if (restricted) "\n\n" + context.getString(R.string.restricted_settings_hint) else ""
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(R.string.section_service_label)
-            .setMessage(R.string.section_enable_message)
+            .setMessage(message)
             .setPositiveButton(R.string.section_enable_button) { _, _ ->
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
             .setNegativeButton(android.R.string.cancel, null)
+            .apply {
+                if (restricted) {
+                    setNeutralButton(R.string.open_app_info) { _, _ ->
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + context.packageName))
+                        )
+                    }
+                }
+            }
             .create()
         if (onDismiss != null) dialog.setOnDismissListener { onDismiss() }
         dialog.show()
+    }
+
+    fun isBatteryExempt(context: Context): Boolean =
+        context.getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+
+    /**
+     * Asks Android to stop battery-optimizing Focus Fence (system confirmation
+     * dialog), with a maker-specific tip first: Samsung, Xiaomi and others add
+     * their own app killers on top of Android's, which the system dialog doesn't
+     * cover.
+     */
+    fun requestBatteryExemption(context: Context) {
+        val tip = oemBatteryTip()
+        val go = {
+            val ok = runCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:" + context.packageName))
+                )
+            }.isSuccess
+            if (!ok) runCatching { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.battery_exempt_title)
+            .setMessage(context.getString(R.string.battery_exempt_body) + (tip?.let { "\n\n" + context.getString(it) } ?: ""))
+            .setPositiveButton(R.string.battery_exempt_go) { _, _ -> go() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun oemBatteryTip(): Int? = when (android.os.Build.MANUFACTURER.lowercase(Locale.ROOT)) {
+        "samsung" -> R.string.oem_tip_samsung
+        "xiaomi", "redmi", "poco" -> R.string.oem_tip_xiaomi
+        "oneplus", "oppo", "realme" -> R.string.oem_tip_oppo
+        "huawei", "honor" -> R.string.oem_tip_huawei
+        "vivo" -> R.string.oem_tip_vivo
+        else -> null
     }
 
     /** Launchable apps as (packageName, label), excluding ourselves and Settings. */

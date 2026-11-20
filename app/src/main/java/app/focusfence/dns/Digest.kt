@@ -70,6 +70,12 @@ class Digest(private val fromT: Long) {
                     for (c in cats) categories.inc(c)
                     categoryHosts.inc("$host [${cats.joinToString(",")}] (on screen)")
                 }
+                // Risky words: counted per category, shown as the words themselves.
+                for (part in (f["terms"] as? String).orEmpty().split(';').filter { it.isNotBlank() }) {
+                    val cat = part.substringBefore(':')
+                    categories.inc(cat)
+                    categoryHosts.inc("\"${part.substringAfter(':')}\" [$cat] (words on screen)")
+                }
             }
             LogEvents.TYPE_APP -> {
                 val pkg = f["pkg"] as? String ?: return

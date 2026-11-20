@@ -83,16 +83,13 @@ class StatsFragment : Fragment() {
         binding.weekStats.removeAllViews()
         val days = (6L downTo 0L).map { today.minusDays(it) }
         val totals = days.associateWith { StatsCodec.total(StatsStore.get(context, it.toString())) }
-        val weekMax = (totals.values.maxOrNull() ?: 0).coerceAtLeast(1)
-        for (day in days) {
-            val label = if (day == today) {
-                getString(R.string.stats_today_label)
-            } else {
-                day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            }
-            val count = totals.getValue(day)
-            addRow(binding.weekStats, label, count.toString(), count, weekMax)
-        }
+        binding.weekChart.setData(
+            days.map { day ->
+                if (day == today) getString(R.string.stats_today_label)
+                else day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+            },
+            days.map { totals.getValue(it) },
+        )
     }
 
     private fun addRow(parent: ViewGroup, title: String, value: String, progress: Int, max: Int) {

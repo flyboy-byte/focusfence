@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Released `v2.4.0-accountable` (screenshots confirmed working). Released `v2.4.1-accountable`. Branch is at `2.5.0-accountable` (code 19): accessibility event diet (content events only for section rules; text/URLs on a foreground tick) + Monitoring regrouped into cards, neutral hint colour app-wide. |
+| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Released `v2.4.0-accountable` (screenshots confirmed working). Released `v2.4.1-accountable`. Branch is at `2.6.0-accountable` (code 20): event diet + foreground tick; unchanged screens skip the AI; risky-word text detection; adult/gambling default Report; battery-exemption + restricted-settings guidance with OEM tips; Stats week chart; Monitoring/Home UI tidy. |
 
 ## Verification levels
 
