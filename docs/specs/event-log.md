@@ -101,7 +101,7 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `thr` record (diag): `top` (`name=ms;…;other=ms`), `total`, `screen` | Whole-process CPU by thread since the previous battery sample, from /proc — catches UI, GC, AI runtime threads |
 | `dns_cpu_us`, `fwd_cpu_us`, `a11y_cpu_us`, `text_cpu_us`, `shot_cpu_us`, `sync_cpu_us`, `sync`, `sync_fail` | Thread-CPU attribution per component (µs), so battery cost can be traced to a part of the app |
 | `text_captured`, `text_empty` | Text captures written / screens with no text |
-| `url_read`, `url_miss` | Browser address bar read / not found |
+| `url_read`, `url_miss`, `url_editing` | Browser address bar read / not found / skipped because the user was typing in it |
 | `lat_n` | Latencies recorded (percentiles use at most 4096 per window) |
 | `log_dropped` | Log lines that failed to write |
 

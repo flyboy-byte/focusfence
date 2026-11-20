@@ -1,6 +1,6 @@
 # State of the project
 
-_Last updated: 2026-11-18. Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-20. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -23,8 +23,8 @@ server and trying it on two phones is the next step.
 | Based on | `claude/android-vpn-website-blocker-1otcbn` (repo default branch), 0 commits behind |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | 126 app JVM unit tests (23 classes) + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.2.0-accountable` (full release, stable key). Released `v2.3.0-accountable` (visual refresh, all-apps watching; Home confirmed on the phone). Released `v2.4.0-accountable` (screenshots confirmed working). Released `v2.4.1-accountable`. Branch is at `2.6.1-accountable` (code 21): VPN no longer reports itself as metered (`setMetered(false)`; user saw 14 kbps downloads with the tunnel up, untested whether this is the cause; `vpn_metered` integrity key logs it). 2.6.0: event diet + foreground tick; unchanged screens skip the AI; risky-word text detection; adult/gambling default Report; battery-exemption + restricted-settings guidance with OEM tips; Stats week chart; Monitoring/Home UI tidy. |
+| Tests | 168 app JVM unit tests + 9 server tests (Ktor test host); both CI jobs green |
+| Latest release | `v2.6.1-accountable` (full release, stable key; installed on the Pixel 9 over 2.4.1). Branch is at `2.6.2-accountable` (code 22): address bar not recorded while the user is typing in it; research notes in `docs/research/`. History: 2.2 partner loop in code · 2.3 visual refresh, all-apps watching · 2.4 screenshots working · 2.5 accessibility event diet · 2.6.0 AI skip on unchanged screens, risky words, adult/gambling Report, battery/restricted-settings guidance, Stats chart · 2.6.1 VPN not metered. |
 
 ## Verification levels
 
@@ -42,7 +42,7 @@ without evidence.
 | Feature | Status | Notes |
 |---|---|---|
 | DNS server choice: Automatic / Cloudflare / Cloudflare Families / Quad9 / Google / your own (UDP, hostname or DoH), optional fallback to Automatic | 🧪 | Settings → DNS server. Filtering happens before forwarding, so the choice never weakens blocking. Diag `fwd_chosen_failed` counts when your server didn't answer and the fallback did. |
-| DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | 2026-11-18 export: 2.0% forward failure (was 75.6% before the relay fix), median latency fine. v2.1.3+ runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
+| DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | **2026-11-20 (2.6.1): 0 failed of 1,544 forwards over 14 h; download speed normal with the VPN on (owner).** 2026-11-18 export: 2.0% forward failure (was 75.6% before the relay fix), median latency fine. v2.1.3+ runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
 | User allowlist | 🧪 | |
@@ -60,7 +60,13 @@ without evidence.
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
-| On-device AI flagging (optional, off by default) | 📱 | **Working on the Pixel 9** (2026-11-19 export): 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
+| On-device AI flagging (optional, off by default) | 📱 | **First real flag 2026-11-20 was a false positive:** a friend's shirtless selfie scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
+
+### Battery (Pixel 9, Focus Fence's own CPU; whole-phone %/h is too noisy to compare)
+| Version | Screen on | Screen off | Notes |
+|---|---|---|---|
+| 2.4.1 (36 h) | 87 s CPU/h; ~28,500 accessibility events/h | 2.7 s/h | Accessibility event firehose was ~60% of it |
+| 2.6.1 (14 h) | **38 s CPU/h; ~550 events/h** | 2.3 s/h | Biggest costs now: screenshots + AI ~7.6 s/h, DNS relay ~4.6 s/h, binder/GC from screen reads |
 
 ### Tamper resistance and friction
 | Feature | Status | Notes |
@@ -95,8 +101,9 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
    check-in; the partner app after 14 h without a message. Doze can delay background work for
    hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
-4. **The AI's accuracy is the model author's number** (~92% on their validation set), not ours. It will miss some things and flag some innocent ones; that's why it only flags, never blocks.
-5. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
+4. **The AI's accuracy is unmeasured.** The model author claims ~92% on their own data; our only real flag so far was a false positive (shirtless man → `porn` 0.82). It only flags, never blocks. Before a partner receives AI flags, add persistence/combined-signal rules (`docs/research/ai-detection.md`).
+5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switched Always-on off (2026-11-20 export). The integrity trail records it, but the app doesn't prompt to turn it back on yet.
+6. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
 
 ## Open decisions (owner / maintainer)
 
@@ -113,11 +120,14 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 
 ## Next steps, in order
 
-1. Deploy `server/` on the VPS behind HTTPS (`server/README.md`).
-2. Tag `v2.2.0-accountable`, install, set the server address, invite an email partner, and pair
-   a second phone. Send a diagnostics export after a day.
-3. Fix what first contact finds; tune the silence thresholds.
-4. Then: report exclusions, screenshot upload, UI polish.
+1. Deploy `server/` on the VPS behind HTTPS (`server/README.md`), set the server address in the
+   app, invite an email partner, pair a second phone, send an export after a day.
+2. AI: persistence + combined-signal rules and a "Not a problem" button before partners see
+   flags (`docs/research/ai-detection.md` A–C).
+3. Prompt to re-enable Always-on VPN when the integrity trail shows it went off.
+4. UI: Home hero state, Settings grouped into cards, Monitoring "Recent flags"
+   (`docs/research/ui-design.md`).
+5. Then: report exclusions, screenshot upload to partner.
 
 ## Incidents (what went wrong, so it isn't repeated)
 
@@ -131,3 +141,5 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 | v2.2–2.3.1 | Screenshots never taken, and no failure shown | Accessibility config lacked `canTakeScreenshot`; a thrown refusal wasn't counted; capture only ran on screen-change events, so a still page never triggered it | 2.3.2: capability added, every refusal logged (`err capture`), timer-driven capture while a watched app is in front |
 | v2.3–2.4.1 | ~170 s CPU per screen-on hour-and-a-half; no URLs recorded in Brave Nightly | All-apps capture subscribed to every app's content-changed events (93k/32 h: binder + main + GC); text capture every 1.5 s; Brave Nightly missing from the address-bar map | 2.4.2: content events only for section rules; text/URL on a foreground tick (30 s / 4 s); more browser IDs |
 | v2.1.0 | APK wouldn't install | Release was unsigned | CI signs; stable key via repo secrets |
+| v2.0–2.6.0 | Downloads at ~14 kbps with the VPN on, full speed off | Android 10+ treats a VPN as metered unless told otherwise; apps throttle on metered networks | 2.6.1: `setMetered(false)` (inherit from the real network); owner confirmed speed normal; `vpn_metered` integrity key |
+| ≤2.6.1 | Half-typed text logged as visited URLs (`h10.56.148.43`) | Address bar read while the user was editing it | 2.6.2: skip a focused address bar (`url_editing` counter) |

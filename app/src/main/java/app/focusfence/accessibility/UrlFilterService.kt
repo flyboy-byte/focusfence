@@ -297,6 +297,12 @@ class UrlFilterService : AccessibilityService() {
     private fun checkUrl(eventPackage: String) {
         val now = SystemClock.uptimeMillis()
         val url = findUrl(eventPackage)
+        if (url == null && urlBarEditing) {
+            // The user is typing in the address bar: the text is a half-typed
+            // query, not a page (2.6.1 export logged "h10.56.148.43").
+            Monitor.perf.count("url_editing")
+            return
+        }
         if (url == null) {
             // A browser with no readable address bar: either the page has no
             // toolbar showing (fullscreen, menus) or the browser changed its view
@@ -390,13 +396,17 @@ class UrlFilterService : AccessibilityService() {
         EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "interrupt"))
     }
 
+    /** Set by [findUrl] when the address bar has input focus (being edited). */
+    private var urlBarEditing = false
+
     private fun findUrl(packageName: String): String? {
+        urlBarEditing = false
         val root = rootInActiveWindow ?: return null
         URL_BAR_IDS[packageName]?.let { id ->
-            root.findAccessibilityNodeInfosByViewId(id)
-                ?.firstOrNull()?.text?.toString()
-                ?.takeIf { it.isNotBlank() }
-                ?.let { return it }
+            root.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()?.let { node ->
+                if (node.isFocused) { urlBarEditing = true; return null }
+                node.text?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
+            }
         }
         return findUrlHeuristically(root)
     }
@@ -413,6 +423,7 @@ class UrlFilterService : AccessibilityService() {
             if (id.contains("url_bar") || id.contains("url_field") ||
                 id.contains("location_bar") || id.contains("url_view")
             ) {
+                if (node.isFocused) { urlBarEditing = true; return null }
                 node.text?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
             }
             for (i in 0 until node.childCount) {
