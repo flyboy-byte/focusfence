@@ -28,8 +28,13 @@ unlock when that PIN was never set, so a forgotten PIN never locks the owner out
 ## Actions and defaults
 
 `GuardPolicy.Action` covers: turn off the VPN, switch strategy, disable logging, disable capture,
-remove a block rule, loosen a bundle, remove an allowlisted site, unblock an app, disable strict
-mode, remove device protection. **Every action defaults to Delay** — partner gating is off
+remove a block rule, loosen a bundle, remove an allowlisted site, unblock an app, exclude an app
+from the VPN, disable strict mode, remove device protection.
+
+*Exclude an app* is guarded by what the app can reach (`dns/ExclusionPolicy`): games, music and
+maps apps toggle instantly (many refuse to run behind a VPN and can't show adult content);
+browsers, social, video, photo and uncategorised apps are guarded. Removing an exclusion is never
+guarded. **Every action defaults to Delay** — partner gating is off
 everywhere until the owner turns it on (e.g. setting *Unblock an app* to Partner PIN). A
 `BundlesTest`-style invariant asserts no action ships defaulting to Partner.
 

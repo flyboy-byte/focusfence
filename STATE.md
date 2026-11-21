@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 168 app JVM unit tests + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | `v2.6.1-accountable` (full release, stable key; installed on the Pixel 9 over 2.4.1). Branch is at `2.6.2-accountable` (code 22): address bar not recorded while the user is typing in it; research notes in `docs/research/`. History: 2.2 partner loop in code · 2.3 visual refresh, all-apps watching · 2.4 screenshots working · 2.5 accessibility event diet · 2.6.0 AI skip on unchanged screens, risky words, adult/gambling Report, battery/restricted-settings guidance, Stats chart · 2.6.1 VPN not metered. |
+| Latest release | `v2.6.1-accountable` (full release, stable key; installed on the Pixel 9 over 2.4.1). Branch is at `2.6.3-accountable` (code 23): VPN exclusions are friction-free for games/music/maps and guarded (strict-mode delay) for browsers, social, video, photos and anything uncategorised; address bar not recorded while typing; research notes in `docs/research/`. History: 2.2 partner loop in code · 2.3 visual refresh, all-apps watching · 2.4 screenshots working · 2.5 accessibility event diet · 2.6.0 AI skip on unchanged screens, risky words, adult/gambling Report, battery/restricted-settings guidance, Stats chart · 2.6.1 VPN not metered. |
 
 ## Verification levels
 
@@ -43,6 +43,7 @@ without evidence.
 |---|---|---|
 | DNS server choice: Automatic / Cloudflare / Cloudflare Families / Quad9 / Google / your own (UDP, hostname or DoH), optional fallback to Automatic | 🧪 | Settings → DNS server. Filtering happens before forwarding, so the choice never weakens blocking. Diag `fwd_chosen_failed` counts when your server didn't answer and the fallback did. |
 | DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | **2026-11-20 (2.6.1): 0 failed of 1,544 forwards over 14 h; download speed normal with the VPN on (owner).** 2026-11-18 export: 2.0% forward failure (was 75.6% before the relay fix), median latency fine. v2.1.3+ runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
+| VPN exclusions by risk (`dns/ExclusionPolicy`): games/music/maps toggle instantly even in strict mode; everything that could show adult content needs the strict delay | 🧪 | Settings → VPN exclusions. Added because games with anti-cheat refuse to run behind a VPN. Risk comes from Android's app category, so an app that declares the wrong category is misfiled (unknown = guarded); a few open games (Roblox, Discord) are forced to guarded. Excluded apps bypass **all** filtering and capture-by-DNS, so this is a real hole for anything free. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
 | User allowlist | 🧪 | |

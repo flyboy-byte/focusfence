@@ -265,32 +265,57 @@ object UiUtil {
     }
 
     fun chooseExcludedApps(context: Context, onDone: () -> Unit) {
-        val launchables = launchableApps(context)
-        if (launchables.isEmpty()) return
+        val pm = context.packageManager
+        val browsers = app.focusfence.monitor.AppCatalog.browsers(context)
+        // (package, label, risk) — risk decides whether excluding needs friction.
+        val apps = pm.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
+        )
+            .map { it.activityInfo.applicationInfo }
+            .distinctBy { it.packageName }
+            .filter { it.packageName != context.packageName && it.packageName != "com.android.settings" }
+            .map { ai ->
+                val isBrowser = ai.packageName in browsers
+                val risk = app.focusfence.dns.ExclusionPolicy.classify(
+                    ai.packageName, ai.category, isBrowser,
+                    app.focusfence.dns.WatchScope.group(ai.packageName, ai.category, isBrowser),
+                )
+                Triple(ai.packageName, pm.getApplicationLabel(ai).toString(), risk)
+            }
+            // Instant-toggle apps first: that's what people open this list for.
+            .sortedWith(compareBy<Triple<String, String, app.focusfence.dns.ExclusionPolicy.Risk>> { it.third.ordinal }
+                .thenBy { it.second.lowercase(Locale.ROOT) })
+        if (apps.isEmpty()) return
         val current = ExcludedAppsStore.get(context)
-        val labels = launchables.map { it.second }.toTypedArray()
-        val checked = BooleanArray(launchables.size) { launchables[it].first in current }
-        val original = checked.copyOf()
-        val locked = StrictStore.isLocked(context)
+        val labels = apps.map {
+            if (it.third == app.focusfence.dns.ExclusionPolicy.Risk.GUARDED) {
+                context.getString(R.string.excluded_guarded_suffix, it.second)
+            } else it.second
+        }.toTypedArray()
+        val checked = BooleanArray(apps.size) { apps[it].first in current }
+        val riskOf = apps.associate { it.first to it.third }
 
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.excluded_dialog_title)
-            .setMultiChoiceItems(labels, checked) { dialog, index, isChecked ->
-                // Strict mode: excluding an app is a filter bypass (loosening).
-                if (locked && isChecked && !original[index]) {
-                    checked[index] = false
-                    (dialog as AlertDialog).listView.setItemChecked(index, false)
-                    Toast.makeText(context, R.string.strict_locked_toast, Toast.LENGTH_SHORT).show()
-                }
-            }
+            .setMultiChoiceItems(labels, checked, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val selected = launchables.indices
-                    .filter { checked[it] }
-                    .map { launchables[it].first }
-                    .toSet()
-                ExcludedAppsStore.set(context, selected)
+                val selected = apps.indices.filter { checked[it] }.map { apps[it].first }.toSet()
+                val guarded = app.focusfence.dns.ExclusionPolicy.needsGuard(current, selected) {
+                    riskOf[it] ?: app.focusfence.dns.ExclusionPolicy.Risk.GUARDED
+                }
+                // Removals and free apps apply now; only newly added guarded apps wait.
+                ExcludedAppsStore.set(context, selected - guarded)
                 restartVpnIfRunning(context)
-                onDone()
+                if (guarded.isEmpty()) {
+                    onDone()
+                } else {
+                    guard(context, app.focusfence.dns.GuardPolicy.Action.EXCLUDE_APP) {
+                        ExcludedAppsStore.set(context, selected)
+                        restartVpnIfRunning(context)
+                        onDone()
+                    }
+                    onDone()
+                }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

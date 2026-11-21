@@ -46,6 +46,7 @@
     <string name="app_blocked_toast">App blocked by Focus Fence</string>
     <string name="excluded_apps_button">VPN exclusions (%1$d)</string>
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
+    <string name="excluded_guarded_suffix">%1$s  ·  needs delay in strict mode</string>
 
     <string name="stats_title">Stats</string>
     <string name="stats_today_summary">%1$d blocked today (%2$d ads &amp; trackers)</string>

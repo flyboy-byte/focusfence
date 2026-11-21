@@ -27,6 +27,7 @@ object GuardPolicy {
         LOOSEN_BUNDLE("guard_loosen_bundle", "Loosen a filter bundle", Level.DELAY),
         REMOVE_ALLOWLIST("guard_remove_allow", "Remove an allowlisted site", Level.DELAY),
         UNBLOCK_APP("guard_unblock_app", "Unblock an app", Level.DELAY),
+        EXCLUDE_APP("guard_exclude_app", "Exclude a browser/social/video app from the filter", Level.DELAY),
         DISABLE_STRICT("guard_disable_strict", "Turn off strict mode", Level.DELAY),
         REMOVE_PROTECTION("guard_remove_protection", "Remove device protection", Level.DELAY),
         LOOSEN_MANAGED("guard_loosen_managed", "Loosen managed-mode protection", Level.DELAY),
