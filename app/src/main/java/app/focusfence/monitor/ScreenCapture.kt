@@ -275,6 +275,18 @@ object ScreenCapture {
                 }
             }
         }
+        // Owner-review copy: a lower, owner-chosen bar than the partner flag, local only.
+        if (verdict != null && app.focusfence.dns.ReviewPolicy.shouldKeep(
+                MonitorSettings.reviewEnabled(context), verdict.score, MonitorSettings.reviewPercent(context))
+        ) {
+            try {
+                app.focusfence.data.ReviewStore.save(context, bitmap, now, pkg ?: "?", verdict.label, verdict.score)
+                Monitor.perf.count("shot_review_kept")
+            } catch (e: Exception) {
+                Log.w(TAG, "save review shot", e)
+                Monitor.perf.count("shot_review_fail")
+            }
+        }
         bitmap.recycle()
 
         EventLog.activity(

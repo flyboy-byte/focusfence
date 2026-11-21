@@ -13,8 +13,8 @@ android {
         applicationId = "app.focusfence.accountable"
         minSdk = 26
         targetSdk = 34
-        versionCode = 23
-        versionName = "2.6.3-accountable"
+        versionCode = 24
+        versionName = "2.7.0-accountable"
     }
 
     // Release signing is driven by environment variables so the keystore and

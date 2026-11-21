@@ -22,6 +22,8 @@ object MonitorSettings {
     const val KEY_LEVEL = "mon_level"
     const val KEY_RETENTION = "mon_retention"
     const val KEY_THRESHOLD = "mon_threshold"
+    const val KEY_REVIEW_ON = "mon_review_on"
+    const val KEY_REVIEW_PCT = "mon_review_pct"
     const val KEY_WATCHED = "mon_watched_apps"
     const val KEY_WATCH_MODE = "mon_watch_mode"
     const val KEY_WATCH_EXCLUDED = "mon_watch_excluded"
@@ -56,6 +58,12 @@ object MonitorSettings {
 
     fun setRetention(c: Context, mode: Classification.RetentionMode) =
         prefs(c).edit().putString(KEY_RETENTION, mode.name).apply()
+
+    /** Owner-only local copies of risky screenshots; see [app.focusfence.dns.ReviewPolicy]. */
+    fun reviewEnabled(c: Context) = prefs(c).getBoolean(KEY_REVIEW_ON, true)
+    fun setReviewEnabled(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_REVIEW_ON, on).apply()
+    fun reviewPercent(c: Context) = prefs(c).getInt(KEY_REVIEW_PCT, app.focusfence.dns.ReviewPolicy.DEFAULT_PERCENT)
+    fun setReviewPercent(c: Context, pct: Int) = prefs(c).edit().putInt(KEY_REVIEW_PCT, pct).apply()
 
     fun threshold(c: Context): Double =
         prefs(c).getString(KEY_THRESHOLD, null)?.toDoubleOrNull() ?: Classification.DEFAULT_THRESHOLD

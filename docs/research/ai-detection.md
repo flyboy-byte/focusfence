@@ -39,7 +39,7 @@ What that tells us:
 |---|---|---|---|
 | A. Require persistence | Report only if 2+ captures from the same app within a few minutes are flagged | ~0 | A lone selfie scrolled past is dropped; sustained viewing still reports. Easiest win. |
 | B. Per-label thresholds | e.g. `porn` ≥ 0.90 alone, or `porn` ≥ 0.75 plus a second signal (risky words on screen, adult domain recently) | ~0 | Combines the signals we already log (`text terms`, `url cat`, DNS category). |
-| C. "Not a problem" feedback | The owner (or partner) marks a flag as wrong; the label + scores are kept locally | small | Builds the dataset needed to tune A/B honestly. No images need to leave the phone. |
+| C. "Not a problem" feedback (**built in 2.7.0**: Monitoring → Review screenshots) | The owner marks a flag as wrong or real; logged as `rev` records | small | Builds the dataset needed to tune A/B honestly. No images need to leave the phone. |
 | D. Second-stage detector on flagged images only | Run a body-part **detector** (e.g. NudeNet) only when stage 1 flags | Only on flags (rare), so battery stays flat | NudeNet's classes split `MALE_BREAST_EXPOSED` from `FEMALE_BREAST_EXPOSED` and have genital/buttocks classes, so it can tell "shirtless" from nudity. This cascade design (classifier + object detector) is what Samsung's on-device moderation paper (arXiv 2107.11845) uses. **Check NudeNet's licence and its ONNX→TFLite conversion before bundling** (couldn't confirm the licence from here). |
 | E. Swap the base model | A newer classifier (e.g. a CLIP-embedding head, as LAION/NVIDIA use) | larger model, slower | Probably not worth it on a phone until A–D have been tried. |
 

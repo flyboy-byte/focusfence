@@ -86,4 +86,14 @@ class LogSummaryTest {
         assertTrue(out, out.contains("== cpu by thread, screen on (all threads, 7.5 s) =="))
         assertTrue(out, out.contains("main                       6.0 s   80%"))
     }
+
+    @Test
+    fun summarisesOwnerReviewVerdicts() {
+        val s = LogSummary()
+        s.add(line(LogEvents.perf(1, 60_000, mapOf("shot_req" to 3L, "shot" to 3L))))
+        s.add(line(LogEvents.review(2, 1, "io.ente.photos.fdroid", "porn", 82, "wrong")))
+        s.add(line(LogEvents.review(3, 2, "com.brave.browser", "sexy", 61, "ok")))
+        val text = s.render()
+        assertTrue(text, text.contains("owner review  1 real, 1 not a problem"))
+    }
 }

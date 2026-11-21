@@ -435,4 +435,17 @@
     <string name="oem_tip_huawei">Huawei/Honor also: Settings → Battery → App launch → Focus Fence AC → Manage manually, all on.</string>
     <string name="oem_tip_vivo">vivo also: Settings → Battery → Background power consumption → allow Focus Fence AC.</string>
     <string name="friction_settings_button">Friction settings ›</string>
+    <string name="review_title">Review flagged screenshots</string>
+    <string name="review_button">Review screenshots (%1$d)</string>
+    <string name="review_switch">Keep a private copy of risky screenshots</string>
+    <string name="review_privacy">Only on this phone: not in backups, never uploaded, deleted after 7 days. Answering a card deletes it. This is separate from what a partner receives, and your answers don\'t change it.</string>
+    <string name="review_percent_button">Keep from %1$d%% risk ›</string>
+    <string name="review_percent_title">Keep screenshots the AI scores at least…</string>
+    <string name="review_empty">Nothing to review. Screenshots the AI scores above your percentage will appear here.</string>
+    <string name="review_meta">%1$s · %2$s %3$d%% · %4$s</string>
+    <string name="review_wrong">Not a problem</string>
+    <string name="review_real">Real hit</string>
+    <string name="review_image_desc">Screenshot the AI scored as risky</string>
+    <string name="review_clear">Delete all</string>
+    <string name="review_clear_confirm">Delete every saved review screenshot?</string>
 </resources>

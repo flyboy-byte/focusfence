@@ -9,6 +9,8 @@ package app.focusfence.dns
 class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
 
     val typeCounts = LinkedHashMap<String, Long>()
+    /** Owner verdicts on reviewed screenshots, keyed `verdict:label` (`wrong` = false alarm). */
+    private val reviews = LinkedHashMap<String, Long>()
     val dnsDecisions = LinkedHashMap<String, Long>()
     val blockReasons = LinkedHashMap<String, Long>()
     private val allowedHosts = HashMap<String, Long>()
@@ -47,6 +49,7 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
                     allowedHosts.inc(host)
                 }
             }
+            LogEvents.TYPE_REVIEW -> reviews.inc("${f["verdict"]}:${f["label"]}")
             LogEvents.TYPE_URL -> urlHosts.inc(f["host"] as? String ?: "?")
             LogEvents.TYPE_APP -> if (f["state"] == "fg") appForeground.inc(f["pkg"] as? String ?: "?")
             LogEvents.TYPE_INTEGRITY ->
@@ -201,6 +204,11 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
                 "fail codes    " + codes.entries.joinToString { "${it.key.removePrefix("shot_fail_c")}=${it.value}" } +
                     "  (2 = no permission, 6 = app blocks screenshots)"
             )
+        }
+        if (reviews.isNotEmpty()) {
+            val wrong = reviews.filterKeys { it.startsWith("wrong:") }.values.sum()
+            val ok = reviews.filterKeys { it.startsWith("ok:") }.values.sum()
+            appendLine("owner review  $ok real, $wrong not a problem  (" + reviews.entries.joinToString { "${it.key}=${it.value}" } + ")")
         }
         val tops = perfTotals.filterKeys { it.startsWith("clf_top_") }
         if (tops.isNotEmpty()) {

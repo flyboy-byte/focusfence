@@ -61,6 +61,9 @@ class MonitoringActivity : AppCompatActivity() {
                 MonitorSettings.setText(this, true)
             }
         }
+        binding.reviewButton.setOnClickListener {
+            startActivity(android.content.Intent(this, ReviewActivity::class.java))
+        }
         binding.watchedAppsButton.setOnClickListener {
             UiUtil.chooseWatchScope(this) { bind() }
         }
@@ -143,6 +146,7 @@ class MonitoringActivity : AppCompatActivity() {
     }
 
     private fun bind() {
+        binding.reviewButton.text = getString(R.string.review_button, app.focusfence.data.ReviewStore.count(this))
         binding.screenshotsSwitch.isChecked = MonitorSettings.screenshotsEnabled(this) && ScreenCapture.available
         binding.textSwitch.isChecked = MonitorSettings.textEnabled(this)
         binding.aiSwitch.isEnabled = ScreenCapture.available

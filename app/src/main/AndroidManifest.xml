@@ -54,6 +54,12 @@
         </activity>
 
         <activity
+            android:name=".ReviewActivity"
+            android:exported="false"
+            android:label="@string/review_title"
+            android:parentActivityName=".MonitoringActivity" />
+
+        <activity
             android:name=".HelpActivity"
             android:exported="false"
             android:label="@string/help_title"

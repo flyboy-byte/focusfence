@@ -39,6 +39,7 @@ export.
 | `screen` | `state` (`on`/`off`) | Screen interactivity changes (UsageStats) |
 | `enforce` | `action` (`app_home`, `section_back`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule |
 | `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped), `hits`? (`host:cat,cat;…` — sites named on screen that match a bundle), `terms`? (`cat:word,word;…` — risky words, `RiskTerms`), `cat`? | Experimental text capture, watched apps only, while the capture indicator shows |
+| `rev` | `shot_t`, `pkg`, `label`, `pct`, `verdict` (`ok` real hit / `wrong` not a problem) | The owner's answer on a review screenshot (Monitoring → Review); feeds threshold tuning, never changes partner reports |
 | `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`), `same`? (screen unchanged since the last scored capture; AI skipped, previous verdict reused) | Experimental screenshot capture: one classified screenshot |
 | `svc` | `comp`, `state`, `detail`? | Component lifecycle (table below) |
 | `integ` | `key`, `value`, `was` (null = first observation) | An observed protection state changed (table below). Always flushed immediately. |

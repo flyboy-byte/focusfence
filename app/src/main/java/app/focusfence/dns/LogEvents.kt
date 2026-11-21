@@ -32,6 +32,8 @@ object LogEvents {
     const val TYPE_TEXT = "text"
     /** Experimental: a classified screenshot (score; image only if retained). */
     const val TYPE_SHOT = "shot"
+    /** The owner reviewed a risky screenshot: "wrong" (not a problem) or "ok" (a real hit). */
+    const val TYPE_REVIEW = "rev"
     const val TYPE_ENFORCE = "enforce"
     const val TYPE_SERVICE = "svc"
     const val TYPE_INTEGRITY = "integ"
@@ -142,6 +144,10 @@ object LogEvents {
             if (trigger != null) put("trigger", trigger)
             if (same != null) put("same", same)
         }
+
+    /** The owner's verdict on a reviewed screenshot; [shotT] is that capture's `t`. Feeds threshold tuning. */
+    fun review(t: Long, shotT: Long, pkg: String, label: String, percent: Int, verdict: String): Map<String, Any?> =
+        linkedMapOf("t" to t, "type" to TYPE_REVIEW, "shot_t" to shotT, "pkg" to pkg, "label" to label, "pct" to percent, "verdict" to verdict)
 
     /** Screen became interactive ("on") or not ("off"), from UsageStats. */
     fun screen(t: Long, state: String): Map<String, Any?> =
