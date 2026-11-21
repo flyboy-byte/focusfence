@@ -14,13 +14,13 @@ object ReviewStore {
 
     private fun dir(c: Context) = File(c.noBackupFilesDir, "review").apply { mkdirs() }
 
-    fun save(c: Context, bitmap: Bitmap, now: Long, pkg: String, label: String, score: Double) {
+    fun save(c: Context, bitmap: Bitmap, now: Long, pkg: String, label: String, score: Double, scores: String = "") {
         val longEdge = maxOf(bitmap.width, bitmap.height)
         val scale = if (longEdge > 720) 720f / longEdge else 1f
         val scaled = if (scale < 1f) {
             Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt(), (bitmap.height * scale).toInt(), true)
         } else bitmap
-        val name = ReviewPolicy.fileName(ReviewPolicy.Entry(now, pkg, label, (score * 100).toInt()))
+        val name = ReviewPolicy.fileName(ReviewPolicy.Entry(now, pkg, label, (score * 100).toInt(), scores))
         try {
             File(dir(c), name).outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 80, it) }
         } finally {

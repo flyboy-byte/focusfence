@@ -280,7 +280,7 @@ object ScreenCapture {
                 MonitorSettings.reviewEnabled(context), verdict.score, MonitorSettings.reviewPercent(context))
         ) {
             try {
-                app.focusfence.data.ReviewStore.save(context, bitmap, now, pkg ?: "?", verdict.label, verdict.score)
+                app.focusfence.data.ReviewStore.save(context, bitmap, now, pkg, verdict.label, verdict.score, app.focusfence.dns.Signals.scoresCompact(scores!!))
                 Monitor.perf.count("shot_review_kept")
             } catch (e: Exception) {
                 Log.w(TAG, "save review shot", e)

@@ -17,7 +17,7 @@ package app.focusfence.dns
 object ReviewPolicy {
 
     const val DEFAULT_PERCENT = 50
-    val PERCENT_CHOICES = listOf(30, 40, 50, 60, 70, 80)
+    val PERCENT_CHOICES = listOf(10, 20, 30, 40, 50, 60, 70, 80)
 
     const val MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000
     const val MAX_COUNT = 40
@@ -25,21 +25,30 @@ object ReviewPolicy {
     fun shouldKeep(enabled: Boolean, score: Double?, percent: Int): Boolean =
         enabled && score != null && score * 100 >= percent
 
-    data class Entry(val t: Long, val pkg: String, val label: String, val percent: Int)
+    /** [scores] is the compact all-label string (`neutral=0.944,porn=0.007,…`), empty on older files. */
+    data class Entry(val t: Long, val pkg: String, val label: String, val percent: Int, val scores: String = "")
 
     private const val SEP = "~"
 
     /** Filename carries the metadata, so listing needs no index file to keep in sync. */
-    fun fileName(e: Entry): String = listOf(e.t, e.pkg, e.label, e.percent).joinToString(SEP) + ".jpg"
+    fun fileName(e: Entry): String =
+        (listOf(e.t, e.pkg, e.label, e.percent) + listOfNotNull(e.scores.ifEmpty { null })).joinToString(SEP) + ".jpg"
 
     fun parse(name: String): Entry? {
         if (!name.endsWith(".jpg")) return null
         val p = name.removeSuffix(".jpg").split(SEP)
-        if (p.size != 4) return null
+        if (p.size != 4 && p.size != 5) return null
         val t = p[0].toLongOrNull() ?: return null
         val pct = p[3].toIntOrNull() ?: return null
-        return Entry(t, p[1], p[2], pct)
+        return Entry(t, p[1], p[2], pct, p.getOrElse(4) { "" })
     }
+
+    /** `neutral 94% · hentai 3% · …`, highest first. */
+    fun breakdown(scores: String): String = scores.split(',').mapNotNull { kv ->
+        val p = kv.split('=')
+        val v = p.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
+        p[0] to v
+    }.sortedByDescending { it.second }.joinToString(" · ") { "${it.first} ${Math.round(it.second * 100)}%" }
 
     /** Names to delete: anything past [maxAgeMs], then the oldest beyond [maxCount]. Unparseable names are removed too. */
     fun toPrune(names: List<String>, now: Long, maxAgeMs: Long = MAX_AGE_MS, maxCount: Int = MAX_COUNT): List<String> {

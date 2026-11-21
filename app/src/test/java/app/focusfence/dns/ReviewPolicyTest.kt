@@ -35,4 +35,11 @@ class ReviewPolicyTest {
         val out = ReviewPolicy.toPrune(listOf(old, a, b, c, "junk.tmp"), now, maxAgeMs = 5000, maxCount = 2)
         assertEquals(setOf(old, c, "junk.tmp"), out.toSet())
     }
+
+    @Test fun scoresRoundTripAndBreakdownSortsHighestFirst() {
+        val e = Entry(5, "p", "porn", 82, "neutral=0.075,porn=0.824,drawings=0.054")
+        assertEquals(e, ReviewPolicy.parse(ReviewPolicy.fileName(e)))
+        assertEquals("porn 82% · neutral 8% · drawings 5%", ReviewPolicy.breakdown(e.scores))
+        assertEquals("", ReviewPolicy.breakdown(""))
+    }
 }

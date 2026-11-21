@@ -93,6 +93,10 @@ class ReviewActivity : AppCompatActivity() {
             UiUtil.appLabel(this, e.pkg), e.label, e.percent,
             DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(e.t)),
         )
+        v.findViewById<TextView>(R.id.reviewScores).apply {
+            text = ReviewPolicy.breakdown(e.scores)
+            visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
+        }
         v.findViewById<Button>(R.id.reviewWrong).setOnClickListener { answer(e, file, "wrong") }
         v.findViewById<Button>(R.id.reviewReal).setOnClickListener { answer(e, file, "ok") }
         return v
