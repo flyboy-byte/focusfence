@@ -106,6 +106,10 @@
              device-owner policies (Private DNS, network logging, suspension) and
              to log every admin lifecycle event. -->
         <receiver
+            android:name=".UnlockReadyReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".admin.FocusFenceAdminReceiver"
             android:exported="true"
             android:permission="android.permission.BIND_DEVICE_ADMIN">

@@ -30,7 +30,7 @@ whether its foundations help or get in the way of the parts that have to be buil
 | Narrow DNS-only `VpnService` (routes only two /32 & /128 addresses) | Cheapest possible device-wide observation *and* filtering point. Every query is now a detection event (this branch). Ever Accountable's own Android filtering is DNS-based too, but not customisable; Focus Fence's per-domain rules, schedules and budgets already go further. |
 | Pure-JVM `dns/` layer (now ~13 files, 59 unit tests) | Detection logic, classification, report summarisation and integrity rules can all be built and tested without a device, which matters a lot for something that has to be trustworthy. |
 | Scoped accessibility service | The same service Ever Accountable relies on for "content inside apps". The narrow event-filter pattern is exactly what is needed to keep a wider monitoring scope affordable. |
-| Strict mode (`StrictLock`: request → 10 min wait → 5 min window) | Equivalent to Ever Accountable's StrongHold "timer" option. Adding partner-held PIN and own-PIN modes extends the same state machine. |
+| Strict mode (`StrictLock`: request → 10 min wait → 15 min window) | Equivalent to Ever Accountable's StrongHold "timer" option. Adding partner-held PIN and own-PIN modes extends the same state machine. |
 | App blocking, section rules, time budgets | Beyond what Ever Accountable offers on Android. Kept as optional enforcement. |
 | Small codebase (~2.9k lines of Kotlin before this branch) | Cheap to reshape. Nothing here is load-bearing in a way that would fight new subsystems. |
 

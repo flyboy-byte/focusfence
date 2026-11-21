@@ -184,7 +184,7 @@ release.
 ## Strict mode
 
 `StrictLock` is a pure state machine — Off / Locked / Pending / Unlocked. Loosening anything
-requires requesting an unlock, waiting 10 minutes, then acting inside a 5-minute window.
+requires requesting an unlock, waiting 10 minutes, then acting inside a 15-minute window (a notification announces when it opens).
 Adding new blocks is always allowed.
 
 Enforcement is **distributed across call sites**, not centralised: `DnsVpnService` refuses

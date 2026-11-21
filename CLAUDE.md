@@ -93,7 +93,7 @@ day's count.
 ### Strict mode
 
 `StrictLock` is a pure state machine (Off / Locked / Pending / Unlocked): loosening anything
-requires requesting an unlock, waiting 10 min, then acting within a 5 min window. Adding blocks is
+requires requesting an unlock, waiting 10 min, then acting within a 15 min window (notification when it opens). Adding blocks is
 always allowed. Enforcement is spread across call sites — `DnsVpnService.onStartCommand` refuses
 `ACTION_STOP` while locked, and UI paths check `StrictStore.isLocked` and route through
 `UiUtil.showStrictLockedDialog`. New destructive UI actions must add their own check.

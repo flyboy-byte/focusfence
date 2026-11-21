@@ -6,12 +6,17 @@ package app.focusfence.dns
  * While strict mode is on, loosening anything — turning blocking off, removing
  * rules, un-blocking apps, or disabling strict mode itself — requires
  * requesting an unlock, waiting [UNLOCK_DELAY_MS], and then making the change
- * inside a [UNLOCK_WINDOW_MS] window before the app locks again.
+ * inside a [UNLOCK_WINDOW_MS] window (a notification announces when it opens) before the app locks again.
  */
 object StrictLock {
 
     const val UNLOCK_DELAY_MS: Long = 10 * 60_000
-    const val UNLOCK_WINDOW_MS: Long = 5 * 60_000
+    /**
+     * How long changes are allowed once the wait is over. 5 minutes proved too
+     * short in practice (the wait ends silently, and a multi-step change eats the
+     * window); the friction is the 10-minute wait, not a short deadline.
+     */
+    const val UNLOCK_WINDOW_MS: Long = 15 * 60_000
 
     sealed class State {
         /** Strict mode disabled: everything editable. */

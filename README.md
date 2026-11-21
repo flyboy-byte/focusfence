@@ -55,7 +55,7 @@ latency and failures (see [`docs/specs/event-log.md`](docs/specs/event-log.md)).
   whole device, in every app.
 - One-tap preset that adds the major social media sites.
 - **Strict mode**: while on, turning blocking off, removing rules, or un-blocking apps requires
-  requesting an unlock, waiting 10 minutes, then making changes inside a 5-minute window.
+  requesting an unlock, waiting 10 minutes, then making changes inside a 15-minute window (you get a notification when it opens).
   Adding new blocks is always allowed.
 - **App blocking**: chosen apps are bounced to the home screen the moment they open (same
   accessibility service as section rules) — covers native apps DNS can't touch.

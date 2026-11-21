@@ -37,8 +37,8 @@
     <string name="strict_pending">Unlocks in %1$s — go do something else</string>
     <string name="strict_unlocked">Unlocked for %1$s — make your changes now</string>
     <string name="strict_request_unlock">Request unlock</string>
-    <string name="strict_dialog_locked">Strict mode is on. To turn blocking off, remove rules, or un-block apps, request an unlock and wait 10 minutes; you\'ll then have a 5-minute window to make changes.</string>
-    <string name="strict_dialog_pending">Unlock already requested — %1$s to go. When it opens you\'ll have 5 minutes to make changes.</string>
+    <string name="strict_dialog_locked">Strict mode is on. To turn blocking off, remove rules, or un-block apps, request an unlock and wait 10 minutes; you\'ll get a notification when it opens and then a 15-minute window to make changes.</string>
+    <string name="strict_dialog_pending">Unlock already requested — %1$s to go. When it opens you\'ll get a notification and have 15 minutes to make changes.</string>
     <string name="strict_locked_toast">Strict mode: un-blocking needs an unlock first</string>
 
     <string name="apps_dialog_title">Block these apps</string>
@@ -133,7 +133,7 @@
     <string name="help_limits_body"><![CDATA[Honesty section — the limits of DNS-based blocking:<br><br>• Pages your phone looked up recently may still load for a few minutes after you block them (DNS caching).<br><br>• <b>Time limits are estimates</b> based on lookup activity — accurate to within a minute or two, and only screen-on time counts.<br><br>• Time limits count and enforce only a site\'s main web addresses (facebook.com, www., m. …) — hidden app/SDK traffic like graph.facebook.com neither drains a budget nor breaks when it runs out. Changing a limit resets that day\'s count.<br><br>• Apps in <b>VPN exclusions</b> bypass the filter entirely — use it for your own apps that talk to a limited site\'s servers.<br><br>• Turn <b>off Private DNS</b> in Android\'s network settings, or it will carry lookups around the filter. (The common browser tricks are already guarded against.)<br><br>• Android allows only <b>one VPN at a time</b>, so Focus Fence can\'t run alongside a regular VPN.<br><br>• Video ads on YouTube or Twitch can\'t be removed — they come from the same domains as the videos themselves.<br><br>• And you can always just switch it off. It\'s a fence, not a prison — Always-on VPN adds friction if you want more commitment.]]></string>
 
     <string name="help_power_title">Strict mode, app blocking &amp; stats</string>
-    <string name="help_power_body"><![CDATA[<b>Strict mode</b> keeps future-you honest. While it\'s on, turning blocking off, removing rules, or un-blocking apps requires requesting an unlock, waiting <b>10 minutes</b>, and making your change inside a 5-minute window. Adding new blocks is always allowed. (Pair it with Always-on VPN for the strongest fence.)<br><br><b>App blocking</b> closes whole apps the moment they open — use it for the Facebook or TikTok <i>apps</i>, which DNS and section rules can\'t reach. Choose apps from the "App &amp; section blocking" card; it uses the same accessibility permission as section rules.<br><br><b>Stats</b> (the chart icon up top) shows what was blocked today, your time-budget usage, and a 7-day trend. Counts only ever live on your phone, and only the last 14 days are kept.]]></string>
+    <string name="help_power_body"><![CDATA[<b>Strict mode</b> keeps future-you honest. While it\'s on, turning blocking off, removing rules, or un-blocking apps requires requesting an unlock, waiting <b>10 minutes</b>, and making your change inside a 15-minute window (you get a notification when it opens). Adding new blocks is always allowed. (Pair it with Always-on VPN for the strongest fence.)<br><br><b>App blocking</b> closes whole apps the moment they open — use it for the Facebook or TikTok <i>apps</i>, which DNS and section rules can\'t reach. Choose apps from the "App &amp; section blocking" card; it uses the same accessibility permission as section rules.<br><br><b>Stats</b> (the chart icon up top) shows what was blocked today, your time-budget usage, and a 7-day trend. Counts only ever live on your phone, and only the last 14 days are kept.]]></string>
 
     <string name="help_start_title">A good starter setup</string>
     <string name="help_start_body"><![CDATA[1. On the <b>Blocklist</b> tab, tap <b>+</b> and add your own domains — or use <b>Add all social media presets</b> there.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections; block whole apps from the same tab.<br><br>3. On <b>Settings</b>, optionally switch on <b>Block ads &amp; trackers</b> — it downloads a 100k+ domain filter list once and blocks ads device-wide.<br><br>4. On <b>Home</b>, flip the switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top.]]></string>
@@ -248,7 +248,7 @@
     <string name="strict_pin_partner_prompt">Enter the partner PIN to unlock.</string>
     <string name="strict_pin_unlock">Unlock</string>
     <string name="strict_pin_use_timer">Use timed unlock</string>
-    <string name="strict_pin_ok">Unlocked. You have 5 minutes.</string>
+    <string name="strict_pin_ok">Unlocked. You have 15 minutes.</string>
     <string name="strict_pin_wrong">Wrong PIN.</string>
 
     <!-- Per-action friction (guard levels) -->
@@ -448,4 +448,7 @@
     <string name="review_image_desc">Screenshot the AI scored as risky</string>
     <string name="review_clear">Delete all</string>
     <string name="review_clear_confirm">Delete every saved review screenshot?</string>
+    <string name="unlock_channel">Strict-mode unlock</string>
+    <string name="unlock_ready_title">Unlock is open</string>
+    <string name="unlock_ready_text">Make your change now: %1$d min left.</string>
 </resources>

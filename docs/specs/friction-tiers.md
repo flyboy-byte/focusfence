@@ -12,7 +12,7 @@ commit to can require a partner. Partner gating is opt-in per action, never a de
 | Level | What it takes |
 |-------|---------------|
 | None | proceed immediately |
-| Delay | the timed strict-unlock window (request, wait 10 min, act within 5 min) |
+| Delay | the timed strict-unlock window (request, wait 10 min, get a notification, act within 15 min) |
 | Your PIN | the owner PIN, entered at the moment of the action |
 | Partner PIN | a PIN the partner holds, entered at the moment of the action |
 
