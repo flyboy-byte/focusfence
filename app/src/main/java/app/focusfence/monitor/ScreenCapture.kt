@@ -203,6 +203,7 @@ object ScreenCapture {
     }
 
     /** Runs on the capture worker. */
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun process(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
         // CPU attribution: this whole pipeline (copy, scale, AI, encrypt) runs on
         // the capture worker thread, so thread CPU time is exactly its cost.
@@ -214,6 +215,7 @@ object ScreenCapture {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun processInner(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
         val bitmap = hardwareToSoftware(result) ?: run {
             Monitor.perf.count("shot_decode_fail")

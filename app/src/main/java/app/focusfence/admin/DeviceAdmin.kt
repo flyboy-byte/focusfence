@@ -43,6 +43,7 @@ object DeviceAdmin {
 
     /** Points global Private DNS at [host] (DoT). Device-owner only. */
     fun setPrivateDns(context: Context, host: String): Boolean = guarded(context) { dpm, admin ->
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return@guarded false // API 29+; lint caught the unguarded call
         val code = dpm.setGlobalPrivateDnsModeSpecifiedHost(admin, host)
         val ok = code == DevicePolicyManager.PRIVATE_DNS_SET_NO_ERROR
         audit(context, "private_dns_set", if (ok) host else "error:$code")
@@ -51,6 +52,7 @@ object DeviceAdmin {
 
     /** Returns Private DNS to automatic (opportunistic), undoing our host. */
     fun clearPrivateDns(context: Context): Boolean = guarded(context) { dpm, admin ->
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return@guarded false
         val code = dpm.setGlobalPrivateDnsModeOpportunistic(admin)
         val ok = code == DevicePolicyManager.PRIVATE_DNS_SET_NO_ERROR
         audit(context, "private_dns_clear", if (ok) "opportunistic" else "error:$code")
@@ -121,7 +123,7 @@ object DeviceAdmin {
     /** Relinquishes device ownership (clears our policies first). Always possible — no brick. */
     fun relinquish(context: Context): Boolean = guarded(context) { dpm, admin ->
         runCatching { dpm.setNetworkLoggingEnabled(admin, false) }
-        runCatching { dpm.setGlobalPrivateDnsModeOpportunistic(admin) }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) runCatching { dpm.setGlobalPrivateDnsModeOpportunistic(admin) }
         runCatching { dpm.setAlwaysOnVpnPackage(admin, null, false) }
         for (r in settingsRestrictions) runCatching { dpm.clearUserRestriction(admin, r) }
         audit(context, "relinquish", "device_owner")

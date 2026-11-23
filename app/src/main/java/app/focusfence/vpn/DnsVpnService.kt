@@ -106,7 +106,13 @@ class DnsVpnService : VpnService() {
         /** Start the next resolver beside a slow one after this long (Automatic mode only). */
         private const val HEDGE_MS = 600L
         /** Threads for hedged attempts only; separate from the 12 query workers so a burst cannot starve them. */
-        private val hedgePool: java.util.concurrent.Executor = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "focusfence-hedge").apply { isDaemon = true } }
+        private val hedgePool: java.util.concurrent.Executor = java.util.concurrent.ThreadPoolExecutor(
+            0, 48, 10, java.util.concurrent.TimeUnit.SECONDS, java.util.concurrent.SynchronousQueue(),
+            { r -> Thread(r, "focusfence-hedge").apply { isDaemon = true } },
+            // Full (a dead network and a burst of lookups): run the attempt on the calling worker, i.e. fall back to the
+            // old one-at-a-time behaviour rather than grow without bound or drop the query.
+            java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy(),
+        )
         /** The network's own resolver is close; give up on it fast and fail over. */
         private const val UDP_TIMEOUT_MS = 1500
         /** How long a looked-up underlying network + its DNS servers is trusted. */

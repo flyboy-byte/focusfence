@@ -264,6 +264,9 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             val p = call.receiveParameters()
             val email = p["email"].orEmpty().trim().lowercase().take(120)
             if (!ipLogin.allow(ip)) return@post html(call, "Admin", loginForm("Too many attempts. Try later."), HttpStatusCode.TooManyRequests)
+            val nowMs = cfg.now()
+            pendings.entries.removeIf { nowMs > it.value.expires } // nothing else ever removes an unused login attempt
+            sessions.entries.removeIf { nowMs - it.value.seen > 30 * 60_000L || nowMs - it.value.created > 8 * 3_600_000L }
             val real = email in allowed
             val code = (100000 + rnd.nextInt(900000)).toString()
             // Same page and same cookie whether or not the address is an admin, so this reveals nothing.

@@ -36,7 +36,12 @@ object Hedged {
         }
         launch()
         while (finished < launched || launched < attempts.size) {
-            val r = if (launched < attempts.size) results.poll(hedgeMs, TimeUnit.MILLISECONDS) else results.take()
+            val r = try {
+                if (launched < attempts.size) results.poll(hedgeMs, TimeUnit.MILLISECONDS) else results.take()
+            } catch (e: InterruptedException) { // the tunnel is shutting down
+                Thread.currentThread().interrupt()
+                return null
+            }
             if (r == null) { // the current attempt is slow: start the next one beside it
                 onHedge(); launch(); continue
             }

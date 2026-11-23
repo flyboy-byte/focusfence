@@ -1,6 +1,6 @@
 # State of the project
 
-> Unreleased on the branch (2026-11-23, after 2.9.2): DNS forwarding races resolvers in Automatic mode (`dns/Hedged`, 0.6 s hedge) because the 12:55 export showed a morning of 3-7 s p95 lookups from waiting out dead carrier UDP DNS; new `net` diag record (link type, roaming, signal, modem bandwidth estimate). 🧪 CI only. Setup screen redesign and About row are also unreleased.
+> **2.10.0 (code 31, 2026-11-23)** = 2.9.2 plus: DNS resolvers race in Automatic mode (`dns/Hedged`, 0.6 s, bounded pool) after a morning of 3-7 s p95 lookups, `net` diag record (link, roaming, signal), Setup screen as cards, About row (button hidden if no URL; pages served at `https://ff.flyboybyte.com/about/`), screenshot wording corrected (images never leave the phone), a paired partner's code can skip the strict wait (wait always offered), two unguarded API-29 device-owner calls fixed (lint). Tests + lint green; 🧪 none of it seen on a phone yet.
 
 > Screenshots never leave the phone today (checked 2026-11-23): only scores/labels reach the log and server. A flagged image is kept on the phone only if a partner key is pasted at Monitoring. Upload to partners is unbuilt; privacy page and strings now say so.
 
