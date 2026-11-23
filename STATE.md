@@ -91,6 +91,7 @@ The server is deployed (2026-11-23) but no phone has used it yet: none of this h
 | Weekly report email | 🧪 | |
 | SMS alerts (Twilio/Telnyx, opt-in, code-verified, throttled) | 🧪 | Provider account + number needed. |
 | App-to-app pairing by shared key; blind mailbox; partner app view | 🧪 | `dns/Pairing`, `AccountabilityActivity`, `PartnerReportActivity`. Both phones must use the same server. |
+| Group accountability rules (`dns/Group`): 2 to 4 members, filtered or partner-only, everyone sees every filtered member by default (narrowable), any viewer can unlock, every change tells the group, loosening changes are flagged for the friction guard | 🧪 | Added 2026-11-23: **pure rules only, 13 JVM tests. No join protocol, storage or UI yet.** Plan and build order: `docs/plans/05-group-and-release.md`. |
 | Partner unlock codes (partner PIN without handing over a PIN) | 🧪 | Rotating 8-digit code in the partner's app, verified offline. |
 | Removing a partner is guarded, logged, and tells them | 🧪 | |
 | Exclude apps from reports | ❌ | EA has it. |

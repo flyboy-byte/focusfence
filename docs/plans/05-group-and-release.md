@@ -44,7 +44,7 @@ merge nobody can review.
   Partners & reports.
 - Email/web partners keep working beside group members (a filtered member can have both).
 
-### Visibility and authority (proposed defaults, owner to confirm)
+### Visibility and authority (**item 1 decided 2026-11-23**: everyone sees every filtered member by default; the rest are proposed defaults)
 1. Each filtered member chooses who sees their report; default **every other group member**. No member sees another's
    unless that member allowed it.
 2. **Any single partner's unlock code** unlocks a filtered member's strict-mode wait (as today with one partner).
@@ -117,7 +117,21 @@ merge nobody can review.
 - [ ] Settings only @sidewinderzz can change: branch protection on `main` (PR + CI + review), package visibility, Actions secrets, repo visibility.
 - [ ] A real two-phone test (and three for groups) recorded in `STATE.md`.
 
-## 7. Not decided
+## 7. Landing path: decided by conversation, not by us (2026-11-23)
 
-Whether this goes upstream at all (A/C) or ships as its own product (B); group visibility defaults above; whether the
-repo goes public; the server image owner; whether the name stays "Focus Fence AC".
+Logan: "We're the better branch. I'll talk to him." So **this branch stays the base**; no merge work, no `shareddev` changes and
+no PR to the upstream repo until Logan and @sidewinderzz have talked. Talking points, so the conversation has facts:
+
+- **What this branch has that `main` and `shareddev` don't:** a working accountability loop (partner reports, alerts, unlock
+  codes), a deployed and independently audited server with a Docker release path, on-device screenshot scoring with a flag
+  policy tuned on real data, a measured battery history (5 days, 10 versions), 192 app and 26 server tests, and 10 signed releases.
+- **What `shareddev` has that this branch lacks:** multi-source lists with provenance, an allowlist, a UI redesign, release
+  signing and a draft-release workflow, a benchmark script, the work-order docs. These can be brought over by feature.
+- **What only @sidewinderzz can decide or do:** adopt or change D-017, signing custody (O-002) and the release workflow,
+  the licence file, branch protection on `main`, package and repo visibility, and whether to merge at all.
+- **What would make a merge reviewable:** one landing path (section 2), a D-017, and CI green on the merged result.
+
+## 8. Not decided
+
+Whether this goes upstream at all (A/C) or ships as its own product (B) (Logan will talk to @sidewinderzz); the group defaults other than visibility;
+whether the repo goes public; the server image owner; whether the name stays "Focus Fence AC".
