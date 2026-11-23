@@ -17,6 +17,7 @@ import app.focusfence.HelpActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
 import app.focusfence.data.AdListStore
+import app.focusfence.data.BlockScreenSettings
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.ExcludedAppsStore
@@ -50,6 +51,12 @@ class SettingsFragment : Fragment() {
             }
         }
         binding.adUpdateButton.setOnClickListener { updateAdList() }
+
+        // Not a loosening action (sites stay blocked either way), so no strict guard.
+        binding.blockScreenSwitch.isChecked = BlockScreenSettings.enabled(requireContext())
+        binding.blockScreenSwitch.setOnCheckedChangeListener { _, checked ->
+            BlockScreenSettings.setEnabled(requireContext(), checked)
+        }
 
         binding.excludedAppsButton.setOnClickListener {
             UiUtil.chooseExcludedApps(requireContext()) { refreshAll() }

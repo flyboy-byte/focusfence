@@ -25,6 +25,7 @@ import app.focusfence.admin.DeviceAdmin
 import app.focusfence.admin.DnsFallback
 import app.focusfence.data.AdListStore
 import app.focusfence.data.AllowlistStore
+import app.focusfence.data.BlockScreenSettings
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.CategoryStore
 import app.focusfence.data.EventLog
@@ -37,6 +38,7 @@ import app.focusfence.data.UsageStore
 import app.focusfence.dns.AlwaysOnNudge
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.BlockScreen
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Categories
 import app.focusfence.dns.Dns
@@ -208,6 +210,9 @@ class DnsVpnService : VpnService() {
     @Volatile
     private var logAllowed = true
 
+    @Volatile
+    private var blockScreen = true
+
     private var tunFd: ParcelFileDescriptor? = null
     private var readerThread: Thread? = null
     private var pool: ExecutorService? = null
@@ -284,6 +289,7 @@ class DnsVpnService : VpnService() {
             CategoryStore.KEY_VERSION -> reloadCategoriesAsync()
             AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
             LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
+            BlockScreenSettings.KEY_BLOCK_SCREEN -> blockScreen = BlockScreenSettings.enabled(this)
             DnsUpstreamStore.KEY_REV -> {
                 upstreamConfig = DnsUpstreamStore.load(this)
                 preferredUpstream = null
@@ -402,6 +408,7 @@ class DnsVpnService : VpnService() {
 
         powerManager = getSystemService(PowerManager::class.java)
         logAllowed = LogSettings.logAllowedDns(this)
+        blockScreen = BlockScreenSettings.enabled(this)
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
@@ -611,6 +618,15 @@ class DnsVpnService : VpnService() {
                 val dnsResponse =
                     Dns.buildBlockedResponse(udp.packet, udp.payloadOffset, question, ttl)
                 writeToTun(Packets.buildUdpReply(udp, dnsResponse))
+                // After the answer is written, so the blocked screen never delays it.
+                // User rules only: ads, guards and categories fire constantly in
+                // the background and aren't something the person chose to open.
+                val rule = decision.rule
+                if (blockScreen && decision.reason == LogEvents.REASON_RULE && rule != null &&
+                    BlockScreen.shouldSignal(question.qname, rule, powerManager.isInteractive)
+                ) {
+                    app.focusfence.BlockedNotice.onDnsBlock(this, rule.domain)
+                }
                 return
             }
         }

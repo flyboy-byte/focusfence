@@ -10,12 +10,16 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import app.focusfence.R
+import app.focusfence.BlockedActivity
+import app.focusfence.data.BlockScreenSettings
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.EventLog
 import app.focusfence.data.LogSettings
 import app.focusfence.data.MonitorSettings
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.BlockScreen
+import app.focusfence.dns.Blocklist
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.RuleEvaluator
 import app.focusfence.dns.UrlDeduper
@@ -85,6 +89,22 @@ class UrlFilterService : AccessibilityService() {
         fun onScreenOn() {
             instance?.let { svc -> svc.main.post { svc.onForegroundTick() } }
         }
+
+        /**
+         * From the DNS filter: a front-door lookup for [domain] was just blocked
+         * by a user rule. Returns false when this service isn't running, so the
+         * caller can fall back to a notification. Costs nothing while idle: no
+         * extra event types or packages, just one address-bar read on demand.
+         */
+        fun onDnsBlocked(domain: String): Boolean {
+            val svc = instance ?: return false
+            // The address bar can lag the lookup slightly; read it after a beat.
+            svc.main.postDelayed({ svc.confirmAndShow(domain, retry = true) }, CONFIRM_DELAY_MS)
+            return true
+        }
+
+        private const val CONFIRM_DELAY_MS = 400L
+        private const val CONFIRM_RETRY_MS = 1_200L
         private const val MAX_FALLBACK_NODES = 250
         private const val COMP = "a11y"
     }
@@ -104,6 +124,9 @@ class UrlFilterService : AccessibilityService() {
 
     @Volatile
     private var logUrls = false
+
+    @Volatile
+    private var blockScreen = true
 
     // Experimental monitoring: which apps to watch, and what to capture.
     @Volatile
@@ -141,7 +164,7 @@ class UrlFilterService : AccessibilityService() {
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS ||
-            key == LogSettings.KEY_LOG_URLS ||
+            key == LogSettings.KEY_LOG_URLS || key == BlockScreenSettings.KEY_BLOCK_SCREEN ||
             key == MonitorSettings.KEY_SCREENSHOTS || key == MonitorSettings.KEY_TEXT ||
             key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL ||
             key == MonitorSettings.KEY_AI || key == MonitorSettings.KEY_WATCH_MODE ||
@@ -189,6 +212,7 @@ class UrlFilterService : AccessibilityService() {
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
         appRules = BlockedAppsStore.rulesByPackage(this)
         logUrls = LogSettings.logUrls(this)
+        blockScreen = BlockScreenSettings.enabled(this)
         captureApps = MonitorSettings.watchedApps(this)
         watchMode = MonitorSettings.watchMode(this)
         watchExcluded = MonitorSettings.excludedApps(this)
@@ -354,7 +378,12 @@ class UrlFilterService : AccessibilityService() {
         if (now - lastBackAt >= BACK_DEBOUNCE_MS) {
             lastBackAt = now
             performGlobalAction(GLOBAL_ACTION_BACK)
-            Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
+            val host = parts?.first
+            if (blockScreen && host != null) {
+                openBlockedScreen(Blocklist.findRule(host, rules)?.domain ?: host)
+            } else {
+                Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
+            }
             EventLog.activity(
                 LogEvents.enforce(
                     System.currentTimeMillis(), "section_back", eventPackage,
@@ -362,6 +391,37 @@ class UrlFilterService : AccessibilityService() {
                 )
             )
         }
+    }
+
+    /**
+     * Shows the blocked screen only if the app in front really is showing
+     * [domain] in its address bar. A blocked lookup alone isn't enough: browsers
+     * prefetch DNS for suggestions while the user types, and other apps look
+     * up front-door hosts in the background. While the bar is being edited the
+     * read returns null, which also keeps the screen from interrupting typing.
+     */
+    private fun confirmAndShow(domain: String, retry: Boolean) {
+        if (!blockScreen) return
+        val pkg = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull() ?: return
+        if (pkg == packageName) return
+        val url = runCatching { findUrl(pkg) }.getOrNull()
+        val parts = url?.let { LogEvents.splitUrl(it) }
+        if (parts == null || !BlockScreen.hostMatches(parts.first, domain)) {
+            if (retry) main.postDelayed({ confirmAndShow(domain, retry = false) }, CONFIRM_RETRY_MS)
+            return
+        }
+        Monitor.perf.count("block_screen")
+        openBlockedScreen(domain)
+        EventLog.activity(
+            LogEvents.enforce(System.currentTimeMillis(), "block_screen", pkg, parts.first, parts.second)
+        )
+    }
+
+    private fun openBlockedScreen(domain: String) {
+        // Allowed from the background: Android exempts apps whose accessibility
+        // service is bound by the system from background-activity-start limits.
+        runCatching { startActivity(BlockedActivity.intent(this, domain)) }
+            .onFailure { EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "block_screen_start")) }
     }
 
     /** Screenshot timing on window events (ScreenCapture also has its own timer). */
