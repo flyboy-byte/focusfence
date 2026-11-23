@@ -73,6 +73,9 @@ class DigestTest {
 
     @Test
     fun alertTextRules() {
+        // An app update briefly drops the tunnel: vpn_metered flips true -> no_vpn -> true. Not an alert.
+        assertNull(Digest.alertText(mapOf("type" to "integ", "key" to "vpn_metered", "value" to "no_vpn", "was" to "true")))
+        assertNull(Digest.alertText(mapOf("type" to "integ", "key" to "vpn_metered", "value" to "true", "was" to "no_vpn")))
         assertNull(Digest.alertText(mapOf("type" to "integ", "key" to "vpn", "value" to "on", "was" to null)))
         assertEquals(
             "a11y_enabled changed: true → false",

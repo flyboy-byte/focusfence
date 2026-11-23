@@ -152,6 +152,10 @@ class Digest(private val fromT: Long) {
             if (type == LogEvents.TYPE_INTEGRITY) {
                 val key = f["key"] as? String ?: return null
                 val was = f["was"] as? String ?: return null // first observation, not a change
+                // Billing hint, not protection: it flips true -> no_vpn -> true for a second on every app
+                // update (the tunnel is down while the package is replaced) and mailed partners "Filter
+                // turned off" for a routine update. Real outages are still the vpn svc records above.
+                if (key == "vpn_metered") return null
                 return "$key changed: $was → ${f["value"]}"
             }
             if (type != LogEvents.TYPE_SERVICE) return null
