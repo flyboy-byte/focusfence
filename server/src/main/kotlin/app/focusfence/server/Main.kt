@@ -68,6 +68,8 @@ class Config(
     val emailDailyCap: Int = 60,
     /** A partner who never confirms their email is dropped after this. */
     val unconfirmedTtlMs: Long = 3L * 24 * 3_600_000,
+    /** Which peers may set X-Forwarded-For (the reverse proxy in front of us). */
+    val trustedProxy: (String) -> Boolean = TrustedProxies.LOOPBACK,
     val now: () -> Long = System::currentTimeMillis,
 )
 
@@ -99,9 +101,11 @@ class Config(
 
 fun main() {
     val env: (String) -> String? = { System.getenv(it) }
+    val trusted = TrustedProxies.parse(env("FF_TRUSTED_PROXIES"))
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
+        trustedProxy = trusted,
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
         maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
@@ -140,14 +144,14 @@ class RateLimiter(private val max: Int, private val windowMs: Long, private val 
 }
 
 /**
- * The address to rate-limit by. Behind nginx every connection arrives from loopback, so the peer address
- * alone would put every partner in one bucket. The proxy header is believed ONLY when the peer is loopback
- * (our own nginx); from anyone else it is forged input, so the peer address is used. The rightmost entry is
+ * The address to rate-limit by. Behind a reverse proxy every connection arrives from the proxy, so the peer
+ * address alone would put every partner in one bucket. The proxy header is believed ONLY when the peer is a
+ * trusted proxy ([TrustedProxies]: loopback by default, `FF_TRUSTED_PROXIES` to add your proxy's network, e.g.
+ * the Docker network); from anyone else it is forged input, so the peer address is used. The rightmost entry is
  * the one our proxy appended, so a client-supplied prefix cannot choose its own bucket.
  */
-internal fun clientKey(peer: String, forwardedFor: String?): String {
-    val loopback = peer == "127.0.0.1" || peer == "::1" || peer == "0:0:0:0:0:0:0:1" || peer == "localhost"
-    if (!loopback) return peer
+internal fun clientKey(peer: String, forwardedFor: String?, trusted: (String) -> Boolean = TrustedProxies.LOOPBACK): String {
+    if (!trusted(peer)) return peer
     val last = forwardedFor?.split(',')?.lastOrNull()?.trim().orEmpty()
     return if (last.isNotEmpty() && last.length <= 45) last else peer
 }
@@ -198,7 +202,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     val mailboxLimiter = RateLimiter(20, 3_600_000, cfg.now)
     val confirmLimiter = RateLimiter(1, 3_600_000, cfg.now) // confirmation emails per address
 
-    fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"])
+    fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"], cfg.trustedProxy)
     fun full(): Boolean = store.usedBytes(cfg.now()) >= cfg.maxDataBytes
     /** One confirmation email per address per hour; that cap holds for resends too. */
     suspend fun sendConfirmation(partner: Store.Partner) {
@@ -223,6 +227,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     routing {
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
+        // For container health checks and uptime monitors: no auth, no data, no store access.
+        get("/healthz") { call.respondText("ok") }
 
         // ---- device API -------------------------------------------------------
 
@@ -374,7 +380,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/join") {
             val form = call.receiveParameters()
             val rawCode = form["code"].orEmpty()
-            if (!joinLimiter.allow(clientKey(call.request.origin.remoteHost, call.request.headers["X-Forwarded-For"]))) {
+            if (!joinLimiter.allow(call.client())) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
             }

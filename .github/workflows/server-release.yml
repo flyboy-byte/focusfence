@@ -1,0 +1,73 @@
+# Publishes the accountability server: a tarball on a GitHub Release, plus a multi-arch container image on GHCR.
+# Triggered by a tag named server-vX.Y.Z (the app's own releases use vX.Y.Z-..., see release.yml).
+name: Server release
+
+on:
+  push:
+    tags: ['server-v*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test
+        run: ./gradlew -p server test
+
+      - name: Package
+        id: pkg
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#server-v}"
+          ./gradlew -p server installDist
+          out="focusfence-server-${version}"
+          mkdir -p "dist/$out"
+          cp -r server/build/install/focusfence-server/. "dist/$out/"
+          # the shipped compose file pulls the published image; its `build:` block only makes sense inside the repo
+          awk '/^    # `docker compose up --build`/{skip=1} skip && /dockerfile:/{skip=0; next} !skip' \
+            server/deploy/docker-compose.yml > "dist/$out/docker-compose.yml"
+          cp server/deploy/Caddyfile server/deploy/.env.example server/README.md "dist/$out/"
+          tar -C dist -czf "dist/${out}.tar.gz" "$out"
+          (cd dist && sha256sum "${out}.tar.gz" > "${out}.tar.gz.sha256")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        id: image
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/${owner}/focusfence-server"
+          docker buildx build -f server/Dockerfile \
+            --platform linux/amd64,linux/arm64 \
+            -t "${image}:${{ steps.pkg.outputs.version }}" -t "${image}:latest" \
+            --push .
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          v="${{ steps.pkg.outputs.version }}"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Focus Fence server ${v}" \
+            --notes "Accountability server ${v}. Container: \`${{ steps.image.outputs.image }}:${v}\` (linux/amd64, linux/arm64). Docker Compose: unpack the tarball, copy \`.env.example\` to \`.env\`, edit it, run \`docker compose up -d\` (add \`--profile https\` for automatic HTTPS). See server/README.md." \
+            dist/focusfence-server-${v}.tar.gz dist/focusfence-server-${v}.tar.gz.sha256
