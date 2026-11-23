@@ -8,7 +8,7 @@ plugins {
 
 repositories { mavenCentral() }
 
-val ktor = "2.3.12"
+val ktor = "2.3.13"
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm:$ktor")
     implementation("io.ktor:ktor-server-cio-jvm:$ktor")
@@ -17,7 +17,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages-jvm:$ktor")
     implementation("io.ktor:ktor-client-cio-jvm:$ktor")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("ch.qos.logback:logback-classic:1.5.6")
+    implementation("ch.qos.logback:logback-classic:1.5.38")
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
     testImplementation("io.ktor:ktor-client-core-jvm:$ktor")
