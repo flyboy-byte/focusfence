@@ -103,6 +103,16 @@
             android:name=".PartnerReportActivity"
             android:exported="false"
             android:parentActivityName=".AccountabilityActivity" />
+        <!-- Own empty task affinity + excluded from Recents: it opens over the
+             browser from the accessibility service and must not drag the rest
+             of the app in behind it or linger in the task switcher. -->
+        <activity
+            android:name=".BlockedActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:taskAffinity="" />
         <activity
             android:name=".SetupActivity"
             android:exported="false"

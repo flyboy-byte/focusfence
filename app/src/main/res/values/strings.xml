@@ -567,4 +567,20 @@
     <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, your activity records go to the accountability server you choose, and that server\'s operator can read them; screenshots are not uploaded, only their scores. Uninstalling removes everything on the phone.</string>
     <string name="about_open_site">Open the full page</string>
     <string name="about_no_browser">No browser found. The page is at %1$s</string>
+
+    <!-- Blocked screen (BlockedActivity) and its Settings switch -->
+    <string name="blocked_screen_title">Blocked by Focus Fence</string>
+    <string name="blocked_screen_nudge">Your friend Focus Fence has your back. Take a breath and get back to what matters.</string>
+    <string name="blocked_screen_home">Go to home screen</string>
+    <string name="blocked_screen_open_app">Open Focus Fence</string>
+    <string name="blocked_reason_always">This site is on your block list.</string>
+    <string name="blocked_reason_schedule">This site is blocked from %1$s to %2$s.</string>
+    <string name="blocked_reason_budget">You\'ve used your %1$d minutes on this site for today.</string>
+    <string name="blocked_reason_commitment">You committed to staying off this site until %1$s.</string>
+    <string name="blocked_reason_section">Only some parts of this site are allowed.</string>
+    <string name="block_screen_label">Show a blocked screen</string>
+    <string name="block_screen_summary">When a blocked site opens in your browser, show a full-screen \"Blocked by Focus Fence\" page instead of the browser\'s error. Needs the accessibility service; without it you get a notification instead.</string>
+    <string name="block_screen_channel">Blocked sites</string>
+    <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
+    <string name="block_screen_notify_text">Tap to see why.</string>
 </resources>
