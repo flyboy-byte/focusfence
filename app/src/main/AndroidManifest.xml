@@ -3,15 +3,37 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Ask (once, user-confirmed) to be exempt from battery optimization: Doze and
+         OEM "battery savers" otherwise delay or kill the filter and capture. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Restart the filter after a reboot if the owner had it on (vpn/AutoStartReceiver). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Foreground-app timeline for the activity log. A special-access
+         permission the owner grants in Settings > Usage access; never granted
+         by installing, and its loss is logged as an integrity change. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Needed on Android 11+ so the blocked-apps picker can list launchable apps. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Watch picker: detect browsers and the home screen (Android 11 package visibility). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
 
@@ -34,6 +56,12 @@
         </activity>
 
         <activity
+            android:name=".ReviewActivity"
+            android:exported="false"
+            android:label="@string/review_title"
+            android:parentActivityName=".MonitoringActivity" />
+
+        <activity
             android:name=".HelpActivity"
             android:exported="false"
             android:label="@string/help_title"
@@ -42,6 +70,86 @@
         <activity
             android:name=".OnboardingActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".DiagnosticsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".CategoriesActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".MonitoringActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".StrictModeActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".DeviceOwnerActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".AccountabilityActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".PartnerReportActivity"
+            android:exported="false"
+            android:parentActivityName=".AccountabilityActivity" />
+        <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".GroupActivity"
+            android:exported="false"
+            android:parentActivityName=".AccountabilityActivity" />
+
+        <!-- Managed mode. We never block uninstall; this receiver exists to run
+             device-owner policies (Private DNS, network logging, suspension) and
+             to log every admin lifecycle event. -->
+        <receiver
+            android:name=".vpn.AutoStartReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".UnlockReadyReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".admin.FocusFenceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Shares log exports (cache/export/ only) with the app the user picks. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <activity
             android:name=".DomainDetailActivity"

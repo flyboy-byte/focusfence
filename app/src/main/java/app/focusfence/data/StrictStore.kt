@@ -22,6 +22,7 @@ object StrictStore {
     fun isLocked(context: Context): Boolean = StrictLock.isLocked(state(context))
 
     fun setEnabled(context: Context, enabled: Boolean) {
+        app.focusfence.UnlockReadyReceiver.cancel(context)
         BlocklistStore.prefs(context).edit()
             .putBoolean(KEY_ENABLED, enabled)
             .putLong(KEY_UNLOCK_READY_AT, 0L)
@@ -32,9 +33,21 @@ object StrictStore {
         BlocklistStore.prefs(context).edit()
             .putLong(KEY_UNLOCK_READY_AT, now + StrictLock.UNLOCK_DELAY_MS)
             .apply()
+        app.focusfence.UnlockReadyReceiver.schedule(context, now + StrictLock.UNLOCK_DELAY_MS)
+    }
+
+    /**
+     * Opens the unlock window immediately (used by a correct PIN unlock). The
+     * timed path still exists as a fallback for a forgotten PIN, so a PIN never
+     * permanently locks the user out.
+     */
+    fun unlockNow(context: Context, now: Long = System.currentTimeMillis()) {
+        app.focusfence.UnlockReadyReceiver.cancel(context)
+        BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, now).apply()
     }
 
     fun cancelUnlock(context: Context) {
+        app.focusfence.UnlockReadyReceiver.cancel(context)
         BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, 0L).apply()
     }
 }

@@ -1,0 +1,17 @@
+# Automatic HTTPS for FF_DOMAIN (its DNS A/AAAA record must point at this machine, ports 80 and 443 open).
+# No access log on purpose: partner report links (/p/<token>) and invite codes are in URLs. Caddy sets
+# X-Forwarded-For to the real client address, which the server trusts only from the compose network.
+{$FF_DOMAIN:localhost} {
+	encode zstd gzip
+	request_body {
+		max_size 3MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		-Server
+	}
+	reverse_proxy server:8080
+}

@@ -5,6 +5,7 @@ object HelpContent {
     data class Page(val titleRes: Int, val bodyRes: Int)
 
     val PAGES = listOf(
+        Page(R.string.help_overview_title, R.string.help_overview_body),
         Page(R.string.help_how_title, R.string.help_how_body),
         Page(R.string.help_rules_title, R.string.help_rules_body),
         Page(R.string.help_sections_title, R.string.help_sections_body),

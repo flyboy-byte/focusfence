@@ -1,0 +1,10 @@
+.git
+.gradle
+**/build
+.idea
+docs
+tools
+*.apk
+*.jks
+*.keystore
+keystore.properties
