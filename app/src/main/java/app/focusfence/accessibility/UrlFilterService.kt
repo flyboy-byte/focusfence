@@ -3,6 +3,7 @@ package app.focusfence.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
@@ -11,9 +12,19 @@ import android.widget.Toast
 import app.focusfence.R
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
+import app.focusfence.data.EventLog
+import app.focusfence.data.LogSettings
+import app.focusfence.data.MonitorSettings
 import app.focusfence.dns.BlockRule
+import app.focusfence.dns.LogEvents
 import app.focusfence.dns.RuleEvaluator
+import app.focusfence.dns.UrlDeduper
 import app.focusfence.dns.UrlFilter
+import app.focusfence.admin.AppSuspension
+import app.focusfence.monitor.CaptureIndicator
+import app.focusfence.monitor.Monitor
+import app.focusfence.monitor.ScreenCapture
+import app.focusfence.monitor.TextCapture
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -24,8 +35,12 @@ import java.time.LocalTime
  * them), so this is the only self-contained way to block part of a website
  * while allowing another part.
  *
- * Reads only browser address bars for matching against the user's own rules;
- * nothing is stored or transmitted.
+ * Reads only browser address bars. They are matched against the user's own
+ * rules and, only if the owner turned on "Record browser addresses"
+ * ([LogSettings.KEY_LOG_URLS]), written to the on-device activity log as
+ * host + path (query strings and fragments are dropped). Nothing is
+ * transmitted. Every enforcement action and the service's own lifecycle are
+ * logged too: this service going away is a protection gap.
  */
 class UrlFilterService : AccessibilityService() {
 
@@ -34,6 +49,11 @@ class UrlFilterService : AccessibilityService() {
         private val URL_BAR_IDS = mapOf(
             "com.android.chrome" to "com.android.chrome:id/url_bar",
             "com.brave.browser" to "com.brave.browser:id/url_bar",
+            "com.brave.browser_beta" to "com.brave.browser_beta:id/url_bar",
+            "com.brave.browser_nightly" to "com.brave.browser_nightly:id/url_bar",
+            "com.chrome.beta" to "com.chrome.beta:id/url_bar",
+            "com.chrome.dev" to "com.chrome.dev:id/url_bar",
+            "com.chrome.canary" to "com.chrome.canary:id/url_bar",
             "com.vivaldi.browser" to "com.vivaldi.browser:id/url_bar",
             "com.kiwibrowser.browser" to "com.kiwibrowser.browser:id/url_bar",
             "com.microsoft.emmx" to "com.microsoft.emmx:id/url_bar",
@@ -47,8 +67,31 @@ class UrlFilterService : AccessibilityService() {
         private const val EVENT_THROTTLE_MS = 700L
         private const val BACK_DEBOUNCE_MS = 1500L
         private const val APP_BLOCK_DEBOUNCE_MS = 2000L
+        /**
+         * Text is read once when a screen opens and then at most this often while
+         * it stays in front. It was 1.5 s on every content change: the
+         * 2026-11-19 export showed 2,394 captures and ~41 s of CPU for it.
+         */
+        private const val TEXT_INTERVAL_MS = 30_000L
+        /** Address bar re-read interval while a browser is in front (replaces content events). */
+        private const val URL_POLL_MS = 4_000L
+        /** Foreground tick when only text capture needs it. */
+        private const val TEXT_POLL_MS = 15_000L
+
+        @Volatile
+        private var instance: UrlFilterService? = null
+
+        /** From Monitor's screen-on broadcast: resume the foreground tick. */
+        fun onScreenOn() {
+            instance?.let { svc -> svc.main.post { svc.onForegroundTick() } }
+        }
         private const val MAX_FALLBACK_NODES = 250
+        private const val COMP = "a11y"
     }
+
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private var fgPkg: String? = null
+    private val fgTick = Runnable { onForegroundTick() }
 
     @Volatile
     private var rules: Map<String, BlockRule> = emptyMap()
@@ -59,6 +102,37 @@ class UrlFilterService : AccessibilityService() {
     @Volatile
     private var appRules: Map<String, BlockRule> = emptyMap()
 
+    @Volatile
+    private var logUrls = false
+
+    // Experimental monitoring: which apps to watch, and what to capture.
+    @Volatile
+    private var captureApps: Set<String> = emptySet()
+
+    @Volatile
+    private var watchMode = app.focusfence.dns.WatchScope.Mode.ALL
+
+    @Volatile
+    private var watchExcluded: Set<String> = emptySet()
+
+    /** Home screen, system UI, keyboards, ourselves: never captured. Recomputed on reload. */
+    @Volatile
+    private var watchSkip: Set<String> = emptySet()
+
+    /** Keyboard / status bar: windows over the app in front, not a switch of app. */
+    @Volatile
+    private var overlayPkgs: Set<String> = emptySet()
+
+    @Volatile
+    private var captureScreenshots = false
+
+    @Volatile
+    private var captureText = false
+
+    private val urlDeduper = UrlDeduper()
+
+    private var lastTextCaptureAt = 0L
+
     private var lastCheckAt = 0L
     private var lastBackAt = 0L
     private var lastAppBlockAt = 0L
@@ -66,7 +140,15 @@ class UrlFilterService : AccessibilityService() {
     private var powerManager: PowerManager? = null
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS) reloadRules()
+        if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS ||
+            key == LogSettings.KEY_LOG_URLS ||
+            key == MonitorSettings.KEY_SCREENSHOTS || key == MonitorSettings.KEY_TEXT ||
+            key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL ||
+            key == MonitorSettings.KEY_AI || key == MonitorSettings.KEY_WATCH_MODE ||
+            key == MonitorSettings.KEY_WATCH_EXCLUDED
+        ) {
+            reloadRules()
+        }
     }
 
     override fun onServiceConnected() {
@@ -74,10 +156,30 @@ class UrlFilterService : AccessibilityService() {
         powerManager = getSystemService(PowerManager::class.java)
         reloadRules()
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
+        Monitor.a11yConnected = true
+        EventLog.activity(
+            LogEvents.service(
+                System.currentTimeMillis(), COMP, "connected",
+                "section_rules=$hasSectionRules,blocked_apps=${appRules.size},log_urls=$logUrls",
+            ),
+            urgent = true,
+        )
+        Monitor.attach(this, COMP)
+        instance = this
+        ScreenCapture.refresh(this)
+        CaptureIndicator.refresh(this)
     }
 
     override fun onDestroy() {
+        main.removeCallbacks(fgTick)
+        instance = null
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
+        Monitor.a11yConnected = false
+        EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "destroyed"), urgent = true)
+        Monitor.detach(COMP)
+        // Capture can't run without this service, so the indicator must not imply
+        // it can; a later reconnect re-shows it.
+        CaptureIndicator.clear(this)
         super.onDestroy()
     }
 
@@ -86,7 +188,21 @@ class UrlFilterService : AccessibilityService() {
         rules = loaded
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
         appRules = BlockedAppsStore.rulesByPackage(this)
+        logUrls = LogSettings.logUrls(this)
+        captureApps = MonitorSettings.watchedApps(this)
+        watchMode = MonitorSettings.watchMode(this)
+        watchExcluded = MonitorSettings.excludedApps(this)
+        watchSkip = app.focusfence.monitor.AppCatalog.alwaysSkip(this)
+        overlayPkgs = app.focusfence.monitor.AppCatalog.overlays(this)
+        captureScreenshots = MonitorSettings.screenshotsEnabled(this)
+        captureText = MonitorSettings.textEnabled(this)
         applyEventFilter()
+        ScreenCapture.refresh(this)
+        // The indicator must reflect capture state exactly: show while capturing,
+        // gone otherwise. Never hidden while capture is on (self-accountability).
+        CaptureIndicator.refresh(this)
+        // Managed mode: keep OS-level app suspension in step with blocked apps.
+        AppSuspension.reconcile(this)
     }
 
     /** Everything time- and device-dependent a rule evaluation needs, sampled once. */
@@ -105,18 +221,33 @@ class UrlFilterService : AccessibilityService() {
      * never wakes this process for other apps' UI changes, which matters
      * enormously for battery. With nothing configured, listen only to our own
      * package (i.e. effectively nothing). Content-changed events (high volume)
-     * are requested only while section rules exist.
+     * are requested only while section rules exist or the owner opted into
+     * recording browser addresses — that opt-in is the one place this service
+     * widens, and the diag log measures what it costs (a11y_ev per window).
      */
     private fun applyEventFilter() {
         val info = serviceInfo ?: return
+        val watchAll = watchMode == app.focusfence.dns.WatchScope.Mode.ALL
+        val capturing = (captureScreenshots || captureText) && (watchAll || captureApps.isNotEmpty())
+        val watchBrowsers = hasSectionRules || logUrls
         val targets = HashSet<String>()
-        if (hasSectionRules) targets += URL_BAR_IDS.keys
-        // Every package with a rule, whether or not it blocks right now: the
+        if (watchBrowsers) targets += URL_BAR_IDS.keys
+        // Every package with an app rule, whether or not it blocks right now: the
         // service must still be receiving events for an app during its allowed
         // window, or it cannot act the moment that window closes.
         targets += appRules.keys
-        info.packageNames =
-            if (targets.isEmpty()) arrayOf(packageName) else targets.toTypedArray()
+        if (capturing) targets += captureApps
+        info.packageNames = when {
+            // "All apps" capture is the one case that needs every package's events.
+            // Its cost is measured, not assumed: diag a11y_ev per window.
+            capturing && watchAll -> null
+            targets.isEmpty() -> arrayOf(packageName)
+            else -> targets.toTypedArray()
+        }
+        // Battery: content-changed events are the firehose (93k in 32 h on the
+        // owner's phone, ~75% of the app's screen-on CPU across binder, main and
+        // GC threads). Capture and URL recording now run on a foreground tick,
+        // so only section rules — which must react instantly — still need them.
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
             (if (hasSectionRules) AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED else 0)
         // Batch event delivery: URL changes are human-speed, no need for more
@@ -126,8 +257,33 @@ class UrlFilterService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // CPU attribution: everything this service does per event (capture
+        // decisions, URL reads, text walks) runs inside this call.
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        try {
+            handleEvent(event)
+        } finally {
+            Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        }
+    }
+
+    private fun handleEvent(event: AccessibilityEvent) {
         val eventPackage = event.packageName?.toString() ?: return
+        // Which app is in front drives the screenshot timer. Our own windows count
+        // too (they're in front), just never watched.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventPackage !in overlayPkgs && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        ) {
+            app.focusfence.monitor.ScreenCapture.onForeground(
+                this, eventPackage,
+                captureScreenshots && app.focusfence.dns.WatchScope.watches(eventPackage, watchMode, captureApps, watchExcluded, watchSkip),
+            )
+        }
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && eventPackage !in overlayPkgs) {
+            onForegroundChanged(eventPackage)
+        }
         if (eventPackage == packageName) return
+        Monitor.perf.count("a11y_ev")
 
         // Whole-app blocking: bounce to the home screen. Evaluated on window
         // state changes only — a window that closes while the user is already
@@ -141,35 +297,143 @@ class UrlFilterService : AccessibilityService() {
                 lastAppBlockAt = now
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 Toast.makeText(this, R.string.app_blocked_toast, Toast.LENGTH_SHORT).show()
+                EventLog.activity(LogEvents.enforce(System.currentTimeMillis(), "app_home", eventPackage))
             }
             return
         }
 
-        // Section rules: only meaningful inside known browsers.
-        if (!hasSectionRules || eventPackage !in URL_BAR_IDS) return
-        val now = SystemClock.uptimeMillis()
-        if (now - lastCheckAt < EVENT_THROTTLE_MS) return
-        lastCheckAt = now
+        // Experimental capture: watched apps only, while the indicator is showing.
+        if ((captureScreenshots || captureText) &&
+            app.focusfence.dns.WatchScope.watches(eventPackage, watchMode, captureApps, watchExcluded, watchSkip)
+        ) {
+            maybeCapture(eventPackage)
+        }
 
-        val url = findUrl(eventPackage) ?: return
-        if (!UrlFilter.shouldBlock(url, rules)) return
+        // Section rules react to every event in a browser (they must be instant);
+        // URL recording alone rides the foreground tick instead.
+        if (hasSectionRules && eventPackage in URL_BAR_IDS) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastCheckAt >= EVENT_THROTTLE_MS) {
+                lastCheckAt = now
+                checkUrl(eventPackage)
+            }
+        }
+    }
+
+    /** Reads the address bar: records it (if enabled) and enforces section rules. */
+    private fun checkUrl(eventPackage: String) {
+        val now = SystemClock.uptimeMillis()
+        val url = findUrl(eventPackage)
+        if (url == null && urlBarEditing) {
+            // The user is typing in the address bar: the text is a half-typed
+            // query, not a page (2.6.1 export logged "h10.56.148.43").
+            Monitor.perf.count("url_editing")
+            return
+        }
+        if (url == null) {
+            // A browser with no readable address bar: either the page has no
+            // toolbar showing (fullscreen, menus) or the browser changed its view
+            // IDs. A high rate here is the signal to update URL_BAR_IDS.
+            Monitor.perf.count("url_miss")
+            return
+        }
+        Monitor.perf.count("url_read")
+        val parts = LogEvents.splitUrl(url)
+        if (logUrls && parts != null && urlDeduper.accept(eventPackage, parts.first, parts.second)) {
+            EventLog.activity(
+                LogEvents.url(
+                    System.currentTimeMillis(), eventPackage, parts.first, parts.second,
+                    cat = app.focusfence.dns.Categories.match(parts.first, app.focusfence.vpn.DnsVpnService.detectionLists)
+                        .takeIf { it.isNotEmpty() }?.joinToString(",")
+                        ?.also { Monitor.perf.count("url_cat_hits") },
+                )
+            )
+        }
+        if (!hasSectionRules || !UrlFilter.shouldBlock(url, rules)) return
 
         if (now - lastBackAt >= BACK_DEBOUNCE_MS) {
             lastBackAt = now
             performGlobalAction(GLOBAL_ACTION_BACK)
             Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
+            EventLog.activity(
+                LogEvents.enforce(
+                    System.currentTimeMillis(), "section_back", eventPackage,
+                    parts?.first, parts?.second,
+                )
+            )
         }
     }
 
-    override fun onInterrupt() {}
+    /** Screenshot timing on window events (ScreenCapture also has its own timer). */
+    private fun maybeCapture(pkg: String) {
+        if (captureScreenshots && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ScreenCapture.onWatchedWindow(this, pkg)
+        }
+    }
+
+    private fun tickNeeded(pkg: String): Boolean =
+        pkg != packageName && (
+            (logUrls && pkg in URL_BAR_IDS) ||
+                (captureText && app.focusfence.dns.WatchScope.watches(pkg, watchMode, captureApps, watchExcluded, watchSkip))
+            )
+
+    /** A new app came to the front: read it once now, then keep a slow tick while it stays. */
+    private fun onForegroundChanged(pkg: String) {
+        if (pkg == fgPkg) return
+        fgPkg = pkg
+        lastTextCaptureAt = 0L // a new screen gets its text read right away
+        main.removeCallbacks(fgTick)
+        if (tickNeeded(pkg)) onForegroundTick()
+    }
+
+    /**
+     * One pass while an app stays in front with the screen on: address bar (if
+     * recording URLs) and text (if watched, at most every [TEXT_INTERVAL_MS]).
+     * Stops on screen off and when no longer needed; resumes on the next
+     * window change or screen-on. Replaces per-content-change work.
+     */
+    private fun onForegroundTick() {
+        main.removeCallbacks(fgTick)
+        val pkg = fgPkg ?: return
+        if (!tickNeeded(pkg)) return
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        if (pm != null && !pm.isInteractive) return
+        // Window-state events can be missed; trust what's actually in front.
+        val active = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        if (active != null && active != pkg && active !in overlayPkgs) {
+            onForegroundChanged(active)
+            return
+        }
+        val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        Monitor.perf.count("fg_tick")
+        val isBrowser = pkg in URL_BAR_IDS
+        if (logUrls && isBrowser) checkUrl(pkg)
+        if (captureText && app.focusfence.dns.WatchScope.watches(pkg, watchMode, captureApps, watchExcluded, watchSkip)) {
+            val now = SystemClock.uptimeMillis()
+            if (lastTextCaptureAt == 0L || now - lastTextCaptureAt >= TEXT_INTERVAL_MS) {
+                lastTextCaptureAt = now
+                TextCapture.capture(pkg, rootInActiveWindow)
+            }
+        }
+        Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+        main.postDelayed(fgTick, if (logUrls && isBrowser) URL_POLL_MS else TEXT_POLL_MS)
+    }
+
+    override fun onInterrupt() {
+        EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "interrupt"))
+    }
+
+    /** Set by [findUrl] when the address bar has input focus (being edited). */
+    private var urlBarEditing = false
 
     private fun findUrl(packageName: String): String? {
+        urlBarEditing = false
         val root = rootInActiveWindow ?: return null
         URL_BAR_IDS[packageName]?.let { id ->
-            root.findAccessibilityNodeInfosByViewId(id)
-                ?.firstOrNull()?.text?.toString()
-                ?.takeIf { it.isNotBlank() }
-                ?.let { return it }
+            root.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()?.let { node ->
+                if (node.isFocused) { urlBarEditing = true; return null }
+                node.text?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
+            }
         }
         return findUrlHeuristically(root)
     }
@@ -186,6 +450,7 @@ class UrlFilterService : AccessibilityService() {
             if (id.contains("url_bar") || id.contains("url_field") ||
                 id.contains("location_bar") || id.contains("url_view")
             ) {
+                if (node.isFocused) { urlBarEditing = true; return null }
                 node.text?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
             }
             for (i in 0 until node.childCount) {

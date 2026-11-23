@@ -161,7 +161,7 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/paths_dialog_message"
                 android:textAppearance="?attr/textAppearanceBodySmall"
-                android:textColor="?android:attr/textColorSecondary"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

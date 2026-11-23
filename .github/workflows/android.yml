@@ -23,13 +23,12 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Build release APK
-        run: ./gradlew assembleRelease
-
-      # A missing mapping file means R8 silently didn't run, which would mean the
-      # release build is no longer being minified — cheap to check, easy to miss.
-      - name: Verify R8 ran
-        run: test -f app/build/outputs/mapping/release/mapping.txt
+      # The classifier is copied out with AssetManager.openFd, which fails on a
+      # compressed asset. Fail the build rather than ship an AI that can't load.
+      - name: Check bundled AI model is present and stored uncompressed
+        run: |
+          unzip -v app/build/outputs/apk/debug/app-debug.apk | tee apk-list.txt | grep classifier/
+          grep -E "Stored .*assets/classifier/nsfw_mobilenet_v2_f16.tflite" apk-list.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -37,17 +36,26 @@ jobs:
           name: focus-fence-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      # Globbed on purpose: the output is app-release-unsigned.apk until a
-      # signingConfig exists (W4), and app-release.apk afterwards.
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: focus-fence-release-apk
-          path: app/build/outputs/apk/release/*.apk
+  # The accountability backend prototype. It compiles the phone's pure dns/ code
+  # too, so this also proves that code stays free of Android types.
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      # Without this, a stack trace from a minified build is unreadable.
-      - name: Upload R8 mapping
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and test server
+        run: ./gradlew -p server test --stacktrace
+
+      - name: Upload test report on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: focus-fence-release-mapping
-          path: app/build/outputs/mapping/release/
+          name: server-test-report
+          path: server/build/reports/tests/

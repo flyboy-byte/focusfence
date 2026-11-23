@@ -1,62 +1,63 @@
-# Focus Fence — planning and research docs
+# Focus Fence — research and design docs
 
-This directory is **documentation only**. Nothing here changes the app's behaviour, and nothing
-here is loaded automatically by any tool — it is read when someone opens it.
+This directory is **documentation only**. Nothing here changes the app's behaviour, and
+nothing here is loaded automatically by any tool — it is read when someone opens it.
 
-**Start at [`../FRAMEWORK.md`](../FRAMEWORK.md)** — the phase-gated status tracker, and the honest
-answer to "where is this project actually at." This file is the doc index.
+It exists because a batch of external research was commissioned about Focus Fence's
+product direction, the Android platform's real limits, and the surrounding FOSS filtering
+ecosystem. Rather than hand over raw research output, it has been checked against the actual
+code and organised so it can be used, argued with, or ignored a piece at a time.
 
-## Contents
+## What's here
 
-| Doc | Tier | Purpose |
-| --- | --- | --- |
-| [`../FRAMEWORK.md`](../FRAMEWORK.md) | Meta | Phase-gated status tracker — where this is and what's next |
-| [`../DECISIONS.md`](../DECISIONS.md) | Meta | Numbered log of *why* (D-001 … D-014) |
-| [`work/`](work/) | **Execution** | **The work orders — W1…W14.** For what to do *right now*, go straight to [`work/NEXT.md`](work/NEXT.md). |
-| [`documentation-guide.md`](documentation-guide.md) | Meta | The tier map — who each doc is for and how they fit |
-| [`overview.md`](overview.md) | High-level | What it is, who it's for, the recorded product intent |
-| [`approach.md`](approach.md) | High-level | Is this worth doing this way — the gap, alternatives, what to validate |
-| [`architecture.md`](architecture.md) | Low-level | How the app works **as built today**, and why the odd parts are odd |
-| [`design.md`](design.md) | Low-level | The boundary model reasoned through against the six examples — resolves O-004 and reorders Track B |
-| [`infrastructure.md`](infrastructure.md) | Low-level | Toolchain, the release-readiness gap, hard constraints, testing |
-| [`parked.md`](parked.md) | High-level | Ideas considered and set down deliberately, with the reasoning — read before proposing an "obvious" addition |
-| [`risks.md`](risks.md) | Mixed | Scope, legal/licensing, technical and operational risk |
-| [`notes.md`](notes.md) | High-level | Open decisions and questions — working scratchpad |
-| [`research-handoff.md`](research-handoff.md) | Meta | Queue of unverified external claims, and how to close them |
-| [`research/`](research/) | — | Intake folder for raw deep-research output |
-| [`audits/findings.md`](audits/findings.md) | Source | **Read before the audits.** Every claim they make about this codebase, checked against source |
-| [`audits/`](audits/) | Source | Five externally commissioned research documents, delivered 2026-08-13 |
-| [`plans/00-roadmap.md`](plans/00-roadmap.md) | Source | Sequencing derived from that research — **superseded as an ordering**, kept for its analysis |
+**Current status lives in [`../STATE.md`](../STATE.md)**; rules for AI agents in
+[`../AGENTS.md`](../AGENTS.md). The audits below predate most of the implementation work.
+
+| Path | What it is |
+|---|---|
+| [`architecture.md`](architecture.md) | How the app works as built today, and why the non-obvious parts are the way they are. Descriptive — no proposals. |
+| [`audits/findings.md`](audits/findings.md) | **Start here.** Every claim the research makes about this codebase, checked against the source: confirmed, wrong, or unverified. |
+| [`audits/00-executive-summary.md`](audits/00-executive-summary.md) | A self-audit written across the other four documents, plus product principles, a capability classification and a draft roadmap. **The least reliable of the five** — see findings §2. |
+| [`audits/01-product-definition.md`](audits/01-product-definition.md) | Adversarial review of the product thesis against existing FOSS competitors. Concludes the broad thesis is falsified and a narrower one survives. |
+| [`audits/02-android-platform.md`](audits/02-android-platform.md) | What Android actually permits: VPN, accessibility, UsageStats, Shizuku, Device Owner, and why HTTPS interception fails a cost/benefit test. **The most reliable of the five.** |
+| [`audits/03-foss-ecosystem.md`](audits/03-foss-ecosystem.md) | Survey of uBlock Origin, Rethink, NetGuard, AdAway, PCAPdroid, DNS66 and the filter-list ecosystem, plus matching/storage strategy at scale and licensing analysis. |
+| [`audits/04-cloudveil-repos.md`](audits/04-cloudveil-repos.md) | Repository-by-repository review of CloudVeil's open-source filtering stack: what's worth studying, what to avoid. |
+| [`plans/00-roadmap.md`](plans/00-roadmap.md) | Suggested sequencing derived from the audits. **Historical** — Tiers 0–1 were largely done on this branch; see `STATE.md`. |
+| [`plans/01-base-assessment.md`](plans/01-base-assessment.md) | Is Focus Fence the right base for an Ever Accountable–class accountability app? (Yes, with two conditions.) |
+| [`plans/02-ever-accountable-parity.md`](plans/02-ever-accountable-parity.md) | Feature-by-feature gap matrix against Ever Accountable on Android, and a phased build order with measurement gates. |
+| [`plans/03-measurement-plan.md`](plans/03-measurement-plan.md) | How to use the new logs to measure reliability and battery cost, and what each result decides. |
+| [`HANDOFF.md`](HANDOFF.md) | Intent, workflow, hard-won findings and decisions: read after `STATE.md` / `AGENTS.md`. |
+| [`research/ai-detection.md`](research/ai-detection.md) | On-device AI: what runs, the first false positive, options to reduce false alarms without battery cost. |
+| [`research/ui-design.md`](research/ui-design.md) | Material 3 guidance applied to this Views app, plus an ordered UI to-do list. |
+| [`specs/event-log.md`](specs/event-log.md) | **Implemented.** Schema and guarantees of the activity and diagnostics logs, export format. |
+| [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Component specs: categories, capture, screenshots, integrity/heartbeat, backend (incl. partner linking by invite code, email + SMS), settings lock, Device Owner. Device side mostly built; backend parts proposed. Open decisions listed. |
+| [`specs/bundles.md`](specs/bundles.md) | **Implemented.** Curated filter-bundle set, strictness tier, bypass guard, defaults. |
+| [`specs/friction-tiers.md`](specs/friction-tiers.md) | **Implemented.** Per-action guard levels (None/Delay/Own PIN/Partner PIN). |
+| [`specs/device-owner.md`](specs/device-owner.md) | **Implemented, not device-tested.** Managed mode (detect-not-block), always-on VPN (no lockdown), settings lock, Private DNS fallback, the strategy switch, package suspension, network logging, filter health detection. |
+| [`../server/`](../server) | **Prototype** Kotlin/Ktor accountability backend (enroll, signed ingest, heartbeat, Resend reports, E2EE screenshots). Not CI-built. |
 
 ## How to read it
 
-If you're catching up after time away, `../FRAMEWORK.md` then `overview.md` is enough.
+The research is long, opinionated, and written by an outside party with no stake in the
+project's history. Some of it is genuinely useful. Some of it argues for building things that
+already exist, or describes the code inaccurately — despite having had the source.
 
-If you're about to change code, `architecture.md` and `infrastructure.md` § "Hard constraints" are
-the two that will stop you breaking something deliberate. Several odd-looking details exist purely
-for battery and have already been regressions once.
+`audits/findings.md` separates those. It is the only file here that has been checked line by
+line against the source, and it is short. Read it before reading any of the audits, or the
+audits will send you after work that is already done.
 
-If you're reading the research in [`audits/`](audits/): **read
-[`audits/findings.md`](audits/findings.md) first.** It's short, and it's the only file here checked
-line-by-line against the source. The research is long, opinionated, and written by an outside party
-with no stake in the project's history. Some of it is genuinely useful. Some of it argues for
-building things that already exist, or describes the code inaccurately — despite having had the
-source. Read in the wrong order, it will send you after work that's already done, and in one case
-would have you re-introduce a battery regression that's already fixed.
+Two things in it need no debate and cost nothing:
 
-## The two things that need no debate
+- **The repo has no `LICENSE` file.** For a project whose identity is FOSS, source
+  visibility isn't a license grant. This blocks nothing today and is a five-minute fix.
+- ~~Two README claims are not accurate~~ — fixed on this branch: the README now says where
+  DNS goes and points to the measured battery numbers instead of asserting them.
 
-- **The repo has no `LICENSE` file.** For a project whose identity is FOSS, source visibility
-  isn't a license grant — and it becomes a hard blocker the moment a binary is published.
-- **The release build is unsigned.** `assembleRelease` produces `app-release-unsigned.apk`, which
-  Android will not install. There is no `signingConfig`.
-
-Both are in `infrastructure.md`; both need a decision from the project's owner, and the signing
-key is a one-way door.
+Everything else is a judgement call and belongs to the maintainer.
 
 ## What this is not
 
-It isn't a set of requirements or a claim that the current design is wrong. The strongest
-conclusion across all four audits is the opposite: the DNS-only routing, the scoped accessibility
-service and the pure-logic `dns/` layer are the parts worth protecting, and most proposed additions
-should have to prove they're worth their cost first.
+It isn't a plan of record, a set of requirements, or a claim that the current design is
+wrong. The strongest conclusion across all four audits is the opposite: the DNS-only routing,
+the scoped accessibility service, and the pure-logic `dns/` layer are the parts worth
+protecting, and most proposed additions should have to prove they're worth their cost first.

@@ -6,4 +6,4 @@
     android:background="?attr/selectableItemBackground"
     android:padding="16dp"
     android:textAppearance="?attr/textAppearanceBodyMedium"
-    android:textColor="?android:attr/textColorSecondary" />
+    android:textColor="?attr/colorOnSurfaceVariant" />

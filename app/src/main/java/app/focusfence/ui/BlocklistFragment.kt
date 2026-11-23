@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import app.focusfence.dns.GuardPolicy
 import app.focusfence.DomainDetailActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
@@ -46,9 +47,7 @@ class BlocklistFragment : Fragment() {
                 startActivity(DomainDetailActivity.intent(requireContext(), rule.domain))
             },
             onDomainDelete = { rule ->
-                if (StrictStore.isLocked(requireContext())) {
-                    UiUtil.showStrictLockedDialog(requireContext())
-                } else {
+                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_BLOCK_RULE) {
                     BlocklistStore.remove(requireContext(), rule.domain)
                     refresh()
                 }
@@ -57,9 +56,7 @@ class BlocklistFragment : Fragment() {
             onAppClick = { pkg -> UiUtil.editAppRule(requireActivity(), pkg) { refresh() } },
             onAppRemove = { pkg ->
                 val context = requireContext()
-                if (StrictStore.isLocked(context)) {
-                    UiUtil.showStrictLockedDialog(context)
-                } else {
+                UiUtil.guard(context, GuardPolicy.Action.UNBLOCK_APP) {
                     BlockedAppsStore.set(context, BlockedAppsStore.get(context) - pkg)
                     refresh()
                 }

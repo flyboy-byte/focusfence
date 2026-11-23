@@ -34,15 +34,22 @@ tun fd (blocking)
    ├─ dstPort != 53           → dropped
    ├─ Dns.parseQuestion       single-question queries only; responses and malformed → null
    │
-   ├─ blockReason(qname)
-   │     ├─ user rule matches and is in force   → rule.domain
-   │     ├─ qname in downloaded ad hosts        → "_ads"
-   │     ├─ qname is a DoH bootstrap host       → "_guard"
-   │     └─ otherwise                           → null
+   ├─ Categories.decide(qname)          first match wins
+   │     ├─ user rule matches and is in force   → block (rule)
+   │     ├─ qname is a DoH bootstrap host       → block (guard)
+   │     ├─ qname on the user allowlist         → allow
+   │     ├─ a bundle with policy BLOCK matches  → block (category)
+   │     ├─ qname in downloaded ad hosts        → block (ads)
+   │     └─ otherwise                           → allow (labelled with any REPORT bundles)
    │
    ├─ blocked  → Dns.buildBlockedResponse, written straight back to the tun
-   └─ allowed  → handed to a 4-thread pool, relayed to a real resolver over a
-                 protect()ed socket, reply written back to the tun
+   └─ allowed  → handed to a 12-thread pool and relayed (forward), in Upstreams.order
+                 for the owner's choice (Automatic below; or a preset / own server first,
+                 optionally falling back to Automatic):
+                   1. the real network's own DNS servers, UDP, socket bound to that network
+                   2. DoH (RFC 8484) to https://1.1.1.1 then https://8.8.8.8, via
+                      Network.openConnection, keep-alive (never disconnect())
+                 the upstream that last answered is tried first; reply written back to the tun
 ```
 
 Two details in there are easy to "fix" into a regression:
@@ -50,21 +57,38 @@ Two details in there are easy to "fix" into a regression:
 **The tun fd is explicitly blocking.** `establish()` returns a non-blocking fd by default,
 which turns the reader loop into a busy spin that pins a core.
 
-**Blocked queries are not answered NXDOMAIN**, despite what the README and one KDoc comment
-still say. A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
+**Blocked queries are not answered NXDOMAIN** (the README and KDoc said so until the logging
+branch corrected them). A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
 continuously — this was measured waking the service thousands of times a day. Blocked A/AAAA
 queries now get a real answer of `0.0.0.0` / `::` with an explicit TTL; other query types get
 NODATA. TTLs are split deliberately: **1 hour** for ad and DoH-guard blocks, which are stable,
 and **60 seconds** for user rules, which change as schedules and budgets do.
 `Dns.buildNxDomain` still exists but is no longer on the block path.
 
+**Why the relay prefers the network's own resolver.** Relaying only to public resolvers failed
+on the owner's test phone twice: plain UDP to 1.1.1.1/8.8.8.8 failed ~75% of the time, and the
+DoH-only relay that replaced it (v2.1.1) left the phone with no working DNS. Every network allows
+its own resolver, which is what DNS66 and similar apps relay to. DoH stays as the fallback.
+
+**Never enable lockdown.** Android's "Block connections without VPN" drops every packet that
+isn't routed into the tunnel. With DNS-only routes that is all real traffic: the phone keeps DNS
+and loses the internet. `VpnHealth` reports it as `lockdown` and the alert opens VPN settings;
+in managed mode the app re-applies always-on without lockdown.
+
+**Filter health.** `dns/VpnHealth` classifies the running filter (ok, offline, degraded,
+upstream_down, silent, bypassed by strict Private DNS, lockdown) from relay outcomes, query
+arrivals, screen state and system settings, with no timers. See
+[`specs/device-owner.md`](specs/device-owner.md#health-detection).
+
 ## Layering
 
 ```
 dns/     pure Kotlin, no Android imports, unit-tested on the JVM
 data/    thin SharedPreferences wrappers
-vpn/     the VpnService — packet loop, upstream relay, stats, budget accrual
-accessibility/  the AccessibilityService — section rules and app blocking
+vpn/     the VpnService — packet loop, upstream relay, health, stats, budget accrual
+accessibility/  the AccessibilityService — section rules, app blocking, URL/text capture
+monitor/ Monitor (battery, perf, integrity trail), usage timeline, text/screen capture
+admin/   Device Owner wrapper, app suspension, Private DNS fallback
 ui/      fragments + the domain editor
 ```
 
@@ -160,7 +184,7 @@ release.
 ## Strict mode
 
 `StrictLock` is a pure state machine — Off / Locked / Pending / Unlocked. Loosening anything
-requires requesting an unlock, waiting 10 minutes, then acting inside a 5-minute window.
+requires requesting an unlock, waiting 10 minutes, then acting inside a 15-minute window (a notification announces when it opens).
 Adding new blocks is always allowed.
 
 Enforcement is **distributed across call sites**, not centralised: `DnsVpnService` refuses
