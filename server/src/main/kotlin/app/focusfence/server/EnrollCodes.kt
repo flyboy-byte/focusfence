@@ -22,6 +22,7 @@ class EnrollCodes(private val file: File) {
         val maxUses: Int = 0,      // 0 = unlimited
         val uses: Int = 0,
         val revoked: Boolean = false,
+        val lastUsedMs: Long = 0,
     )
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -57,15 +58,18 @@ class EnrollCodes(private val file: File) {
     }
 
     /** True if [given] is live; counts a use. Constant-time over the stored hashes. */
-    fun redeem(given: String, now: Long): Boolean = synchronized(this) {
+    fun redeem(given: String, now: Long): Boolean = redeemId(given, now) != null
+
+    /** Like [redeem] but returns the code's id so the device can record which code admitted it. */
+    fun redeemId(given: String, now: Long): String? = synchronized(this) {
         val h = Integrity.sha256(normalizeCode(given)).toByteArray()
         val all = list()
         var hit: Code? = null
         for (c in all) if (java.security.MessageDigest.isEqual(h, c.hash.toByteArray()) && hit == null) hit = c
-        val c = hit ?: return false
-        if (c.revoked || (c.expiresMs != 0L && now > c.expiresMs) || (c.maxUses != 0 && c.uses >= c.maxUses)) return false
-        save(all.map { if (it.id == c.id) it.copy(uses = it.uses + 1) else it })
-        true
+        val c = hit ?: return null
+        if (c.revoked || (c.expiresMs != 0L && now > c.expiresMs) || (c.maxUses != 0 && c.uses >= c.maxUses)) return null
+        save(all.map { if (it.id == c.id) it.copy(uses = it.uses + 1, lastUsedMs = now) else it })
+        c.id
     }
 }
 

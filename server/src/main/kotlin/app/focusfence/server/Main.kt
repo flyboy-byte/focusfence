@@ -271,9 +271,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (full() || store.deviceCount() >= cfg.maxDevices) return@post call.serverFull()
             runCatching { Integrity.publicKeyFromBase64Spki(req.publicKeySpki) }
                 .getOrElse { return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key")) }
-            if (needsCode && !enrollCodes.redeem(call.request.headers["X-FF-Enroll"].orEmpty(), cfg.now()))
-                return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed"))
-            call.respond(EnrollResponse(store.createDevice(req.publicKeySpki, cfg.now()).id))
+            val usedCode = if (needsCode) enrollCodes.redeemId(call.request.headers["X-FF-Enroll"].orEmpty(), cfg.now())
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed")) else ""
+            val created = store.createDevice(req.publicKeySpki, cfg.now())
+            if (usedCode.isNotEmpty()) store.updateDevice(created.id) { it.codeId = usedCode }
+            call.respond(EnrollResponse(created.id))
         }
 
         post("/v1/invites") {

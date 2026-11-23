@@ -68,6 +68,10 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var missingRecords: Long = 0,
         var partners: List<Partner> = emptyList(),
         var invites: List<Invite> = emptyList(),
+        /** Which enrollment code let this phone in (EnrollCodes id; empty for the bootstrap token). Admin page only. */
+        var codeId: String = "",
+        /** A name the operator gave the device on the admin page. */
+        var label: String = "",
     )
 
     @Serializable
@@ -128,6 +132,14 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val r = block(d)
         saveDevice(d)
         r
+    }
+
+    /** Bytes a device occupies (records, rotated records, screenshots), for the admin page. */
+    fun deviceBytes(id: String): Long {
+        if (!SAFE_ID.matches(id)) return 0
+        val rec = File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }.orEmpty().sumOf { it.length() }
+        val blobs = File(root, "blobs").listFiles { f -> f.name.startsWith("${id}_") }.orEmpty().sumOf { it.length() }
+        return rec + blobs
     }
 
     /** Removes a device, its records and its screenshots. Only the admin page calls this. */

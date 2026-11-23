@@ -112,7 +112,7 @@ class Admin(
 
     private suspend fun html(c: ApplicationCall, title: String, body: String, status: HttpStatusCode = HttpStatusCode.OK) {
         c.response.headers.append("Cache-Control", "no-store")
-        c.respondText(Web.page(title, body), ContentType.Text.Html, status)
+        c.respondText(if (body.startsWith("<!doctype")) body else Web.page(title, body), ContentType.Text.Html, status)
     }
 
     private fun loginForm(note: String? = null) =
@@ -128,31 +128,107 @@ class Admin(
 
     private fun hidden(s: Session) = "<input type='hidden' name='csrf' value='${Web.esc(s.csrf)}'>"
 
-    private fun dashboard(s: Session, newCode: String? = null, note: String? = null): String = buildString {
-        append("<h1>Server admin</h1><p class='muted'>${Web.esc(s.email)} · <form style='display:inline' method='post' action='/admin/logout'>${hidden(s)}<button>Sign out</button></form></p>")
-        if (note != null) append("<div class='card'>${Web.esc(note)}</div>")
-        if (newCode != null) append("<div class='card'><b>New enrollment code (shown once):</b><br><code style='font-size:1.3em'>${Web.esc(newCode)}</code></div>")
-        val used = store.usedBytes(cfg.now())
-        append("<h2>Usage</h2><p>Data ${used / 1_048_576} of ${cfg.maxDataBytes / 1_048_576} MB · devices ${store.deviceCount()} of ${cfg.maxDevices} · mailboxes ${store.mailboxCount()} of ${cfg.maxMailboxes}</p>")
-        append("<h2>Enrollment codes</h2><table>")
-        for (c in codes.list()) {
-            val state = if (c.revoked) "revoked" else if (c.expiresMs != 0L && cfg.now() > c.expiresMs) "expired" else "live"
-            append("<tr><td>${Web.esc(c.label)}</td><td>${c.uses}/${if (c.maxUses == 0) "∞" else c.maxUses.toString()}</td><td>$state</td><td>")
-            if (!c.revoked) append("<form method='post' action='/admin/codes/revoke'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(c.id)}'><button>Revoke</button></form>")
-            append("</td></tr>")
+    private val startedMs = cfg.now()
+
+    private val CSS = """
+:root{color-scheme:light dark;--bg:#f6f6f9;--card:#fff;--fg:#1b1b1f;--mut:#666;--line:#e2e2e8;--acc:#3f51b5;--ok:#1b7f3b;--bad:#b3261e;--warn:#a15c00}
+@media(prefers-color-scheme:dark){:root{--bg:#121216;--card:#1c1c22;--fg:#e8e8ee;--mut:#9a9aa6;--line:#33333c;--acc:#9fb0ff;--ok:#6fd08c;--bad:#ff8a80;--warn:#ffc266}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+header b{font-size:1.05em}header .sp{flex:1}
+nav{display:flex;gap:4px;flex-wrap:wrap}nav a{padding:6px 12px;border-radius:999px;text-decoration:none;color:var(--fg)}
+nav a.on{background:var(--acc);color:#fff}@media(prefers-color-scheme:dark){nav a.on{color:#111}}
+main{max-width:900px;margin:0 auto;padding:16px}h1{font-size:1.3em;margin:.2em 0 .6em}h2{font-size:1.05em;margin:0 0 .5em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.big{font-size:1.6em;font-weight:600}.mut{color:var(--mut);font-size:.9em}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%}th{text-align:left;color:var(--mut);font-weight:500;font-size:.85em}
+td,th{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);vertical-align:middle}tr:last-child td{border-bottom:0}
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.8em;border:1px solid var(--line)}
+form.inline{display:inline}label{display:block;margin:8px 0 2px;font-size:.9em;color:var(--mut)}
+input{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;max-width:340px}
+input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radius:8px;border:0;background:var(--acc);color:#fff;cursor:pointer}
+@media(prefers-color-scheme:dark){button{color:#111}}button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}button.danger{background:var(--bad);color:#fff}
+.note{border-left:4px solid var(--acc)}.code{font:600 1.25em ui-monospace,monospace;letter-spacing:.04em;word-break:break-all}
+.row{display:flex;flex-wrap:wrap;gap:12px}.row>div{flex:1;min-width:140px}
+"""
+
+    private fun ago(ms: Long): String {
+        if (ms <= 0) return "never"
+        val d = (cfg.now() - ms).coerceAtLeast(0) / 1000
+        return when { d < 90 -> "just now"; d < 5400 -> "${d / 60} min ago"; d < 129600 -> "${d / 3600} h ago"; else -> "${d / 86400} days ago" }
+    }
+    private fun mb(b: Long) = if (b < 1_048_576) "${b / 1024} KB" else "${b / 1_048_576} MB"
+    private fun bar(frac: Double) = "<div class='bar'><i style='width:${(frac.coerceIn(0.0, 1.0) * 100).toInt()}%'></i></div>"
+
+    private fun shell(s: Session, tab: String, body: String): String {
+        fun tabLink(id: String, label: String) = "<a href='/admin${if (id == "overview") "" else "/$id"}'${if (tab == id) " class='on'" else ""}>$label</a>"
+        return "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Focus Fence admin</title><style>$CSS</style></head><body>" +
+            "<header><b>Focus Fence server</b><nav>${tabLink("overview", "Overview")}${tabLink("codes", "Codes")}${tabLink("devices", "Devices")}${tabLink("activity", "Activity")}</nav><span class='sp'></span>" +
+            "<span class='mut'>${Web.esc(s.email)}</span><form class='inline' method='post' action='/admin/logout'>${hidden(s)}<button class='ghost'>Sign out</button></form></header><main>$body</main></body></html>"
+    }
+
+    private fun flash(newCode: String?, note: String?) =
+        (note?.let { "<div class='card note'>${Web.esc(it)}</div>" } ?: "") +
+            (newCode?.let { "<div class='card note'><h2>New enrollment code</h2><div class='code'>${Web.esc(it)}</div><p class='mut'>Shown once. Give it to one person; it is stored only as a hash.</p></div>" } ?: "")
+
+    private fun dashboard(s: Session, tab: String = "overview", newCode: String? = null, note: String? = null): String {
+        val now = cfg.now()
+        val body = when (tab) {
+            "codes" -> {
+                val list = codes.list().sortedByDescending { it.createdMs }
+                flash(newCode, note) + "<h1>Enrollment codes</h1><div class='card'><div class='tw'><table><tr><th>For</th><th>Used</th><th>Last used</th><th>Expires</th><th>State</th><th></th></tr>" +
+                    (if (list.isEmpty()) "<tr><td colspan='6' class='mut'>No codes yet. The server's own bootstrap code still works" + (if (cfg.enrollToken != null) "." else ", and enrollment is open (no code needed) until you make one.") + "</td></tr>" else "") +
+                    list.joinToString("") { c ->
+                        val state = if (c.revoked) "<span class='badge bad'>revoked</span>" else if (c.expiresMs != 0L && now > c.expiresMs) "<span class='badge warn'>expired</span>"
+                        else if (c.maxUses != 0 && c.uses >= c.maxUses) "<span class='badge warn'>used up</span>" else "<span class='badge ok'>live</span>"
+                        "<tr><td>${Web.esc(c.label)}</td><td>${c.uses}/${if (c.maxUses == 0) "∞" else c.maxUses.toString()}</td><td>${ago(c.lastUsedMs)}</td><td>${if (c.expiresMs == 0L) "never" else Web.time(c.expiresMs)}</td><td>$state</td><td>" +
+                            (if (!c.revoked) "<form class='inline' method='post' action='/admin/codes/revoke'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(c.id)}'><button class='ghost'>Revoke</button></form>" else "") + "</td></tr>"
+                    } + "</table></div></div>" +
+                    "<div class='card'><h2>Make a code</h2><form method='post' action='/admin/codes/add'>${hidden(s)}<div class='row'><div><label>Who is it for</label><input name='label' required maxlength='60' placeholder='Sam'></div>" +
+                    "<div><label>Expires in days</label><input name='days' inputmode='numeric' maxlength='4' placeholder='never' value='14'></div><div><label>Max uses</label><input name='uses' inputmode='numeric' maxlength='4' placeholder='unlimited' value='1'></div></div><p><button>Create code</button></p></form></div>"
+            }
+            "devices" -> {
+                val devs = store.allDevices().sortedByDescending { it.lastSeenMs }
+                val byCode = codes.list().associateBy { it.id }
+                flash(newCode, note) + "<h1>Devices</h1><p class='mut'>Names, dates, sizes and partner counts only. Reports, activity, tokens and screenshots are never shown here.</p>" +
+                    (if (devs.isEmpty()) "<div class='card mut'>No phones enrolled yet.</div>" else "") +
+                    devs.joinToString("") { d ->
+                        val silent = d.staleAlerted
+                        "<div class='card'><div class='row'><div><div class='mut'>Device <code>${Web.esc(d.id.take(8))}</code></div><div class='big'>${Web.esc(d.label.ifBlank { "unnamed" })}</div></div>" +
+                            "<div><div class='mut'>Last seen</div>${ago(d.lastSeenMs)}${if (silent) " <span class='badge bad'>silent</span>" else ""}</div>" +
+                            "<div><div class='mut'>Enrolled</div>${Web.time(d.enrolledMs)}<div class='mut'>with ${Web.esc(byCode[d.codeId]?.label ?: if (d.codeId.isEmpty()) "bootstrap code / open" else "a removed code")}</div></div>" +
+                            "<div><div class='mut'>Partners</div>${d.partners.size} (${d.partners.count { it.confirmed }} confirmed)<div class='mut'>${mb(store.deviceBytes(d.id))} stored</div></div></div>" +
+                            "<form method='post' action='/admin/devices/label'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(d.id)}'><div class='row'><div><input name='label' maxlength='40' placeholder='Name this device' value='${Web.esc(d.label)}'></div><div><button class='ghost'>Save name</button></div></div></form>" +
+                            "<form method='post' action='/admin/devices/remove' style='margin-top:8px'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(d.id)}'><label><input type='checkbox' name='sure' value='1' required> Delete this device and everything stored for it</label><button class='danger'>Remove device</button></form></div>"
+                    }
+            }
+            "activity" -> {
+                val mine = sessions.values.filter { it.full }.sortedByDescending { it.seen }
+                flash(newCode, note) + "<h1>Activity</h1><div class='card'><h2>Admin log</h2><div class='tw'><table><tr><th>When</th><th>Who</th><th>What</th><th>From</th></tr>" +
+                    auditTail(100).joinToString("") { a -> "<tr><td>${Web.time(a["t"]?.toLongOrNull() ?: 0)}</td><td>${Web.esc(a["who"].orEmpty())}</td><td>${Web.esc(a["action"].orEmpty())} <span class='mut'>${Web.esc(a["detail"].orEmpty())}</span></td><td class='mut'>${Web.esc(a["ip"].orEmpty())}</td></tr>" } +
+                    "</table></div></div><div class='card'><h2>Signed-in sessions</h2><p class='mut'>${mine.size} active. Sessions end after 30 minutes idle or 8 hours, and when the server restarts.</p>" +
+                    "<form class='inline' method='post' action='/admin/sessions/others'>${hidden(s)}<button class='ghost'>Sign out all other sessions</button></form></div>" +
+                    "<div class='card'><h2>Your sign-in</h2><p class='mut'>Recovery codes left: ${recs()[s.email]?.recovery?.size ?: 0}</p>" +
+                    "<form class='inline' method='post' action='/admin/recovery/new'>${hidden(s)}<button class='ghost'>Make new recovery codes</button></form> " +
+                    "<form class='inline' method='post' action='/admin/test-email'>${hidden(s)}<button class='ghost'>Send me a test email</button></form></div>"
+            }
+            else -> {
+                val used = store.usedBytes(now); val devs = store.deviceCount(); val boxes = store.mailboxCount()
+                val all = store.allDevices(); val silent = all.count { it.staleAlerted }
+                val live = codes.list().count { !it.revoked && (it.expiresMs == 0L || now < it.expiresMs) && (it.maxUses == 0 || it.uses < it.maxUses) }
+                flash(newCode, note) + "<h1>Overview</h1><div class='grid'>" +
+                    "<div class='card'><div class='mut'>Data</div><div class='big'>${mb(used)}</div>${bar(used.toDouble() / cfg.maxDataBytes)}<div class='mut'>of ${mb(cfg.maxDataBytes)}</div></div>" +
+                    "<div class='card'><div class='mut'>Phones</div><div class='big'>$devs</div>${bar(devs.toDouble() / cfg.maxDevices)}<div class='mut'>of ${cfg.maxDevices}</div></div>" +
+                    "<div class='card'><div class='mut'>Blind mailboxes</div><div class='big'>$boxes</div>${bar(boxes.toDouble() / cfg.maxMailboxes)}<div class='mut'>of ${cfg.maxMailboxes}</div></div>" +
+                    "<div class='card'><div class='mut'>Silent phones</div><div class='big ${if (silent > 0) "bad" else "ok"}'>$silent</div><div class='mut'>no check-in for ${cfg.staleMs / 3_600_000} h</div></div></div>" +
+                    "<div class='card'><h2>Enrollment</h2><p>${if (cfg.enrollToken == null && live == 0 && codes.list().isEmpty()) "<span class='bad'>Open: anyone who finds this server can enroll a phone.</span>" else "Closed: a code is needed."} " +
+                    "$live live code(s)${if (cfg.enrollToken != null) " plus the bootstrap code" else ""}. <a href='/admin/codes'>Manage codes</a></p></div>" +
+                    "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${cfg.staleMs / 3_600_000} h silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · confirmation emails capped at ${cfg.confirmGlobalDailyCap}/day</p></div>"
+            }
         }
-        append("</table><form method='post' action='/admin/codes/add'>${hidden(s)}<label>Who is it for<br><input name='label' required maxlength='60'></label>" +
-            "<label>Expires in days (blank = never)<br><input name='days' inputmode='numeric' maxlength='4'></label>" +
-            "<label>Max uses (blank = unlimited)<br><input name='uses' inputmode='numeric' maxlength='4'></label><button>Create a code</button></form>")
-        append("<h2>Devices</h2><p class='muted'>Id, dates and partner count only. Reports, tokens and screenshots are never shown here.</p><table>")
-        for (d in store.allDevices().sortedByDescending { it.lastSeenMs }) {
-            append("<tr><td><code>${Web.esc(d.id.take(8))}</code></td><td>seen ${Web.time(d.lastSeenMs)}</td><td>${d.partners.size} partner(s)</td><td>" +
-                "<form method='post' action='/admin/devices/remove'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(d.id)}'>" +
-                "<label><input type='checkbox' name='sure' value='1' required> delete</label><button>Remove</button></form></td></tr>")
-        }
-        append("</table><h2>Recent admin activity</h2><table>")
-        for (a in auditTail(30)) append("<tr><td>${Web.time(a["t"]?.toLongOrNull() ?: 0)}</td><td>${Web.esc(a["who"].orEmpty())}</td><td>${Web.esc(a["action"].orEmpty())} ${Web.esc(a["detail"].orEmpty())}</td><td class='muted'>${Web.esc(a["ip"].orEmpty())}</td></tr>")
-        append("</table>")
+        return shell(s, tab, body)
     }
 
     private fun newSession(c: ApplicationCall, email: String, full: Boolean): Session {
@@ -173,6 +249,14 @@ class Admin(
                 s == null -> html(call, "Admin", loginForm())
                 !s.full -> html(call, "Set up", setupPage(s))
                 else -> html(call, "Admin", dashboard(s))
+            }
+        }
+        for (tab in listOf("codes", "devices", "activity")) r.get("/admin/$tab") {
+            val s = session(call)
+            when {
+                s == null -> html(call, "Admin", loginForm())
+                !s.full -> html(call, "Set up", setupPage(s))
+                else -> html(call, "Admin", dashboard(s, tab))
             }
         }
         r.post("/admin/login") {
@@ -247,18 +331,44 @@ class Admin(
             val label = p["label"].orEmpty().trim().ifEmpty { "unnamed" }
             val (plain, c) = codes.create(label, cfg.now(), days?.let { cfg.now() + it * 86_400_000 } ?: 0, uses)
             audit(s.email, clientOf(call), "code_created", "${c.id} ${c.label}")
-            html(call, "Admin", dashboard(s, newCode = plain))
+            html(call, "Admin", dashboard(s, "codes", newCode = plain))
         } }
         r.post("/admin/codes/revoke") { call.authed { s, p ->
             val id = p["id"].orEmpty(); val ok = codes.revoke(id)
             audit(s.email, clientOf(call), "code_revoked", id)
-            html(call, "Admin", dashboard(s, note = if (ok) "Code revoked." else "No such code."))
+            html(call, "Admin", dashboard(s, "codes", note = if (ok) "Code revoked." else "No such code."))
         } }
         r.post("/admin/devices/remove") { call.authed { s, p ->
             val id = p["id"].orEmpty()
             val ok = p["sure"] == "1" && store.deleteDevice(id)
             audit(s.email, clientOf(call), "device_removed", id.take(8))
-            html(call, "Admin", dashboard(s, note = if (ok) "Device removed." else "Nothing removed."))
+            html(call, "Admin", dashboard(s, "devices", note = if (ok) "Device removed." else "Nothing removed."))
+        } }
+        r.post("/admin/devices/label") { call.authed { s, p ->
+            val id = p["id"].orEmpty(); val label = p["label"].orEmpty().trim().take(40)
+            val ok = store.updateDevice(id) { it.label = label } != null
+            audit(s.email, clientOf(call), "device_named", "${id.take(8)} $label")
+            html(call, "Admin", dashboard(s, "devices", note = if (ok) "Saved." else "No such device."))
+        } }
+        r.post("/admin/sessions/others") { call.authed { s, _ ->
+            val mine = call.request.cookies[COOKIE]
+            val n = sessions.count { it.key != mine }
+            sessions.keys.filter { it != mine }.forEach { sessions.remove(it) }
+            audit(s.email, clientOf(call), "other_sessions_ended", n.toString())
+            html(call, "Admin", dashboard(s, "activity", note = "$n other session(s) signed out."))
+        } }
+        r.post("/admin/recovery/new") { call.authed { s, _ ->
+            val plain = List(8) { newInviteCode() + newInviteCode() }
+            val all = recs(); val rec = all[s.email]
+            if (rec != null) { rec.recovery = plain.map { Integrity.sha256(normalizeCode(it)) }; saveRecs(all) }
+            audit(s.email, clientOf(call), "recovery_codes_renewed")
+            html(call, "Recovery codes", "<h1>New recovery codes</h1><p>The old ones no longer work. Save these now; they are not shown again.</p><div class='card'><code>" +
+                plain.joinToString("<br>") { it.chunked(4).joinToString("-") } + "</code></div><p><a href='/admin/activity'>Back</a></p>")
+        } }
+        r.post("/admin/test-email") { call.authed { s, _ ->
+            val ok = emailGlobal.allow("all") && notifier.email(s.email, "Focus Fence admin test", "<p>This is a test email from your Focus Fence server. Sending works.</p>")
+            audit(s.email, clientOf(call), "test_email", if (ok) "sent" else "failed")
+            html(call, "Admin", dashboard(s, "activity", note = if (ok) "Test email sent to ${s.email}." else "The email could not be sent. Check the server log."))
         } }
         r.post("/admin/logout") { call.authed { s, _ ->
             call.request.cookies[COOKIE]?.let { sessions.remove(it) }

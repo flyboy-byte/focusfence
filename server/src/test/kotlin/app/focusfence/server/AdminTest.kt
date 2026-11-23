@@ -71,10 +71,16 @@ class AdminTest {
         assertFalse(store.dir.resolve("admin.json").readText().contains(recovery[0].replace("-", "")), "recovery codes stored hashed")
 
         // Dashboard, create a code, see it once.
-        assertTrue(http.get("/admin") { header(HttpHeaders.Cookie, session) }.bodyAsText().contains("Enrollment codes"))
+        assertTrue(http.get("/admin") { header(HttpHeaders.Cookie, session) }.bodyAsText().contains("Overview"))
+        assertTrue(http.get("/admin/codes") { header(HttpHeaders.Cookie, session) }.bodyAsText().contains("Enrollment codes"))
         assertEquals(HttpStatusCode.Forbidden, http.form("/admin/codes/add", session, "csrf" to "nope", "label" to "x").status)
         val made = http.form("/admin/codes/add", session, "csrf" to csrf, "label" to "Sam", "uses" to "1").bodyAsText()
-        assertTrue(made.contains("shown once"))
+        assertTrue(made.contains("Shown once"))
+        val dev = store.createDevice("spki", clock)
+        assertTrue(http.form("/admin/devices/label", session, "csrf" to csrf, "id" to dev.id, "label" to "Sam's phone").bodyAsText().contains("Saved"))
+        assertEquals("Sam's phone", store.device(dev.id)!!.label)
+        assertTrue(http.form("/admin/test-email", session, "csrf" to csrf).bodyAsText().contains("Test email sent"))
+        assertTrue(http.get("/admin/devices") { header(HttpHeaders.Cookie, session) }.bodyAsText().contains("Sam&#39;s phone"), "labels are escaped")
         assertEquals(1, EnrollCodes(store.dir.resolve("codes.json")).list().size)
         assertTrue(store.dir.resolve("admin-audit.jsonl").readText().contains("code_created"))
 
@@ -108,7 +114,8 @@ class AdminTest {
 
     @Test
     fun noSessionNoDashboard() = run { http ->
-        assertFalse(http.get("/admin").bodyAsText().contains("Enrollment codes"))
+        assertFalse(http.get("/admin").bodyAsText().contains("Overview"))
+        assertFalse(http.get("/admin/devices").bodyAsText().contains("Remove device"))
         assertEquals(HttpStatusCode.Unauthorized, http.form("/admin/codes/add", "", "csrf" to "x", "label" to "x").status)
     }
 }
