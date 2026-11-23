@@ -67,6 +67,9 @@ _Rewritten 2026-11-23 (end of the long session on the laptop with VPS access). `
 2. Read the first export from 2.8.0/2.9.0: did the Always-on reminder fire, `flag_*` counters, time-to-email for a filter-off alert
    (he opened the app before the email arrived: unmeasured), Save to Downloads, a real light-mode run of `tools/check_light_mode.py`.
 3. **Server admin and landing page**: `docs/plans/06-server-admin-and-landing.md`. Phase 1 (per-person enrollment codes) first.
+3b. **GitHub Pages site, linked from Settings** (owner request 2026-11-23, not started): a privacy page and whatever else is
+   needed, published with GitHub Pages and opened from a "About and privacy" row in Settings. Scope and caveats in
+   `docs/plans/07-pages-and-privacy.md`. Needs @sidewinderzz (repo admin) to enable Pages, and the repo is private today.
 4. Not done: device attestation at enroll (enroll code + caps are the stopgap), off-box backups, an outbound firewall for the
    service, fail2ban nginx jails (host-wide, they read the journal but nginx logs to files), `docker compose` end to end, first
    run of `server-release.yml`, report exclusions, screenshot upload to partners, Settings grouped into cards, "Recent flags".
