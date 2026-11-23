@@ -264,18 +264,63 @@ than anywhere else in the app).
 
 ---
 
+## D-017 — One release signing key for every Focus Fence release
+
+*Decided: 2026-11-23 by @flyboy-byte. Resolves O-002.*
+
+Every release APK of this app, from any branch, is signed with the key already held in this repo's
+Actions secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, added
+2026-11-17). It has signed every `v*-accountable` release since then (up to 2.10.0), and
+those builds are on real phones, so it already is the app's identity: changing it now would force
+every install to uninstall and lose its rules, exactly the failure O-002 warned about.
+
+**The key, so anyone can check a release is genuine** (public values, not secrets):
+
+| | |
+|---|---|
+| Certificate SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
+| Public key SHA-256 | `deb822114c362ad960c2d8c3f42cfce9bcd1b0926625aabbaacc0cb2b60f3bb2` |
+| Subject | `CN=Focus Fence Accountable, OU=flyboy-byte, O=Focus Fence, C=CA` |
+| Algorithm | RSA 2048, APK Signature Scheme v2 |
+| Valid | 2026-11-16 to 2054-04-03 |
+
+Check one with `apksigner verify --print-certs <apk>`: the certificate SHA-256 must match.
+
+**Answers to O-002's questions:**
+
+1. *Who generated and holds it:* @flyboy-byte.
+2. *Does the other maintainer hold a copy:* not as a file. @sidewinderzz, as repo admin, controls the
+   secrets and the workflows that use them; that is the second point of control.
+3. *Backup:* @flyboy-byte keeps an offline, encrypted backup, never in the repo, a chat or a synced
+   drive. Location deliberately not written here. **To confirm when merging:** that this backup exists
+   (the secrets cannot be read back out of GitHub, so it is the only copy if the original is lost).
+4. *CI or by hand:* **CI signs**, from the secrets above. The doc's hand-signing recommendation was
+   not followed; the risk is contained because only `release.yml` reads the secrets and it runs on
+   pushed `v*` tags only. `android.yml` runs on `pull_request` and never references them, and GitHub
+   does not pass secrets to fork PRs.
+
+**Deviations from `docs/signing-key-custody.md`, accepted:** RSA 2048 instead of 4096 (Android and
+every store accept it; 2048 is still the common default), and about 27 years of validity instead of
+30 or more (it outlives any plausible life of this app; Play's own floor is 2033).
+
+**Rules that follow:**
+
+- Any signing config (including the one proposed in #11, which reads `FOCUSFENCE_*` variables) must
+  use **this** key. A second key for the same application id is never acceptable.
+- Never add these secrets to a workflow that runs on `pull_request`, and never print them.
+- A build without the secrets (forks, local) stays unsigned or debug-signed, never a "release".
+- Debug and CI artifacts are signed with debug keys and do not install over a release; that is
+  expected, not a bug.
+
+**What would reopen it:** the key leaking (then: new application id, announce, reissue) or being lost
+(then: same, since there is no recovery). Moving to hand signing later keeps the same key and does not
+reopen this.
+
+---
+
 # Open — decided before the first release
 
-## O-002 — Signing key custody
-
-Blocks the first release (`docs/infrastructure.md` R2), and it is a **one-way door**: the key becomes the app's
-permanent identity. Signing a later update with a different key forces every user to uninstall
-and reinstall, losing their rules.
-
-To settle: who generates and holds the keystore; whether both of us hold a copy; where the backup
-lives; and whether CI signs from a GitHub Actions secret or releases are signed by hand.
-
-Worth settling now — losing this key later is unrecoverable.
+## ~~O-002 — Signing key custody~~ — resolved by D-017 (2026-11-23)
 
 ## O-003 — Whether an allowlist overrides user rules
 
