@@ -544,4 +544,10 @@
     <string name="unlock_channel">Strict-mode unlock</string>
     <string name="unlock_ready_title">Unlock is open</string>
     <string name="unlock_ready_text">Make your change now: %1$d min left.</string>
+    <!-- About and privacy: the site URL lives here so it can change. TODO: replace once GitHub Pages is enabled (needs the repo admin). -->
+    <string name="about_url" translatable="false">https://sidewinderzz.github.io/focusfence/privacy.html</string>
+    <string name="about_title">About and privacy</string>
+    <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, your activity records go to the accountability server you choose, and that server\'s operator can read them; screenshots are encrypted to your partner. Uninstalling removes everything on the phone.</string>
+    <string name="about_open_site">Open the full page</string>
+    <string name="about_no_browser">No browser found. The page is at %1$s</string>
 </resources>

@@ -64,6 +64,7 @@ class SettingsFragment : Fragment() {
         binding.setupButton.setOnClickListener {
             startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
         }
+        binding.aboutButton.setOnClickListener { showAbout() }
         binding.accountabilityButton.setOnClickListener {
             startActivity(Intent(requireContext(), app.focusfence.AccountabilityActivity::class.java))
         }
@@ -216,5 +217,22 @@ class SettingsFragment : Fragment() {
                 DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(updatedAt)),
             )
         }
+    }
+
+    /** Short summary that works offline, then an optional hop to the site in the browser (no web view, no network from the app). */
+    private fun showAbout() {
+        val url = getString(R.string.about_url)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.about_title)
+            .setMessage(R.string.about_summary)
+            .setPositiveButton(R.string.about_open_site) { _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                } catch (e: android.content.ActivityNotFoundException) {
+                    android.widget.Toast.makeText(requireContext(), getString(R.string.about_no_browser, url), android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 }

@@ -1,4 +1,6 @@
-# GitHub Pages site and in-app links (scope only; nothing built)
+# GitHub Pages site and in-app links (started 2026-11-23)
+
+**Built (🧪 CI only):** `docs/site/` has Home, Privacy, Limits and Run-your-own-server pages (static, no scripts); Settings → Accountability card has "About and privacy" (offline summary dialog, then opens `about_url` in the browser). **Not done:** the Pages workflow, enabling Pages (repo admin), the real `about_url` (currently a placeholder guess at `sidewinderzz.github.io/focusfence/`), operator/contact on the privacy page, Licences and Security pages. The privacy page was checked against `TextCapture` (it logs the visible text, 2,000 chars/screen); re-check on each release.
 
 _Requested by Logan 2026-11-23: "add a privacy page and etc as needed into GitHub Pages, linked into Settings."_
 
