@@ -73,6 +73,9 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
         append("<h1>Focus Fence report</h1>")
         append("<p class='muted'>For ${esc(partner.name)} · last 7 days · keep this link private, it's your login.</p>")
         if (notice != null) append("<div class='card'>${esc(notice)}</div>")
+        if (!partner.confirmed) {
+            append("<form method='post' action='/p/$t/resend'><button>Send the confirmation email again</button></form>")
+        }
         append(
             if (deviceOnline) "<p class='ok'>The phone is checking in normally (last ${time(lastSeenMs)}).</p>"
             else "<p class='bad'>The phone hasn't checked in since ${time(lastSeenMs)} — protection may be off, or the app may have been removed.</p>"

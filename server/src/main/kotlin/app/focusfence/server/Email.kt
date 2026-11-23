@@ -7,6 +7,7 @@ import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
@@ -43,6 +44,7 @@ class LiveNotifier(
 ) : Notifier {
 
     private val client = HttpClient(CIO)
+    private val log = org.slf4j.LoggerFactory.getLogger("email")
 
     @Serializable
     private data class ResendRequest(val from: String, val to: List<String>, val subject: String, val html: String)
@@ -58,13 +60,22 @@ class LiveNotifier(
             println("[email:dev] to=$to subject=$subject\n$html")
             return true
         }
-        return runCatching {
-            client.post("https://api.resend.com/emails") {
+        // A failed send must never be silent: a partner who never gets their confirmation can't be told why.
+        // Resend's error body is a short message with no credentials in it, so it is safe to log (not the address).
+        return try {
+            val r = client.post("https://api.resend.com/emails") {
                 header("Authorization", "Bearer $resendKey")
                 contentType(ContentType.Application.Json)
                 setBody(Json.encodeToString(ResendRequest.serializer(), ResendRequest(mailFrom, listOf(to), subject, html)))
-            }.status.isSuccess()
-        }.getOrDefault(false)
+            }
+            if (!r.status.isSuccess()) {
+                log.warn("email send failed: HTTP {} {}", r.status.value, r.bodyAsText().take(200))
+            }
+            r.status.isSuccess()
+        } catch (e: Exception) {
+            log.warn("email send failed: {}", e::class.simpleName)
+            false
+        }
     }
 
     override suspend fun sms(to: String, text: String): Boolean = runCatching {

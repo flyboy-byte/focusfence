@@ -200,6 +200,16 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"])
     fun full(): Boolean = store.usedBytes(cfg.now()) >= cfg.maxDataBytes
+    /** One confirmation email per address per hour; that cap holds for resends too. */
+    suspend fun sendConfirmation(partner: Store.Partner) {
+        if (!confirmLimiter.allow(partner.email.lowercase())) return
+        notifier.email(
+            partner.email, "Focus Fence: confirm your email",
+            "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
+                "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/${partner.token}\">confirm here</a>. " +
+                "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
+        )
+    }
     suspend fun ApplicationCall.serverFull() = respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
 
     fun signedOk(device: Store.Device, action: String, t: Long, extra: String, sig: String): Boolean {
@@ -393,16 +403,17 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 d.invites = d.invites.filter { it.codeHash != codeHash } // single use
                 d.partners = d.partners + partner
             }
-            if (confirmLimiter.allow(email.lowercase())) {
-                notifier.email(
-                    email, "Focus Fence: confirm your email",
-                    "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
-                        "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/${partner.token}\">confirm here</a>. " +
-                        "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
-                )
-            }
+            sendConfirmation(partner)
             call.respondRedirect("/p/${partner.token}?welcome=1")
 
+        }
+
+        // The first email can fail (provider down, sender not verified) or land in spam: let the partner ask again.
+        post("/p/{token}/resend") {
+            val token = call.parameters["token"].orEmpty()
+            val (_, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
+            if (!partner.confirmed) sendConfirmation(partner)
+            call.respondRedirect("/p/$token?welcome=1")
         }
 
         // The email link only SHOWS a button; confirming is a POST, so a mail scanner that opens links can't confirm for you.

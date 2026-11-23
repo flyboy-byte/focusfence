@@ -384,4 +384,23 @@ class ServerTest {
         assertEquals(HttpStatusCode.BadRequest, r.status)
         assertTrue(!r.bodyAsText().contains("Exception") && !r.bodyAsText().contains("kotlinx"), r.bodyAsText())
     }
+
+    @Test
+    fun confirmationCanBeResentButNotFasterThanOncePerHour() = run { http ->
+        val id = http.enroll()
+        http.join(http.invite(id).code)
+        val token = store.device(id)!!.partners.single().token
+        assertEquals(1, notifier.emails.size)
+        // inside the hour: asking again sends nothing more
+        http.post("/p/$token/resend")
+        assertEquals(1, notifier.emails.size)
+        clock += 61 * 60_000
+        http.post("/p/$token/resend")
+        assertEquals(2, notifier.emails.size)
+        assertTrue(notifier.emails.last().second.contains("confirm"))
+        // the page offers the button only while unconfirmed
+        assertTrue(http.get("/p/$token").bodyAsText().contains("/p/$token/resend"))
+        http.post("/confirm/$token")
+        assertTrue(!http.get("/p/$token").bodyAsText().contains("/resend"))
+    }
 }
