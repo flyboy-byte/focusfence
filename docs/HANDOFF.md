@@ -66,7 +66,7 @@ _Rewritten 2026-11-23 (end of the long session on the laptop with VPS access). `
    each sees the other's report and that an alert reaches the other. Expect bugs; get both exports.
 2. Read the first export from 2.8.0/2.9.0: did the Always-on reminder fire, `flag_*` counters, time-to-email for a filter-off alert
    (he opened the app before the email arrived: unmeasured), Save to Downloads, a real light-mode run of `tools/check_light_mode.py`.
-3. **Server admin and landing page**: `docs/plans/06-server-admin-and-landing.md`. Phase 1 (per-person enrollment codes) first.
+3. **Server admin and landing page** (Logan 2026-11-23: "at some point, but maybe not quite yet": phase 1, per-person codes, is built and deployed; do not start phases 2-4 until he says): `docs/plans/06-server-admin-and-landing.md`. Phase 1 (per-person enrollment codes) first.
 3b. **GitHub Pages site, linked from Settings** (owner request 2026-11-23; pages in `docs/site/` and the Settings row are written, not published): a privacy page and whatever else is
    needed, published with GitHub Pages and opened from a "About and privacy" row in Settings. Scope and caveats in
    `docs/plans/07-pages-and-privacy.md`. Needs @sidewinderzz (repo admin) to enable Pages, and the repo is private today.
