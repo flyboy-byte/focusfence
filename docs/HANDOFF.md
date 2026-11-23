@@ -59,6 +59,7 @@ _Rewritten 2026-11-23 (end of the long session on the laptop with VPS access). `
   partner key ("less privacy now, harden later if we open it up").
 - Adult/gambling bundles default to Report. Strict unlock: wait 10 min, window 15. Capture keeps its visible indicator. Never block
   uninstall, never widen the VPN routes. Never commit signing material.
+- Screenshots stay on the phone (2026-11-23, Logan unsure, my recommendation adopted): no image upload to partners until his "Not a problem"/"Real hit" answers (`rev` records) show the flags are mostly real. Revisit then; the pasted "partner key" box in Monitoring is left as is.
 - Landing on upstream is Logan's conversation, not ours. `docs/plans/05-group-and-release.md` section 7 has the talking points and a
   draft D-017.
 
