@@ -214,15 +214,19 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     /** One confirmation email per address per hour; that cap holds for resends too. */
     suspend fun sendConfirmation(deviceId: String, partner: Store.Partner) {
         if (!confirmLimiter.allow(partner.email.lowercase()) || !confirmGlobal.allow("all")) return
-        // A new single-use token every time (only its hash is stored), so an older email's link stops working.
+        // A new single-use token every time (only its hash is stored), so an older email's link stops working...
         val token = newToken()
-        store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id }?.confirmHash = Integrity.sha256(token) }
-        notifier.email(
+        val hash = Integrity.sha256(token)
+        var previous: String? = null
+        store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id }?.let { previous = it.confirmHash; it.confirmHash = hash } }
+        val sent = notifier.email(
             partner.email, "Focus Fence: confirm your email",
             "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
                 "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/$token\">confirm here</a>. " +
                 "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
         )
+        // ...but only if the email really went out: otherwise nobody holds the new link, and the old one must keep working.
+        if (!sent) store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id && it.confirmHash == hash }?.confirmHash = previous }
     }
     suspend fun ApplicationCall.serverFull(): Unit {
         // Visible to the operator: a full server silently refuses every phone.

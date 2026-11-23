@@ -30,8 +30,13 @@ import kotlin.test.assertTrue
 class FakeNotifier : Notifier {
     val emails = ArrayList<Triple<String, String, String>>()
     val texts = ArrayList<Pair<String, String>>()
+    /** Simulates the provider refusing (an unverified sender, an outage). */
+    var failEmails = false
     override val smsAvailable = true
-    override suspend fun email(to: String, subject: String, html: String): Boolean { emails += Triple(to, subject, html); return true }
+    override suspend fun email(to: String, subject: String, html: String): Boolean {
+        if (failEmails) return false
+        emails += Triple(to, subject, html); return true
+    }
     override suspend fun sms(to: String, text: String): Boolean { texts += to to text; return true }
 }
 
@@ -467,5 +472,31 @@ class ServerTest {
         repeat(3) { i -> s.saveBlob("dev", "s$i", ByteArray(60)); Thread.sleep(15) }
         val kept = java.io.File(s.javaClass.getDeclaredField("root").apply { isAccessible = true }.get(s) as java.io.File, "blobs").listFiles()!!.map { it.name }
         assertEquals(listOf("dev_s2.bin"), kept, "180 bytes over a 100 byte budget: only the newest fits")
+    }
+
+    @Test
+    fun aFailedSendDoesNotReplaceTheTokenOrKillTheOldLink() = run { http ->
+        val id = http.enroll()
+        http.join(http.invite(id).code)
+        val first = emailedConfirmToken()
+        val pid = store.device(id)!!.partners.single().id
+        val before = store.device(id)!!.partners.single().confirmHash
+        notifier.failEmails = true
+        clock += 61 * 60_000
+        http.post("/join/resend/$pid")
+        assertEquals(before, store.device(id)!!.partners.single().confirmHash, "nobody got a new link, so nothing changes")
+        assertEquals(HttpStatusCode.Found, http.post("/confirm/$first").status, "the first email's link still works")
+    }
+
+    @Test
+    fun aFirstSendThatFailsLeavesNoDanglingHash() = run { http ->
+        val id = http.enroll()
+        notifier.failEmails = true
+        http.join(http.invite(id).code)
+        assertEquals(null, store.device(id)!!.partners.single().confirmHash)
+        notifier.failEmails = false
+        clock += 61 * 60_000
+        http.post("/join/resend/${store.device(id)!!.partners.single().id}")
+        assertEquals(HttpStatusCode.Found, http.post("/confirm/${emailedConfirmToken()}").status)
     }
 }
