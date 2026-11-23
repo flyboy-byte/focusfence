@@ -33,6 +33,20 @@ What that tells us:
 - A single 82% score is **not** evidence. One image is not a measured false-positive rate.
   We need tens to hundreds of reviewed flags before we tune anything with confidence.
 
+## Data from the 2026-11-23 export (122 h, 1,056 screenshots, 812 scored)
+
+Top labels: neutral 665, drawings 138, porn 8, sexy 1. Every screenshot at 50% or above (8) and what `dns/FlagPolicy` does with it:
+
+| When | App | Label, score | Old rule | New rule |
+|---|---|---|---|---|
+| 11-20 08:21 | Ente Photos | porn 0.82 | flagged | held (lone hit) |
+| 11-20 16:03 | Ente Photos | porn 0.86 | flagged | held |
+| 11-22 06:52 | Ente Photos | sexy 0.81 | flagged | held; the owner answered **ok** (not a problem) at 06:53, the only `rev` answer so far |
+| 11-22 11:57 to 12:09 | Brave | porn 0.51, 0.70, 0.95 | one flag at 0.95 | flagged (strong); sustained run |
+| 11-22 17:04 | Ente Photos | porn 0.72 | flagged | held |
+
+Four of five old flags were a photo-gallery app, one confirmed false by the owner. No evidence was kept for any of them (`shot_no_partner_key` 5: no partner key set). One reviewed answer is still not a rate: keep collecting `rev` answers before retuning, and record why in this file when thresholds change.
+
 ## Options, cheapest first
 
 | Option | What it does | Cost | Notes |

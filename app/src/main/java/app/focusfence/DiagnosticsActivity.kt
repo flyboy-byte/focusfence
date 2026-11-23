@@ -1,13 +1,16 @@
 package app.focusfence
 
+import android.content.ContentValues
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.provider.MediaStore
 import android.provider.Settings
 import android.text.format.Formatter
 import android.widget.CompoundButton
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import app.focusfence.dns.GuardPolicy
@@ -53,7 +56,8 @@ class DiagnosticsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         binding.refreshButton.setOnClickListener { refresh() }
-        binding.exportButton.setOnClickListener { export() }
+        binding.exportButton.setOnClickListener { export(save = false) }
+        binding.saveButton.setOnClickListener { export(save = true) }
         binding.clearButton.setOnClickListener { confirmClear() }
         binding.usageAccessButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
@@ -153,8 +157,24 @@ class DiagnosticsActivity : AppCompatActivity() {
         const val ACTIVITY_WINDOW_MS = 24 * 60 * 60_000L
     }
 
-    private fun export() {
+    /** Pre-Android-10 fallback: the system file picker (no storage permission needed). */
+    private var zipToSave: File? = null
+    private val pickSaveLocation = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val zip = zipToSave
+        zipToSave = null
+        if (uri != null && zip != null) {
+            try {
+                contentResolver.openOutputStream(uri)?.use { out -> zip.inputStream().use { it.copyTo(out) } }
+                Toast.makeText(this, getString(R.string.diag_saved, zip.name), Toast.LENGTH_LONG).show()
+            } catch (e: IOException) {
+                Toast.makeText(this, getString(R.string.diag_save_failed, e.toString()), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun export(save: Boolean) {
         binding.exportButton.isEnabled = false
+        binding.saveButton.isEnabled = false
         val app = applicationContext
         Thread {
             val result = try {
@@ -166,7 +186,8 @@ class DiagnosticsActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 binding.exportButton.isEnabled = true
-                result.onSuccess { share(it) }.onFailure {
+                binding.saveButton.isEnabled = true
+                result.onSuccess { if (save) saveToDownloads(it) else share(it) }.onFailure {
                     Toast.makeText(this, getString(R.string.diag_error, it.toString()), Toast.LENGTH_LONG).show()
                 }
             }
@@ -226,6 +247,33 @@ class DiagnosticsActivity : AppCompatActivity() {
             // the first thing to check when the integrity trail shows gaps.
             "battery_opt_exempt" to (pm?.isIgnoringBatteryOptimizations(packageName) ?: false),
         )
+    }
+
+    /**
+     * Straight into the Downloads folder, so the owner can pick the file up without sending it through another
+     * app first. Android 10+ lets an app add its own files there with no permission (MediaStore); older
+     * versions go through the system file picker.
+     */
+    private fun saveToDownloads(file: File) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            zipToSave = file
+            pickSaveLocation.launch(file.name)
+            return
+        }
+        try {
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, file.name)
+                put(MediaStore.Downloads.MIME_TYPE, "application/zip")
+                put(MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: throw IOException("Downloads is not available")
+            contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } }
+                ?: throw IOException("couldn't open the new file")
+            Toast.makeText(this, getString(R.string.diag_saved, file.name), Toast.LENGTH_LONG).show()
+        } catch (e: IOException) {
+            Toast.makeText(this, getString(R.string.diag_save_failed, e.toString()), Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun share(file: File) {

@@ -24,7 +24,7 @@ server and trying it on two phones is the next step.
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 180 app JVM unit tests + 9 server tests (Ktor test host); both CI jobs green |
-| Latest release | Tagged `v2.7.2-accountable` (full release, stable key); the Pixel 9 ran 2.6.1–2.6.3 at last export. Branch is at `2.7.2-accountable` (code 26): **strict-mode unlock window 5 → 15 min, plus a notification when the wait ends** (the owner kept missing the window; untested on a phone). Before that, 2.7.1 (code 25): **owner screenshot review** (full per-label scores on each card, thresholds down to 10%) (Monitoring → Review screenshots: risky captures at/above your % kept locally, with Not a problem / Real hit) + VPN exclusions are friction-free for games/music/maps and guarded (strict-mode delay) for browsers, social, video, photos and anything uncategorised; address bar not recorded while typing; research notes in `docs/research/`. History: 2.2 partner loop in code · 2.3 visual refresh, all-apps watching · 2.4 screenshots working · 2.5 accessibility event diet · 2.6.0 AI skip on unchanged screens, risky words, adult/gambling Report, battery/restricted-settings guidance, Stats chart · 2.6.1 VPN not metered. |
+| Latest release | Tagged `v2.7.2-accountable` (full release, stable key); the Pixel 9 ran 2.7.2 at the 2026-11-23 export. **Branch is at `2.8.0-accountable` (code 27), not yet tagged:** AI flag policy (`dns/FlagPolicy`), Always-on VPN reminder (`dns/AlwaysOnNudge`), **Settings → Logs & diagnostics → "Save to Downloads"** (the export no longer has to go through another app; Android 10+ writes straight to Downloads, older versions use the file picker; 🧪 not yet tried on the phone), and the server address can point at `https://ff.flyboybyte.com`. Before that, 2.7.2 (code 26): **strict-mode unlock window 5 → 15 min, plus a notification when the wait ends** (the owner kept missing the window; untested on a phone). Before that, 2.7.1 (code 25): **owner screenshot review** (full per-label scores on each card, thresholds down to 10%) (Monitoring → Review screenshots: risky captures at/above your % kept locally, with Not a problem / Real hit) + VPN exclusions are friction-free for games/music/maps and guarded (strict-mode delay) for browsers, social, video, photos and anything uncategorised; address bar not recorded while typing; research notes in `docs/research/`. History: 2.2 partner loop in code · 2.3 visual refresh, all-apps watching · 2.4 screenshots working · 2.5 accessibility event diet · 2.6.0 AI skip on unchanged screens, risky words, adult/gambling Report, battery/restricted-settings guidance, Stats chart · 2.6.1 VPN not metered. |
 
 ## Verification levels
 
@@ -70,6 +70,7 @@ without evidence.
 |---|---|---|---|
 | 2.4.1 (36 h) | 87 s CPU/h; ~28,500 accessibility events/h | 2.7 s/h | Accessibility event firehose was ~60% of it |
 | 2.6.1 (14 h) | **38 s CPU/h; ~550 events/h** | 2.3 s/h | Biggest costs now: screenshots + AI ~7.6 s/h, DNS relay ~4.6 s/h, binder/GC from screen reads |
+| 2.7.2 (5.4 h on, 25 h off; export of 2026-11-23, split by the `app updated` records) | **48 s CPU/h** (2.6.2 51, 2.6.3 55) | 3.75 s/h (was ~3.0) | Whole 122 h export averaged 59.5 s/h on, but that mixes 2.2 to 2.7. Screen-off is a bit up, probably DNS retries on the 2026-11-22 outage day. Per-version split needs the `app updated` svc records; `summary.txt` does not do it. |
 
 ### Tamper resistance and friction
 | Feature | Status | Notes |
@@ -136,6 +137,7 @@ The server is deployed (2026-11-23) but no phone has used it yet: none of this h
 
 | When | What | Cause | Fix |
 |---|---|---|---|
+| 2026-11-22 | Export summary showed 12.8% forward failure and 535 ms median latency | 16 hours with no working network (some hours had zero successful forwards, 2,782 of the 2,892 failures), likely travel; the relay was fine outside them: 0.57% failed, median 277 ms, p95 528 ms | None needed for the outage. Open: 3% of forwards still burn a first attempt before failover, and p99 reaches ~11 s; look at the UDP timeout before the next export. |
 | pre-branch | Service woke thousands of times a day | Blocked queries answered NXDOMAIN with no SOA, so clients re-asked | Cacheable `0.0.0.0`/`::` with TTLs |
 | 2026-11-16 | First-run CPU spike | Category reload storm on bundle download | Coalesced single-thread reload |
 | 2026-11-16 | 75% of relays failing, slow browsing | Plain UDP to 1.1.1.1/8.8.8.8 unreliable on the test network | (superseded) |

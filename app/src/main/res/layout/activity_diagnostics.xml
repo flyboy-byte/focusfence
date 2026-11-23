@@ -110,6 +110,14 @@
                     android:text="@string/diag_clear" />
             </LinearLayout>
 
+            <Button
+                android:id="@+id/saveButton"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/diag_save" />
+
             <TextView
                 android:id="@+id/storageText"
                 android:layout_width="match_parent"
