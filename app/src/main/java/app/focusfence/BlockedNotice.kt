@@ -12,14 +12,15 @@ import app.focusfence.accessibility.UrlFilterService
 import app.focusfence.dns.BlockScreen
 
 /**
- * Routes a blocked front-door lookup to the blocked screen. Called on the DNS
- * reader thread, so it does nothing heavier than a map lookup there and hands
+ * Routes a blocked front-door lookup to the user. Called on the DNS reader
+ * thread, so it does nothing heavier than a map lookup there and hands
  * everything else to the main thread.
  *
  * With the accessibility service running, that service checks the browser's
- * address bar and opens [BlockedActivity]. Without it there is no way to tell
- * a person opening the site from background traffic, so the backup is a quiet
- * notification on its own low-importance channel, rate-limited per domain.
+ * address bar first and then posts the notification or opens [BlockedActivity],
+ * per the chosen style. Without it there is no way to tell a person opening
+ * the site from background traffic, so it's always the notification, on its
+ * own low-importance channel and rate-limited per domain.
  */
 object BlockedNotice {
 
@@ -40,10 +41,11 @@ object BlockedNotice {
         if (UrlFilterService.onDnsBlocked(domain)) return
         if (!notifyCooldown.accept(domain, now)) return
         val app = context.applicationContext
-        main.post { notify(app, domain) }
+        main.post { show(app, domain) }
     }
 
-    private fun notify(context: Context, domain: String) {
+    /** Posts (or replaces) the "blocked" notification. Tapping it opens [BlockedActivity]. */
+    fun show(context: Context, domain: String) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
             NotificationChannel(

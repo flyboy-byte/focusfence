@@ -1,24 +1,29 @@
 package app.focusfence.data
 
 import android.content.Context
+import app.focusfence.dns.BlockScreen
 
 /**
- * The "Show a blocked screen" switch (Settings → Filtering). In the main
+ * How a blocked site is announced (Settings → Filtering): a notification (the
+ * default), the full "Blocked by Focus Fence" screen, or nothing. In the main
  * `focusfence` prefs file because both services act on it at runtime and the
  * prefs listener on that file is the only propagation mechanism.
  *
- * Turning it off is not a loosening action: sites stay blocked either way, only
- * the explanation screen goes away. So no strict-mode guard.
+ * Changing it is not a loosening action: sites stay blocked either way, only
+ * the explanation changes. So no strict-mode guard.
  */
 object BlockScreenSettings {
 
-    const val KEY_BLOCK_SCREEN = "block_screen"
+    /**
+     * Replaced the short-lived boolean `block_screen` (full screen on/off,
+     * never in a release); that key is simply ignored now.
+     */
+    const val KEY_BLOCK_STYLE = "block_style"
 
-    /** On by default: a bare "site can't be reached" leaves people guessing what happened. */
-    fun enabled(context: Context): Boolean =
-        BlocklistStore.prefs(context).getBoolean(KEY_BLOCK_SCREEN, true)
+    fun style(context: Context): BlockScreen.Style =
+        BlockScreen.Style.parse(BlocklistStore.prefs(context).getString(KEY_BLOCK_STYLE, null))
 
-    fun setEnabled(context: Context, on: Boolean) {
-        BlocklistStore.prefs(context).edit().putBoolean(KEY_BLOCK_SCREEN, on).apply()
+    fun setStyle(context: Context, style: BlockScreen.Style) {
+        BlocklistStore.prefs(context).edit().putString(KEY_BLOCK_STYLE, style.id).apply()
     }
 }

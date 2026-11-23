@@ -578,8 +578,11 @@
     <string name="blocked_reason_budget">You\'ve used your %1$d minutes on this site for today.</string>
     <string name="blocked_reason_commitment">You committed to staying off this site until %1$s.</string>
     <string name="blocked_reason_section">Only some parts of this site are allowed.</string>
-    <string name="block_screen_label">Show a blocked screen</string>
-    <string name="block_screen_summary">When a blocked site opens in your browser, show a full-screen \"Blocked by Focus Fence\" page instead of the browser\'s error. Needs the accessibility service; without it you get a notification instead.</string>
+    <string name="block_screen_label">When a site is blocked</string>
+    <string name="block_screen_summary">How Focus Fence tells you it blocked a site you opened. The site is blocked either way. The full screen needs the accessibility service; without it you get the notification.</string>
+    <string name="block_style_notify">Show a notification</string>
+    <string name="block_style_screen">Show a full \"Blocked by Focus Fence\" screen</string>
+    <string name="block_style_off">Don\'t tell me (browser error only)</string>
     <string name="block_screen_channel">Blocked sites</string>
     <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
     <string name="block_screen_notify_text">Tap to see why.</string>

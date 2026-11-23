@@ -211,7 +211,7 @@ class DnsVpnService : VpnService() {
     private var logAllowed = true
 
     @Volatile
-    private var blockScreen = true
+    private var blockStyle = BlockScreen.Style.DEFAULT
 
     private var tunFd: ParcelFileDescriptor? = null
     private var readerThread: Thread? = null
@@ -289,7 +289,7 @@ class DnsVpnService : VpnService() {
             CategoryStore.KEY_VERSION -> reloadCategoriesAsync()
             AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
             LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
-            BlockScreenSettings.KEY_BLOCK_SCREEN -> blockScreen = BlockScreenSettings.enabled(this)
+            BlockScreenSettings.KEY_BLOCK_STYLE -> blockStyle = BlockScreenSettings.style(this)
             DnsUpstreamStore.KEY_REV -> {
                 upstreamConfig = DnsUpstreamStore.load(this)
                 preferredUpstream = null
@@ -408,7 +408,7 @@ class DnsVpnService : VpnService() {
 
         powerManager = getSystemService(PowerManager::class.java)
         logAllowed = LogSettings.logAllowedDns(this)
-        blockScreen = BlockScreenSettings.enabled(this)
+        blockStyle = BlockScreenSettings.style(this)
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
@@ -622,7 +622,7 @@ class DnsVpnService : VpnService() {
                 // User rules only: ads, guards and categories fire constantly in
                 // the background and aren't something the person chose to open.
                 val rule = decision.rule
-                if (blockScreen && decision.reason == LogEvents.REASON_RULE && rule != null &&
+                if (blockStyle != BlockScreen.Style.OFF && decision.reason == LogEvents.REASON_RULE && rule != null &&
                     BlockScreen.shouldSignal(question.qname, rule, powerManager.isInteractive)
                 ) {
                     app.focusfence.BlockedNotice.onDnsBlock(this, rule.domain)

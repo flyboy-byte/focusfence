@@ -8,6 +8,17 @@ import org.junit.Test
 class BlockScreenTest {
 
     @Test
+    fun styleParsesAndDefaultsToNotification() {
+        assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.DEFAULT)
+        assertEquals(BlockScreen.Style.SCREEN, BlockScreen.Style.parse("screen"))
+        assertEquals(BlockScreen.Style.OFF, BlockScreen.Style.parse("off"))
+        assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.parse("notify"))
+        // Missing or unknown values fall back to the default.
+        assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.parse(null))
+        assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.parse("banner"))
+    }
+
+    @Test
     fun whyNamesTheRuleKind() {
         assertEquals(BlockScreen.Why.ALWAYS, BlockScreen.why(BlockRule("reddit.com")))
         assertEquals(BlockScreen.Why.SCHEDULE, BlockScreen.why(BlockRule("x.com", 540, 1080)))

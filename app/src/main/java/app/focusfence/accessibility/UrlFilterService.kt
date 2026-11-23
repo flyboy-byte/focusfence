@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import app.focusfence.R
 import app.focusfence.BlockedActivity
+import app.focusfence.BlockedNotice
 import app.focusfence.data.BlockScreenSettings
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
@@ -126,7 +127,7 @@ class UrlFilterService : AccessibilityService() {
     private var logUrls = false
 
     @Volatile
-    private var blockScreen = true
+    private var blockStyle = BlockScreen.Style.DEFAULT
 
     // Experimental monitoring: which apps to watch, and what to capture.
     @Volatile
@@ -164,7 +165,7 @@ class UrlFilterService : AccessibilityService() {
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == BlocklistStore.KEY_RULES || key == BlockedAppsStore.KEY_BLOCKED_APPS ||
-            key == LogSettings.KEY_LOG_URLS || key == BlockScreenSettings.KEY_BLOCK_SCREEN ||
+            key == LogSettings.KEY_LOG_URLS || key == BlockScreenSettings.KEY_BLOCK_STYLE ||
             key == MonitorSettings.KEY_SCREENSHOTS || key == MonitorSettings.KEY_TEXT ||
             key == MonitorSettings.KEY_WATCHED || key == MonitorSettings.KEY_LEVEL ||
             key == MonitorSettings.KEY_AI || key == MonitorSettings.KEY_WATCH_MODE ||
@@ -212,7 +213,7 @@ class UrlFilterService : AccessibilityService() {
         hasSectionRules = loaded.values.any { it.hasPathExceptions }
         appRules = BlockedAppsStore.rulesByPackage(this)
         logUrls = LogSettings.logUrls(this)
-        blockScreen = BlockScreenSettings.enabled(this)
+        blockStyle = BlockScreenSettings.style(this)
         captureApps = MonitorSettings.watchedApps(this)
         watchMode = MonitorSettings.watchMode(this)
         watchExcluded = MonitorSettings.excludedApps(this)
@@ -379,7 +380,9 @@ class UrlFilterService : AccessibilityService() {
             lastBackAt = now
             performGlobalAction(GLOBAL_ACTION_BACK)
             val host = parts?.first
-            if (blockScreen && host != null) {
+            // Notification style keeps the toast here: the Back press already
+            // happened in front of the user, a notification would only repeat it.
+            if (blockStyle == BlockScreen.Style.SCREEN && host != null) {
                 openBlockedScreen(Blocklist.findRule(host, rules)?.domain ?: host)
             } else {
                 Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
@@ -394,14 +397,16 @@ class UrlFilterService : AccessibilityService() {
     }
 
     /**
-     * Shows the blocked screen only if the app in front really is showing
+     * Announces the block (screen or notification, per [blockStyle]) only if
+     * the app in front really is showing
      * [domain] in its address bar. A blocked lookup alone isn't enough: browsers
      * prefetch DNS for suggestions while the user types, and other apps look
      * up front-door hosts in the background. While the bar is being edited the
      * read returns null, which also keeps the screen from interrupting typing.
      */
     private fun confirmAndShow(domain: String, retry: Boolean) {
-        if (!blockScreen) return
+        val style = blockStyle
+        if (style == BlockScreen.Style.OFF) return
         val pkg = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull() ?: return
         if (pkg == packageName) return
         val url = runCatching { findUrl(pkg) }.getOrNull()
@@ -410,10 +415,11 @@ class UrlFilterService : AccessibilityService() {
             if (retry) main.postDelayed({ confirmAndShow(domain, retry = false) }, CONFIRM_RETRY_MS)
             return
         }
-        Monitor.perf.count("block_screen")
-        openBlockedScreen(domain)
+        val action = if (style == BlockScreen.Style.SCREEN) "block_screen" else "block_notify"
+        Monitor.perf.count(action)
+        if (style == BlockScreen.Style.SCREEN) openBlockedScreen(domain) else BlockedNotice.show(this, domain)
         EventLog.activity(
-            LogEvents.enforce(System.currentTimeMillis(), "block_screen", pkg, parts.first, parts.second)
+            LogEvents.enforce(System.currentTimeMillis(), action, pkg, parts.first, parts.second)
         )
     }
 
