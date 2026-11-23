@@ -57,6 +57,13 @@ object GroupProtocol {
     fun open(group: Pairing.Keys, blob: ByteArray): Map<String, Any?>? =
         Pairing.open(group.enc, blob, group.mailboxId.toByteArray())?.let { LogJson.decode(String(it)) }
 
+    /**
+     * Total version of [open] for text straight off the server: never throws, whatever was posted. The group mailbox is
+     * writable by everyone who holds the invite, so a garbage entry must be skipped, not allowed to wedge anyone's sync.
+     */
+    fun openB64(group: Pairing.Keys, b64: String): Map<String, Any?>? =
+        runCatching { open(group, B64.decode(b64)) }.getOrNull()
+
     private val FIELDS = mapOf(
         "hello" to listOf("name", "role", "pubSign", "pubEnc"),
         "close" to emptyList(),
@@ -282,4 +289,23 @@ object GroupProtocol {
 
     private fun sha256(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b)
     private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * The text a creator shares to invite someone. It carries the group secret (so it is as private as a pairing key:
+ * send it over a message app, not a public channel) and the server address, so the joiner doesn't have to type it.
+ */
+object GroupInvite {
+    class Parsed(val secret: ByteArray, val server: String?)
+
+    fun format(secretCode: String, serverUrl: String): String =
+        "Focus Fence group invite\nCode: $secretCode\nServer: $serverUrl"
+
+    /** Lenient: finds the code and an https:// address anywhere in the pasted text. Null if there's no valid code. */
+    fun parse(text: String): Parsed? {
+        val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val secret = tokens.firstNotNullOfOrNull { Pairing.decode(it) } ?: return null
+        val server = tokens.firstOrNull { it.startsWith("https://", ignoreCase = true) }?.trimEnd('/', '.', ',', ')')
+        return Parsed(secret, server)
+    }
 }

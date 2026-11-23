@@ -31,7 +31,9 @@ object GuardPolicy {
         DISABLE_STRICT("guard_disable_strict", "Turn off strict mode", Level.DELAY),
         REMOVE_PROTECTION("guard_remove_protection", "Remove device protection", Level.DELAY),
         LOOSEN_MANAGED("guard_loosen_managed", "Loosen managed-mode protection", Level.DELAY),
-        REMOVE_PARTNER("guard_remove_partner", "Remove an accountability partner", Level.DELAY);
+        REMOVE_PARTNER("guard_remove_partner", "Remove an accountability partner", Level.DELAY),
+        /** Leave a group, stop filtering inside it, narrow who sees my report, or remove a member. */
+        LEAVE_GROUP("guard_leave_group", "Leave or loosen a group", Level.DELAY);
 
         companion object {
             fun fromKey(key: String): Action? = values().firstOrNull { it.key == key }

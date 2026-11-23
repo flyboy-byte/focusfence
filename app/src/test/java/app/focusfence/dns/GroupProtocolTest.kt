@@ -230,6 +230,16 @@ class GroupProtocolTest {
         assertNull(GroupProtocol.open(Net().keys, blob))
     }
 
+    @Test fun garbagePostedToTheMailboxIsSkippedAndNeverThrows() {
+        val net = Net()
+        for (junk in listOf("", "!!!not base64!!!", "AAAA", "////", "a".repeat(5000), "=")) {
+            assertNull("junk <$junk> must be ignored", GroupProtocol.openB64(net.keys, junk))
+        }
+        val a = Phone("Ann")
+        val good = B64.encode(GroupProtocol.seal(net.keys, GroupProtocol.hello(a.me, net.groupId, Role.FILTERED, 1)))
+        assertTrue(GroupProtocol.openB64(net.keys, good) != null)
+    }
+
     @Test fun aSignatureBindsTheGroupSoAMessageCantBeReplayedIntoAnotherGroup() {
         val a = Phone("Ann"); val b = Phone("Bo")
         val net1 = makeGroup(a, b)
@@ -238,5 +248,31 @@ class GroupProtocolTest {
         net2.post(leave) // signed for group 1
         assertEquals(2, net2.view().state!!.members.size)
         assertEquals(1, net2.view().dropped)
+    }
+}
+
+class GroupInviteTest {
+    @Test fun roundTripsTheCodeAndServer() {
+        val secret = Pairing.generateSecret()
+        val text = GroupInvite.format(Pairing.encode(secret), "https://ff.example.com")
+        val p = GroupInvite.parse(text)!!
+        assertTrue(secret.contentEquals(p.secret))
+        assertEquals("https://ff.example.com", p.server)
+    }
+
+    @Test fun toleratesChatNoiseAndATrailingPunctuation() {
+        val secret = Pairing.generateSecret()
+        val code = Pairing.encode(secret).lowercase()
+        val p = GroupInvite.parse("hey join us!!\n$code\n(server https://ff.example.com/.)")!!
+        assertTrue(secret.contentEquals(p.secret))
+        assertEquals("https://ff.example.com", p.server)
+    }
+
+    @Test fun rejectsAMistypedCodeAndText() {
+        val code = Pairing.encode(Pairing.generateSecret())
+        val typo = code.replaceFirst(code[0], if (code[0] == 'A') 'B' else 'A')
+        assertNull(GroupInvite.parse(typo))
+        assertNull(GroupInvite.parse("no code here https://x.example"))
+        assertNull(GroupInvite.parse(""))
     }
 }

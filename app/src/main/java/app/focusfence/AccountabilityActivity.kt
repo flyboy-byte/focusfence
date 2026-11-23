@@ -46,6 +46,7 @@ class AccountabilityActivity : AppCompatActivity() {
             bind()
             refreshPartners()
         }
+        binding.groupButton.setOnClickListener { startActivity(Intent(this, GroupActivity::class.java)) }
         binding.inviteButton.setOnClickListener { invite() }
         binding.pairButton.setOnClickListener { pair() }
         binding.watchButton.setOnClickListener { addWatch() }

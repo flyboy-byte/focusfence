@@ -83,7 +83,9 @@ object SyncStore {
 
     /** Anything configured that the worker should run for. */
     fun hasWork(context: Context): Boolean =
-        serverUrl(context).isNotBlank() && (deviceId(context) != null || ownPairings(context).isNotEmpty() || watches(context).isNotEmpty())
+        serverUrl(context).isNotBlank() &&
+            (deviceId(context) != null || ownPairings(context).isNotEmpty() || watches(context).isNotEmpty() ||
+                app.focusfence.data.GroupStore.active(context))
 
     // ---- pairings ------------------------------------------------------------
 

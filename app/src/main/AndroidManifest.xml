@@ -101,6 +101,10 @@
             android:name=".PartnerReportActivity"
             android:exported="false"
             android:parentActivityName=".AccountabilityActivity" />
+        <activity
+            android:name=".GroupActivity"
+            android:exported="false"
+            android:parentActivityName=".AccountabilityActivity" />
 
         <!-- Managed mode. We never block uninstall; this receiver exists to run
              device-owner policies (Private DNS, network logging, suspension) and

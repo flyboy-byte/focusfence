@@ -61,6 +61,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             } catch (e: Exception) {
                 error = "server: ${e.javaClass.simpleName}: ${e.message}"
             }
+            // Groups first: a hand-over made now becomes a pairing the loops below can start using this same pass.
+            if (app.focusfence.data.GroupStore.active(ctx)) {
+                try {
+                    GroupSync.run(ctx, api, now)
+                } catch (e: Exception) {
+                    error = error ?: "group: ${e.javaClass.simpleName}: ${e.message}"
+                }
+            }
             for (p in SyncStore.ownPairings(ctx)) {
                 try {
                     sendToPartner(ctx, api, p, now)

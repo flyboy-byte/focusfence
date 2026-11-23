@@ -97,6 +97,21 @@ merge nobody can review.
 - Open protocol questions: invite expiry (the server can't enforce single use of a bearer secret), what happens when a
   member's phone is wiped (their key is gone: they re-join and everyone re-pairs), and ordering of hellos.
 
+### Built 2026-11-23 (none of it run on a phone yet)
+
+- `dns/Group` (rules), `dns/GroupProtocol` (signed replayable log, fingerprint approval, sealed hand-over), `dns/GroupInvite`:
+  pure, 29 JVM tests including a simulated 4-phone group.
+- `data/GroupStore` (keys, secret, local bookkeeping, decrypted log and outbox in `noBackupFilesDir`), `sync/GroupSync`
+  (one pass inside `SyncWorker`, before the pairing loops) and `sync/GroupManager` (what the screen calls: sign, queue, kick),
+  `GroupActivity` (start, join, approve, remove, role, who sees me, leave), reached from Partners & reports. Loosening actions go
+  through a new friction action, `LEAVE_GROUP`. Every group change is written to the activity log (`partner`/`group_*`), and
+  `Digest.alertText` turns them into partner alerts.
+- **Known limits, on purpose, to revisit:** (1) **History lives on the server**, which keeps the last 300 messages and 30 days per
+  mailbox, so someone joining a long-lived group late would not see its first messages. Members keep their own copy. Join
+  within a day or two, then use **Close to new members**. (2) One group per phone. (3) A phone that is reinstalled loses its
+  member key and must rejoin as a new member. (4) The group invite is a bearer secret: anyone holding it can join and be
+  *seen* (up to 4), but nothing is shared with them until a member approves them by fingerprint.
+
 ### Build order (each step ships and is testable alone)
 0. **Gate B first:** pair two real phones with today's flow. It has never run on a phone, and groups multiply every bug in it.
 1. Roles in the app: Filtered / Partner / both, partner-only mode with no VPN and no upload. Pure rules in `dns/`.
