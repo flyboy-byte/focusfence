@@ -68,6 +68,8 @@ class Config(
     val confirmGlobalDailyCap: Int = 30,
     /** If set, /v1/enroll needs this in the X-FF-Enroll header: open enrollment lets anyone take device slots. */
     val enrollToken: String? = null,
+    /** Emails allowed to sign in to /admin; empty switches the admin page off. */
+    val adminEmails: List<String> = emptyList(),
     /** Backstop on top of double opt-in: no address is emailed more often than this, or more than the daily cap. */
     val emailMinIntervalMs: Long = 60_000L,
     val emailDailyCap: Int = 60,
@@ -112,6 +114,7 @@ fun main(args: Array<String>) {
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
+        adminEmails = env("FF_ADMIN_EMAILS").orEmpty().split(",").map { it.trim() }.filter { it.contains("@") },
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
         maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
@@ -247,6 +250,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     suspend fun ApplicationCall.unknownDevice() = respond(HttpStatusCode.NotFound, ErrorResponse("unknown device"))
 
     routing {
+        Admin(cfg, store, notifier, enrollCodes) { it.client() }.routes(this)
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }

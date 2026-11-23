@@ -1,4 +1,6 @@
-# Server admin and landing page (phase 1 built 2026-11-23; the rest scope only)
+# Server admin and landing page (phases 1-3 built and deployed 2026-11-23; landing page not built)
+
+**Phases 2-3 built (🧪 CI only, never used on the live box yet, not yet audited by the extraction session):** `Admin.kt`, `/admin` on when `FF_ADMIN_EMAILS` is set (live: Logan only). Login = emailed 6-digit code (10 min, 5 tries) + authenticator code (RFC 6238; replay refused) or a one-time recovery code; first login enrolls the authenticator (shows the key and an otpauth link, no QR) and shows 8 recovery codes once. Session cookie `__Host-` Secure/HttpOnly/SameSite=Strict, 30 min idle / 8 h, CSRF on every POST. Dashboard: usage, enrollment codes (create/revoke, shown once), devices (id/dates/partner count, remove), audit log. Sessions are in memory (a restart signs everyone out). Not done: IP allowlist, separate nginx zone for /admin, fail2ban, the landing page (phase 4).
 
 **Phase 1 built (🧪 CI only, not deployed):** `EnrollCodes.kt` + `codes.json` in the data dir; `focusfence-server admin codes add <label> [--days N] [--uses N] | list | revoke <id>` (run with the same `FF_DATA_DIR`); `/v1/enroll` accepts a live per-person code or the bootstrap `FF_ENROLL_TOKEN`; once any code exists enrollment is closed to anyone without one. Only hashes stored; a bad key does not burn a code. Needs a deploy (vps-sudo window).
 

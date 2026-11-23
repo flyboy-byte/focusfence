@@ -130,6 +130,14 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         r
     }
 
+    /** Removes a device, its records and its screenshots. Only the admin page calls this. */
+    fun deleteDevice(id: String): Boolean = synchronized(lock(id)) {
+        if (!SAFE_ID.matches(id) || !deviceFile(id).exists()) return false
+        deviceFile(id).delete(); recordsFile(id).delete()
+        File(root, "blobs").listFiles { f -> f.name.startsWith(id + "_") }?.forEach { it.delete() }
+        true
+    }
+
     fun allDevices(): List<Device> =
         File(root, "devices").listFiles { f -> f.name.endsWith(".json") }
             ?.mapNotNull { runCatching { json.decodeFromString(Device.serializer(), it.readText()) }.getOrNull() }
