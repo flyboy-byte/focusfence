@@ -26,6 +26,7 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 | [`plans/01-base-assessment.md`](plans/01-base-assessment.md) | Is Focus Fence the right base for an Ever Accountable–class accountability app? (Yes, with two conditions.) |
 | [`plans/02-ever-accountable-parity.md`](plans/02-ever-accountable-parity.md) | Feature-by-feature gap matrix against Ever Accountable on Android, and a phased build order with measurement gates. |
 | [`plans/03-measurement-plan.md`](plans/03-measurement-plan.md) | How to use the new logs to measure reliability and battery cost, and what each result decides. |
+| [`HANDOFF.md`](HANDOFF.md) | Intent, workflow, hard-won findings and decisions: read after `STATE.md` / `AGENTS.md`. |
 | [`research/ai-detection.md`](research/ai-detection.md) | On-device AI: what runs, the first false positive, options to reduce false alarms without battery cost. |
 | [`research/ui-design.md`](research/ui-design.md) | Material 3 guidance applied to this Views app, plus an ordered UI to-do list. |
 | [`specs/event-log.md`](specs/event-log.md) | **Implemented.** Schema and guarantees of the activity and diagnostics logs, export format. |
