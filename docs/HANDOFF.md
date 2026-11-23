@@ -29,7 +29,8 @@ _Rewritten 2026-11-23 (end of the long session on the laptop with VPS access). `
 1. Work on `claude/logging-and-accountability-plan`; run `./gradlew testDebugUnitTest assembleDebug` and `./gradlew -p server test`
    with `ANDROID_HOME=$HOME/Android/Sdk JAVA_HOME=/usr/lib/jvm/java-21-openjdk` (the system JDK 27 breaks Gradle 8.9; no `--offline`).
 2. Push; CI (`android.yml`) is the authority. Tags `vX.Y.Z-accountable` build a signed release (`release.yml`, secrets live in the
-   repo). **He has authorised me to tag and push tags myself** (2026-11-23). Bump `versionCode`/`versionName` first.
+   repo). **He has authorised me to tag and push tags myself** (2026-11-23), but told me to stop "spamming releases": push fixes to the
+   branch freely, tag only after he has tried the previous build or asks, and batch fixes into it. Unreleased on the branch now: screenshot wording, About row with no dead link. Bump `versionCode`/`versionName` first.
 3. He exports **Settings → Logs & diagnostics → Save to Downloads** and drops the files in `~/.claude/uploads/`; analyse locally
    only (private). Split numbers by version with the `app updated` svc records, not the whole-export summary.
 4. Server deploys: build `./gradlew -p server installDist`, `rsync` to `flyboybyte:ffbackend-dist/`, then as root under a

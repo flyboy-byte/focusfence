@@ -161,9 +161,8 @@ class SettingsFragment : Fragment() {
                 val presetId = if (mode == app.focusfence.dns.Upstreams.Mode.PRESET) presets.getOrNull(c - 2)?.id else null
                 app.focusfence.data.DnsUpstreamStore.save(ctx, mode, presetId, text, fallback.isChecked)
                 refreshAll()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        }
+        b.show()
     }
 
     private fun refreshAccessibility() {
@@ -222,17 +221,18 @@ class SettingsFragment : Fragment() {
     /** Short summary that works offline, then an optional hop to the site in the browser (no web view, no network from the app). */
     private fun showAbout() {
         val url = getString(R.string.about_url)
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+        val b = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.about_title)
             .setMessage(R.string.about_summary)
-            .setPositiveButton(R.string.about_open_site) { _, _ ->
+            .setNegativeButton(android.R.string.ok, null)
+        // No site yet means no button: a dead link is worse than none.
+        if (url.isNotBlank()) b.setPositiveButton(R.string.about_open_site) { _, _ ->
                 try {
                     startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
                 } catch (e: android.content.ActivityNotFoundException) {
                     android.widget.Toast.makeText(requireContext(), getString(R.string.about_no_browser, url), android.widget.Toast.LENGTH_LONG).show()
                 }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        }
+        b.show()
     }
 }
