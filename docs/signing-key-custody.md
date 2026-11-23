@@ -3,7 +3,7 @@
 > **Tier:** Low-level · **Audience:** @sidewinderzz, making a one-way decision ·
 > **Use when:** you are ready to unblock W4 and cut a first release.
 >
-> **Resolved 2026-11-23 by [D-017](../DECISIONS.md):** the key in the repo's Actions secrets (certificate SHA-256
+> **Resolved 2026-11-23 by [D-021](../DECISIONS.md):** the key in the repo's Actions secrets (certificate SHA-256
 > `2ca769a5…6098671`) is the release key for every release. The rest of this document is the decision support as it
 > stood before that, kept for the reasoning.
 >
@@ -116,5 +116,5 @@ Tracked so the decision is not mistaken for the work:
 
 ## Status
 
-~~**Unresolved.** Awaiting @sidewinderzz on questions 1–4.~~ Resolved by D-017. W4 stays BLOCKED until then, and this
+~~**Unresolved.** Awaiting @sidewinderzz on questions 1–4.~~ Resolved by D-021. W4 stays BLOCKED until then, and this
 document is not a substitute for that decision.

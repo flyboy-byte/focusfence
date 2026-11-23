@@ -264,9 +264,15 @@ than anywhere else in the app).
 
 ---
 
-## D-017 — One release signing key for every Focus Fence release
+## D-021 — One release signing key for every Focus Fence release
 
 *Decided: 2026-11-23 by @flyboy-byte. Resolves O-002.*
+
+**Numbered D-021, not D-017,** because the unmerged `shareddev` branch already uses D-017 to D-020 (allowlist,
+partner-held keys). **It supersedes the 2026-08-18 O-002 resolution on `shareddev` (commit `9214641`)**, which
+said @sidewinderzz would generate and hold an RSA 4096 key and sign by hand. That key was never used: every
+release since 2026-11-17 has been CI-signed with the key below, so this records what actually happened and
+needs @sidewinderzz's agreement, since it reverses what he was assigned.
 
 Every release APK of this app, from any branch, is signed with the key already held in this repo's
 Actions secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, added
@@ -320,7 +326,7 @@ reopen this.
 
 # Open — decided before the first release
 
-## ~~O-002 — Signing key custody~~ — resolved by D-017 (2026-11-23)
+## ~~O-002 — Signing key custody~~ — resolved by D-021 (2026-11-23)
 
 ## O-003 — Whether an allowlist overrides user rules
 

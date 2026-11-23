@@ -116,7 +116,7 @@ Mostly pre-existing. Honest status:
 
 - [x] Decide the license — **MIT** (D-015, 2026-08-15). `LICENSE` and README section landed, and
       @sidewinderzz acknowledged the choice on 2026-08-15 (recorded in D-015).
-- [x] Decide signing key custody (O-002) — **D-017, 2026-11-23** — a one-way door; the key becomes the app's permanent
+- [x] Decide signing key custody (O-002) — **D-021, 2026-11-23** — a one-way door; the key becomes the app's permanent
       identity
 - [ ] Tag and cut the first GitHub Release with a signed APK and published SHA-256
 - [ ] Decide whether F-Droid is wanted, which would put a third party in the build path and
@@ -130,7 +130,7 @@ W7 (time-bounded app blocking — apps can now be scheduled or committed, not ju
 all landed and are merged to `main`, alongside the licence (D-015, acknowledged) and the
 adult-content decision (D-016). Test suite: 53 passing.
 
-~~**The only thing left blocking the release is signing key custody (O-002)**~~ Resolved by D-017 (2026-11-23): the key in the repo secrets signs every release. Original note: — a one-way decision
+~~**The only thing left blocking the release is signing key custody (O-002)**~~ Resolved by D-021 (2026-11-23): the key in the repo secrets signs every release. Original note: — a one-way decision
 for @sidewinderzz, decision support written up in `docs/signing-key-custody.md`. No code work
 remains ahead of it; W4 and W5 (signing config, tag → release workflow) are each roughly an hour
 once it's made.
