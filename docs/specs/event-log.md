@@ -152,3 +152,9 @@ system share sheet (FileProvider, `cache/export/` only). It contains:
 
 `LogEvents.SCHEMA_VERSION` is written into `meta.json`. Adding fields or record types doesn't
 bump it, since readers ignore unknown fields. Renaming or changing the meaning of a field does.
+
+## `net` (diag, added after 2.9.2)
+One record at each battery sample: `tr` (cell / wifi / other / none), `val` (Android's validated flag), `roam`, `metered`, `down` / `up`
+(the modem's own bandwidth estimate in kbps, not a measured speed), `sig` (dBm when Android reports it). No traffic, no permission.
+Lines up with the `perf` latency windows to tell "slow lookups on a weak cell link" from "slow lookups on good signal".
+`perf` also gained `fwd_hedged` (a second resolver was started beside a slow one; Automatic DNS only, see `dns/Hedged`).

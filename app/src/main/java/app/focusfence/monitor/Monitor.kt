@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.PowerManager
+import android.os.Build
 import android.os.Process
 import android.os.SystemClock
 import android.provider.Settings
@@ -169,9 +170,31 @@ object Monitor {
         safely("thread cpu") { sampleThreads(now, wasScreenOn) }
         DnsVpnService.pollHealth()
         EventLog.diag(LogEvents.battery(now, sample))
+        safely("net") { sampleNetwork(context, now) }
         closePerfWindow()
         checkIntegrity(context)
         safely("usage pull") { UsageCollector.pull(context) }
+    }
+
+    /** What link the phone is on right now (no traffic, no permissions): see [LogEvents.net]. */
+    private fun sampleNetwork(context: Context, now: Long) {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return
+        val best = cm.allNetworks.mapNotNull { n -> cm.getNetworkCapabilities(n)?.let { n to it } }
+            .filter { !it.second.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) && it.second.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+            .sortedByDescending { it.second.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) }
+            .firstOrNull()?.second
+        if (best == null) { EventLog.diag(LogEvents.net(now, "none", false, false, false, 0, 0, null)); return }
+        val tr = when {
+            best.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> "cell"
+            best.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+            else -> "other"
+        }
+        val sig = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) best.signalStrength.takeIf { it != android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED } else null
+        EventLog.diag(LogEvents.net(now, tr,
+            best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+            !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
+            !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+            best.linkDownstreamBandwidthKbps, best.linkUpstreamBandwidthKbps, sig))
     }
 
     private var lastThreads: Map<Int, app.focusfence.dns.ThreadCpu.Sample>? = null

@@ -40,6 +40,7 @@ object LogEvents {
     const val TYPE_BATTERY = "bat"
     const val TYPE_PERF = "perf"
     const val TYPE_THREADS = "thr"
+    const val TYPE_NET = "net"
     const val TYPE_ERROR = "err"
     const val TYPE_META = "meta"
 
@@ -204,6 +205,15 @@ object LogEvents {
      */
     fun threads(t: Long, top: String, totalMs: Long, screen: Boolean): Map<String, Any?> =
         linkedMapOf("t" to t, "type" to TYPE_THREADS, "top" to top, "total" to totalMs, "screen" to screen)
+
+    /**
+     * Diag: the real (non-VPN) network at a battery sample, so slow lookups can be lined up with what the link was.
+     * [tr] cell / wifi / other, [validated] Android's internet check passed, [roaming], [metered], [downKbps] / [upKbps]
+     * the modem's own estimate (not a measured speed), [sig] signal strength in dBm when Android reports one.
+     */
+    fun net(t: Long, tr: String, validated: Boolean, roaming: Boolean, metered: Boolean, downKbps: Int, upKbps: Int, sig: Int?): Map<String, Any?> =
+        linkedMapOf<String, Any?>("t" to t, "type" to TYPE_NET, "tr" to tr, "val" to validated, "roam" to roaming,
+            "metered" to metered, "down" to downKbps, "up" to upKbps).apply { if (sig != null) put("sig", sig) }
 
     fun perf(t: Long, windowMs: Long, fields: Map<String, Any?>): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_PERF, "win" to windowMs).apply {

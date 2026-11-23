@@ -103,6 +103,10 @@ class DnsVpnService : VpnService() {
         private const val HEALTH_EVAL_INTERVAL_MS = 5_000L
 
         private const val UPSTREAM_TIMEOUT_MS = 2500
+        /** Start the next resolver beside a slow one after this long (Automatic mode only). */
+        private const val HEDGE_MS = 600L
+        /** Threads for hedged attempts only; separate from the 12 query workers so a burst cannot starve them. */
+        private val hedgePool: java.util.concurrent.Executor = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "focusfence-hedge").apply { isDaemon = true } }
         /** The network's own resolver is close; give up on it fast and fail over. */
         private const val UDP_TIMEOUT_MS = 1500
         /** How long a looked-up underlying network + its DNS servers is trusted. */
@@ -702,11 +706,45 @@ class DnsVpnService : VpnService() {
         }
     }
 
+    /** One attempt at one resolver; any failure is a null so the caller moves on. */
+    private fun tryUpstream(upstream: Upstreams.Entry, query: ByteArray): ByteArray? = try {
+        when (upstream) {
+            is Upstreams.Entry.Udp -> resolve(upstream.host)?.let { udpQuery(it, upstream.port, query) }
+            is Upstreams.Entry.Doh -> dohQuery(upstream.url, query)
+        }
+    } catch (e: Exception) {
+        null
+    }
+
     private fun forwardInner(udp: Packets.UdpDatagram, query: ByteArray) {
         refreshUnderlying(force = false)
         val first = preferredUpstream
         val order = Upstreams.order(upstreamConfig, underlyingDns, first)
         val started = SystemClock.elapsedRealtime()
+        // Automatic mode only: race the resolvers instead of waiting out each dead one. A custom server never leaks a
+        // query to a public resolver early; it keeps the strict order below.
+        if (upstreamConfig.mode == Upstreams.Mode.AUTO && order.size > 1) {
+            val attempts = order.map { upstream -> { tryUpstream(upstream, query) } }
+            val win = app.focusfence.dns.Hedged.race(attempts, HEDGE_MS, hedgePool,
+                onFail = { Monitor.perf.count("fwd_attempt_fail") }, onHedge = { Monitor.perf.count("fwd_hedged") })
+            if (win != null) {
+                val upstream = order[win.index]
+                preferredUpstream = upstream.key
+                writeToTun(Packets.buildUdpReply(udp, win.value, win.value.size))
+                Monitor.perf.latency(SystemClock.elapsedRealtime() - started)
+                Monitor.perf.count("fwd")
+                Monitor.perf.count(if (upstream is Upstreams.Entry.Udp) "fwd_udp" else "fwd_doh")
+                if (upstream.key != first) Monitor.perf.count("fwd_failover")
+                healthMonitor.recordForward(true)
+                evaluateHealth(force = false)
+                return
+            }
+            refreshUnderlying(force = true)
+            Monitor.perf.count("fwd_fail")
+            healthMonitor.recordForward(false)
+            evaluateHealth(force = false)
+            return
+        }
         for ((i, upstream) in order.withIndex()) {
             val answer = try {
                 when (upstream) {
