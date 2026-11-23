@@ -47,6 +47,14 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
+                    android:id="@+id/setupButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/setup_title" />
+
+                <Button
                     android:id="@+id/accountabilityButton"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"

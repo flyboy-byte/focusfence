@@ -61,6 +61,9 @@ class SettingsFragment : Fragment() {
         binding.categoriesButton.setOnClickListener {
             startActivity(Intent(requireContext(), CategoriesActivity::class.java))
         }
+        binding.setupButton.setOnClickListener {
+            startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
+        }
         binding.accountabilityButton.setOnClickListener {
             startActivity(Intent(requireContext(), app.focusfence.AccountabilityActivity::class.java))
         }

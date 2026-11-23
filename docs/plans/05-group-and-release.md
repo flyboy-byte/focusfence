@@ -30,13 +30,17 @@ true of the current code; what it needs is to be **stated, guided and tested**.
 
 Rules this gives us, to keep true as the app grows:
 1. **With every optional layer off the app is the lightweight blocker.** No capture, no AI, no uploads, no server contact, no
-   accessibility events beyond what rules need. A test or checklist should keep proving it (a release check: fresh install,
-   core filter only, confirm no sync/capture work starts).
+   accessibility events beyond what rules need. **Release check, built 2026-11-23:** install fresh, start only the core filter,
+   use the phone for a day, export, and run `python3 -I tools/check_light_mode.py <export.zip>`: it fails if any screenshot, AI,
+   text-capture or sync counter is non-zero (prints counter names and totals only). Verified so far on a synthetic log and on a
+   full-featured export (correctly fails); **not yet run on a real light-mode export.**
 2. **Server and screenshots are separate switches.** A partner can get alerts without any screenshots; screenshots can be
    on with no partner (owner review only).
 3. **Recommended means guided, not forced.** The app should offer a single "Set up accountability" path that suggests the
    recommended layers one at a time, each with its measured cost in plain words, and lets the person stop at any step.
-   (Not built: today these are separate settings screens.)
+   **Built 2026-11-23 (`SetupActivity`, Settings → "Set up accountability"): a checklist, not a wizard.** It reads each layer's
+   real setting, labels it recommended or optional, states the measured cost, and opens the screen that owns the layer. It
+   turns nothing on itself, so "stop at any step" is trivially true. Not run on a phone.
 4. **Self-hosting is a first-class option, not a requirement**: the server is a published image with Compose (section 4), and
    nothing in the app is tied to one operator.
 

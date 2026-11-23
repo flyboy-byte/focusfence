@@ -102,6 +102,10 @@
             android:exported="false"
             android:parentActivityName=".AccountabilityActivity" />
         <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".GroupActivity"
             android:exported="false"
             android:parentActivityName=".AccountabilityActivity" />

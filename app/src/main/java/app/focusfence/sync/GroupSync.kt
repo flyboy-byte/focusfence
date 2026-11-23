@@ -123,9 +123,9 @@ object GroupSync {
 
         // 4. tell the person, and keep the integrity trail honest
         val fresh = view.notices.drop(st.noticesSeen)
-        for (n in fresh) {
+        for ((i, n) in fresh.withIndex()) {
             EventLog.activity(LogEvents.service(now, "partner", "group_notice", n), urgent = true)
-            notify(ctx, 7_000 + st.noticesSeen, ctx.getString(R.string.group_notice_title), n)
+            notify(ctx, 7_000 + ((st.noticesSeen + i) % 900), ctx.getString(R.string.group_notice_title), n) // one each, none overwritten
         }
         val waiting = GroupProtocol.awaitingApproval(view, me, st.local).filter { it.first.id !in st.prompted }
         for ((m, _) in waiting) notify(ctx, 8_000 + (m.id.hashCode() and 0xfff), ctx.getString(R.string.group_approve_title), ctx.getString(R.string.group_approve_text, m.name))

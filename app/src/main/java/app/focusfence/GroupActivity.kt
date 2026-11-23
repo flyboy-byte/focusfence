@@ -52,9 +52,15 @@ class GroupActivity : AppCompatActivity() {
     private fun text(s: CharSequence, style: Int = com.google.android.material.R.attr.textAppearanceBodyMedium, top: Int = 8): TextView =
         TextView(this).apply {
             this.text = s
-            setTextAppearance(obtainStyledAttributes(intArrayOf(style)).use { it.getResourceId(0, 0) })
+            setTextAppearance(appearance(style))
             setPadding(0, dp(top), 0, 0)
         }
+
+    /** The text style a theme attribute points at. (TypedArray is only closeable from Android 12, so recycle by hand.) */
+    private fun appearance(attr: Int): Int {
+        val a = obtainStyledAttributes(intArrayOf(attr))
+        try { return a.getResourceId(0, 0) } finally { a.recycle() }
+    }
 
     private fun heading(s: String) = text(s, com.google.android.material.R.attr.textAppearanceTitleMedium, top = 20)
 
