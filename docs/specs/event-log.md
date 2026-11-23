@@ -37,7 +37,7 @@ export.
 | `url` | `pkg` (browser), `host`, `path` (no query, no fragment), `cat`? (bundle categories the host matches) | A browser's address bar shows a different page, while *Record browser addresses* is on (default off) |
 | `app` | `pkg`, `state` (`fg`/`bg`) | The foreground package changes (UsageStats; needs Usage access) |
 | `screen` | `state` (`on`/`off`) | Screen interactivity changes (UsageStats) |
-| `enforce` | `action` (`app_home`, `section_back`, `block_screen`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule (`block_screen`: opened the "Blocked by Focus Fence" screen over a browser showing a DNS-blocked site) |
+| `enforce` | `action` (`app_home`, `section_back`, `block_screen`, `block_notify`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule (`block_screen` / `block_notify`: the browser in front showed a DNS-blocked site, so the full blocked screen opened or the notification was posted, per Settings → Filtering) |
 | `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped), `hits`? (`host:cat,cat;…` — sites named on screen that match a bundle), `terms`? (`cat:word,word;…` — risky words, `RiskTerms`), `cat`? | Experimental text capture, watched apps only, while the capture indicator shows |
 | `rev` | `shot_t`, `pkg`, `label`, `pct`, `verdict` (`ok` real hit / `wrong` not a problem) | The owner's answer on a review screenshot (Monitoring → Review); feeds threshold tuning, never changes partner reports |
 | `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`), `same`? (screen unchanged since the last scored capture; AI skipped, previous verdict reused) | Experimental screenshot capture: one classified screenshot |
@@ -157,5 +157,5 @@ bump it, since readers ignore unknown fields. Renaming or changing the meaning o
 One record at each battery sample: `tr` (cell / wifi / other / none), `val` (Android's validated flag), `roam`, `metered`, `down` / `up`
 (the modem's own bandwidth estimate in kbps, not a measured speed), `sig` (dBm when Android reports it). No traffic, no permission.
 Lines up with the `perf` latency windows to tell "slow lookups on a weak cell link" from "slow lookups on good signal".
-`perf` also gained `block_screen` (the blocked screen was opened over a browser; see `dns/BlockScreen`).
+`perf` also gained `block_screen` and `block_notify` (a confirmed block was announced by full screen or notification; see `dns/BlockScreen`).
 `perf` also gained `fwd_hedged` (a second resolver was started beside a slow one; Automatic DNS only, see `dns/Hedged`).

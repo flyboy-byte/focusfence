@@ -9,10 +9,25 @@ package app.focusfence.dns
  * certificate for youtube.com. The browser rejects that with a security
  * warning, and the only way around it (a user-installed CA) is a security hole
  * that most apps ignore anyway. So DNS still answers 0.0.0.0, and the screen is
- * opened alongside, by the accessibility service once it has confirmed the
- * browser in front is actually showing the blocked site.
+ * opened (or a notification posted) alongside, after the accessibility
+ * service, when it runs, has confirmed the browser in front is actually
+ * showing the blocked site.
  */
 object BlockScreen {
+
+    /**
+     * How a block is announced. NOTIFY is the default: lightest touch, and it
+     * works without the accessibility service. SCREEN opens the full-screen
+     * page; OFF leaves only the browser's own error.
+     */
+    enum class Style(val id: String) {
+        NOTIFY("notify"), SCREEN("screen"), OFF("off");
+
+        companion object {
+            val DEFAULT = NOTIFY
+            fun parse(id: String?): Style = values().firstOrNull { it.id == id } ?: DEFAULT
+        }
+    }
 
     /** Which kind of rule did the blocking, for the screen's explanation line. */
     enum class Why { ALWAYS, SCHEDULE, BUDGET, COMMITMENT, SECTION }
