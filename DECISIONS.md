@@ -56,7 +56,7 @@ audits and plans live under `docs/`, which no tool loads automatically.
 **Why:** `CLAUDE.md` loads into every Claude session in this repo, including @sidewinderzz's. A
 contributor's opinions about direction shouldn't silently steer the maintainer's sessions.
 
-## D-005 — Personal branches integrate on `shareddev`; `main` is releases only
+## ~~D-005 — Personal branches integrate on `shareddev`; `main` is releases only~~ — superseded by D-022 (2026-11-23)
 
 *Decided: 2026-08-14, by @flyboy-byte. Revised twice on 2026-08-15.*
 
@@ -261,6 +261,27 @@ mode is parked separately (P-002) because it may need an HTTP header a DNS filte
 **Consequence:** adult filtering ships as W14, sequenced after W11. No new architecture. The
 category toggle must be protected by strict mode (D-012's friction is more load-bearing here
 than anywhere else in the app).
+
+---
+
+## D-022 — `main` is the only long-lived branch; short task branches merge by PR
+
+*Decided: 2026-11-23 by @flyboy-byte, with @sidewinderzz. Supersedes D-005. (D-021 is the signing key, PR #15.)*
+
+D-005's `shareddev` gate was never used as designed: work sat on `shareddev`/`logandev` from 2026-08-18
+and never reached `main`, while the accountability work went from its own branch straight to `main`
+in #12. Both of us now work through Claude sessions that open PRs, so the gate adds a second place for
+work to strand without adding review. The shape that matches how we actually work:
+
+- **`main` is the only long-lived branch**, the default branch, and is changed only by PR with CI green.
+- **One short branch per task**, from fresh `main`, opened as a draft PR early so the other person (and
+  their Claude) can see the area is claimed. Merge within a day or two; head branches are deleted on merge.
+- **Releases are tags on `main`**, and the version is bumped only in the release PR, so two builds never
+  share a version (two different builds were both called 2.10.0 on 2026-11-23).
+- Details, hot files and the cleanup that went with this: [`docs/collaboration.md`](docs/collaboration.md).
+
+**What would reopen it:** a third regular contributor, or a release cadence that needs a stabilisation
+branch.
 
 ---
 
