@@ -111,6 +111,10 @@ The server is deployed (2026-11-23) but no phone has used it yet: none of this h
 
 ## Open decisions (owner / maintainer)
 
+**2026-11-23, landing on `main` and group accountability: see `docs/plans/05-group-and-release.md`.** `main` is releases-only and
+`shareddev` is a 29-commit parallel line (25 conflicting files with this branch); D-010/D-012/D-016 on `main` reject what this
+branch does, so a D-017 is needed first. Group accountability (up to 4 phones, per-member roles) is designed there, not built.
+
 | Decision | Options / recommendation |
 |---|---|
 | Backend hosting | Logan's VPS (Resend already there) — recommended for the prototype. **Blocks everything on the partner side.** |
