@@ -93,6 +93,7 @@ object UiUtil {
         verify: (String) -> Boolean,
         onVerified: () -> Unit,
         timerFallback: () -> Unit,
+        timerLabel: Int = R.string.strict_pin_use_timer,
     ) {
         val input = android.widget.EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -110,7 +111,7 @@ object UiUtil {
                 }
             }
             // Fallback so a lost PIN can't permanently lock the user out.
-            .setNeutralButton(R.string.strict_pin_use_timer) { _, _ -> timerFallback() }
+            .setNeutralButton(timerLabel) { _, _ -> timerFallback() }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
@@ -126,7 +127,20 @@ object UiUtil {
     fun guard(context: Context, action: app.focusfence.dns.GuardPolicy.Action, onAllowed: () -> Unit) {
         when (val req = app.focusfence.data.GuardStore.requirement(context, action)) {
             is app.focusfence.dns.GuardPolicy.Requirement.Allowed -> onAllowed()
-            is app.focusfence.dns.GuardPolicy.Requirement.TimedUnlock -> showStrictLockedDialog(context)
+            is app.focusfence.dns.GuardPolicy.Requirement.TimedUnlock ->
+                // A paired partner can skip the wait with the code shown in their app (checked offline); the wait is
+                // always still there, so a partner who is asleep or gone never locks the owner out.
+                if (PinStore.hasPartnerPin(context) && StrictStore.state(context) is StrictLock.State.Locked) {
+                    showPinDialog(
+                        context, R.string.strict_wait_or_partner_prompt, { PinStore.verifyPartner(context, it) },
+                        onVerified = {
+                            Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                            onAllowed()
+                        },
+                        timerFallback = { StrictStore.requestUnlock(context); showStrictLockedDialog(context) },
+                        timerLabel = R.string.strict_wait_instead,
+                    )
+                } else showStrictLockedDialog(context)
             is app.focusfence.dns.GuardPolicy.Requirement.Pin -> {
                 val prompt = if (req.partner) R.string.strict_pin_partner_prompt else R.string.strict_pin_owner_prompt
                 val verify: (String) -> Boolean = if (req.partner) {

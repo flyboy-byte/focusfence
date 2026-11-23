@@ -55,3 +55,11 @@ lowering it while locked goes through the unlock, so strict mode can't be weaken
 `PinStore.UnlockMode` (Timer / Owner PIN / Partner PIN) remains the authority for the generic
 `showStrictLockedDialog` path and the Delay level's timed window. Per-action PIN levels sit above
 it: an action set to Partner PIN always prompts the partner PIN regardless of the global mode.
+
+## Partner skips the wait (added after 2.9.2, unreleased)
+At the Delay level, if a partner is paired (`PinStore.hasPartnerPin`: a handed-over PIN or a paired partner's app) and strict mode is
+locked, the guard dialog asks for the partner's code **or** "Wait instead" (starts the normal 10 minute wait). A correct code runs
+the one action and does not open the global unlock window. The wait always remains, so an absent partner never locks the owner out
+(same reasoning as never blocking uninstall). A partner-only level with no wait was considered and **not** built: it adds a way to
+be locked out and a dependency on someone else, which cuts against the optional, light design. Email-only partners have no app, so
+no code; they are unaffected.
