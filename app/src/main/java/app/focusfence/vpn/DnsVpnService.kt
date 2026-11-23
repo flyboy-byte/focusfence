@@ -352,6 +352,7 @@ class DnsVpnService : VpnService() {
                 urgent = true,
             )
             if (!restart) {
+                VpnWanted.set(this, false) // the owner turned it off: do not bring it back on boot or update
                 app.focusfence.sync.Sync.kick(this)
                 // Always-on would have the OS bring the tunnel straight back; drop
                 // it for this stop (startVpn re-applies it), and hand filtering to
@@ -454,6 +455,7 @@ class DnsVpnService : VpnService() {
         // dead), so a small pool backs the queue up and every lookup stalls.
         pool = Executors.newFixedThreadPool(12)
         isRunning = true
+        VpnWanted.set(this, true)
         blockedCount.set(0)
         alwaysOnState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             when {

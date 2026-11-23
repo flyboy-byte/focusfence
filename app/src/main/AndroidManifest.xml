@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Restart the filter after a reboot if the owner had it on (vpn/AutoStartReceiver). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Foreground-app timeline for the activity log. A special-access
          permission the owner grants in Settings > Usage access; never granted
          by installing, and its loss is logged as an integrity change. -->
@@ -113,6 +115,15 @@
         <!-- Managed mode. We never block uninstall; this receiver exists to run
              device-owner policies (Private DNS, network logging, suspension) and
              to log every admin lifecycle event. -->
+        <receiver
+            android:name=".vpn.AutoStartReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".UnlockReadyReceiver"
             android:exported="false" />

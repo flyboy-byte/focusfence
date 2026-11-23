@@ -132,6 +132,11 @@ class HomeFragment : Fragment() {
             IntentFilter(DnsVpnService.ACTION_STATE_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        // Opening the app after an update that killed the tunnel: bring it back if the owner had it on
+        // (only when the one-time consent is still granted; otherwise the switch stays off and the user taps it).
+        if (!DnsVpnService.isRunning && app.focusfence.vpn.VpnWanted.get(requireContext()) &&
+            VpnService.prepare(requireContext()) == null
+        ) startVpn()
         refreshState()
         refreshStrict()
         refreshAttention()
