@@ -1,5 +1,7 @@
 # State of the project
 
+> Screenshots never leave the phone today (checked 2026-11-23): only scores/labels reach the log and server. A flagged image is kept on the phone only if a partner key is pasted at Monitoring. Upload to partners is unbuilt; privacy page and strings now say so.
+
 _Last updated: 2026-11-23. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 

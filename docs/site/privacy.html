@@ -10,7 +10,7 @@
 <tr><th>Layer</th><th>Observes</th><th>Stays</th></tr>
 <tr><td>Accessibility</td><td>Browser address bars and the foreground app, to enforce section rules and blocked apps.</td><td>On the phone, in the local log.</td></tr>
 <tr><td>Text capture</td><td>Visible text in the apps you chose to watch (up to 2,000 characters per screen, password fields skipped), to look for risky words.</td><td>The text itself is written to the activity log on the phone. If you use an accountability server, that log is uploaded and the server can read it.</td></tr>
-<tr><td>Screenshots + on-device AI</td><td>Periodic screenshots, scored by a model that runs on the phone. A visible indicator is always shown while capture is on.</td><td>On the phone. Risky ones can be kept for your own review (deleted after 7 days). Sent to a partner only if you set that up, encrypted to their key.</td></tr>
+<tr><td>Screenshots + on-device AI</td><td>Periodic screenshots, scored by a model that runs on the phone. A visible indicator is always shown while capture is on.</td><td>The image never leaves the phone today. Only the score, label and app name go into the activity log. Risky ones can be kept for your own review (deleted after 7 days); a flagged one is kept only if you paste a partner key, encrypted to it, and still stays on the phone. Sending images to partners is not built yet.</td></tr>
 <tr><td>Usage access</td><td>Which app is in the foreground and for how long.</td><td>On the phone.</td></tr>
 </table>
 
@@ -18,7 +18,7 @@
 <p>This is off until you enter a server address. Then:</p>
 <ul>
 <li>The phone uploads its activity records every 15 minutes, signed with a key that never leaves the phone. <strong>The server can read these records</strong> (domains, apps, alerts). This was a deliberate choice for now.</li>
-<li>Screenshots, if you share them, are encrypted to your partner's key; the server cannot read them.</li>
+<li>Screenshots are not uploaded: the server receives scores and labels, never the images. If sharing images is added later it will be encrypted to your partner's key so the server cannot read them.</li>
 <li>App-to-app pairing and groups use "blind mailboxes": the server stores only encrypted messages under an identifier it cannot link to a person, and keeps a hash of the access token.</li>
 <li>The server also holds: the report token for each partner, partner email addresses (and phone numbers if SMS is used), and the phone's public key.</li>
 <li><strong>Who runs the server can see what it holds.</strong> You can run your own (<a href="server.html">how</a>) instead of trusting someone else's.</li>

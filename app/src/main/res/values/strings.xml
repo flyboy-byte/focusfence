@@ -207,7 +207,7 @@
     <string name="monitor_shots">Capture screenshots</string>
     <string name="monitor_ai">Flag screenshots with on-device AI</string>
     <string name="monitor_ai_hint">Scores each screenshot on this phone; nothing is uploaded for analysis. About 0.1 s of CPU per screenshot.</string>
-    <string name="monitor_shots_hint">Occasional screenshots of the apps you watch. Only flagged ones are kept, encrypted for your partner.</string>
+    <string name="monitor_shots_hint">Occasional screenshots of the apps you watch. Images are scored on this phone and not sent anywhere. A flagged one is kept here (encrypted to the partner key below) only if a key is set; sending images to partners is not built yet.</string>
     <string name="monitor_shots_unavailable">Screenshot capture needs Android 11 or newer. Text capture still works.</string>
     <string name="monitor_text">Capture on-screen text</string>
     <string name="monitor_text_hint">Visible text from watched apps, passwords skipped. Works where apps block screenshots.</string>
@@ -547,7 +547,7 @@
     <!-- About and privacy: the site URL lives here so it can change. TODO: replace once GitHub Pages is enabled (needs the repo admin). -->
     <string name="about_url" translatable="false">https://sidewinderzz.github.io/focusfence/privacy.html</string>
     <string name="about_title">About and privacy</string>
-    <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, your activity records go to the accountability server you choose, and that server\'s operator can read them; screenshots are encrypted to your partner. Uninstalling removes everything on the phone.</string>
+    <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, your activity records go to the accountability server you choose, and that server\'s operator can read them; screenshots are not uploaded, only their scores. Uninstalling removes everything on the phone.</string>
     <string name="about_open_site">Open the full page</string>
     <string name="about_no_browser">No browser found. The page is at %1$s</string>
 </resources>
