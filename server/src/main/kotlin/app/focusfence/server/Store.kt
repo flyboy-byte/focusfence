@@ -36,6 +36,8 @@ class Store(private val root: File) {
          */
         val token: String,
         val linkedMs: Long,
+        /** False until the address owner clicks the link we emailed. Nothing but that one email goes to an unconfirmed address. */
+        var confirmed: Boolean = true,
         var phone: String? = null,
         var phoneVerified: Boolean = false,
         var smsCodeHash: String? = null,
@@ -86,8 +88,32 @@ class Store(private val root: File) {
     }
 
     fun saveDevice(d: Device) = synchronized(lock(d.id)) {
-        deviceFile(d.id).writeText(json.encodeToString(Device.serializer(), d))
+        writeAtomic(deviceFile(d.id), json.encodeToString(Device.serializer(), d))
     }
+
+    /** Write to a temp file and rename, so a crash or full disk can't leave half a JSON file. */
+    private fun writeAtomic(f: File, text: String) {
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeText(text)
+        java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+    }
+
+    // ---- quotas: the data dir shares a disk with other services, so growth is bounded ----
+
+    @Volatile private var usedCache = 0L
+    @Volatile private var usedAt = 0L
+
+    /** Bytes under the data dir, recomputed at most every 30 s (a handful of files per device). */
+    fun usedBytes(nowMs: Long = System.currentTimeMillis()): Long {
+        if (nowMs - usedAt > 30_000 || nowMs < usedAt) {
+            usedCache = root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            usedAt = nowMs
+        }
+        return usedCache
+    }
+
+    fun deviceCount(): Int = File(root, "devices").listFiles { f -> f.name.endsWith(".json") }?.size ?: 0
+    fun mailboxCount(): Int = File(root, "mailbox").listFiles { f -> f.name.endsWith(".json") && !f.name.endsWith(".msgs.jsonl") }?.size ?: 0
 
     /** Read-modify-write under the device lock. */
     fun <T> updateDevice(id: String, block: (Device) -> T): T? = synchronized(lock(id)) {
@@ -119,6 +145,7 @@ class Store(private val root: File) {
         synchronized(lock(id)) {
             val d = device(id) ?: return@synchronized
             recordsFile(id).appendText(recordsRaw.trimEnd('\n') + "\n")
+            rotateRecords(recordsFile(id))
             d.expectedNextSeq = lastSeq + 1
             d.lastHash = newHash
             d.lastSeenMs = now
@@ -127,15 +154,36 @@ class Store(private val root: File) {
             saveDevice(d)
         }
 
+    /** Streams the file (never `readLines` on a whole file: the heap is small and the file is attacker-influenced). */
     fun readRecords(id: String): List<String> {
         val f = recordsFile(id)
         if (!f.exists()) return emptyList()
-        return f.readLines().filter { it.isNotBlank() }
+        return f.useLines { seq -> seq.filter { it.isNotBlank() }.toList() }
+    }
+
+    /** Past [RECORDS_MAX_BYTES], drop the oldest lines so about [RECORDS_KEEP_BYTES] of the newest remain. */
+    private fun rotateRecords(f: File) {
+        if (f.length() <= RECORDS_MAX_BYTES) return
+        val tail = java.io.RandomAccessFile(f, "r").use { raf ->
+            raf.seek(f.length() - RECORDS_KEEP_BYTES)
+            raf.readLine() // discard the partial line we landed in
+            val out = java.io.ByteArrayOutputStream()
+            val buf = ByteArray(64 * 1024)
+            while (true) { val n = raf.read(buf); if (n < 0) break; out.write(buf, 0, n) }
+            out.toByteArray()
+        }
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeBytes(tail)
+        java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
     }
 
     fun saveBlob(deviceId: String, shotId: String, bytes: ByteArray) {
-        require(SAFE_ID.matches(shotId))
+        require(SAFE_ID.matches(deviceId) && SAFE_ID.matches(shotId))
+        require(bytes.size <= SHOT_MAX_BYTES) { "shot too large" }
         File(root, "blobs/${deviceId}_$shotId.bin").writeBytes(bytes)
+        // Keep only the newest SHOTS_PER_DEVICE per device, so a signed-in client can't fill the disk.
+        val mine = File(root, "blobs").listFiles { f -> f.name.startsWith("${deviceId}_") }.orEmpty()
+        if (mine.size > SHOTS_PER_DEVICE) mine.sortedBy { it.lastModified() }.take(mine.size - SHOTS_PER_DEVICE).forEach { it.delete() }
     }
 
     // ---- blind mailbox --------------------------------------------------------
@@ -146,7 +194,7 @@ class Store(private val root: File) {
     /** Creates the mailbox, or returns the existing one (the caller checks its token hash). */
     fun createMailbox(id: String, tokenHash: String, now: Long): Mailbox = synchronized(lock("mb:$id")) {
         mailbox(id) ?: Mailbox(tokenHash, now).also {
-            mailboxFile(id).writeText(json.encodeToString(Mailbox.serializer(), it))
+            writeAtomic(mailboxFile(id), json.encodeToString(Mailbox.serializer(), it))
         }
     }
 
@@ -156,34 +204,40 @@ class Store(private val root: File) {
         mailFile(id).appendText(json.encodeToString(MailMessage.serializer(), msg) + "\n")
         mb.nextId++
         mb.lastWriteMs = now
-        mailboxFile(id).writeText(json.encodeToString(Mailbox.serializer(), mb))
-        prune(id, now)
+        writeAtomic(mailboxFile(id), json.encodeToString(Mailbox.serializer(), mb))
+        if (msg.id % 25 == 0L) prune(id, now) // not on every post: pruning reads the file
         msg.id
     }
 
     fun readMail(id: String, after: Long, limit: Int = 200): List<MailMessage> {
         val f = mailFile(id)
         if (!f.exists()) return emptyList()
-        return f.readLines().asSequence().filter { it.isNotBlank() }
-            .mapNotNull { runCatching { json.decodeFromString(MailMessage.serializer(), it) }.getOrNull() }
-            .filter { it.id > after }.take(limit).toList()
+        return f.useLines { seq ->
+            seq.filter { it.isNotBlank() }
+                .mapNotNull { runCatching { json.decodeFromString(MailMessage.serializer(), it) }.getOrNull() }
+                .filter { it.id > after }.take(limit).toList()
+        }
     }
 
     /** Keep the last [MAIL_KEEP] messages and nothing older than [MAIL_MAX_AGE_MS]. */
     private fun prune(id: String, now: Long) {
         val f = mailFile(id)
-        val lines = f.readLines().filter { it.isNotBlank() }
-        if (lines.size <= MAIL_KEEP + 50) return
+        val lines = f.useLines { seq -> seq.filter { it.isNotBlank() }.toList() }
+        if (lines.size <= MAIL_KEEP + 25) return
         val kept = lines.takeLast(MAIL_KEEP).filter {
             val t = runCatching { json.decodeFromString(MailMessage.serializer(), it).t }.getOrDefault(now)
             now - t <= MAIL_MAX_AGE_MS
         }
-        f.writeText(kept.joinToString("\n", postfix = "\n"))
+        writeAtomic(f, kept.joinToString("\n", postfix = "\n"))
     }
 
     companion object {
         val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,80}$")
-        const val MAIL_KEEP = 1000
+        const val MAIL_KEEP = 300
+        const val RECORDS_MAX_BYTES = 16L * 1024 * 1024
+        const val RECORDS_KEEP_BYTES = 10L * 1024 * 1024
+        const val SHOT_MAX_BYTES = 2 * 1024 * 1024
+        const val SHOTS_PER_DEVICE = 200
         const val MAIL_MAX_AGE_MS = 30L * 24 * 3_600_000
     }
 }

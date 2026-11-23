@@ -1,6 +1,6 @@
 # State of the project
 
-_Last updated: 2026-11-20. Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-23. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -62,6 +62,7 @@ without evidence.
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
+| AI flag policy (`dns/FlagPolicy`): a raw hit is reported/kept for a partner only if score ≥ 0.90, or a 2nd hit in the same app within 3 min, or ≥ 0.75 with adult words on screen in that app | 🧪 | Added 2026-11-23, 7 JVM tests, not on a phone. Untuned guesses; owner review screen unaffected. Diag counters `flag_strong/persistent/corroborated/held`. Don't retune without recording why (`docs/research/ai-detection.md`). |
 | On-device AI flagging (optional, off by default) | 📱 | **First real flag 2026-11-20 was a false positive:** a friend's shirtless selfie scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
 ### Battery (Pixel 9, Focus Fence's own CPU; whole-phone %/h is too noisy to compare)
@@ -78,13 +79,13 @@ without evidence.
 | Device owner: always-on VPN (no lockdown), VPN/Private DNS settings lock, Private DNS fallback, strategy switch, network logging | 🧪 | Needs adb and all accounts removed while provisioning. `specs/device-owner.md`. |
 
 ### Partner side
-Everything here needs a deployed server (`server/README.md`); none of it has run outside tests.
+The server is deployed (2026-11-23) but no phone has used it yet: none of this has run outside tests and curl.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Server (Kotlin/Ktor, flat files): signed ingest, heartbeat, invites, partner pages, alerts, weekly report, blind mailbox | 🧪 | 9 server tests in CI. Not deployed. Compiles the phone's `dns/` code so alert rules are shared. |
+| Server (Kotlin/Ktor, flat files): signed ingest, heartbeat, invites, partner pages, alerts, weekly report, blind mailbox | 🧪 | **Deployed 2026-11-23 at `https://ff.flyboybyte.com`** (flyboybyte VPS, user `ffbackend`, nginx + Let's Encrypt; `docs/plans/04-backend-deploy.md`). Checked with curl only: no phone has enrolled yet. Hardened after an independent audit (quotas, partner double opt-in, CSP/escaping, range-checked records). 22 server tests in CI. Compiles the phone's `dns/` code so alert rules are shared. |
 | Phone upload + heartbeat (WorkManager, 15 min, hardware-backed P-256 key, hash chain, cursor resync) | 🧪 | `sync/SyncWorker`. Starts from "now" at enrollment, not old history. |
-| Email partners: one-time invite code → `/join` → private report page | 🧪 | |
+| Email partners: one-time invite code → `/join` → confirm email → private report page | 🧪 | Partners are double opt-in: nothing but the confirmation email goes to an address until its owner clicks Confirm. |
 | Instant alerts (filter off/revoked, a11y/usage access off, log cleared, records missing, partner removed, health problems, silence) | 🧪 | One rule: `Digest.alertText`. |
 | Weekly report email | 🧪 | |
 | SMS alerts (Twilio/Telnyx, opt-in, code-verified, throttled) | 🧪 | Provider account + number needed. |
@@ -104,7 +105,7 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
    check-in; the partner app after 14 h without a message. Doze can delay background work for
    hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
 4. **The AI's accuracy is unmeasured.** The model author claims ~92% on their own data; our only real flag so far was a false positive (shirtless man → `porn` 0.82). It only flags, never blocks. Before a partner receives AI flags, add persistence/combined-signal rules (`docs/research/ai-detection.md`).
-5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switched Always-on off (2026-11-20 export). The integrity trail records it, but the app doesn't prompt to turn it back on yet.
+5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switch switched Always-on off (2026-11-20 export). The integrity trail records it. **Since 2026-11-23 (unreleased, 🧪)** the app also reminds the owner when the VPN starts with Always-on off: one notification per 12 h that opens VPN settings (`dns/AlwaysOnNudge`, diag counter `always_on_nudge`).
 6. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
 
 ## Open decisions (owner / maintainer)
@@ -114,7 +115,7 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 | Backend hosting | Logan's VPS (Resend already there) — recommended for the prototype. **Blocks everything on the partner side.** |
 | Domain + HTTPS | Needed: the app only talks to `https://` servers |
 | SMS provider + monthly budget | Twilio / Telnyx / Vonage, behind one `Notifier` interface |
-| Privacy tier | Recommend P3: server-readable records, end-to-end-encrypted screenshots |
+| Privacy tier | **Decided 2026-11-23 (owner): server-readable records, personal use; "less privacy now, harden later if we open it up."** Screenshots stay end-to-end encrypted to the partner key. Revisit before anyone but the owner uses the server. |
 | Log retention after upload | Keep N days locally vs delete on acknowledgement |
 | Default protection tier | Recommend device admin as default (EA parity), device owner as opt-in |
 | License | MPL-2.0 or Apache-2.0 suggested (`docs/plans/00-roadmap.md` Tier 0) |
@@ -125,9 +126,8 @@ Everything here needs a deployed server (`server/README.md`); none of it has run
 0. Use the review screen for a few days: the `rev` answers are the first real false-alarm rate (`docs/research/ai-detection.md` option C is now built).
 1. Deploy `server/` on the VPS behind HTTPS (`server/README.md`), set the server address in the
    app, invite an email partner, pair a second phone, send an export after a day.
-2. AI: persistence + combined-signal rules and a "Not a problem" button before partners see
-   flags (`docs/research/ai-detection.md` A–C).
-3. Prompt to re-enable Always-on VPN when the integrity trail shows it went off.
+2. ~~AI: persistence + combined-signal rules~~ — built 2026-11-23 (unreleased, `dns/FlagPolicy`); the "Not a problem" button shipped in 2.7.0. Retune only from `rev` answers.
+3. ~~Prompt to re-enable Always-on VPN~~ — built 2026-11-23 (unreleased); confirm it fires on the Pixel.
 4. UI: Home hero state, Settings grouped into cards, Monitoring "Recent flags"
    (`docs/research/ui-design.md`).
 5. Then: report exclusions, screenshot upload to partner.

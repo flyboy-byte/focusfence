@@ -148,6 +148,9 @@ object ScreenCapture {
         requestScreenshot(service, pkg, trigger)
     }
 
+    /** Which raw hits become partner flags; text capture feeds it adult-word sightings. */
+    internal val flagPolicy = app.focusfence.dns.FlagPolicy()
+
     // Last scored screen, for skipping unchanged ones. Capture is serialized
     // (inFlight), so plain fields are safe here.
     private var lastHash: Long? = null
@@ -255,7 +258,14 @@ object ScreenCapture {
             verdict?.let { Monitor.perf.count("clf_risk_b${app.focusfence.dns.Signals.bucket(it.score)}") }
         }
         val mode = MonitorSettings.retention(context)
-        val flagged = verdict?.flagged ?: false
+        // A raw hit (risky label over the owner's threshold) is only reported to a partner, and its image kept
+        // for them, when FlagPolicy corroborates it. The owner's review copy below is not affected.
+        val why = if (verdict?.flagged == true) flagPolicy.onRawHit(pkg, verdict.score, now) else null
+        val flagged = why != null
+        when {
+            why != null -> Monitor.perf.count("flag_${why.name.lowercase()}")
+            verdict?.flagged == true -> Monitor.perf.count("flag_held")
+        }
         val keep = Classification.retainImage(mode, flagged)
 
         var shotId: String? = null

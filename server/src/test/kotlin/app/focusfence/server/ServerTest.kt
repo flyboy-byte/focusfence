@@ -50,8 +50,8 @@ class ServerTest {
         })
 
     /** Redirects are not followed, so the join/verify flows can be asserted step by step. */
-    private fun run(block: suspend (HttpClient) -> Unit) = testApplication {
-        application { module(store, notifier, cfg) }
+    private fun run(config: Config = cfg, block: suspend (HttpClient) -> Unit) = testApplication {
+        application { module(store, notifier, config) }
         block(createClient { followRedirects = false })
     }
 
@@ -82,6 +82,14 @@ class ServerTest {
             if (phone != null) { append("phone", phone); append("sms_consent", "yes") }
         })
 
+    /** Joins, then clicks the emailed confirm button, so alerts flow. Returns the partner's token. */
+    private suspend fun HttpClient.joinConfirmed(id: String, phone: String? = null): String {
+        join(invite(id).code, phone)
+        val token = store.device(id)!!.partners.last().token
+        assertEquals(HttpStatusCode.Found, post("/confirm/$token").status)
+        return token
+    }
+
     private suspend fun HttpClient.batch(id: String, first: Long, last: Long, prev: String, raw: String): HttpResponse {
         val sig = sign(Integrity.batchMessage(id, first, last, prev, raw))
         val body = json.encodeToString(BatchRequest.serializer(), BatchRequest(id, first, last, prev, raw, sig))
@@ -102,22 +110,26 @@ class ServerTest {
         // Codes are forgiving to type: lowercase, no dash.
         val r = http.join(inv.code.lowercase().replace("-", ""))
         assertEquals(HttpStatusCode.Found, r.status)
+        // Only a confirmation email goes out at join; it carries the confirm link, not the report link.
         assertEquals("sam@example.com", notifier.emails.last().first)
+        assertTrue(notifier.emails.last().second.contains("confirm"))
 
         val list = json.decodeFromString(PartnersResponse.serializer(), http.postJson("/v1/partners/list", signed("partners", id)).bodyAsText())
         assertEquals(1, list.partners.size)
         assertEquals("Sam", list.partners[0].name)
         assertTrue(list.partners[0].email.startsWith("sa…@"))
+        assertTrue(!list.partners[0].confirmed)
+        http.post("/confirm/${store.device(id)!!.partners.single().token}")
 
         // Single use.
         val again = http.join(inv.code)
-        assertTrue(again.bodyAsText().contains("isn't valid"))
+        assertTrue(again.bodyAsText().contains("isn&#39;t valid"))
 
         // Unlink tells the partner.
         val pid = list.partners[0].id
         val before = notifier.emails.size
         assertEquals(HttpStatusCode.OK, http.postJson("/v1/partners/unlink", signed("unlink", id, pid, partnerId = pid)).status)
-        assertTrue(notifier.emails.drop(before).any { it.second.contains("removed") })
+        assertTrue(notifier.emails.drop(before).any { it.second.contains("removed") }) // confirmed, so they are told
         assertEquals(0, store.device(id)!!.partners.size)
     }
 
@@ -126,7 +138,7 @@ class ServerTest {
         val id = http.enroll()
         val inv = http.invite(id)
         clock += cfg.inviteTtlMs + 1
-        assertTrue(http.join(inv.code).bodyAsText().contains("isn't valid"))
+        assertTrue(http.join(inv.code).bodyAsText().contains("isn&#39;t valid"))
     }
 
     @Test
@@ -143,7 +155,7 @@ class ServerTest {
     @Test
     fun batchesChainAlertAndReportGaps() = run { http ->
         val id = http.enroll()
-        http.join(http.invite(id).code)
+        http.joinConfirmed(id)
         notifier.emails.clear()
 
         val raw1 = """{"seq":1,"t":$clock,"type":"dns","host":"a.com","qtype":"A","decision":"allowed"}"""
@@ -176,11 +188,12 @@ class ServerTest {
     @Test
     fun smsOptInVerifiedThenAlertsThrottled() = run { http ->
         val id = http.enroll()
-        http.join(http.invite(id).code, phone = "+1 (555) 123-4567")
+        val token = http.joinConfirmed(id)
+        assertTrue(notifier.texts.isEmpty(), "no text at join")
+        http.submitForm("/p/$token/sms", Parameters.build { append("phone", "+1 (555) 123-4567"); append("sms_consent", "yes") })
         val (to, text) = notifier.texts.single()
         assertEquals("+15551234567", to)
         val code = Regex("\\d{6}").find(text)!!.value
-        val token = store.device(id)!!.partners.single().token
 
         assertEquals(HttpStatusCode.Found, http.submitForm("/p/$token/sms/verify", Parameters.build { append("code", "000000") }).status)
         assertTrue(!store.device(id)!!.partners.single().phoneVerified)
@@ -194,6 +207,7 @@ class ServerTest {
         assertTrue(notifier.texts[0].second.contains("revoked"))
         // A second alert inside the throttle window: email yes, text no.
         val raw2 = """{"seq":2,"t":$clock,"type":"svc","comp":"vpn","state":"revoked"}"""
+        clock += 2 * 60_000 // past the per-address email gap, still inside the 10 min text throttle
         http.batch(id, 2, 2, h, raw2)
         assertEquals(1, notifier.texts.size)
     }
@@ -214,7 +228,7 @@ class ServerTest {
     @Test
     fun staleDeviceAlertsOnceAndWeeklyReportSends() = run { http ->
         val id = http.enroll()
-        http.join(http.invite(id).code)
+        http.joinConfirmed(id)
         notifier.emails.clear()
         val alerts = Alerts(store, notifier, cfg)
         clock += cfg.staleMs + 60_000
@@ -222,6 +236,7 @@ class ServerTest {
         alerts.sweep()
         assertEquals(1, notifier.emails.count { it.second.contains("silent") })
         clock += cfg.reportEveryMs
+        store.updateDevice(id) { it.lastSeenMs = clock } // the phone is back, so only the report is due
         alerts.sweep()
         assertEquals(1, notifier.emails.count { it.second.contains("weekly report") })
     }
@@ -254,8 +269,119 @@ class ServerTest {
 
         // Wrong token: no read, no write. Someone else can't claim the id.
         assertEquals(HttpStatusCode.Forbidden, http.get("/v1/mailbox/${k.mailboxId}/msgs") { header("X-FF-Token", "nope") }.status)
-        assertEquals(HttpStatusCode.Conflict, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"other"}""").status)
+        assertEquals(HttpStatusCode.Conflict, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"${Pairing.tokenHash("someone else")}"}""").status)
         assertEquals(HttpStatusCode.BadRequest, http.postJson("/v1/mailbox/not-hex", """{"tokenHash":"x"}""").status)
         assertNull(Pairing.open(Pairing.derive(Pairing.generateSecret()).enc, Base64.getDecoder().decode(msgs.single().c), k.mailboxId.toByteArray()))
+    }
+
+    // ---- audit fixes (extraction session, 2026-11-23) ------------------------------------------------
+
+    @Test
+    fun joinFormEscapesQuotesAndSendsACsp() = run { http ->
+        val r = http.get("/join?code=%27%20autofocus%20onfocus%3D%27x")
+        val body = r.bodyAsText()
+        // The quote stays inside value='...' as &#39;, so it can't close the attribute and inject autofocus/onfocus.
+        assertTrue(!body.contains("value='' autofocus"), body)
+        assertTrue(body.contains("value='&#39; autofocus"), body)
+        val csp = r.headers["Content-Security-Policy"].orEmpty()
+        assertTrue(csp.contains("default-src 'none'") && csp.contains("frame-ancestors 'none'"), csp)
+    }
+
+    @Test
+    fun unconfirmedAddressGetsOnlyTheConfirmationEmail() = run { http ->
+        val id = http.enroll()
+        http.join(http.invite(id).code)
+        val token = store.device(id)!!.partners.single().token
+        assertEquals(1, notifier.emails.size)
+
+        // An alert-worthy batch reaches nobody who hasn't confirmed.
+        http.batch(id, 1, 1, "GENESIS", """{"seq":1,"t":$clock,"type":"svc","comp":"vpn","state":"revoked"}""")
+        assertEquals(1, notifier.emails.size)
+
+        // A link prefetcher (GET) must not confirm; only the button (POST) does.
+        assertEquals(HttpStatusCode.OK, http.get("/confirm/$token").status)
+        assertTrue(!store.device(id)!!.partners.single().confirmed)
+        http.post("/confirm/$token")
+        assertTrue(store.device(id)!!.partners.single().confirmed)
+        assertTrue(notifier.emails.last().second.contains("now an accountability partner"))
+    }
+
+    @Test
+    fun unconfirmedPartnersExpireAndThePartnerCountIsCapped() = run { http ->
+        val id = http.enroll()
+        repeat(cfg.maxPartnersPerDevice) { http.join(http.invite(id).code) }
+        assertTrue(http.join(http.invite(id).code).bodyAsText().contains("most partners"))
+        clock += cfg.unconfirmedTtlMs + 1
+        store.updateDevice(id) { it.lastSeenMs = clock }
+        Alerts(store, notifier, cfg).sweep()
+        assertEquals(0, store.device(id)!!.partners.size)
+    }
+
+    @Test
+    fun anAddressIsNotEmailedFasterThanTheGap() = run { http ->
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        notifier.emails.clear()
+        val a = """{"seq":1,"t":$clock,"type":"svc","comp":"vpn","state":"revoked"}"""
+        val h = json.decodeFromString(BatchResponse.serializer(), http.batch(id, 1, 1, "GENESIS", a).bodyAsText()).nextHash
+        http.batch(id, 2, 2, h, a.replace("\"seq\":1", "\"seq\":2"))
+        assertEquals(1, notifier.emails.size, "second alert inside the gap is held back")
+    }
+
+    @Test
+    fun enrollIsCappedAndRateLimited() = run(Config(publicUrl = "https://ff.test", maxDevices = 1, now = { clock })) { http ->
+        http.enroll()
+        val spki = Base64.getEncoder().encodeToString(keys.public.encoded)
+        assertEquals(HttpStatusCode.InsufficientStorage, http.postJson("/v1/enroll", """{"publicKeySpki":"$spki"}""").status)
+    }
+
+    @Test
+    fun enrollIsRateLimitedPerClient() = run(Config(publicUrl = "https://ff.test", maxDevices = 1000, now = { clock })) { http ->
+        val spki = Base64.getEncoder().encodeToString(keys.public.encoded)
+        repeat(5) { assertEquals(HttpStatusCode.OK, http.postJson("/v1/enroll", """{"publicKeySpki":"$spki"}""").status) }
+        assertEquals(HttpStatusCode.TooManyRequests, http.postJson("/v1/enroll", """{"publicKeySpki":"$spki"}""").status)
+    }
+
+    @Test
+    fun diskBudgetStopsWritesButNotReads() = run(Config(publicUrl = "https://ff.test", maxDataBytes = 1, now = { clock })) { http ->
+        val raw = """{"seq":1,"t":$clock,"type":"dns","host":"a.com","qtype":"A","decision":"allowed"}"""
+        val d = store.createDevice(Base64.getEncoder().encodeToString(keys.public.encoded), clock)
+        assertEquals(HttpStatusCode.InsufficientStorage, http.batch(d.id, 1, 1, "GENESIS", raw).status)
+    }
+
+    @Test
+    fun shotsAreSizeCappedAndPrunedPerDevice() = run { http ->
+        val id = http.enroll()
+        fun shotBody(shotId: String, bytes: Int): String {
+            val sig = sign(Integrity.requestMessage("shot", id, clock, shotId))
+            val b64 = Base64.getEncoder().encodeToString(ByteArray(bytes))
+            return """{"deviceId":"$id","t":$clock,"shotId":"$shotId","ciphertextB64":"$b64","signature":"$sig"}"""
+        }
+        assertEquals(HttpStatusCode.PayloadTooLarge, http.postJson("/v1/shots", shotBody("big", Store.SHOT_MAX_BYTES + 1)).status)
+        repeat(Store.SHOTS_PER_DEVICE + 5) { assertEquals(HttpStatusCode.OK, http.postJson("/v1/shots", shotBody("s$it", 16)).status) }
+        val kept = java.io.File(store.javaClass.getDeclaredField("root").apply { isAccessible = true }.get(store) as java.io.File, "blobs")
+            .listFiles { f -> f.name.startsWith(id) }!!.size
+        assertEquals(Store.SHOTS_PER_DEVICE, kept)
+    }
+
+    @Test
+    fun recordsMustSpanTheClaimedSeqRange() = run { http ->
+        val id = http.enroll()
+        fun rec(n: Int) = """{"seq":$n,"t":$clock,"type":"dns","host":"a.com","qtype":"A","decision":"allowed"}"""
+        // claims 1..3, carries only seq 1
+        assertEquals(HttpStatusCode.Conflict, http.batch(id, 1, 3, "GENESIS", rec(1)).status)
+        // out of order
+        assertEquals(HttpStatusCode.Conflict, http.batch(id, 1, 2, "GENESIS", rec(2) + "\n" + rec(1)).status)
+        // a record with no seq at all
+        assertEquals(HttpStatusCode.Conflict, http.batch(id, 1, 1, "GENESIS", """{"t":1,"type":"dns"}""").status)
+        // the honest batch still goes through, with a gap inside the range allowed
+        assertEquals(HttpStatusCode.OK, http.batch(id, 1, 3, "GENESIS", rec(1) + "\n" + rec(3)).status)
+    }
+
+    @Test
+    fun errorsDontLeakExceptionText() = run { http ->
+        val r = http.postJson("/v1/enroll", """{"publicKeySpki":123}""")
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+        assertTrue(!r.bodyAsText().contains("Exception") && !r.bodyAsText().contains("kotlinx"), r.bodyAsText())
     }
 }

@@ -74,6 +74,8 @@ object TextCapture {
         if (terms.isNotEmpty()) {
             Monitor.perf.count("text_term_hits")
             terms.keys.forEach { Monitor.perf.count("text_term_$it") }
+            // Adult words on screen corroborate a middling image score in this app (dns/FlagPolicy).
+            if ("adult" in terms) ScreenCapture.flagPolicy.noteSignal(pkg, System.currentTimeMillis())
         }
         EventLog.activity(
             LogEvents.text(

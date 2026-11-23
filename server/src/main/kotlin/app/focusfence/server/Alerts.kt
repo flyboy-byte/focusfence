@@ -15,14 +15,29 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
 
     fun link(p: Store.Partner) = "${cfg.publicUrl}/p/${p.token}"
 
+    /** Backstop against using us to flood an inbox: a minimum gap and a daily cap per address. */
+    private val sent = java.util.concurrent.ConcurrentHashMap<String, MutableList<Long>>()
+    private fun mayEmail(address: String): Boolean {
+        val now = cfg.now()
+        val list = sent.computeIfAbsent(address.lowercase()) { ArrayList() }
+        synchronized(list) {
+            list.removeAll { now - it > 24 * 3_600_000L }
+            if (list.isNotEmpty() && now - list.last() < cfg.emailMinIntervalMs) return false
+            if (list.size >= cfg.emailDailyCap) return false
+            list += now
+            return true
+        }
+    }
+
     suspend fun toPartners(device: Store.Device, subject: String, lines: List<String>) {
         if (lines.isEmpty()) return
         val now = cfg.now()
         for (p in device.partners) {
+            if (!p.confirmed) continue
             val html = "<p>${Web.esc(subject)}</p><ul>" +
                 lines.joinToString("") { "<li>${Web.esc(it)}</li>" } +
                 "</ul><p><a href=\"${link(p)}\">Open the report</a></p>"
-            notifier.email(p.email, "Focus Fence: $subject", html)
+            if (mayEmail(p.email)) notifier.email(p.email, "Focus Fence: $subject", html)
             val phone = p.phone
             if (p.phoneVerified && phone != null && now - p.lastSmsMs >= cfg.smsMinIntervalMs) {
                 val more = if (lines.size > 1) " (+${lines.size - 1} more)" else ""
@@ -51,7 +66,10 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
     suspend fun sweep() {
         val now = cfg.now()
         for (d in store.allDevices()) {
-            if (d.partners.isEmpty()) continue
+            if (d.partners.any { !it.confirmed && now - it.linkedMs > cfg.unconfirmedTtlMs }) {
+                store.updateDevice(d.id) { dev -> dev.partners = dev.partners.filter { it.confirmed || now - it.linkedMs <= cfg.unconfirmedTtlMs } }
+            }
+            if (d.partners.none { it.confirmed }) continue
             if (!d.staleAlerted && now - d.lastSeenMs > cfg.staleMs) {
                 store.updateDevice(d.id) { it.staleAlerted = true }
                 toPartners(
@@ -62,8 +80,8 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             if (now - d.lastReportMs >= cfg.reportEveryMs) {
                 store.updateDevice(d.id) { it.lastReportMs = now }
                 val digest = digest(d.id, now - cfg.reportEveryMs, now)
-                for (p in d.partners) {
-                    notifier.email(
+                for (p in d.partners.filter { it.confirmed }) {
+                    if (mayEmail(p.email)) notifier.email(
                         p.email, "Focus Fence: weekly report",
                         "${Web.digestHtml(digest)}<p><a href=\"${link(p)}\">Open the full report</a></p>",
                     )

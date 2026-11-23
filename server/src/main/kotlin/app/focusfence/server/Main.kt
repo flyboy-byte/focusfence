@@ -5,6 +5,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.createApplicationPlugin
+import io.ktor.server.application.log
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.application.install
@@ -56,6 +58,16 @@ class Config(
     val smsMinIntervalMs: Long = 10 * 60_000L,
     /** Signed requests must be this fresh: stops replay of a captured request. */
     val clockSkewMs: Long = 10 * 60_000L,
+    /** Hard bounds, because this box's disk is shared with other services and enroll/mailbox creation are open. */
+    val maxDevices: Int = 100,
+    val maxMailboxes: Int = 500,
+    val maxDataBytes: Long = 2L * 1024 * 1024 * 1024,
+    val maxPartnersPerDevice: Int = 5,
+    /** Backstop on top of double opt-in: no address is emailed more often than this, or more than the daily cap. */
+    val emailMinIntervalMs: Long = 60_000L,
+    val emailDailyCap: Int = 60,
+    /** A partner who never confirms their email is dropped after this. */
+    val unconfirmedTtlMs: Long = 3L * 24 * 3_600_000,
     val now: () -> Long = System::currentTimeMillis,
 )
 
@@ -63,7 +75,7 @@ class Config(
 @Serializable data class EnrollResponse(val deviceId: String)
 @Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null)
 @Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String)
-@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long)
+@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true)
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>)
 @Serializable data class BatchRequest(
     val deviceId: String,
@@ -90,6 +102,9 @@ fun main() {
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
+        maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
+        maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
+        maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
     )
     val store = Store(File(env("FF_DATA_DIR") ?: "data"))
     val notifier = LiveNotifier(
@@ -106,7 +121,7 @@ fun main() {
             Thread.sleep(60_000)
         }
     }
-    embeddedServer(CIO, port = (env("FF_PORT") ?: "8080").toInt()) { module(store, notifier, cfg) }.start(wait = true)
+    embeddedServer(CIO, host = env("FF_HOST") ?: "0.0.0.0", port = (env("FF_PORT") ?: "8080").toInt()) { module(store, notifier, cfg) }.start(wait = true)
 }
 
 /** Fixed-window limiter for the few unauthenticated endpoints (invite codes are short). */
@@ -122,6 +137,19 @@ class RateLimiter(private val max: Int, private val windowMs: Long, private val 
             return true
         }
     }
+}
+
+/**
+ * The address to rate-limit by. Behind nginx every connection arrives from loopback, so the peer address
+ * alone would put every partner in one bucket. The proxy header is believed ONLY when the peer is loopback
+ * (our own nginx); from anyone else it is forged input, so the peer address is used. The rightmost entry is
+ * the one our proxy appended, so a client-supplied prefix cannot choose its own bucket.
+ */
+internal fun clientKey(peer: String, forwardedFor: String?): String {
+    val loopback = peer == "127.0.0.1" || peer == "::1" || peer == "0:0:0:0:0:0:0:1" || peer == "localhost"
+    if (!loopback) return peer
+    val last = forwardedFor?.split(',')?.lastOrNull()?.trim().orEmpty()
+    return if (last.isNotEmpty() && last.length <= 45) last else peer
 }
 
 private val random = SecureRandom()
@@ -146,14 +174,33 @@ private fun smsCode(): String = (100000 + random.nextInt(900000)).toString()
 
 fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; encodeDefaults = true }) }
+    // The partner pages are plain server-rendered HTML with inline CSS and no scripts, so a strict CSP costs nothing
+    // and turns any future escaping slip into a non-event.
+    install(createApplicationPlugin("SecurityHeaders") {
+        onCall { call ->
+            call.response.headers.append("Content-Security-Policy",
+                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
+            call.response.headers.append("X-Content-Type-Options", "nosniff")
+            call.response.headers.append("Referrer-Policy", "no-referrer")
+        }
+    })
     install(StatusPages) {
         exception<Throwable> { call, cause ->
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message ?: "error"))
+            // Never echo the exception text: it can carry class names or file paths. Keep it in our log only.
+            call.application.log.warn("request failed: ${cause::class.simpleName}: ${cause.message}")
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad request"))
         }
     }
     val alerts = Alerts(store, notifier, cfg)
     val joinLimiter = RateLimiter(10, 3_600_000, cfg.now)
     val smsLimiter = RateLimiter(3, 3_600_000, cfg.now)
+    val enrollLimiter = RateLimiter(5, 3_600_000, cfg.now)
+    val mailboxLimiter = RateLimiter(20, 3_600_000, cfg.now)
+    val confirmLimiter = RateLimiter(1, 3_600_000, cfg.now) // confirmation emails per address
+
+    fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"])
+    fun full(): Boolean = store.usedBytes(cfg.now()) >= cfg.maxDataBytes
+    suspend fun ApplicationCall.serverFull() = respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
 
     fun signedOk(device: Store.Device, action: String, t: Long, extra: String, sig: String): Boolean {
         if (abs(cfg.now() - t) > cfg.clockSkewMs) return false
@@ -171,6 +218,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
+            if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
+            if (full() || store.deviceCount() >= cfg.maxDevices) return@post call.serverFull()
             runCatching { Integrity.publicKeyFromBase64Spki(req.publicKeySpki) }
                 .getOrElse { return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key")) }
             call.respond(EnrollResponse(store.createDevice(req.publicKeySpki, cfg.now()).id))
@@ -195,7 +244,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "partners", req.t, "", req.signature)) return@post call.unauthorized()
             call.respond(PartnersResponse(device.partners.map {
-                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs)
+                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed)
             }))
         }
 
@@ -216,6 +265,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/v1/batches") {
             val req = call.receive<BatchRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (full()) return@post call.serverFull()
             val key = Integrity.publicKeyFromBase64Spki(device.publicKeySpki)
             val msg = Integrity.batchMessage(req.deviceId, req.firstSeq, req.lastSeq, req.prevHash, req.recordsRaw)
             val sigOk = Integrity.verifySignature(key, msg, req.signature)
@@ -258,7 +308,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val req = call.receive<ShotRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "shot", req.t, req.shotId, req.signature)) return@post call.unauthorized()
-            store.saveBlob(req.deviceId, req.shotId, Base64.getDecoder().decode(req.ciphertextB64))
+            if (full()) return@post call.serverFull()
+            if (req.ciphertextB64.length > Store.SHOT_MAX_BYTES * 4 / 3 + 16) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
+            val bytes = Base64.getDecoder().decode(req.ciphertextB64)
+            if (bytes.size > Store.SHOT_MAX_BYTES) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
+            store.saveBlob(req.deviceId, req.shotId, bytes)
             call.respond(OkResponse())
         }
 
@@ -270,6 +324,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val id = call.parameters["id"].orEmpty()
             if (!MAILBOX_ID.matches(id)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
             val req = call.receive<CreateMailboxRequest>()
+            if (store.mailbox(id) == null) { // an existing mailbox is just re-checked; only NEW ones are limited
+                if (!mailboxLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
+                if (full() || store.mailboxCount() >= cfg.maxMailboxes) return@post call.serverFull()
+            }
+            if (req.tokenHash.length != 43) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad token hash"))
             val mb = store.createMailbox(id, req.tokenHash, cfg.now())
             if (mb.tokenHash != req.tokenHash) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("taken"))
             call.respond(OkResponse())
@@ -277,6 +336,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         post("/v1/mailbox/{id}/msgs") {
             val id = call.parameters["id"].orEmpty()
+            if (!MAILBOX_ID.matches(id)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
+            if (full()) return@post call.serverFull()
             val mb = store.mailbox(id) ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("no mailbox"))
             if (!tokenOk(call, mb)) return@post call.respond(HttpStatusCode.Forbidden, ErrorResponse("bad token"))
             val req = call.receive<PostMailRequest>()
@@ -286,6 +347,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         get("/v1/mailbox/{id}/msgs") {
             val id = call.parameters["id"].orEmpty()
+            if (!MAILBOX_ID.matches(id)) return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
             val mb = store.mailbox(id) ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("no mailbox"))
             if (!tokenOk(call, mb)) return@get call.respond(HttpStatusCode.Forbidden, ErrorResponse("bad token"))
             val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
@@ -302,14 +364,14 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/join") {
             val form = call.receiveParameters()
             val rawCode = form["code"].orEmpty()
-            if (!joinLimiter.allow(call.request.origin.remoteHost)) {
+            if (!joinLimiter.allow(clientKey(call.request.origin.remoteHost, call.request.headers["X-Forwarded-For"]))) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
             }
             val codeHash = Integrity.sha256(normalizeCode(rawCode))
-            val name = form["name"].orEmpty().trim().take(60)
+            val name = form["name"].orEmpty().filter { !it.isISOControl() }.trim().take(60)
             val email = form["email"].orEmpty().trim().take(120)
-            if (name.isEmpty() || !email.contains('@')) {
+            if (name.isEmpty() || !EMAIL.matches(email)) {
                 return@post call.respondText(Web.joinForm(rawCode, "Enter your name and email.", notifier.smsAvailable), ContentType.Text.Html)
             }
             val now = cfg.now()
@@ -318,21 +380,53 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     Web.joinForm(rawCode, "That code isn't valid. It may have expired or already been used.", notifier.smsAvailable),
                     ContentType.Text.Html,
                 )
-            val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now)
+            if (device.partners.size >= cfg.maxPartnersPerDevice) {
+                return@post call.respondText(
+                    Web.joinForm(rawCode, "This phone already has the most partners it can have.", notifier.smsAvailable),
+                    ContentType.Text.Html,
+                )
+            }
+            // Double opt-in: the address is NOT trusted yet. Until its owner clicks the link below, the only thing
+            // ever sent to it is that one email, so a stranger's address can't be signed up to receive alerts.
+            val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now, confirmed = false)
             store.updateDevice(device.id) { d ->
                 d.invites = d.invites.filter { it.codeHash != codeHash } // single use
                 d.partners = d.partners + partner
             }
-            notifier.email(
-                email, "Focus Fence: you're now an accountability partner",
-                "<p>Hi ${Web.esc(name)}, you'll get a weekly report and alerts by email.</p>" +
-                    "<p>Your private report page (keep this link to yourself): <a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>",
-            )
-            val phone = form["phone"]?.let(::normalizePhone)
-            if (phone != null && form["sms_consent"] == "yes" && notifier.smsAvailable) {
-                startSmsVerification(store, notifier, smsLimiter, cfg, device.id, partner.id, phone)
+            if (confirmLimiter.allow(email.lowercase())) {
+                notifier.email(
+                    email, "Focus Fence: confirm your email",
+                    "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
+                        "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/${partner.token}\">confirm here</a>. " +
+                        "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
+                )
             }
             call.respondRedirect("/p/${partner.token}?welcome=1")
+
+        }
+
+        // The email link only SHOWS a button; confirming is a POST, so a mail scanner that opens links can't confirm for you.
+        get("/confirm/{token}") {
+            val (_, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
+                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            val body = if (partner.confirmed) Web.message("Already confirmed", "You're already set up.")
+            else Web.confirmForm(partner.token)
+            call.respondText(body, ContentType.Text.Html)
+        }
+
+        post("/confirm/{token}") {
+            val token = call.parameters["token"].orEmpty()
+            val (device, partner) = store.partnerByToken(token)
+                ?: return@post call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            if (!partner.confirmed) {
+                store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.confirmed = true }
+                notifier.email(
+                    partner.email, "Focus Fence: you're now an accountability partner",
+                    "<p>Hi ${Web.esc(partner.name)}, you'll get a weekly report and alerts by email.</p>" +
+                        "<p>Your private report page (keep this link to yourself): <a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>",
+                )
+            }
+            call.respondRedirect("/p/$token?welcome=1")
         }
 
         get("/p/{token}") {
@@ -340,6 +434,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
             val now = cfg.now()
             val notice = when {
+                call.request.queryParameters["welcome"] != null && !partner.confirmed ->
+                    "Check your email and confirm your address to start getting alerts. Until then nothing is sent to you."
                 call.request.queryParameters["welcome"] != null -> "You're linked. Bookmark this page — it's your private report."
                 call.request.queryParameters["sms"] == "on" -> "Text alerts are on."
                 call.request.queryParameters["sms"] == "bad" -> "That code didn't match. Try again."
@@ -357,7 +453,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
             val form = call.receiveParameters()
             val phone = form["phone"]?.let(::normalizePhone)
-            if (phone != null && form["sms_consent"] == "yes" && notifier.smsAvailable) {
+            if (partner.confirmed && phone != null && form["sms_consent"] == "yes" && notifier.smsAvailable) {
                 startSmsVerification(store, notifier, smsLimiter, cfg, device.id, partner.id, phone)
             }
             call.respondRedirect("/p/$token")
@@ -402,6 +498,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 }
 
 private val MAILBOX_ID = Regex("^[0-9a-f]{64}$")
+private val EMAIL = Regex("^[^\\s@<>\"',;]{1,64}@[A-Za-z0-9.-]{1,80}\\.[A-Za-z]{2,24}$")
 
 private fun tokenOk(call: ApplicationCall, mb: Store.Mailbox): Boolean {
     val token = call.request.headers["X-FF-Token"] ?: return false

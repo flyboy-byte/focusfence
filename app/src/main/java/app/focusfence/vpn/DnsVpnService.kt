@@ -34,6 +34,7 @@ import app.focusfence.data.StatsStore
 import app.focusfence.data.StrategyStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
+import app.focusfence.dns.AlwaysOnNudge
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.Blocklist
@@ -97,6 +98,7 @@ class DnsVpnService : VpnService() {
         private const val NOTIFICATION_ID = 1
         private const val ALERT_CHANNEL = "vpn_alert"
         private const val ALERT_ID = 2
+        private const val NUDGE_ID = 3
         /** Health is re-evaluated at most this often from the relay path. */
         private const val HEALTH_EVAL_INTERVAL_MS = 5_000L
 
@@ -462,6 +464,7 @@ class DnsVpnService : VpnService() {
         } else {
             "unknown"
         }
+        maybeNudgeAlwaysOn()
         EventLog.activity(
             LogEvents.service(
                 System.currentTimeMillis(), COMP, "start",
@@ -790,6 +793,39 @@ class DnsVpnService : VpnService() {
             nm.cancel(ALERT_ID)
         }
         broadcastState()
+    }
+
+    /**
+     * Android drops Always-on when the VPN is toggled from the system switch. Remind the owner, at most every
+     * 12 h ([AlwaysOnNudge]); the notification goes away once it's on again. Its own prefs file, so the
+     * timestamp doesn't trip the rules listeners that watch `focusfence`.
+     */
+    private fun maybeNudgeAlwaysOn() {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        val prefs = getSharedPreferences("focusfence_nudge", MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (alwaysOnState != "off") {
+            nm.cancel(NUDGE_ID)
+            return
+        }
+        if (!AlwaysOnNudge.shouldNudge(alwaysOnState, app.focusfence.admin.DeviceAdmin.isDeviceOwner(this), prefs.getLong("always_on", 0), now)) return
+        prefs.edit().putLong("always_on", now).apply()
+        ensureAlertChannel(this, nm)
+        val open = PendingIntent.getActivity(
+            this, 2, Intent(AndroidSettings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE,
+        )
+        nm.notify(
+            NUDGE_ID,
+            NotificationCompat.Builder(this, ALERT_CHANNEL)
+                .setSmallIcon(R.drawable.ic_shield)
+                .setContentTitle(getString(R.string.alert_always_on_title))
+                .setContentText(getString(R.string.alert_always_on_text))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(getString(R.string.alert_always_on_text)))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build(),
+        )
+        Monitor.perf.count("always_on_nudge")
     }
 
     private fun healthText(state: VpnHealth.State): Int = when (state) {

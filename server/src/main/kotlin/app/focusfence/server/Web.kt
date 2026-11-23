@@ -18,7 +18,14 @@ object Web {
     fun time(ms: Long): String = timeFmt.format(Instant.ofEpochMilli(ms))
 
     fun esc(x: String): String =
-        x.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+        x.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;")
+
+    /** The page behind the emailed confirm link: a button, because confirming must be a deliberate POST. */
+    fun confirmForm(token: String): String = page(
+        "Confirm your email",
+        "<p>Confirm that you want to be this person's accountability partner and get their alerts and weekly report by email.</p>" +
+            "<form method=\"post\" action=\"/confirm/${esc(token)}\"><button type=\"submit\">Yes, confirm</button></form>",
+    )
 
     fun page(title: String, body: String): String = """<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

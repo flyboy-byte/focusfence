@@ -23,6 +23,9 @@ import java.util.Base64
  */
 object Integrity {
 
+    /** Every record starts `{"seq":N` (the phone writes it first; docs/specs/event-log.md). */
+    private val SEQ = Regex("^\\{\"seq\":(\\d+)")
+
     fun publicKeyFromBase64Spki(b64: String): PublicKey {
         val der = Base64.getDecoder().decode(b64)
         val key = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(der))
@@ -84,6 +87,18 @@ object Integrity {
         if (lastSeq < firstSeq) return Result.Reject("inverted seq range")
         if (firstSeq < expectedNextSeq) return Result.Reject("replayed/overlapping seq")
         if (recordsRaw.isBlank()) return Result.Reject("empty batch")
+        // The signature covers the text and the claimed range; this ties the two together, so a batch can't
+        // claim a range its records don't span (which would hide or invent missing records).
+        var prev = firstSeq - 1
+        var first = -1L
+        for (line in recordsRaw.lineSequence()) {
+            if (line.isBlank()) continue
+            val seq = SEQ.find(line)?.groupValues?.get(1)?.toLongOrNull() ?: return Result.Reject("record without a seq")
+            if (seq <= prev) return Result.Reject("records out of order or outside the range")
+            if (first < 0) first = seq
+            prev = seq
+        }
+        if (first != firstSeq || prev != lastSeq) return Result.Reject("records don't span the claimed range")
         val gap = firstSeq - expectedNextSeq
         return Result.Ok(hashBatch(prevHash, recordsRaw), gap)
     }

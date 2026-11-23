@@ -320,6 +320,8 @@
 
     <!-- Filter health / VPN error detection -->
     <string name="alert_channel_name">Protection problems</string>
+    <string name="alert_always_on_title">Always-on VPN is off</string>
+    <string name="alert_always_on_text">Without it, protection doesn\'t come back after a restart. Tap to open VPN settings and turn on Always-on VPN for Focus Fence.</string>
     <string name="alert_stopped_title">Protection stopped</string>
     <string name="alert_stopped_revoked">The filter VPN was turned off or replaced by another VPN. Tap to turn it back on.</string>
     <string name="alert_stopped_establish">The filter VPN couldn\'t start. Tap to open Focus Fence and turn it on.</string>
