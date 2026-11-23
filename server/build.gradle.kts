@@ -48,3 +48,6 @@ tasks.test {
 }
 
 application { mainClass.set("app.focusfence.server.MainKt") }
+
+// The static About / privacy pages (docs/site) ship inside the jar and are served at /about/.
+tasks.processResources { from("../docs/site") { into("about") } }

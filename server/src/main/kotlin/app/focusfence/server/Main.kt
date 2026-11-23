@@ -251,6 +251,16 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     routing {
         Admin(cfg, store, notifier, enrollCodes) { it.client() }.routes(this)
+        // The app's About / privacy pages (docs/site, packaged as resources). Static, no scripts; the stylesheet is inlined
+        // because the CSP allows only inline styles.
+        get("/about") { call.respondRedirect("/about/privacy.html") }
+        get("/about/{name}") {
+            val name = call.parameters["name"].orEmpty()
+            val res = if (Regex("[a-z]{1,20}\\.html").matches(name)) object {}.javaClass.getResource("/about/$name") else null
+            if (res == null) return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            val css = object {}.javaClass.getResource("/about/style.css")?.readText().orEmpty()
+            call.respondText(res.readText().replace("<link rel=\"stylesheet\" href=\"style.css\">", "<style>$css</style>"), ContentType.Text.Html)
+        }
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }

@@ -1,4 +1,6 @@
-# GitHub Pages site and in-app links (started 2026-11-23)
+# About / privacy pages and in-app link (built 2026-11-23)
+
+**Decision 2026-11-23:** GitHub Pages is not possible for now (Logan has push, not admin, on `sidewinderzz/focusfence`, and it is private). The pages in `docs/site/` are packaged into the server jar and served at **https://ff.flyboybyte.com/about/** (live); the app's `about_url` points there (unreleased until the next tag). Move to Pages later by changing that one string.
 
 **Built (🧪 CI only):** `docs/site/` has Home, Privacy, Limits and Run-your-own-server pages (static, no scripts); Settings → Accountability card has "About and privacy" (offline summary dialog, then opens `about_url` in the browser). **Not done:** the Pages workflow, enabling Pages (repo admin), the real `about_url` (currently a placeholder guess at `sidewinderzz.github.io/focusfence/`), operator/contact on the privacy page, Licences and Security pages. The privacy page was checked against `TextCapture` (it logs the visible text, 2,000 chars/screen); re-check on each release.
 

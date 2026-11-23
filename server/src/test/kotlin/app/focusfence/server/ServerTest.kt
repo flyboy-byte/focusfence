@@ -529,4 +529,15 @@ class ServerTest {
         assertEquals(HttpStatusCode.OK, enroll("boot"), "bootstrap token still works")
         assertEquals(HttpStatusCode.Unauthorized, enroll("zzzz"))
     }
+
+    @Test
+    fun aboutPagesAreServedStaticallyWithTheStylesheetInlined() = run { http ->
+        val page = http.get("/about/privacy.html")
+        assertEquals(HttpStatusCode.OK, page.status)
+        val body = page.bodyAsText()
+        assertTrue(body.contains("<h1>Privacy</h1>") && body.contains("<style>") && !body.contains("rel=\"stylesheet\""))
+        assertEquals(HttpStatusCode.NotFound, http.get("/about/..%2Fsecret.html").status)
+        assertEquals(HttpStatusCode.NotFound, http.get("/about/nothing.html").status)
+        assertEquals(HttpStatusCode.Found, http.get("/about").status)
+    }
 }
