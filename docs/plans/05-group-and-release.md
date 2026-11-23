@@ -10,6 +10,36 @@ packaging is built and was tested locally (not yet run through the release workf
 2. **Move GitHub forward**: a full release for the app and for the server, with a Docker Compose option for the server.
 3. Get this branch to where it **could** merge to `main`, with the confirmation and decision of @sidewinderzz.
 
+## 0b. Product shape: layers, all optional (owner, 2026-11-23)
+
+Logan: keep accountability in the app, but leave the **server optional and screenshots optional**, most layers
+**recommended** rather than forced, in the FOSS spirit of keeping it light. Nothing below needs to be built to make this
+true of the current code; what it needs is to be **stated, guided and tested**.
+
+| Layer | Default today | Recommended? | Needs a server | Measured cost |
+|---|---|---|---|---|
+| Core filter (DNS-only VPN, lists, per-domain rules) | on once started | yes | no | negligible (the premise of the app) |
+| Local activity and diagnostics log (DNS on, URLs off) | DNS logging on, URL logging off | yes: it is the record and never leaves the phone unless exported | no | small |
+| Strict mode and per-action friction | user turns on | yes for accountability | no | none |
+| Uninstall protection (device admin) | user turns on (one tap) | yes | no | none |
+| On-screen text capture | **off** (checked in code) | optional | no | the biggest accessibility cost (about 21% of app CPU in the 2026-11-23 export) |
+| Screenshots + on-device AI scoring | **off** (checked in code) | optional, recommended if you want evidence | no (evidence to a partner needs a partner key) | about 19% to 32% of app CPU |
+| Owner review screen | on, only does anything when AI is on | with AI | no | small |
+| Partners by email/web | none: **needs a server address** (checked in code) | recommended | yes | upload every 15 min, measured negligible |
+| App-to-app pairing and groups | none: **needs a server address** | recommended | yes (blind mailbox only) | same |
+
+Rules this gives us, to keep true as the app grows:
+1. **With every optional layer off the app is the lightweight blocker.** No capture, no AI, no uploads, no server contact, no
+   accessibility events beyond what rules need. A test or checklist should keep proving it (a release check: fresh install,
+   core filter only, confirm no sync/capture work starts).
+2. **Server and screenshots are separate switches.** A partner can get alerts without any screenshots; screenshots can be
+   on with no partner (owner review only).
+3. **Recommended means guided, not forced.** The app should offer a single "Set up accountability" path that suggests the
+   recommended layers one at a time, each with its measured cost in plain words, and lets the person stop at any step.
+   (Not built: today these are separate settings screens.)
+4. **Self-hosting is a first-class option, not a requirement**: the server is a published image with Compose (section 4), and
+   nothing in the app is tied to one operator.
+
 ## 1. Findings that shape everything (read before planning)
 
 | Finding | Evidence | Consequence |
@@ -100,7 +130,9 @@ merge nobody can review.
 > permanent visible indicator, device-admin uninstall protection, and **partners**: one or more people (up to a group of
 > four) who receive reports and can unlock strict mode. This supersedes D-010, D-012 and the D-016 rejection **only inside
 > that mode**, and for the reason that the threat there is a person who has agreed to be watched and may still try to
-> evade it; outside the mode all three stand. Partners are optional: with none, the app behaves as before.
+> evade it; outside the mode all three stand. **Every accountability layer is independently optional** (server, partners,
+> text capture, screenshots, AI): with all of them off the app is the same lightweight, local-first blocker it was, and
+> the server is a self-hostable component, not a dependency. "Recommended" is guidance in the UI, never a requirement.
 > **Consequence:** the accountability code is isolated (`dns/` pure core, `sync/`, `monitor/`, `server/`), never required by
 > the filter, and every observation in it is disclosed in the UI and logged.
 
