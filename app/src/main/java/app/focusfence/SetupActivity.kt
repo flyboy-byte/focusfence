@@ -3,7 +3,6 @@ package app.focusfence
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -64,31 +63,71 @@ class SetupActivity : AppCompatActivity() {
     private fun render() {
         val c = binding.content
         c.removeAllViews()
-        c.addView(text(getString(R.string.setup_intro), top = 0))
-        for (l in layers()) c.addView(row(l))
-        c.addView(text(getString(R.string.setup_footnote), top = 20))
+        c.addView(text(getString(R.string.setup_intro), top = 0, style = com.google.android.material.R.style.TextAppearance_Material3_BodyMedium, muted = true))
+        val all = layers()
+        c.addView(section(R.string.setup_section_recommended))
+        all.filter { it.recommended }.forEach { c.addView(card(it)) }
+        c.addView(section(R.string.setup_section_optional))
+        all.filter { !it.recommended }.forEach { c.addView(card(it)) }
+        c.addView(text(getString(R.string.setup_footnote), top = 20, style = com.google.android.material.R.style.TextAppearance_Material3_BodySmall, muted = true))
     }
 
-    private fun row(l: Layer): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(18), 0, 0)
-        val tag = getString(if (l.recommended) R.string.setup_recommended else R.string.setup_optional)
-        addView(text("${getString(l.title)} · $tag", bold = true, top = 0))
-        addView(text(getString(if (l.on) R.string.setup_on else R.string.setup_off), top = 2))
-        addView(text(getString(l.what), top = 4))
-        addView(text(getString(l.cost), top = 4, small = true))
-        addView(Button(context).apply {
-            text = getString(R.string.setup_open)
-            setOnClickListener { if (l.open != MainActivity::class.java) startActivity(Intent(context, l.open)) else finish() }
+    private fun section(title: Int) = text(getString(title), top = 24,
+        style = com.google.android.material.R.style.TextAppearance_Material3_TitleSmall, color = attr(androidx.appcompat.R.attr.colorPrimary))
+
+    /** One tappable card per layer: name and an On/Off chip on top, what it does, then its cost in small muted type. */
+    private fun card(l: Layer): View = com.google.android.material.card.MaterialCardView(this).apply {
+        radius = dp(16).toFloat()
+        cardElevation = 0f
+        isClickable = true
+        isFocusable = true
+        setContentPadding(dp(16), dp(14), dp(16), dp(14))
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { topMargin = dp(10) }
+        setOnClickListener { if (l.open != MainActivity::class.java) startActivity(Intent(context, l.open)) else finish() }
+        contentDescription = getString(l.title) + ", " + getString(if (l.on) R.string.setup_on else R.string.setup_off)
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                addView(text(getString(l.title), top = 0, style = com.google.android.material.R.style.TextAppearance_Material3_TitleMedium).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+                addView(statusChip(l.on))
+            })
+            addView(text(getString(l.what), top = 6, style = com.google.android.material.R.style.TextAppearance_Material3_BodyMedium))
+            addView(text(getString(l.cost), top = 8, style = com.google.android.material.R.style.TextAppearance_Material3_BodySmall, muted = true))
         })
     }
 
+    private fun statusChip(on: Boolean) = com.google.android.material.chip.Chip(this).apply {
+        text = getString(if (on) R.string.setup_on else R.string.setup_off)
+        isClickable = false
+        isCheckable = false
+        isFocusable = false
+        if (on) {
+            chipBackgroundColor = android.content.res.ColorStateList.valueOf(attr(com.google.android.material.R.attr.colorSecondaryContainer))
+            setTextColor(attr(com.google.android.material.R.attr.colorOnSecondaryContainer))
+            chipStrokeWidth = 0f
+        } else {
+            chipBackgroundColor = android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+            setTextColor(attr(com.google.android.material.R.attr.colorOnSurfaceVariant))
+            chipStrokeColor = android.content.res.ColorStateList.valueOf(attr(com.google.android.material.R.attr.colorOutline))
+            chipStrokeWidth = dp(1).toFloat()
+        }
+    }
+
+    private fun attr(id: Int): Int = com.google.android.material.color.MaterialColors.getColor(binding.root, id)
+
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
 
-    private fun text(s: CharSequence, top: Int = 8, bold: Boolean = false, small: Boolean = false) = TextView(this).apply {
+    private fun text(s: CharSequence, top: Int = 8, style: Int = com.google.android.material.R.style.TextAppearance_Material3_BodyMedium,
+                     muted: Boolean = false, color: Int? = null) = TextView(this).apply {
         text = s
+        androidx.core.widget.TextViewCompat.setTextAppearance(this, style)
         setPadding(0, dp(top), 0, 0)
-        textSize = if (small) 12f else 14f
-        if (bold) { setTypeface(typeface, android.graphics.Typeface.BOLD); textSize = 16f }
+        if (color != null) setTextColor(color)
+        else if (muted) setTextColor(attr(com.google.android.material.R.attr.colorOnSurfaceVariant))
     }
 }

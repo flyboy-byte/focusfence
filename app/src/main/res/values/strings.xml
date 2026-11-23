@@ -359,7 +359,9 @@
     <string name="setup_title">Set up accountability</string>
     <string name="setup_open_summary">A checklist of the optional layers, what each one costs, and where to turn it on. Skip any of it.</string>
     <string name="setup_open">Open</string>
-    <string name="setup_intro">Everything here is optional and independent. With all of it off, Focus Fence is the same light on-device blocker it always was: no uploads, no capture, no server. Pick only what you want. Costs below were measured on one Pixel 9 over five days.</string>
+    <string name="setup_intro">All optional and independent. With everything off, this is the same light on-device blocker: no uploads, no capture, no server. Costs were measured on one Pixel 9 over five days.</string>
+    <string name="setup_section_recommended">Recommended</string>
+    <string name="setup_section_optional">Optional</string>
     <string name="setup_recommended">recommended</string>
     <string name="setup_optional">optional</string>
     <string name="setup_on">On</string>
@@ -388,7 +390,7 @@
     <string name="setup_shots">Screenshots and on-device AI</string>
     <string name="setup_shots_what">Samples the screen and scores it on this phone, and keeps flagged ones for review. A visible indicator is always shown while it runs.</string>
     <string name="setup_shots_cost">Cost: about a fifth to a third of this app\'s CPU in the measured export (screen on). A model can be wrong: the first real flag was a false alarm.</string>
-    <string name="setup_footnote">Nothing is turned on from this list: each button opens the screen where that layer lives.</string>
+    <string name="setup_footnote">Tap a card to open the screen where that layer is switched on or off. Nothing changes from this list.</string>
     <!-- Group accountability -->
     <string name="group_title">Group accountability</string>
     <string name="group_open">Group accountability</string>
