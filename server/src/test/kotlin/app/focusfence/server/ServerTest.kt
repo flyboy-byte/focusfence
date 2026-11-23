@@ -76,18 +76,21 @@ class ServerTest {
     private suspend fun HttpClient.invite(id: String): InviteResponse =
         json.decodeFromString(InviteResponse.serializer(), postJson("/v1/invites", signed("invite", id)).bodyAsText())
 
-    private suspend fun HttpClient.join(code: String, phone: String? = null): HttpResponse =
+    private suspend fun HttpClient.join(code: String, phone: String? = null, email: String = "sam@example.com"): HttpResponse =
         submitForm("/join", Parameters.build {
-            append("code", code); append("name", "Sam"); append("email", "sam@example.com")
+            append("code", code); append("name", "Sam"); append("email", email)
             if (phone != null) { append("phone", phone); append("sms_consent", "yes") }
         })
 
-    /** Joins, then clicks the emailed confirm button, so alerts flow. Returns the partner's token. */
+    /** The confirmation token exactly as the address owner would get it: from the email, nowhere else. */
+    private fun emailedConfirmToken(): String =
+        Regex("/confirm/([A-Za-z0-9_-]+)").find(notifier.emails.last { it.second.contains("confirm") }.third)!!.groupValues[1]
+
+    /** Joins, then clicks the emailed confirm button, so alerts flow. Returns the partner's report token. */
     private suspend fun HttpClient.joinConfirmed(id: String, phone: String? = null): String {
         join(invite(id).code, phone)
-        val token = store.device(id)!!.partners.last().token
-        assertEquals(HttpStatusCode.Found, post("/confirm/$token").status)
-        return token
+        assertEquals(HttpStatusCode.Found, post("/confirm/${emailedConfirmToken()}").status)
+        return store.device(id)!!.partners.last().token
     }
 
     private suspend fun HttpClient.batch(id: String, first: Long, last: Long, prev: String, raw: String): HttpResponse {
@@ -109,7 +112,7 @@ class ServerTest {
         assertTrue(inv.joinUrl.startsWith("https://ff.test/join?code="))
         // Codes are forgiving to type: lowercase, no dash.
         val r = http.join(inv.code.lowercase().replace("-", ""))
-        assertEquals(HttpStatusCode.Found, r.status)
+        assertEquals(HttpStatusCode.OK, r.status) // a "check your email" page, not a redirect to a report
         // Only a confirmation email goes out at join; it carries the confirm link, not the report link.
         assertEquals("sam@example.com", notifier.emails.last().first)
         assertTrue(notifier.emails.last().second.contains("confirm"))
@@ -119,7 +122,7 @@ class ServerTest {
         assertEquals("Sam", list.partners[0].name)
         assertTrue(list.partners[0].email.startsWith("sa…@"))
         assertTrue(!list.partners[0].confirmed)
-        http.post("/confirm/${store.device(id)!!.partners.single().token}")
+        http.post("/confirm/${emailedConfirmToken()}")
 
         // Single use.
         val again = http.join(inv.code)
@@ -291,7 +294,7 @@ class ServerTest {
     fun unconfirmedAddressGetsOnlyTheConfirmationEmail() = run { http ->
         val id = http.enroll()
         http.join(http.invite(id).code)
-        val token = store.device(id)!!.partners.single().token
+        val token = emailedConfirmToken()
         assertEquals(1, notifier.emails.size)
 
         // An alert-worthy batch reaches nobody who hasn't confirmed.
@@ -303,6 +306,7 @@ class ServerTest {
         assertTrue(!store.device(id)!!.partners.single().confirmed)
         http.post("/confirm/$token")
         assertTrue(store.device(id)!!.partners.single().confirmed)
+        assertEquals(null, store.device(id)!!.partners.single().confirmHash, "the token is single use")
         assertTrue(notifier.emails.last().second.contains("now an accountability partner"))
     }
 
@@ -385,22 +389,83 @@ class ServerTest {
         assertTrue(!r.bodyAsText().contains("Exception") && !r.bodyAsText().contains("kotlinx"), r.bodyAsText())
     }
 
+
+    // ---- re-audit (extraction session, 2026-11-23) --------------------------------------------------
+
     @Test
-    fun confirmationCanBeResentButNotFasterThanOncePerHour() = run { http ->
+    fun theJoinerIsNeverGivenAnyTokenSoCantConfirmSomeoneElsesAddress() = run { http ->
+        val id = http.enroll()
+        val r = http.join(http.invite(id).code)
+        assertEquals(HttpStatusCode.OK, r.status, "no redirect to a report")
+        val body = r.bodyAsText()
+        val partner = store.device(id)!!.partners.single()
+        val emailed = emailedConfirmToken()
+        assertTrue(!body.contains(partner.token) && !body.contains(emailed) && !body.contains("/p/"), body)
+        assertTrue(r.headers["Location"] == null)
+        // the report token is not the confirmation token, and confirming with it does nothing
+        assertEquals(HttpStatusCode.NotFound, http.post("/confirm/${partner.token}").status)
+        assertTrue(!store.device(id)!!.partners.single().confirmed)
+        // only the emailed token confirms, once, and then yields the report link
+        val done = http.post("/confirm/$emailed")
+        assertEquals(HttpStatusCode.Found, done.status)
+        assertEquals("/p/${partner.token}?welcome=1", done.headers["Location"])
+        assertEquals(HttpStatusCode.NotFound, http.post("/confirm/$emailed").status)
+    }
+
+    @Test
+    fun resendMintsANewTokenAndTheOldLinkDies() = run { http ->
         val id = http.enroll()
         http.join(http.invite(id).code)
-        val token = store.device(id)!!.partners.single().token
-        assertEquals(1, notifier.emails.size)
-        // inside the hour: asking again sends nothing more
-        http.post("/p/$token/resend")
-        assertEquals(1, notifier.emails.size)
+        val first = emailedConfirmToken()
+        val pid = store.device(id)!!.partners.single().id
+        http.post("/join/resend/$pid")
+        assertEquals(1, notifier.emails.size, "inside the hour: nothing more is sent")
         clock += 61 * 60_000
-        http.post("/p/$token/resend")
+        val page = http.post("/join/resend/$pid")
+        assertEquals(HttpStatusCode.OK, page.status)
+        assertTrue(!page.bodyAsText().contains(store.device(id)!!.partners.single().token))
         assertEquals(2, notifier.emails.size)
-        assertTrue(notifier.emails.last().second.contains("confirm"))
-        // the page offers the button only while unconfirmed
-        assertTrue(http.get("/p/$token").bodyAsText().contains("/p/$token/resend"))
-        http.post("/confirm/$token")
-        assertTrue(!http.get("/p/$token").bodyAsText().contains("/resend"))
+        val second = emailedConfirmToken()
+        assertTrue(first != second)
+        assertEquals(HttpStatusCode.NotFound, http.post("/confirm/$first").status)
+        assertEquals(HttpStatusCode.Found, http.post("/confirm/$second").status)
+        assertEquals(HttpStatusCode.OK, http.post("/join/resend/not-a-partner").status) // doesn't reveal what exists
+    }
+
+    @Test
+    fun confirmationEmailsHaveAWholeServerDailyCap() = run(Config(publicUrl = "https://ff.test", confirmGlobalDailyCap = 2, maxPartnersPerDevice = 10, now = { clock })) { http ->
+        val id = http.enroll()
+        repeat(4) { http.join(http.invite(id).code, email = "p$it@example.com") }
+        assertEquals(2, notifier.emails.size)
+    }
+
+    @Test
+    fun alertEmailsHaveAWholeServerDailyCap() = run(Config(publicUrl = "https://ff.test", emailGlobalDailyCap = 1, maxPartnersPerDevice = 10, now = { clock })) { http ->
+        val id = http.enroll()
+        repeat(2) { n ->
+            http.join(http.invite(id).code, email = "q$n@example.com")
+            http.post("/confirm/${emailedConfirmToken()}")
+        }
+        notifier.emails.clear()
+        http.batch(id, 1, 1, "GENESIS", """{"seq":1,"t":$clock,"type":"svc","comp":"vpn","state":"revoked"}""")
+        assertEquals(1, notifier.emails.size, "two confirmed partners, but the server-wide cap lets one email out")
+    }
+
+    @Test
+    fun enrollNeedsTheEnrollmentCodeWhenOneIsSet() = run(Config(publicUrl = "https://ff.test", enrollToken = "s3cret", now = { clock })) { http ->
+        val spki = Base64.getEncoder().encodeToString(keys.public.encoded)
+        assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/enroll", """{"publicKeySpki":"$spki"}""").status)
+        val wrong = http.post("/v1/enroll") { header("X-FF-Enroll", "nope"); contentType(ContentType.Application.Json); setBody("""{"publicKeySpki":"$spki"}""") }
+        assertEquals(HttpStatusCode.Unauthorized, wrong.status)
+        val right = http.post("/v1/enroll") { header("X-FF-Enroll", "s3cret"); contentType(ContentType.Application.Json); setBody("""{"publicKeySpki":"$spki"}""") }
+        assertEquals(HttpStatusCode.OK, right.status)
+    }
+
+    @Test
+    fun aDevicesShotsAreCappedInBytesTooOldestFirst() {
+        val s = Store(Files.createTempDirectory("ff-shots").toFile(), shotBytesPerDevice = 100)
+        repeat(3) { i -> s.saveBlob("dev", "s$i", ByteArray(60)); Thread.sleep(15) }
+        val kept = java.io.File(s.javaClass.getDeclaredField("root").apply { isAccessible = true }.get(s) as java.io.File, "blobs").listFiles()!!.map { it.name }
+        assertEquals(listOf("dev_s2.bin"), kept, "180 bytes over a 100 byte budget: only the newest fits")
     }
 }

@@ -63,6 +63,11 @@ class Config(
     val maxMailboxes: Int = 500,
     val maxDataBytes: Long = 2L * 1024 * 1024 * 1024,
     val maxPartnersPerDevice: Int = 5,
+    /** Whole-server email ceilings per day, whatever the number of addresses. */
+    val emailGlobalDailyCap: Int = 200,
+    val confirmGlobalDailyCap: Int = 30,
+    /** If set, /v1/enroll needs this in the X-FF-Enroll header: open enrollment lets anyone take device slots. */
+    val enrollToken: String? = null,
     /** Backstop on top of double opt-in: no address is emailed more often than this, or more than the daily cap. */
     val emailMinIntervalMs: Long = 60_000L,
     val emailDailyCap: Int = 60,
@@ -106,6 +111,7 @@ fun main() {
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
         trustedProxy = trusted,
+        enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
         maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
@@ -191,7 +197,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             // Never echo the exception text: it can carry class names or file paths. Keep it in our log only.
-            call.application.log.warn("request failed: ${cause::class.simpleName}: ${cause.message}")
+            call.application.log.warn("request failed: ${cause::class.simpleName}: ${(cause.message ?: "").filter { !it.isISOControl() }.take(120)}")
             call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad request"))
         }
     }
@@ -201,20 +207,29 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     val enrollLimiter = RateLimiter(5, 3_600_000, cfg.now)
     val mailboxLimiter = RateLimiter(20, 3_600_000, cfg.now)
     val confirmLimiter = RateLimiter(1, 3_600_000, cfg.now) // confirmation emails per address
+    val confirmGlobal = RateLimiter(cfg.confirmGlobalDailyCap, 24 * 3_600_000L, cfg.now)
 
     fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"], cfg.trustedProxy)
     fun full(): Boolean = store.usedBytes(cfg.now()) >= cfg.maxDataBytes
     /** One confirmation email per address per hour; that cap holds for resends too. */
-    suspend fun sendConfirmation(partner: Store.Partner) {
-        if (!confirmLimiter.allow(partner.email.lowercase())) return
+    suspend fun sendConfirmation(deviceId: String, partner: Store.Partner) {
+        if (!confirmLimiter.allow(partner.email.lowercase()) || !confirmGlobal.allow("all")) return
+        // A new single-use token every time (only its hash is stored), so an older email's link stops working.
+        val token = newToken()
+        store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id }?.confirmHash = Integrity.sha256(token) }
         notifier.email(
             partner.email, "Focus Fence: confirm your email",
             "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
-                "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/${partner.token}\">confirm here</a>. " +
+                "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/$token\">confirm here</a>. " +
                 "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
         )
     }
-    suspend fun ApplicationCall.serverFull() = respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
+    suspend fun ApplicationCall.serverFull(): Unit {
+        // Visible to the operator: a full server silently refuses every phone.
+        application.log.warn("server full: refusing {} (data {} MB of {} MB, {} devices of {})",
+            request.local.uri.substringBefore('?'), store.usedBytes(cfg.now()) / 1_048_576, cfg.maxDataBytes / 1_048_576, store.deviceCount(), cfg.maxDevices)
+        respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
+    }
 
     fun signedOk(device: Store.Device, action: String, t: Long, extra: String, sig: String): Boolean {
         if (abs(cfg.now() - t) > cfg.clockSkewMs) return false
@@ -235,6 +250,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
             if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
+            cfg.enrollToken?.let { want ->
+                val got = call.request.headers["X-FF-Enroll"].orEmpty()
+                if (!java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(want).toByteArray()))
+                    return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed"))
+            }
             if (full() || store.deviceCount() >= cfg.maxDevices) return@post call.serverFull()
             runCatching { Integrity.publicKeyFromBase64Spki(req.publicKeySpki) }
                 .getOrElse { return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key")) }
@@ -409,41 +429,43 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 d.invites = d.invites.filter { it.codeHash != codeHash } // single use
                 d.partners = d.partners + partner
             }
-            sendConfirmation(partner)
-            call.respondRedirect("/p/${partner.token}?welcome=1")
+            sendConfirmation(device.id, partner)
+            // No redirect to the report: the joiner must not receive any token for an address they haven't proven they own.
+            call.respondText(Web.joinPending(partner.id), ContentType.Text.Html)
 
         }
 
-        // The first email can fail (provider down, sender not verified) or land in spam: let the partner ask again.
-        post("/p/{token}/resend") {
-            val token = call.parameters["token"].orEmpty()
-            val (_, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
-            if (!partner.confirmed) sendConfirmation(partner)
-            call.respondRedirect("/p/$token?welcome=1")
+        // The first email can fail (provider down, sender not verified) or land in spam: let the joiner ask again.
+        // Keyed by partner id, which grants nothing; the per-address hourly cap and the per-client join cap still apply.
+        post("/join/resend/{pid}") {
+            if (!joinLimiter.allow(call.client())) return@post call.respondText(Web.message("Slow down", "Too many attempts. Try again in an hour."), ContentType.Text.Html, HttpStatusCode.TooManyRequests)
+            val found = store.partnerById(call.parameters["pid"].orEmpty())
+            if (found != null && !found.second.confirmed) sendConfirmation(found.first.id, found.second)
+            call.respondText(Web.joinPending(call.parameters["pid"].orEmpty().take(64), "If that request is still open, we sent the email again."), ContentType.Text.Html)
         }
 
         // The email link only SHOWS a button; confirming is a POST, so a mail scanner that opens links can't confirm for you.
         get("/confirm/{token}") {
-            val (_, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
-                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            val body = if (partner.confirmed) Web.message("Already confirmed", "You're already set up.")
-            else Web.confirmForm(partner.token)
-            call.respondText(body, ContentType.Text.Html)
+            val token = call.parameters["token"].orEmpty()
+            store.partnerByConfirmToken(token)
+                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid or has already been used."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            call.respondText(Web.confirmForm(token), ContentType.Text.Html)
         }
 
         post("/confirm/{token}") {
             val token = call.parameters["token"].orEmpty()
-            val (device, partner) = store.partnerByToken(token)
-                ?: return@post call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            if (!partner.confirmed) {
-                store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.confirmed = true }
+            val (device, partner) = store.partnerByConfirmToken(token)
+                ?: return@post call.respondText(Web.message("Not found", "This link isn't valid or has already been used."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            run {
+                store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.apply { confirmed = true; confirmHash = null } }
                 notifier.email(
                     partner.email, "Focus Fence: you're now an accountability partner",
                     "<p>Hi ${Web.esc(partner.name)}, you'll get a weekly report and alerts by email.</p>" +
                         "<p>Your private report page (keep this link to yourself): <a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>",
                 )
             }
-            call.respondRedirect("/p/$token?welcome=1")
+            // Only now does the confirmed owner of the address get their report link (here, and in the email).
+            call.respondRedirect("/p/${partner.token}?welcome=1")
         }
 
         get("/p/{token}") {

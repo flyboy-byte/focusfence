@@ -21,6 +21,7 @@ object SyncStore {
 
     private const val FILE = "focusfence_sync"
     private const val KEY_SERVER = "server_url"
+    private const val KEY_ENROLL = "enroll_code"
     private const val KEY_DEVICE = "device_id"
     private const val KEY_SEQ = "uploaded_seq"
     private const val KEY_HASH = "last_hash"
@@ -37,6 +38,13 @@ object SyncStore {
 
     fun setServerUrl(context: Context, url: String) {
         prefs(context).edit().putString(KEY_SERVER, url.trim().trimEnd('/')).apply()
+    }
+
+    /** Only needed when the server's operator set one (FF_ENROLL_TOKEN); blank otherwise. Sent when enrolling, nowhere else. */
+    fun enrollCode(context: Context): String = prefs(context).getString(KEY_ENROLL, "").orEmpty()
+
+    fun setEnrollCode(context: Context, code: String) {
+        prefs(context).edit().putString(KEY_ENROLL, code.trim()).apply()
     }
 
     fun deviceId(context: Context): String? = prefs(context).getString(KEY_DEVICE, null)

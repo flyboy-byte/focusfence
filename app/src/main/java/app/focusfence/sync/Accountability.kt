@@ -26,8 +26,14 @@ object Accountability {
     /** Registers this phone's key with the server, once. */
     fun ensureEnrolled(ctx: Context): String {
         SyncStore.deviceId(ctx)?.let { return it }
-        val r = api(ctx).post("/v1/enroll", JSONObject().put("publicKeySpki", DeviceKey.publicSpkiB64()))
+        val code = SyncStore.enrollCode(ctx)
+        val r = api(ctx).post(
+            "/v1/enroll", JSONObject().put("publicKeySpki", DeviceKey.publicSpkiB64()),
+            if (code.isNotEmpty()) mapOf("X-FF-Enroll" to code) else emptyMap(),
+        )
         val id = r.body?.optString("deviceId").orEmpty()
+        check(r.code != 401) { "This server needs an enrollment code. Ask whoever runs it, then enter it under Server." }
+        check(r.code != 507) { "The server is full. Ask whoever runs it." }
         check(r.code == 200 && id.isNotEmpty()) { "Server refused enrollment (HTTP ${r.code})." }
         EventLog.init(ctx)
         SyncStore.setEnrolled(ctx, id, EventLog.currentSeq(EventLog.Channel.ACTIVITY))

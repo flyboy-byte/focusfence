@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Prototype: swap in Postgres + object storage before anything but personal or
  * small-group use.
  */
-class Store(private val root: File) {
+class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_BYTES_PER_DEVICE) {
 
     private val json = Json { prettyPrint = false; ignoreUnknownKeys = true; encodeDefaults = true }
     private val locks = ConcurrentHashMap<String, Any>()
@@ -38,6 +38,12 @@ class Store(private val root: File) {
         val linkedMs: Long,
         /** False until the address owner clicks the link we emailed. Nothing but that one email goes to an unconfirmed address. */
         var confirmed: Boolean = true,
+        /**
+         * SHA-256 of the single-use token in the confirmation email. Only the hash is kept, and the token itself is
+         * only ever in that email: it is never in a redirect or a response, so the person who typed the address in
+         * can't confirm it for its owner. Null once confirmed (or for partners created before double opt-in).
+         */
+        var confirmHash: String? = null,
         var phone: String? = null,
         var phoneVerified: Boolean = false,
         var smsCodeHash: String? = null,
@@ -140,6 +146,22 @@ class Store(private val root: File) {
         return null
     }
 
+    /** The device and unconfirmed partner a confirmation-email token belongs to (constant-time hash compare). */
+    fun partnerByConfirmToken(token: String): Pair<Device, Partner>? {
+        if (token.length < 20) return null
+        val want = Integrity.sha256(token).toByteArray()
+        for (d in allDevices()) {
+            val p = d.partners.firstOrNull { it.confirmHash != null && java.security.MessageDigest.isEqual(it.confirmHash!!.toByteArray(), want) } ?: continue
+            return d to p
+        }
+        return null
+    }
+
+    fun partnerById(id: String): Pair<Device, Partner>? {
+        for (d in allDevices()) d.partners.firstOrNull { it.id == id }?.let { return d to it }
+        return null
+    }
+
     /** Appends raw JSONL records (already validated) and advances the device cursor. */
     fun appendRecords(id: String, recordsRaw: String, lastSeq: Long, newHash: String, gap: Long, now: Long) =
         synchronized(lock(id)) {
@@ -183,7 +205,14 @@ class Store(private val root: File) {
         File(root, "blobs/${deviceId}_$shotId.bin").writeBytes(bytes)
         // Keep only the newest SHOTS_PER_DEVICE per device, so a signed-in client can't fill the disk.
         val mine = File(root, "blobs").listFiles { f -> f.name.startsWith("${deviceId}_") }.orEmpty()
-        if (mine.size > SHOTS_PER_DEVICE) mine.sortedBy { it.lastModified() }.take(mine.size - SHOTS_PER_DEVICE).forEach { it.delete() }
+        // ...and no more than shotBytesPerDevice, oldest first.
+        val byAge = mine.filter { it.exists() }.sortedBy { it.lastModified() }.toMutableList()
+        var total = byAge.sumOf { it.length() }
+        while (byAge.size > 1 && (byAge.size > SHOTS_PER_DEVICE || total > shotBytesPerDevice)) {
+            val oldest = byAge.removeAt(0)
+            total -= oldest.length()
+            oldest.delete()
+        }
     }
 
     // ---- blind mailbox --------------------------------------------------------
@@ -238,6 +267,7 @@ class Store(private val root: File) {
         const val RECORDS_KEEP_BYTES = 10L * 1024 * 1024
         const val SHOT_MAX_BYTES = 2 * 1024 * 1024
         const val SHOTS_PER_DEVICE = 200
+        const val SHOT_BYTES_PER_DEVICE = 64L * 1024 * 1024
         const val MAIL_MAX_AGE_MS = 30L * 24 * 3_600_000
     }
 }

@@ -17,6 +17,8 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
 
     /** Backstop against using us to flood an inbox: a minimum gap and a daily cap per address. */
     private val sent = java.util.concurrent.ConcurrentHashMap<String, MutableList<Long>>()
+    /** And a ceiling on the whole server, so many addresses can't add up to a flood. */
+    private val global = RateLimiter(cfg.emailGlobalDailyCap, 24 * 3_600_000L, cfg.now)
     private fun mayEmail(address: String): Boolean {
         val now = cfg.now()
         val list = sent.computeIfAbsent(address.lowercase()) { ArrayList() }
@@ -24,6 +26,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             list.removeAll { now - it > 24 * 3_600_000L }
             if (list.isNotEmpty() && now - list.last() < cfg.emailMinIntervalMs) return false
             if (list.size >= cfg.emailDailyCap) return false
+            if (!global.allow("all")) return false
             list += now
             return true
         }

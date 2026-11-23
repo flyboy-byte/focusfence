@@ -60,6 +60,17 @@
                             android:layout_height="wrap_content"
                             android:inputType="textUri" />
                     </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/acc_enroll_code">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/enrollInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textVisiblePassword" />
+                    </com.google.android.material.textfield.TextInputLayout>
                     <Button
                         android:id="@+id/serverSave"
                         style="@style/Widget.Material3.Button.TonalButton"

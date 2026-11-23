@@ -39,8 +39,10 @@ class AccountabilityActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         binding.serverInput.setText(SyncStore.serverUrl(this))
+        binding.enrollInput.setText(SyncStore.enrollCode(this))
         binding.serverSave.setOnClickListener {
             SyncStore.setServerUrl(this, binding.serverInput.text?.toString().orEmpty())
+            SyncStore.setEnrollCode(this, binding.enrollInput.text?.toString().orEmpty())
             bind()
             refreshPartners()
         }

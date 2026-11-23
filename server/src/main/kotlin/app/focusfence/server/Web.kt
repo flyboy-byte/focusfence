@@ -20,6 +20,19 @@ object Web {
     fun esc(x: String): String =
         x.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;")
 
+    /**
+     * What the person who just joined sees. It deliberately carries NO token that grants anything: the confirmation
+     * link exists only in the email, so only the owner of the address can confirm it. The one control is "send it
+     * again", keyed by the partner id (which can't confirm, read a report or do anything else).
+     */
+    fun joinPending(partnerId: String, notice: String? = null): String = page(
+        "Check your email",
+        "<h1>Check your email</h1><p>We sent a confirmation link to the address you entered. Open it and press the " +
+            "button to start getting alerts. Until then nothing else is sent to that address, and the request expires in a few days.</p>" +
+            (if (notice != null) "<div class='card'>${esc(notice)}</div>" else "") +
+            "<form method=\"post\" action=\"/join/resend/${esc(partnerId)}\"><button type=\"submit\">Send the email again</button></form>",
+    )
+
     /** The page behind the emailed confirm link: a button, because confirming must be a deliberate POST. */
     fun confirmForm(token: String): String = page(
         "Confirm your email",
@@ -73,9 +86,6 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
         append("<h1>Focus Fence report</h1>")
         append("<p class='muted'>For ${esc(partner.name)} · last 7 days · keep this link private, it's your login.</p>")
         if (notice != null) append("<div class='card'>${esc(notice)}</div>")
-        if (!partner.confirmed) {
-            append("<form method='post' action='/p/$t/resend'><button>Send the confirmation email again</button></form>")
-        }
         append(
             if (deviceOnline) "<p class='ok'>The phone is checking in normally (last ${time(lastSeenMs)}).</p>"
             else "<p class='bad'>The phone hasn't checked in since ${time(lastSeenMs)} — protection may be off, or the app may have been removed.</p>"

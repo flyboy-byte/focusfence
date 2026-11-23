@@ -360,6 +360,7 @@
     <string name="acc_settings_summary">Who sees this phone\'s reports: a partner by email (and text), or by their own Focus Fence app.</string>
     <string name="acc_server_title">Server</string>
     <string name="acc_server_hint">Both kinds of partner go through a Focus Fence server. Web and email partners get reports from it; app-to-app partners only use it as a blind mailbox it can\'t read.</string>
+    <string name="acc_enroll_code">Enrollment code (only if your server asks for one)</string>
     <string name="acc_server_url">Server address (https://…)</string>
     <string name="acc_save">Save</string>
     <string name="acc_status_none">Not set up</string>

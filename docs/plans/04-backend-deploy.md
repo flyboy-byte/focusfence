@@ -9,7 +9,7 @@ Let's Encrypt cert to 2027-02-21, Resend sending-only key in `/etc/ffbackend/env
 sites unchanged. **Gate A (Pixel enroll, first batch, partner email) has not run.** Rollbacks:
 `/usr/local/sbin/ffbackend-nginx-rollback.sh` then `/usr/local/sbin/ffbackend-rollback.sh`. Change log on the box:
 `~/security/hardening-log.md`. Also added: `FF_HOST` (bind address) in `Main.kt`.
-**Audit (extraction session, 2026-11-23): 11 findings, server-side ones fixed and redeployed the same day** (quotas, double opt-in, escaping + CSP, streaming reads, seq-tied records, unit hardening 4.3 to 1.5). Report: `~/projects/extraction/docs/ffbackend-security-audit-2026-11-23.md`.
+**Audit (extraction session, 2026-11-23): 11 findings, server-side ones fixed and redeployed the same day; the re-audit found the double opt-in bypassable by the joiner (R1), fixed the same day with a separate email-only token** (quotas, double opt-in, escaping + CSP, streaming reads, seq-tied records, unit hardening 4.3 to 1.5). Report: `~/projects/extraction/docs/ffbackend-security-audit-2026-11-23.md`.
 
 **Goal:** `server/` running on the `flyboybyte` VPS behind HTTPS, so the phone's partner loop can run for
 real for the first time. Gate: **one phone enrolls, uploads a batch, and a partner email + report page
