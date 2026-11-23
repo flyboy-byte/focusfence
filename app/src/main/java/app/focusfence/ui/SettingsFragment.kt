@@ -161,8 +161,9 @@ class SettingsFragment : Fragment() {
                 val presetId = if (mode == app.focusfence.dns.Upstreams.Mode.PRESET) presets.getOrNull(c - 2)?.id else null
                 app.focusfence.data.DnsUpstreamStore.save(ctx, mode, presetId, text, fallback.isChecked)
                 refreshAll()
-        }
-        b.show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun refreshAccessibility() {
@@ -226,12 +227,14 @@ class SettingsFragment : Fragment() {
             .setMessage(R.string.about_summary)
             .setNegativeButton(android.R.string.ok, null)
         // No site yet means no button: a dead link is worse than none.
-        if (url.isNotBlank()) b.setPositiveButton(R.string.about_open_site) { _, _ ->
+        if (url.isNotBlank()) {
+            b.setPositiveButton(R.string.about_open_site) { _, _ ->
                 try {
                     startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
                 } catch (e: android.content.ActivityNotFoundException) {
                     android.widget.Toast.makeText(requireContext(), getString(R.string.about_no_browser, url), android.widget.Toast.LENGTH_LONG).show()
                 }
+            }
         }
         b.show()
     }
