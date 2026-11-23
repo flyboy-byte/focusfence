@@ -18,6 +18,7 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
 
     private val json = Json { prettyPrint = false; ignoreUnknownKeys = true; encodeDefaults = true }
     private val locks = ConcurrentHashMap<String, Any>()
+    val dir: File get() = root
 
     init {
         File(root, "devices").mkdirs()

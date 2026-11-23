@@ -499,4 +499,34 @@ class ServerTest {
         http.post("/join/resend/${store.device(id)!!.partners.single().id}")
         assertEquals(HttpStatusCode.Found, http.post("/confirm/${emailedConfirmToken()}").status)
     }
+
+    @Test
+    fun perPersonCodesAreSingleUseRevocableAndExpire() {
+        val dir = Files.createTempDirectory("ff-codes").toFile()
+        val codes = EnrollCodes(java.io.File(dir, "codes.json"))
+        val (plain, rec) = codes.create("friend", 1000, expiresMs = 5000, maxUses = 1)
+        assertEquals(false, codes.redeem("nope", 1001))
+        assertEquals(true, codes.redeem(plain.lowercase().replace("-", " "), 1001), "format-insensitive")
+        assertEquals(false, codes.redeem(plain, 1002), "single use")
+        val (p2, r2) = codes.create("two", 1000, expiresMs = 5000)
+        assertEquals(false, codes.redeem(p2, 6000), "expired")
+        val (p3, r3) = codes.create("three", 1000)
+        assertEquals(true, codes.revoke(r3.id)); assertEquals(false, codes.redeem(p3, 1001), "revoked")
+        assertEquals(false, java.io.File(dir, "codes.json").readText().contains(plain.replace("-", "")), "only the hash is stored")
+        val out = mutableListOf<String>()
+        assertEquals(true, runAdmin(arrayOf("admin", "codes", "list"), dir, 1001, out::add)); assertEquals(3, out.size)
+        assertEquals(false, runAdmin(arrayOf("serve"), dir, 0, out::add))
+    }
+
+    @Test
+    fun enrollAcceptsAPersonCodeAndTheBootstrapTokenAndNeverBurnsACodeOnABadKey() = run(Config(publicUrl = "https://ff.test", enrollToken = "boot", now = { clock })) { http ->
+        val spki = Base64.getEncoder().encodeToString(keys.public.encoded)
+        suspend fun enroll(code: String, key: String = spki) = http.post("/v1/enroll") { header("X-FF-Enroll", code); contentType(ContentType.Application.Json); setBody("""{"publicKeySpki":"$key"}""") }.status
+        val (plain, _) = EnrollCodes(java.io.File(store.dir, "codes.json")).create("friend", clock, maxUses = 1)
+        assertEquals(HttpStatusCode.BadRequest, enroll(plain, key = "garbage"), "bad key is rejected")
+        assertEquals(HttpStatusCode.OK, enroll(plain), "the code was not burned by the bad key")
+        assertEquals(HttpStatusCode.Unauthorized, enroll(plain), "now used up")
+        assertEquals(HttpStatusCode.OK, enroll("boot"), "bootstrap token still works")
+        assertEquals(HttpStatusCode.Unauthorized, enroll("zzzz"))
+    }
 }

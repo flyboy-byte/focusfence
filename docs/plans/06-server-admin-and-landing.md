@@ -1,4 +1,6 @@
-# Server admin and landing page (scope only; nothing built)
+# Server admin and landing page (phase 1 built 2026-11-23; the rest scope only)
+
+**Phase 1 built (🧪 CI only, not deployed):** `EnrollCodes.kt` + `codes.json` in the data dir; `focusfence-server admin codes add <label> [--days N] [--uses N] | list | revoke <id>` (run with the same `FF_DATA_DIR`); `/v1/enroll` accepts a live per-person code or the bootstrap `FF_ENROLL_TOKEN`; once any code exists enrollment is closed to anyone without one. Only hashes stored; a bad key does not burn a code. Needs a deploy (vps-sudo window).
 
 _Scoped 2026-11-23. Wanted by Logan for: onboarding other people onto his server, and giving @sidewinderzz access. "Simple and
 secure, 2FA by email or an authenticator app." Reports don't need it. Don't let this grow: phases below stop early on purpose._

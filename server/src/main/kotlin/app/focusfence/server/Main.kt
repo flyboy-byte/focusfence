@@ -104,7 +104,7 @@ class Config(
 @Serializable data class PostMailResponse(val id: Long)
 @Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
 
-fun main() {
+fun main(args: Array<String>) {
     val env: (String) -> String? = { System.getenv(it) }
     val trusted = TrustedProxies.parse(env("FF_TRUSTED_PROXIES"))
     val cfg = Config(
@@ -116,6 +116,7 @@ fun main() {
         maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
     )
+    if (runAdmin(args, File(env("FF_DATA_DIR") ?: "data"), System.currentTimeMillis(), ::println)) return
     val store = Store(File(env("FF_DATA_DIR") ?: "data"))
     val notifier = LiveNotifier(
         resendKey = env("RESEND_API_KEY"),
@@ -183,6 +184,7 @@ private fun newToken(): String = ByteArray(24).also { random.nextBytes(it) }
 private fun smsCode(): String = (100000 + random.nextInt(900000)).toString()
 
 fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
+    val enrollCodes = EnrollCodes(File(store.dir, "codes.json"))
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; encodeDefaults = true }) }
     // The partner pages are plain server-rendered HTML with inline CSS and no scripts, so a strict CSP costs nothing
     // and turns any future escaping slip into a non-event.
@@ -254,14 +256,19 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
             if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-            cfg.enrollToken?.let { want ->
+            val codesOn = cfg.enrollToken != null || enrollCodes.any()
+            var needsCode = codesOn
+            if (codesOn) {
                 val got = call.request.headers["X-FF-Enroll"].orEmpty()
-                if (!java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(want).toByteArray()))
-                    return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed"))
+                val boot = cfg.enrollToken?.let { java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(it).toByteArray()) } ?: false
+                if (boot) needsCode = false
+                else if (got.isEmpty()) return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed"))
             }
             if (full() || store.deviceCount() >= cfg.maxDevices) return@post call.serverFull()
             runCatching { Integrity.publicKeyFromBase64Spki(req.publicKeySpki) }
                 .getOrElse { return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key")) }
+            if (needsCode && !enrollCodes.redeem(call.request.headers["X-FF-Enroll"].orEmpty(), cfg.now()))
+                return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed"))
             call.respond(EnrollResponse(store.createDevice(req.publicKeySpki, cfg.now()).id))
         }
 
