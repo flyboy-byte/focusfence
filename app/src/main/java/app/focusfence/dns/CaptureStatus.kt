@@ -54,28 +54,21 @@ object CaptureStatus {
                     "(the first capture comes after a random delay).",
             )
         }
-        val sb = StringBuilder("Last screenshot ${ago(i.lastShotAt)}")
+        // Totals are shown as numbers beside this line, so it only says what happened last. The model's label is
+        // named only when it flagged something: "hentai 11%" on an ordinary screen read as an accusation.
+        val sb = StringBuilder("Last check ${ago(i.lastShotAt)}")
         if (i.lastPkg != null) sb.append(" in ").append(i.lastPkg)
-        sb.append(". ")
         when {
-            !i.aiOn -> sb.append("AI flagging is off, so it wasn't scored.")
-            i.aiLoadFailed -> sb.append("AI model failed to load, so it wasn't scored.")
-            i.lastLabel == null -> sb.append("Not scored.")
-            else -> {
-                sb.append("AI: ${i.lastLabel} ${pct(i.lastScore)}")
-                if (i.lastFlagged) sb.append(" — flagged")
-                sb.append('.')
-            }
+            !i.aiOn -> sb.append(". AI flagging is off.")
+            i.aiLoadFailed -> sb.append(". The AI model failed to load, so it wasn't scored.")
+            i.lastLabel == null -> sb.append(". Not scored.")
+            i.lastFlagged -> sb.append(" was flagged: ${i.lastLabel} ${pct(i.lastScore)}.")
+            else -> sb.append(". Nothing found.")
         }
-        sb.append("\nTotal: ${i.taken} taken, ${i.flagged} flagged")
-        if (i.failed > 0) sb.append(", ${i.failed} failed")
-        sb.append('.')
-        val warn = (i.aiOn && i.aiLoadFailed) || (i.flagged > 0 && !i.partnerKeySet) || (i.failed > 0 && i.failed >= i.taken)
-        if (i.flagged > 0 && !i.partnerKeySet) {
-            sb.append("\nFlagged images aren't being kept: no partner key is set, so there's no one to encrypt them to.")
-        }
+        if (i.failed > 0) sb.append(" ${i.failed} couldn't be taken.")
+        val warn = (i.aiOn && i.aiLoadFailed) || (i.failed > 0 && i.failed >= i.taken)
         return Status(if (warn) Level.WARNING else Level.WORKING, sb.toString())
     }
 
-    private fun pct(score: Double?): String = if (score == null) "" else "(${(score * 100).toInt()}%)"
+    private fun pct(score: Double?): String = if (score == null) "" else "${(score * 100).toInt()}%"
 }

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Focus Fence AC</string>
     <string name="blocking_switch_label">Protection</string>
-    <string name="status_inactive">Off — not filtering or recording</string>
+    <string name="status_inactive">Not filtering. Turn it on to block sites.</string>
     <string name="status_active">Active — filtering and recording (%1$d blocked this session)</string>
     <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
     <string name="add_button">Add</string>
@@ -90,7 +90,7 @@
     <string name="nav_settings">Settings</string>
     <string name="nav_blocking">Blocking</string>
     <string name="nav_partners">Partners</string>
-    <string name="nav_monitoring">Monitoring</string>
+    <string name="nav_monitoring">Checks</string>
     <string name="classic_layout">Classic layout</string>
     <string name="classic_layout_summary">The older four tabs (Home, Blocklist, Stats, Settings), with Partners and Monitoring opened from Settings. Nothing else changes.</string>
 
@@ -217,18 +217,18 @@
     <string name="capture_active_text">Capturing on-screen text for accountability</string>
 
     <!-- Monitoring (experimental) -->
-    <string name="monitor_title">Monitoring (experimental)</string>
+    <string name="monitor_title">Screen checks</string>
     <string name="monitor_open">Monitoring (experimental)</string>
     <string name="monitor_settings_summary">Screenshots and on-screen text from chosen apps, for accountability. While on, a permanent notification shows it is running.</string>
     <string name="monitor_banner">This records what is on your screen.</string>
     <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
-    <string name="monitor_shots">Capture screenshots</string>
-    <string name="monitor_ai">Flag screenshots with on-device AI</string>
-    <string name="monitor_ai_hint">Scores each screenshot on this phone; nothing is uploaded for analysis. About 0.1 s of CPU per screenshot.</string>
-    <string name="monitor_shots_hint">Occasional screenshots of the apps you watch. Images are scored on this phone and not sent anywhere. A flagged one is kept here (encrypted to the partner key below) only if a key is set; sending images to partners is not built yet.</string>
+    <string name="monitor_shots">Screenshots</string>
+    <string name="monitor_ai">AI flagging</string>
+    <string name="monitor_ai_hint">About 0.1 s per screenshot, on this phone.</string>
+    <string name="monitor_shots_hint">Now and then, in the apps you watch. Scored on this phone, never uploaded.</string>
     <string name="monitor_shots_unavailable">Screenshot capture needs Android 11 or newer. Text capture still works.</string>
-    <string name="monitor_text">Capture on-screen text</string>
-    <string name="monitor_text_hint">Visible text from watched apps, passwords skipped. Works where apps block screenshots.</string>
+    <string name="monitor_text">On-screen text</string>
+    <string name="monitor_text_hint">Works where apps block screenshots. Passwords are skipped.</string>
     <string name="monitor_watched_apps">Watched apps (%1$d)</string>
     <string name="monitor_level">Screenshot frequency</string>
     <string name="monitor_level_low">Low (~every 4 min)</string>
@@ -294,9 +294,9 @@
 
     <!-- Home status card + settings groups -->
     <string name="home_status_title">Status</string>
-    <string name="home_row_bundles">Filter bundles</string>
-    <string name="home_row_monitoring">Monitoring</string>
-    <string name="home_row_timeline">App timeline</string>
+    <string name="home_row_bundles">Block lists</string>
+    <string name="home_row_monitoring">Screen checks</string>
+    <string name="home_row_timeline">App time</string>
     <string name="home_row_strict">Friction (strict mode)</string>
     <string name="home_row_managed">Uninstall protection</string>
     <string name="home_row_log">Activity log</string>
@@ -305,11 +305,10 @@
         <item quantity="other">%1$d bundles on (%2$d blocking)</item>
     </plurals>
     <string name="home_none_on">None on</string>
-    <string name="home_mon_both">Screenshots and on-screen text</string>
+    <string name="home_mon_both">Screenshots + text</string>
     <string name="home_mon_shots">Screenshots</string>
     <string name="home_mon_text">On-screen text</string>
     <string name="home_off">Off</string>
-    <string name="home_on">On</string>
     <string name="home_timeline_on">Recording which apps are used</string>
     <string name="home_timeline_off">Off: grant Usage access</string>
     <string name="home_managed_admin">On</string>
@@ -486,7 +485,7 @@
     <string name="report_unlock_hint">If they ask, this code unlocks anything they\'ve set to need a partner PIN. Changes in %1$d min.</string>
     <string name="report_alerts">Recent alerts</string>
     <string name="report_no_digest">No report yet. Their phone sends one every few hours once it\'s online.</string>
-    <string name="home_row_partners">Accountability partners</string>
+    <string name="home_row_partners">Partners</string>
     <string name="home_partners_none">Off (optional, needs a server)</string>
     <string name="home_partners_count">%1$d set up · synced %2$s</string>
 
@@ -509,14 +508,14 @@
     <string name="hero_on">Protected</string>
     <string name="hero_off">Not protected</string>
     <string name="hero_problem">Needs attention</string>
-    <string name="monitor_section_capture">What to capture</string>
+    <string name="monitor_section_capture">What it checks</string>
     <string name="monitor_section_schedule">How often, and what to keep</string>
-    <string name="monitor_section_key">Partner encryption key</string>
+    <string name="monitor_section_key">Old partner key (optional)</string>
     <string name="restricted_settings_hint">Switch greyed out, or "Restricted setting"? Android 13+ blocks this for apps not from the Play Store until you allow it: tap App info below → ⋮ (top right) → Allow restricted settings, then come back and turn it on.</string>
     <string name="open_app_info">App info</string>
-    <string name="home_row_battery">Battery restrictions</string>
-    <string name="home_battery_ok">Unrestricted — protection can\'t be paused</string>
-    <string name="home_battery_fix">Restricted — tap to fix</string>
+    <string name="home_row_battery">Battery</string>
+    <string name="home_battery_ok">Can\'t be paused</string>
+    <string name="home_battery_fix">Restricted. Tap to fix</string>
     <string name="battery_exempt_title">Keep protection running</string>
     <string name="battery_exempt_body">Android\'s battery optimization can pause Focus Fence in the background, which can stop filtering and capture without warning. Allowing it to run unrestricted keeps it reliable. Focus Fence is built to use little battery: it only sees DNS lookups, and its cost is measured in Logs &amp; diagnostics.</string>
     <string name="battery_exempt_go">Allow</string>
@@ -527,7 +526,7 @@
     <string name="oem_tip_vivo">vivo also: Settings → Battery → Background power consumption → allow Focus Fence AC.</string>
     <string name="friction_settings_button">Friction settings ›</string>
     <string name="review_title">Review flagged screenshots</string>
-    <string name="review_button">Review screenshots (%1$d)</string>
+    <string name="review_button">Review %1$d flagged</string>
     <string name="review_switch">Keep a private copy of risky screenshots</string>
     <string name="review_privacy">Only on this phone: not in backups, deleted after 7 days, and the clear image is never uploaded. Answering a card deletes it. You can choose to send a partner a heavily blurred version.</string>
     <string name="review_share">Send blurred to partners…</string>
@@ -584,4 +583,44 @@
     <string name="block_notify_category_title">Blocked: %1$s</string>
     <string name="blocked_reason_category">It\'s on the %1$s list you turned on.</string>
     <string name="block_style_full_screen_note">The full screen needs the accessibility service. Without it you get the notification.</string>
+    <!-- Home redesign (2026-11-24) -->
+    <string name="home_hero_on_sub">Filter on</string>
+    <string name="home_hero_on_strict_sub">Filter on · strict mode locked</string>
+    <string name="home_hero_problem_sub">The filter is on but not working. Tap Filter health below.</string>
+    <string name="home_stat_blocked">blocked</string>
+    <plurals name="home_stat_partners">
+        <item quantity="one">partner</item>
+        <item quantity="other">partners</item>
+    </plurals>
+    <string name="home_stat_sync">since sync</string>
+    <string name="home_ago_now">now</string>
+    <string name="home_strict_off">Off. Changes take effect right away.</string>
+    <string name="home_strict_locked">Loosening anything takes a 10-min wait</string>
+    <string name="home_strict_pending">Unlocks in %1$s</string>
+    <string name="home_strict_unlocked">Unlocked for %1$s</string>
+    <string name="home_strict_turn_on">Turn on</string>
+    <string name="home_strict_unlock">Unlock</string>
+    <string name="home_strict_relock">Lock</string>
+    <string name="home_layers_title">Your layers</string>
+    <string name="home_layers_count">%1$d of %2$d on</string>
+    <string name="home_lists_blocking">%1$d blocking</string>
+    <string name="home_on">On</string>
+    <string name="home_partners_sync_error">Can\'t sync</string>
+    <plurals name="home_partners_short">
+        <item quantity="one">1 · synced</item>
+        <item quantity="other">%1$d · synced</item>
+    </plurals>
+    <string name="home_week_title">This week</string>
+    <string name="home_week_summary">Blocks, top sites and app time</string>
+    <string name="monitor_review_hint">Mark false flags so the AI gets better. You can send a partner a blurred copy from there.</string>
+    <string name="monitor_advanced">Advanced</string>
+    <string name="monitor_banner_short">While checks are on, a notification always shows, so anyone using the phone can see it.</string>
+    <string name="monitor_head_working">Working</string>
+    <string name="monitor_head_warning">Check this</string>
+    <string name="monitor_head_waiting">Ready</string>
+    <string name="monitor_head_off">Off</string>
+    <string name="monitor_head_blocked">Not working</string>
+    <string name="monitor_stat_taken">screens checked</string>
+    <string name="monitor_stat_flagged">flagged</string>
+    <string name="review_button_none">Open Review</string>
 </resources>
