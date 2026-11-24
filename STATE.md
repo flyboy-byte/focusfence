@@ -19,7 +19,7 @@ below. It is the single place to answer "where are we?" — keep it honest, shor
 
 **Focus Fence AC** is a free, open-source self-accountability app for Android, benchmarked against
 **Ever Accountable** (EA). The core is the DNS-only filter, which works alone with no account or server. Optional
-layers add an activity log, filter-health detection, settings friction and strict mode, device admin / device owner,
+layers add an activity log, filter-health detection, settings friction and strict mode, uninstall protection (device admin),
 opt-in text and screenshot capture with an on-device AI, and partners: email/web partners with end-to-end sealed
 reports through a self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23), and app-to-app pairing and
 groups through a blind mailbox. The filter, logs and email alerts are in daily use; groups, app pairing and strict
@@ -60,7 +60,6 @@ without evidence.
 | User allowlist | 🧪 | |
 | DoH-bypass guards | 📱 | Inherited. |
 | App blocking (accessibility bounce) | 📱 | Inherited. |
-| App suspension (Device Owner) | 🧪 | |
 
 ### Detection and logging (accountability record, local only)
 | Feature | Status | Notes |
@@ -87,7 +86,7 @@ without evidence.
 |---|---|---|
 | Friction guards per action (None / Delay / Own PIN / Partner PIN) | 🧪 | `specs/friction-tiers.md`. Partner PIN is local until the backend exists. |
 | Device admin (EA's model: uninstall needs admin turned off first, logged) | 🧪 | **The default protection.** One tap, no adb; requests no policies, so Android's consent screen lists none. Home row "Uninstall protection". |
-| Device owner: always-on VPN (no lockdown), VPN/Private DNS settings lock, Private DNS fallback, strategy switch, network logging | 🧪 | Needs adb and all accounts removed while provisioning. `specs/device-owner.md`. |
+| ~~Device owner (managed mode)~~ | removed | Removed 2026-11-24 (D-028): needed adb and a phone with no accounts; nobody would set it up. An old install can leave it from the Uninstall protection screen. |
 
 ### Partner side
 The server is live (2026-11-23). Enrollment, upload and email alerts have run with a real phone; the rest has only run in tests and curl.
@@ -131,7 +130,6 @@ tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main`
 |---|---|
 | SMS provider + monthly budget | Twilio / Telnyx / Vonage, behind one `Notifier` interface |
 | Log retention after upload | Keep N days locally vs delete on acknowledgement |
-| Default protection tier | Recommend device admin as default (EA parity), device owner as opt-in |
 | Partner login | Option B in `docs/plans/09-partner-login.md`, scoped, not built |
 | GitHub Pages for the about/privacy pages | Possible now the repo is public; today they're served by the server (`docs/plans/07-pages-and-privacy.md`) |
 

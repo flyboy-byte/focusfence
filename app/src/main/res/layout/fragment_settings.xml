@@ -413,12 +413,12 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <Button
-                    android:id="@+id/deviceOwnerButton"
+                    android:id="@+id/uninstallProtectionButton"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="@string/owner_open" />
+                    android:text="@string/admin_card_title" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

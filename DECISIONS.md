@@ -460,3 +460,14 @@ change every commit hash, break changelog links and clones, and still need GitHu
 encrypted keystore-recovery artifact was deleted first, so it never became public. Public also means GitHub Actions
 runs free.
 
+## D-028 — Device owner (managed mode) removed; uninstall protection stays
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+Managed mode (Private DNS strategy switch, always-on VPN, settings lock, app suspension, network logging) needed adb
+and a phone with every account removed. Logan: "No one would ever do device owner." It was never set up on a real
+phone. Removed from the app, Settings, Home and the Guide; `docs/specs/device-owner.md` is kept as history.
+Uninstall protection (device admin with no policies, Ever Accountable's model) stays, now on its own small screen
+with Turn on / Turn off (the latter behind the `REMOVE_PROTECTION` friction guard). A phone provisioned by an older
+version gets one button that clears every policy those versions could set and leaves device ownership.
+

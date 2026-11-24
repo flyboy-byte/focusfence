@@ -283,35 +283,13 @@
     <string name="guard_level_own_pin">Your PIN</string>
     <string name="guard_level_partner_pin">Partner PIN</string>
 
-    <!-- Managed mode / Device Owner -->
-    <string name="owner_title">Uninstall protection</string>
-    <string name="owner_open">Uninstall protection</string>
-    <string name="owner_settings_summary">One tap, like Ever Accountable: uninstalling Focus Fence then needs a deliberate extra step, and it\'s recorded. Advanced (optional, needs adb): device owner mode adds always-on VPN, locked settings and OS-level app blocking.</string>
-    <string name="owner_intro">We never block uninstalling the app. Managed mode adds stronger enforcement and logs any attempt to remove protection. Removal stays possible, behind friction.</string>
-    <string name="owner_enable_howto">Not set up yet. With USB or wireless debugging, run this once on a device with no other accounts:</string>
-    <string name="owner_status_owner">Managed mode active (device owner)</string>
+    <!-- Uninstall protection (device admin) -->
+    <string name="owner_settings_summary">One tap, like Ever Accountable: uninstalling Focus Fence then needs a deliberate extra step, and it\'s recorded.</string>
     <string name="admin_card_title">Uninstall protection</string>
-    <string name="admin_card_body">The same protection Ever Accountable uses. One tap, no computer. While it\'s on, Focus Fence can\'t be uninstalled until you turn it off first in system settings — a deliberate second step that gets recorded (and, once reports exist, sent to your partner). For more (always-on VPN, locked settings, app suspension), set up device owner below.</string>
+    <string name="admin_card_body">The same protection Ever Accountable uses. While it\'s on, Focus Fence can\'t be uninstalled until you turn this off first. That extra step is recorded, and partners are told. It never locks you out.</string>
     <string name="admin_activate">Turn on</string>
     <string name="admin_add_explanation">Makes uninstalling Focus Fence a two-step action that is recorded for your accountability partner. It does not lock you out: you can turn this off at any time.</string>
-    <string name="owner_status_admin">Device admin active (not device owner)</string>
-    <string name="owner_status_none">Managed mode not set up</string>
-    <string name="owner_strategy_title">Filtering strategy</string>
-    <string name="owner_strategy_intro">Switch to Private DNS to free the VPN slot for another VPN while category filtering continues. Needs managed mode.</string>
-    <string name="owner_strategy_hint">Strategy</string>
-    <string name="owner_strategy_vpn">Focus Fence VPN (full filtering)</string>
-    <string name="owner_strategy_private_dns">Private DNS (frees the VPN slot)</string>
-    <string name="owner_dot_hint">Private DNS host (DoT)</string>
-    <string name="owner_dot_save">Save DNS host</string>
-    <string name="owner_dot_saved">Saved</string>
-    <string name="owner_dot_invalid">Enter a valid DoT hostname</string>
-    <string name="owner_network_logging">Per-app DNS logging (network logging)</string>
-    <string name="owner_suspend_apps">Suspend blocked apps at the OS level</string>
-    <string name="owner_suspend_hint">Stronger than the default home-screen bounce: blocked apps can\'t open at all.</string>
-    <string name="owner_need_owner">Private DNS strategy needs managed mode (device owner).</string>
-    <string name="owner_strategy_failed">Couldn\'t set Private DNS. Check managed mode.</string>
-    <string name="owner_remove">Remove managed mode</string>
-    <string name="owner_removed">Managed mode removed</string>
+    <string name="owner_remove">Leave managed mode (from an older version)</string>
     <string name="admin_disable_warning">Removing Focus Fence protection will be recorded. Your accountability partner can see that protection was turned off.</string>
 
     <!-- Home status card + settings groups -->
@@ -334,7 +312,6 @@
     <string name="home_on">On</string>
     <string name="home_timeline_on">Recording which apps are used</string>
     <string name="home_timeline_off">Off: grant Usage access</string>
-    <string name="home_managed_on">On (device owner)</string>
     <string name="home_managed_admin">On</string>
     <string name="home_managed_off">Off — tap to turn on</string>
     <string name="home_log_value">View, export, battery and health</string>
@@ -370,15 +347,6 @@
     <string name="home_health_down">Lookups failing</string>
     <string name="home_health_silent">Bypassed (no traffic)</string>
     <string name="home_health_bypassed">Bypassed by Private DNS</string>
-    <!-- Managed mode: VPN + DNS together -->
-    <string name="owner_vpn_title">VPN and DNS</string>
-    <string name="owner_always_on">Always-on VPN</string>
-    <string name="owner_always_on_hint">Android starts the filter at boot and keeps it running. Not lockdown: the internet never gets cut off if the filter restarts.</string>
-    <string name="owner_lock_settings">Lock VPN and Private DNS settings</string>
-    <string name="owner_lock_hint">Blocks turning the VPN off, or setting a Private DNS host that skips the filter, from system Settings. Turning it off here still works, with your friction setting.</string>
-    <string name="owner_lock_needs_always_on">Turn on Always-on VPN first.</string>
-    <string name="owner_fallback">Private DNS fallback</string>
-    <string name="owner_fallback_hint">Whenever the VPN is off (turned off, or another VPN takes over), lookups go to the DNS host above instead, so filtering continues at category level. Undone automatically when the VPN comes back.</string>
 
     <!-- Accountability partners -->
     <!-- Setup guide -->
@@ -606,4 +574,7 @@
     <string name="block_screen_channel">Blocked sites</string>
     <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
     <string name="block_screen_notify_text">Tap to see why.</string>
+    <string name="admin_turn_off">Turn off</string>
+    <string name="admin_status_on">Uninstall protection is on</string>
+    <string name="admin_status_off">Uninstall protection is off</string>
 </resources>

@@ -16,7 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import app.focusfence.CategoriesActivity
-import app.focusfence.DeviceOwnerActivity
+import app.focusfence.UninstallProtectionActivity
 import app.focusfence.DiagnosticsActivity
 import app.focusfence.MonitoringActivity
 import app.focusfence.StrictModeActivity
@@ -315,19 +315,12 @@ class HomeFragment : Fragment() {
         )
 
 
-        // Device admin is the default protection (EA's model); device owner is the advanced tier.
-        val owner = DeviceAdmin.isDeviceOwner(context)
-        val admin = owner || DeviceAdmin.isAdminActive(context)
+        // Uninstall protection (device admin, EA's model).
+        val admin = DeviceAdmin.isDeviceOwner(context) || DeviceAdmin.isAdminActive(context)
         row(
             R.string.home_row_managed, admin,
-            getString(
-                when {
-                    owner -> R.string.home_managed_on
-                    admin -> R.string.home_managed_admin
-                    else -> R.string.home_managed_off
-                }
-            ),
-            DeviceOwnerActivity::class.java,
+            getString(if (admin) R.string.home_managed_admin else R.string.home_managed_off),
+            UninstallProtectionActivity::class.java,
         )
 
         row(R.string.home_row_log, true, getString(R.string.home_log_value), DiagnosticsActivity::class.java)

@@ -206,6 +206,8 @@ Every unlock request, grant and loosening action becomes an activity record.
 
 ## 8. Managed mode (Device Owner)
 
+> **Removed 2026-11-24 (D-028).** Only uninstall protection (device admin) remains.
+
 - A `DeviceAdminReceiver`, provisioned via `adb shell dpm set-device-owner` (development) or QR
   code. Shizuku-assisted provisioning is an option (Déchaîner's pattern).
 - Policies (as built — see [`device-owner.md`](device-owner.md)):

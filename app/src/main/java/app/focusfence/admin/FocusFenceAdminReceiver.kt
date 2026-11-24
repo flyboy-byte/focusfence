@@ -8,7 +8,7 @@ import app.focusfence.dns.LogEvents
 import app.focusfence.monitor.Monitor
 
 /**
- * Device-admin / device-owner receiver. The project's stance is **detect and
+ * Uninstall-protection (device admin) receiver. The project's stance is **detect and
  * notify, not block**: we do not call setUninstallBlocked, so removal stays
  * possible. What this does instead is make any attempt to remove protection
  * loud — every admin lifecycle event is written to the activity log as an
