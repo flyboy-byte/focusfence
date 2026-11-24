@@ -54,17 +54,23 @@ button{background:#3f51b5;color:#fff;border:0;padding:8px 16px}
 label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px 12px 2px 0}
 </style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
-    fun joinForm(code: String, error: String?, smsAvailable: Boolean): String = page(
+    fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null): String = page(
         "Become an accountability partner",
         buildString {
             append("<h1>Become an accountability partner</h1>")
-            append("<p>Someone asked you to be their accountability partner on Focus Fence. Enter the invite code they sent you. You'll get a weekly report by email and an alert if their protection changes.</p>")
+            append("<p>Someone asked you to be their accountability partner on Focus Fence. You'll get a weekly report by email and an alert if their protection changes.</p>")
             if (error != null) append("<p class='bad'>${esc(error)}</p>")
             // Filled by /static/report.js when the link carried a report key (D-023), so a partner who opened this inside a
             // chat app can carry the key to the browser they'll read reports in.
             append("<div id='keystatus' class='muted'></div>")
             append("<form method='post' action='/join'>")
-            append("<label>Invite code<br><input name='code' required value='${esc(code)}' autocapitalize='characters'></label>")
+            // Opened from the invite link: the link is the invite, so there's no code to type. Keep that link: it's yours.
+            if (link != null) {
+                append("<input type='hidden' name='link' value='${esc(link)}'>")
+                append("<p class='muted'><b>Keep the link you were sent.</b> After you join and confirm your email, it opens the report in any browser.</p>")
+            } else {
+                append("<label>Invite code<br><input name='code' required value='${esc(code)}' autocapitalize='characters'></label>")
+            }
             append("<label>Your name<br><input name='name' required maxlength='60'></label>")
             append("<label>Your email<br><input name='email' type='email' required maxlength='120'></label>")
             if (smsAvailable) {
@@ -97,7 +103,7 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
         // D-023: the report is sealed on the phone; /static/report.js opens it here with the key from the partner's link.
         append("<div id='report' class='card'><p class='muted'>Opening the encrypted report…</p></div>")
         append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
-        append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you, and stays in this browser.</p>")
+        append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
         append("<h2>Text alerts</h2>")
         when {
             !smsAvailable -> append("<p class='muted'>Text alerts aren't set up on this server.</p>")

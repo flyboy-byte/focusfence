@@ -186,8 +186,8 @@
       var digests = await open(keys, data.deviceId, reports);
       if (!digests.length) {
         show([el('p', 'This report is end-to-end encrypted and this browser does not have the key.', 'bad'),
-          el('p', 'Open the invite link (or a "key link") the phone\'s owner sent you, in this same browser, then come back here. ' +
-            'Links opened inside a chat or email app often use a separate browser.', 'muted')]);
+          el('p', 'Open the Focus Fence link the phone\'s owner sent you (or a "key link" from them). It carries the key and ' +
+            'opens this report in whichever browser it lands in.', 'muted')]);
         return;
       }
       var shots = digests.filter(function (d) { return d.kind === 'shot'; });

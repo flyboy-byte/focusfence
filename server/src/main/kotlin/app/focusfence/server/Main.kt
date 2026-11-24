@@ -207,7 +207,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         onCall { call ->
             // Scripts only where D-023 needs them (the partner's browser opens the sealed report), and only our own file.
             val path = call.request.local.uri.substringBefore('?')
-            val scripts = path.startsWith("/p/") || path == "/join" || path == "/key"
+            val scripts = path.startsWith("/p/") || path.startsWith("/i/") || path == "/join" || path == "/key"
             call.response.headers.append("Content-Security-Policy",
                 "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" +
                     if (scripts) "; script-src 'self'; connect-src 'self'" else "")
@@ -309,13 +309,15 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "invite", req.t, "", req.signature)) return@post call.unauthorized()
             val code = newInviteCode()
+            // The link's own long secret: unlike the short code it stays valid once used, as that partner's report link.
+            val secret = newToken()
             val expires = cfg.now() + cfg.inviteTtlMs
             store.updateDevice(device.id) { d ->
                 // At most 5 live invites; expired ones are dropped.
-                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires)).takeLast(5)
+                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret))).takeLast(5)
             }
             val shown = code.chunked(4).joinToString("-")
-            call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/join?code=$shown"))
+            call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/i/$secret"))
         }
 
         post("/v1/partners/list") {
@@ -459,6 +461,25 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         // ---- partner web pages ---------------------------------------------
 
+        // The partner's one link (D-026). Before joining: the join form. After joining and confirming the address: on to
+        // the report, and the browser carries the '#k=' key across the redirect, so it works in any browser, any time.
+        get("/i/{secret}") {
+            val secret = call.parameters["secret"].orEmpty()
+            if (secret.length < 20) return@get call.respondText(Web.message("Not found", "This link isn't valid."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            val hash = Integrity.sha256(secret)
+            store.partnerByLinkHash(hash)?.let { (_, partner) ->
+                return@get if (partner.confirmed) call.respondRedirect("/p/${partner.token}")
+                else call.respondText(Web.message("Confirm your email first",
+                    "We emailed ${Web.mask(partner.email)} a confirmation link. Click it, then open this same link again: it's your report link from then on."),
+                    ContentType.Text.Html)
+            }
+            val now = cfg.now()
+            if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now } }) {
+                return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            }
+            call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret), ContentType.Text.Html)
+        }
+
         get("/join") {
             val code = call.request.queryParameters["code"].orEmpty()
             call.respondText(Web.joinForm(code, null, notifier.smsAvailable), ContentType.Text.Html)
@@ -471,29 +492,29 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
             }
+            val rawLink = form["link"].orEmpty().take(64)
+            val linkHash = if (rawLink.length >= 20) Integrity.sha256(rawLink) else ""
             val codeHash = Integrity.sha256(normalizeCode(rawCode))
+            fun again(err: String) = Web.joinForm(rawCode, err, notifier.smsAvailable, link = rawLink.takeIf { linkHash.isNotEmpty() })
             val name = form["name"].orEmpty().filter { !it.isISOControl() }.trim().take(60)
             val email = form["email"].orEmpty().trim().take(120)
             if (name.isEmpty() || !EMAIL.matches(email)) {
-                return@post call.respondText(Web.joinForm(rawCode, "Enter your name and email.", notifier.smsAvailable), ContentType.Text.Html)
+                return@post call.respondText(again("Enter your name and email."), ContentType.Text.Html)
             }
             val now = cfg.now()
-            val device = store.allDevices().firstOrNull { d -> d.invites.any { it.codeHash == codeHash && it.expiresMs > now } }
-                ?: return@post call.respondText(
-                    Web.joinForm(rawCode, "That code isn't valid. It may have expired or already been used.", notifier.smsAvailable),
-                    ContentType.Text.Html,
-                )
+            fun Store.Invite.matches() = expiresMs > now && (if (linkHash.isNotEmpty()) this.linkHash == linkHash else this.codeHash == codeHash)
+            val device = store.allDevices().firstOrNull { d -> d.invites.any { it.matches() } }
+                ?: return@post call.respondText(again("That invite isn't valid. It may have expired or already been used."), ContentType.Text.Html)
+            val invite = device.invites.first { it.matches() }
             if (device.partners.size >= cfg.maxPartnersPerDevice) {
-                return@post call.respondText(
-                    Web.joinForm(rawCode, "This phone already has the most partners it can have.", notifier.smsAvailable),
-                    ContentType.Text.Html,
-                )
+                return@post call.respondText(again("This phone already has the most partners it can have."), ContentType.Text.Html)
             }
             // Double opt-in: the address is NOT trusted yet. Until its owner clicks the link below, the only thing
             // ever sent to it is that one email, so a stranger's address can't be signed up to receive alerts.
-            val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now, confirmed = false)
+            val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now, confirmed = false,
+                linkHash = invite.linkHash.ifEmpty { null })
             store.updateDevice(device.id) { d ->
-                d.invites = d.invites.filter { it.codeHash != codeHash } // single use
+                d.invites = d.invites.filter { it.codeHash != invite.codeHash } // single use: the code is spent, the link now belongs to this partner
                 d.partners = d.partners + partner
             }
             sendConfirmation(device.id, partner)

@@ -486,7 +486,7 @@
     <string name="acc_email_hint">Send them an invite code. They join on a web page and get a weekly report and alerts by email, plus optional text alerts.</string>
     <string name="acc_invite">Invite a partner</string>
     <string name="acc_invite_ready_title">Invite ready</string>
-    <string name="acc_invite_ready">Code %1$s, good for 24 hours and one person. Send the whole link: the part after # is the key that unlocks your report, and the server never sees it.</string>
+    <string name="acc_invite_ready">Send this link to one person within 24 hours. It becomes their report link for good: it opens your report in any browser, and the part after # is the key the server never sees. (Typing code %1$s works too, but then they need a key link.)</string>
     <string name="acc_key_link">Resend key link</string>
     <string name="acc_key_link_share">Open this on the device where you read my Focus Fence report, so it can unlock it (the server can\'t read it): %1$s</string>
     <string name="acc_invite_share">Would you be my accountability partner on Focus Fence? Open %1$s (invite code %2$s, expires in 24 hours).</string>
