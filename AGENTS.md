@@ -38,25 +38,26 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
   hidden monitoring.
 - Treat log exports as private data: analyse them locally, never send them anywhere.
 
-## Pull requests: explain yourself to the other maintainer
+## Pull requests: awareness, not rules
 
-Two people (@flyboy-byte, @sidewinderzz) and their agents work on this repo, and either may merge the other's
-work. A PR should let the other person understand **why**, not just what, without a conversation. So every PR
-description has these sections (the template in `.github/pull_request_template.md` pre-fills them, and the
-`PR contract` check fails a PR that leaves one empty):
+Two people (@flyboy-byte, @sidewinderzz) and their agents send PRs into one `main`, and either may merge the
+other's work. Nothing here is enforced, by a check or by an agent: it's a habit that makes the other person's job
+easier. When you write a PR, think about who will read it, and cover what they'd want to know. The template in
+`.github/pull_request_template.md` offers these sections; use the ones that help, in a sentence or two each:
 
 - **What and why**: the change and the reason, in plain words.
-- **Pros**: what gets better.
-- **Cons and risks**: what gets worse or could break. Don't leave it at "none"; there is always a cost.
-- **What the other maintainer might object to**: put yourself in their place. Name the likely objection (scope,
-  privacy, battery, a decision in `DECISIONS.md`, their own work this touches) and say why it's still worth it,
-  or what you'd change if they disagree. A sentence or two; this is courtesy, not a defence brief.
+- **Pros** and **cons and risks**: what gets better, what gets worse or could break.
+- **What the other maintainer might think**: their likely view (scope, privacy, battery, a decision in
+  `DECISIONS.md`, their own work this touches), and why it's still worth it, or what you'd change if they disagree.
 - **Tested**: 📱 on a phone / 🧪 CI only / not tested, and what exactly.
 - **How to revert**: usually "revert the squash commit"; say if data, a server deploy or a release is involved.
 
-Keep PRs to one feature or fix, and title them with a type and scope (`feat(dns): …`, `fix(server): …`,
-`docs: …`, `refactor(ui): …`, `perf(sync): …`, `chore: …`): squash merges inherit the title, and the changelog is
-built from it.
+**Agents:** write your own PRs this way, and when you notice the other maintainer's work nearby (an open PR on the
+same files, a decision of theirs this touches), say so in your PR. Never block, reject, rewrite or gate someone
+else's PR for missing a section; mention it at most, kindly.
+
+Keep PRs to one feature or fix, and a typed title (`feat(dns): …`, `fix(server): …`, `docs: …`, `refactor(ui): …`,
+`perf(sync): …`, `chore: …`) helps the changelog group it.
 
 ## Commands
 

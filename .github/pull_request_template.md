@@ -1,5 +1,5 @@
-<!-- Title: type(scope): summary, e.g. "fix(dns): keep push notifications working under a google.com rule".
-     Every section needs at least a sentence; the "PR contract" check fails an empty one. See AGENTS.md. -->
+<!-- Optional, and nothing checks it: a few lines that help the other maintainer understand and merge this.
+     Use what fits, delete what doesn't. Title like "fix(dns): …" helps the changelog. See AGENTS.md. -->
 
 ## What and why
 
@@ -10,7 +10,7 @@
 ## Cons and risks
 
 
-## What the other maintainer might object to
+## What the other maintainer might think
 
 
 ## Tested
