@@ -52,6 +52,9 @@ class AccountabilityFragment : Fragment() {
         binding.serverInput.setText(SyncStore.serverUrl(requireContext()))
         binding.enrollInput.setText(SyncStore.enrollCode(requireContext()))
         binding.serverSave.setOnClickListener {
+            // Once connected, the server fields fold away behind "Change server": set once, rarely touched.
+            if (!editingServer && SyncStore.deviceId(requireContext()) != null) { editingServer = true; bindServer(); return@setOnClickListener }
+            editingServer = false
             SyncStore.setServerUrl(requireContext(), binding.serverInput.text?.toString().orEmpty())
             SyncStore.setEnrollCode(requireContext(), binding.enrollInput.text?.toString().orEmpty())
             bind()
@@ -93,6 +96,16 @@ class AccountabilityFragment : Fragment() {
         }
     }
 
+    private var editingServer = false
+
+    private fun bindServer() {
+        val open = editingServer || SyncStore.deviceId(requireContext()) == null
+        val v = if (open) View.VISIBLE else View.GONE
+        (binding.serverInput.parent.parent as View).visibility = v
+        (binding.enrollInput.parent.parent as View).visibility = v
+        binding.serverSave.setText(if (open) R.string.acc_save else R.string.acc_change_server)
+    }
+
     private fun bind() {
         val ok = SyncStore.lastOk(requireContext())
         val configured = SyncStore.deviceId(requireContext()) != null || SyncStore.ownPairings(requireContext()).isNotEmpty() || SyncStore.watches(requireContext()).isNotEmpty()
@@ -105,6 +118,7 @@ class AccountabilityFragment : Fragment() {
                 SyncStore.lastError(requireContext())?.let { getString(R.string.acc_status_error, it) } ?: "",
             )
         }
+        bindServer()
         renderEmailPartners()
         renderPairings()
         renderWatches()

@@ -77,6 +77,10 @@ class MonitoringFragment : Fragment() {
         binding.reviewButton.setOnClickListener {
             startActivity(android.content.Intent(requireContext(), ReviewActivity::class.java))
         }
+        // What was captured and why lives in the logs; reachable from here as well as Settings → Advanced.
+        binding.logsButton.setOnClickListener {
+            startActivity(android.content.Intent(requireContext(), DiagnosticsActivity::class.java))
+        }
         binding.watchedAppsButton.setOnClickListener {
             UiUtil.chooseWatchScope(requireContext()) { bind() }
         }
