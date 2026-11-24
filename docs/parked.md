@@ -100,3 +100,28 @@ otherwise. Reopen only if W13's harness produces a number showing a real problem
 Device Owner mode would make the app genuinely hard to remove. It also makes the user a managed
 device, which is the exact thing the product intent rejects: the owner must stay the owner, keep
 ADB, keep sideloading, keep the ability to run other VPNs. Friction, not prevention.
+
+---
+
+## P-006 — A "blocked" page inside the browser
+
+*Parked 2026-11-23 by @flyboy-byte — effectively permanent while the app holds VPN and Accessibility permissions.*
+
+The wish: when a site is blocked, the browser shows "Blocked by Focus Fence" instead of an error, so you can tell a
+block from bad internet. For HTTPS (almost every site) that means the app answering as youtube.com, which a browser
+only accepts from a certificate authority the user has installed. Concretely it would take:
+
+- **A local HTTPS server inside the tunnel.** Blocked names would resolve to an address routed into the VPN, and the app
+  would have to terminate TCP and TLS there. Today the tunnel carries DNS only (D-001), which is why it is light.
+- **A user-installed CA.** Installed by hand in Android Settings, with a permanent "network may be monitored" warning;
+  Firefox ignores it unless changed; apps that pin certificates break.
+- **A key that can impersonate every site** living in the app. If it leaked, anyone could intercept that phone's HTTPS.
+  For an app that already holds VPN and Accessibility permissions, that is the worst risk it could add (D-010).
+
+Plain-HTTP sites would not need a CA, but there are almost none left, so that half-measure isn't worth building.
+
+**What answers the real question instead (D-024):** the app's own blocked notification or screen, confirmed against the
+address bar, with blocks triaged so only ones that matter interrupt. Blocked lookups keep answering `0.0.0.0` (D-003).
+
+**What would reopen it:** a platform API that lets a VPN app show an interstitial for a blocked HTTPS site without a
+certificate authority. None exists as of 2026-11.
