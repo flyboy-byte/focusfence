@@ -161,6 +161,21 @@ object Blocklist {
         return FRONT_DOOR_PREFIXES.any { qname == it + domain }
     }
 
+    /**
+     * Shared phone infrastructure that a rule on a parent domain must never take down (#18): blocking `google.com`
+     * also matched `mtalk.google.com`, which carries Firebase push, so every app on the phone silently stopped getting
+     * notifications. A rule naming one of these hosts exactly still blocks it; only parent-domain rules skip them.
+     */
+    private val INFRASTRUCTURE = setOf(
+        "mtalk.google.com", "mtalk4.google.com", "android.clients.google.com",
+        "fcm.googleapis.com", "fcmtoken.googleapis.com", "firebaseinstallations.googleapis.com",
+        "time.google.com", "time.android.com",
+        "connectivitycheck.gstatic.com", "connectivitycheck.android.com",
+    )
+    private val ALT_MTALK = Regex("^alt[0-9]+-mtalk\\.google\\.com$")
+
+    fun isInfrastructure(qname: String): Boolean = qname in INFRASTRUCTURE || ALT_MTALK.matches(qname)
+
     /** True if [qname] equals a blocked domain or is a subdomain of one. */
     fun matches(qname: String, blocked: Set<String>): Boolean {
         if (blocked.isEmpty()) return false
