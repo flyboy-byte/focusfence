@@ -6,7 +6,14 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- **server:** admin audit pass 5 (A1-A7) (`758de46`, [#25](https://github.com/sidewinderzz/focusfence/pull/25))
+- **dns:** a parent-domain rule never blocks push, time or connectivity hosts (#18) (`fcb5f05`, [#22](https://github.com/sidewinderzz/focusfence/pull/22))
 ### Changed
+- D-023: the server operator can't read users' activity (E2E email/web partner reports) (`92d3d78`, [#19](https://github.com/sidewinderzz/focusfence/pull/19))
+- Port research, benchmarks and the D-017..D-020 record from the retired shareddev branch (`7ee07ef`, [#17](https://github.com/sidewinderzz/focusfence/pull/17))
+- D-022: main is the only long-lived branch; collaboration guide and branch cleanup record (`ae649e7`, [#16](https://github.com/sidewinderzz/focusfence/pull/16))
+- D-021: one release signing key for every Focus Fence release (resolves O-002) (`330a668`, [#15](https://github.com/sidewinderzz/focusfence/pull/15))
 - Make a notification the default way to say a site was blocked (`9f6867a`, [#14](https://github.com/sidewinderzz/focusfence/pull/14))
 - Show a "Blocked by Focus Fence" screen when a blocked site opens (`9de21aa`, [#13](https://github.com/sidewinderzz/focusfence/pull/13))
 - Merge Focus Fence AC (2.10.0) into main (`7dcec4e`, [#12](https://github.com/sidewinderzz/focusfence/pull/12))
@@ -15,6 +22,12 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - Merge in the pre-planning app-blocking entry-point fix (`60724f4`)
 - Record the branch-strategy change and update status after the merge (`f3aaf18`)
 - Merge logandev into main: MIT licence, adult-content decision, W1/W2/W6/W7 (`c13bef2`)
+### Docs
+- D-024 triaged block notifications; park a browser block page (P-006, needs a CA) (`bf6957d`, [#24](https://github.com/sidewinderzz/focusfence/pull/24))
+- roadmap (phases 0-6) and a HANDOFF rewritten for main (`975fb54`, [#20](https://github.com/sidewinderzz/focusfence/pull/20))
+### Maintenance
+- generated changelog (tools/changelog.py), backfilled from every release tag; release PR steps in AGENTS (`857f3c0`, [#23](https://github.com/sidewinderzz/focusfence/pull/23))
+- PR awareness guide for people and agents (template, AGENTS section; nothing enforced) (`3874189`, [#21](https://github.com/sidewinderzz/focusfence/pull/21))
 
 _Undo any line with `git revert <commit>`._
 
