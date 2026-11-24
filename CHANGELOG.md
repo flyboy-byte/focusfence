@@ -7,6 +7,22 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Added
+- check GitHub for updates and install with one tap (`abb69ad`, [#49](https://github.com/flyboy-byte/focusfence/pull/49))
+- block triage: notices for adult/gambling/scam sites, partner alert on repeated tries (D-024) (`9d9d15a`, [#53](https://github.com/flyboy-byte/focusfence/pull/53))
+- shared screenshots at 48 px with one blur (D-025 amended) (`3c7b020`, [#51](https://github.com/flyboy-byte/focusfence/pull/51))
+### Fixed
+- network blips are one count in the report, and degraded stops flapping (`760d05e`, [#50](https://github.com/flyboy-byte/focusfence/pull/50))
+### Changed
+- ui: plainer Home and Screen checks (no stat tiles, no card around the list) (`4dc21c9`, [#55](https://github.com/flyboy-byte/focusfence/pull/55))
+- ui: Home and Screen checks redesign (green = working, amber = needs you) (`49e6751`, [#54](https://github.com/flyboy-byte/focusfence/pull/54))
+### Maintenance
+- remove device owner (managed mode); uninstall protection gets its own screen (D-028) (`d95602a`, [#52](https://github.com/flyboy-byte/focusfence/pull/52))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.13.0-accountable
+
+### Added
 - the invite link is the partner's report link for good (D-026); partner login scoped (plan 09) (`6d134ec`, [#39](https://github.com/flyboy-byte/focusfence/pull/39))
 ### Fixed
 - **alerts:** app updates and flaky-network health go in the report, not an email (`f035a28`, [#38](https://github.com/flyboy-byte/focusfence/pull/38))
@@ -19,6 +35,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - public-release audit and checklist; SECURITY.md; STATE's stale branch and release rows (`05813ef`, [#42](https://github.com/flyboy-byte/focusfence/pull/42))
 - README for the public repo: what Focus Fence AC is, what's verified, privacy model, self-hosting (`1584c81`, [#41](https://github.com/flyboy-byte/focusfence/pull/41))
 ### Maintenance
+- release 2.13.0 (`aaf9b96`, [#48](https://github.com/flyboy-byte/focusfence/pull/48))
 - public-release prep: server internals out of the docs, names to handles (`df71abc`, [#40](https://github.com/flyboy-byte/focusfence/pull/40))
 
 _Undo any line with `git revert <commit>`._

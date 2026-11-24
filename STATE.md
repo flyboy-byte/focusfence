@@ -12,7 +12,7 @@
 
 > Screenshots: automatic capture never sends an image. Since 2.12 the owner can choose to send a **blurred** (≤ 24 px) thumbnail of a flagged shot to email/web partners (D-025, Phase 2 level B); a clear image never leaves the phone. Level C (automatic blurred sending) waits on Phase 7's false-flag work.
 
-_Last updated: 2026-11-24. Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-24 (2.14.0). Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -34,7 +34,7 @@ mode pass their tests but haven't been field-tested. The repo went public on 202
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR |
-| Latest release | `v2.12.0-accountable` (2026-11-23, code 33). `main` has two more merged changes waiting for 2.13 (quieter alerts #38, permanent partner link #39), next to release. |
+| Latest release | `v2.14.0-accountable` (2026-11-24, code 35): self-update, block triage, 48 px shared screenshots, quieter network health, device owner removed, Home and Screen checks redesign. All 🧪 until seen on the phone. |
 
 ## Verification levels
 
