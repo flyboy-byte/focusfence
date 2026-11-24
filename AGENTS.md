@@ -86,7 +86,12 @@ with `-R sidewinderzz/focusfence`).
 - Signing: if repo secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
   exist, the stable key is used (updates install over each other). Otherwise a throwaway key is
   generated and the notes say so. The expected cert SHA-256 is in `STATE.md`.
-- Bump `versionCode` / `versionName` in `app/build.gradle.kts` before tagging.
+- Release = one small PR titled `chore: release X.Y.Z` that bumps `versionCode` / `versionName` in
+  `app/build.gradle.kts` **and** refreshes the changelog (`tools/changelog.py full > CHANGELOG.md`);
+  after it merges, tag `vX.Y.Z-accountable` on `main`. Never bump the version in a feature PR.
+- The changelog is generated, never hand-edited: one line per squash-merged PR, grouped by the type in
+  its title, each naming the commit to `git revert`. `tools/changelog.py notes <last-tag>` prints just
+  the new section, for the release description.
 - Some agent sandboxes can't push tags or edit releases. If yours can't, give the human the exact
   commands (they run them from Termux with `gh`).
 
