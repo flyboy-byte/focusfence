@@ -8,7 +8,7 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 - **@flyboy-byte (Logan):** a self-accountability app (benchmark: Ever Accountable) on his Pixel 9, aimed at groups of up to
   4 phones; every layer optional ("recommended" means guided, never forced); FOSS spirit, light. Leads collaboration and
   the accountability direction. Short on time to test: verify harder than feels necessary and label 🧪 vs 📱.
-- **@sidewinderzz (Shelby):** repo owner and admin; merged the accountability work into `main` (#12) and added the blocked
+- **@sidewinderzz:** repo owner and admin; merged the accountability work into `main` (#12) and added the blocked
   screen/notification (#13, #14). His agents work from Claude project threads and open PRs too.
 - **How we work together (D-022):** `main` is the only long-lived branch; short task branches, PRs, squash merges; releases
   are tags on `main`. PRs carry a little awareness for the other person (`AGENTS.md`, "Pull requests: awareness, not
@@ -22,16 +22,13 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 3. **Releases:** a `chore: release X.Y.Z` PR (bump `versionCode`/`versionName`, `tools/changelog.py full > CHANGELOG.md`),
    merge, tag `vX.Y.Z-accountable` on `main`; `release.yml` signs with the one key (D-021, cert `2ca769a5…6098671`). Logan
    authorised Claude to tag, **but only after he has tried the previous build or asks**: no rapid-fire releases.
-4. Exports: he uses **Settings → Logs & diagnostics → Save to Downloads** and drops files in `~/.claude/uploads/`; analyse
+4. Exports: he uses **Settings → Logs & diagnostics → Save to Downloads** and shares them with the session; analyse
    locally only (private). Split numbers by version using the `app updated` records.
-5. **Server deploys** (`ff.flyboybyte.com`, flyboybyte VPS): `./gradlew -p server installDist`, rsync to
-   `flyboybyte:ffbackend-dist/`, then as root under a **Logan-opened `vps-sudo` window** (~20 min): copy `/opt/ffbackend`
-   to `/opt/ffbackend.prev`, rsync in, `chown -R ubuntu:ffbackend`, restart, check `/healthz`, **restore automatically if
-   unhealthy**, log in `~/security/hardening-log.md`. Never touch sshd, authorized_keys, ufw or sudoers; nginx only with his
-   explicit OK.
-6. **Secrets** live only in `/etc/ffbackend/env` (root:ffbackend 640): Resend sending-only key, bootstrap enrollment code,
-   `FF_ADMIN_EMAILS` (Logan only). Never print them. Sender: `Focus Fence <focusfence@reports.flyboybyte.com>` (only the
-   `reports.` subdomain is verified in Resend). The signing keystore is held by Logan (D-021); never in the repo.
+5. **Server deploys:** the generic procedure is in `docs/plans/04-backend-deploy.md` (build, keep the previous build,
+   copy, restart, check `/healthz`, restore automatically if unhealthy). The live box's specifics (host, root window,
+   paths, what never to touch) are in the git-ignored `docs/ops.local.md` on Logan's machine; ask him if it's missing.
+6. **Secrets** live only in the server's env file and the repo's Actions secrets. Never print them, never commit them.
+   The signing keystore is held by Logan (D-021); never in the repo.
 
 ## Decisions not to re-ask (details in `DECISIONS.md`)
 - **Privacy:** the server operator can't read anyone's activity (D-023): email/web partner reports are sealed on the phone
@@ -65,7 +62,7 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | No emulator on this machine, and a debug build can't install over the release app (different key) | UI changes are checked on Logan's phone from a release |
 
 ## Open questions only a person can answer
-Screenshot level B or C (Logan); triage details (Logan, then Shelby on #13); keystore backup confirmed (Logan); repo
-settings: default branch `main`, squash-only, auto-delete branches, close #11 (Shelby); whether the repo goes public (then
+Screenshot level B or C (Logan); triage details (Logan, then @sidewinderzz on #13); keystore backup confirmed (Logan); repo
+settings: default branch `main`, squash-only, auto-delete branches, close #11 (@sidewinderzz); whether the repo goes public (then
 scrub `docs/plans/04-backend-deploy.md` and owner references); SMS provider and budget; running `server-release.yml`
 (publishes a GHCR image under the upstream repo).

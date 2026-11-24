@@ -18,3 +18,6 @@ keystore.properties
 keystore.b64
 *-password.txt
 release-kit/
+
+# Private notes kept beside the repo, never published (public-release audit 2026-11-24)
+*.local.md
