@@ -657,4 +657,6 @@
     <string name="whats_new_loading">Loading from GitHub…</string>
     <string name="whats_new_failed">Couldn\'t reach GitHub. Try again later.</string>
     <string name="whats_new_installed">(installed)</string>
+    <string name="github_title">Source code on GitHub</string>
+    <string name="github_summary">Code, every release, and where to report a problem</string>
 </resources>
