@@ -111,6 +111,9 @@ class Config(
 @Serializable data class PostMailResponse(val id: Long)
 @Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
 
+/** Where the public About / privacy pages live (GitHub Pages, from docs/site). */
+const val ABOUT_PAGES = "https://flyboy-byte.github.io/focusfence/"
+
 fun main(args: Array<String>) {
     val env: (String) -> String? = { System.getenv(it) }
     val trusted = TrustedProxies.parse(env("FF_TRUSTED_PROXIES"))
@@ -267,15 +270,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     routing {
         Admin(cfg, store, notifier, enrollCodes) { it.client() }.routes(this)
-        // The app's About / privacy pages (docs/site, packaged as resources). Static, no scripts; the stylesheet is inlined
-        // because the CSP allows only inline styles.
-        get("/about") { call.respondRedirect("/about/privacy.html") }
+        // The About / privacy pages moved to GitHub Pages (2026-11-24). Apps up to 2.14 link here, so these redirect
+        // there permanently; only plain page names, never a path or query, are passed through.
+        get("/about") { call.respondRedirect(ABOUT_PAGES + "privacy.html", permanent = true) }
         get("/about/{name}") {
             val name = call.parameters["name"].orEmpty()
-            val res = if (Regex("[a-z]{1,20}\\.html").matches(name)) object {}.javaClass.getResource("/about/$name") else null
-            if (res == null) return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
-            val css = object {}.javaClass.getResource("/about/style.css")?.readText().orEmpty()
-            call.respondText(res.readText().replace("<link rel=\"stylesheet\" href=\"style.css\">", "<style>$css</style>"), ContentType.Text.Html)
+            if (!Regex("[a-z]{1,20}\\.html").matches(name)) return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            call.respondRedirect(ABOUT_PAGES + name, permanent = true)
         }
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.

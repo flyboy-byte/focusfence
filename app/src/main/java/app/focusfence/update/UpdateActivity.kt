@@ -51,6 +51,12 @@ class UpdateActivity : AppCompatActivity() {
             text = getString(R.string.update_body, version, Updates.installedVersion(this@UpdateActivity))
             setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge)
         }
+        val notesText = TextView(this).apply {
+            text = intent.getStringExtra(EXTRA_NOTES).orEmpty()
+            visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
+            setPadding(0, pad, 0, 0)
+            setLineSpacing(2 * resources.displayMetrics.density, 1f)
+        }
         status = TextView(this).apply { setPadding(0, pad, 0, 0) }
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -76,6 +82,7 @@ class UpdateActivity : AppCompatActivity() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(pad, pad, pad, pad)
                 addView(body)
+                addView(notesText)
                 addView(progress, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 addView(status)
                 addView(install)
@@ -210,12 +217,14 @@ class UpdateActivity : AppCompatActivity() {
         private const val EXTRA_URL = "url"
         private const val EXTRA_SIZE = "size"
         private const val EXTRA_PAGE = "page"
+        private const val EXTRA_NOTES = "notes"
 
         fun intent(c: Context, o: UpdateCheck.Offer): Intent = Intent(c, UpdateActivity::class.java)
             .putExtra(EXTRA_VERSION, o.version)
             .putExtra(EXTRA_URL, o.apkUrl)
             .putExtra(EXTRA_SIZE, o.size)
             .putExtra(EXTRA_PAGE, o.pageUrl)
+            .putExtra(EXTRA_NOTES, o.notes)
     }
 }
 

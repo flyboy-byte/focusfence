@@ -70,4 +70,42 @@ class UpdateCheckTest {
         assertFalse(UpdateCheck.sameSigner(listOf("ab12"), listOf("ab12", "cd34")))
         assertFalse(UpdateCheck.sameSigner(emptyList(), emptyList()))
     }
+
+    private val body = """
+        **Focus Fence AC** — a site blocker.
+
+        ## What's new
+
+        ### Added
+        - check GitHub for updates and install with one tap (`abb69ad`, [#49](https://github.com/x/pull/49))
+        - **ui:** five-tab layout (`933523f`, [#29](https://github.com/x/pull/29))
+        ### Docs
+        - README in plain words (`bbcb835`, [#47](https://github.com/x/pull/47))
+        ### Fixed
+        - network blips are one count (`760d05e`)
+
+        _Undo any line with `git revert <commit>`._
+
+        ## Install
+        - Signing key: stable
+    """.trimIndent()
+
+    @Test
+    fun notesArePlainForThePhone() {
+        assertEquals(
+            "Added\n• Check GitHub for updates and install with one tap\n• Five-tab layout\nFixed\n• Network blips are one count",
+            UpdateCheck.userNotes(body),
+        )
+    }
+
+    @Test
+    fun aBodyWithoutWhatsNewHasNoNotes() {
+        assertEquals("", UpdateCheck.userNotes("**Focus Fence AC** — accountability build.\n\n- Signing key: stable"))
+    }
+
+    @Test
+    fun theOfferCarriesTheNotes() {
+        val r = UpdateCheck.Release("v2.15.0-accountable", false, false, listOf(apk("v2.15.0-accountable")), "", body)
+        assertTrue(UpdateCheck.offer(r, "2.14.0-accountable")!!.notes.startsWith("Added"))
+    }
 }

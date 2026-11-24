@@ -1,6 +1,6 @@
 # About / privacy pages and in-app link (built 2026-11-23)
 
-**Update 2026-11-24:** the repo is now public and @flyboy-byte is admin, so Pages is possible; nothing has moved yet.
+**Update 2026-11-24 (later):** moved. `docs/site` publishes to https://flyboy-byte.github.io/focusfence/ through `.github/workflows/pages.yml`; the app's `about_url` points there (from 2.15); the server's `/about/*` now redirects there permanently, so older apps still land on the pages.
 
 **Decision 2026-11-23:** GitHub Pages is not possible for now (Logan has push, not admin, on `sidewinderzz/focusfence`, and it is private). The pages in `docs/site/` are packaged into the server jar and served at **https://ff.flyboybyte.com/about/** (live); the app's `about_url` points there (unreleased until the next tag). Move to Pages later by changing that one string.
 
