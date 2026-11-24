@@ -421,11 +421,16 @@ defeat a boundary someone chose. Not yet decided.
 **Date:** 2026-11-23 · **By:** @flyboy-byte · **Status:** accepted
 
 Level B ships: the owner picks a flagged screenshot on Review and sends it. It is always the `ShotBlur` thumbnail
-(24 px long edge, blurred), never the clear image, even by the owner's choice, because a partner must never hold a
+(24 px long edge, blurred; 48 px since the amendment below), never the clear image, even by the owner's choice, because a partner must never hold a
 clear explicit image (roadmap Phase 2) and an owner in a bad moment is exactly when that rule matters. It is sealed
 with the report key (D-023), so the server stores ciphertext only. Level C (automatic sending of the same thumbnail)
 is the eventual step, gated on the false-flag rate and the conditions in `docs/roadmap.md` Phase 2. Level D (a
 clear image) stays ruled out.
+
+**Amended 2026-11-24 by @flyboy-byte:** the thumbnail goes to 48 px on the long edge with one blur instead of 24 px
+with two. At 24 px a partner saw colours only and couldn't judge whether a flag was real. Compared side by side on a
+real photo: 48 px shows the shape of the scene with no detail; 96 px unblurred was rejected as close to a clear image.
+The rule itself is unchanged.
 
 ## D-026 — A partner holds one link: the invite link is their report link for good
 

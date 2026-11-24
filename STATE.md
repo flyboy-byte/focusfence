@@ -108,7 +108,7 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 | Partner unlock codes (partner PIN without handing over a PIN) | 🧪 | Rotating 8-digit code in the partner's app, verified offline. |
 | Removing a partner is guarded, logged, and tells them | 🧪 | |
 | Exclude apps from reports | ❌ | EA has it. |
-| Screenshot to partner, owner-sent and blurred (level B, D-025) | 🧪 | Review → "Send blurred to partners…"; ≤ 24 px thumbnail, sealed. Automatic sending (level C) ❌. |
+| Screenshot to partner, owner-sent and blurred (level B, D-025) | 🧪 | Review → "Send blurred to partners…"; ≤ 48 px thumbnail, one blur (was 24 px until 2026-11-24, unreleased), sealed. Automatic sending (level C) ❌. |
 
 ## What's weak (read before trusting anything)
 

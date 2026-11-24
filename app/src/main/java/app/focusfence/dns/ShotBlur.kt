@@ -3,13 +3,15 @@ package app.focusfence.dns
 /**
  * The only form in which a screenshot ever leaves the phone (Phase 2, level B; decided 2026-11-23: a partner never
  * receives a clear image of explicit content, whoever chooses to send it). The picture is area-averaged down to at
- * most [MAX_EDGE] pixels on its long edge and then box-blurred, so what travels is a few hundred colour patches:
- * enough to show "a photo app, mostly skin tones" or "a chat screen", never enough to recognise a body or a face.
+ * most [MAX_EDGE] pixels on its long edge and then box-blurred once, so what travels is about a thousand colour
+ * patches: enough to show the shape of what was on screen ("a chat screen", "a photo, mostly skin"), never enough to
+ * recognise a body or a face. Raised from 24 px and two blurs on 2026-11-24 (D-025): that showed colours only, too
+ * little for a partner to judge a flag. 96 px unblurred was compared and rejected as too close to a clear image.
  * Sent as raw RGB, not JPEG, so the partner's browser paints pixels onto a canvas and needs no image decoder (and the
  * report page's CSP stays without img-src). Pure, so the size ceiling is unit-tested.
  */
 object ShotBlur {
-    const val MAX_EDGE = 24
+    const val MAX_EDGE = 48
 
     class Thumb(val w: Int, val h: Int, val rgb: ByteArray)
 
@@ -33,7 +35,7 @@ object ShotBlur {
             }
         }
         var px = Array(3) { ch -> IntArray(tw * th) { i -> if (n[i] == 0L) 0 else (sum[ch][i] / n[i]).toInt() } }
-        repeat(2) { px = Array(3) { ch -> boxBlur(px[ch], tw, th) } }
+        px = Array(3) { ch -> boxBlur(px[ch], tw, th) }
         val out = ByteArray(tw * th * 3)
         for (i in 0 until tw * th) for (ch in 0 until 3) out[i * 3 + ch] = px[ch][i].toByte()
         return Thumb(tw, th, out)

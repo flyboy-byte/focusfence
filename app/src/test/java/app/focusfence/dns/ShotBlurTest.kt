@@ -8,10 +8,10 @@ class ShotBlurTest {
     private fun solid(w: Int, h: Int, c: Int) = IntArray(w * h) { c }
 
     @Test
-    fun aPhoneScreenshotBecomesAtMost24PixelsOnItsLongEdge() {
+    fun aPhoneScreenshotBecomesAtMost48PixelsOnItsLongEdge() {
         val t = ShotBlur.thumbnail(solid(720, 1600, 0xff112233.toInt()), 720, 1600)
-        assertEquals(24, t.h)
-        assertEquals(11, t.w)
+        assertEquals(48, t.h)
+        assertEquals(22, t.w)
         assertEquals(t.w * t.h * 3, t.rgb.size)
     }
 
