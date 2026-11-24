@@ -30,6 +30,8 @@ class Digest(private val fromT: Long) {
     private var missing = 0L
     private var offSince = -1L
     private var offMs = 0L
+    /** Times the network went bad (degraded / upstream down): one count, not a line each. */
+    private var networkTrouble = 0L
     private var lastT = fromT
 
     fun add(f: Map<String, Any?>) {
@@ -101,7 +103,11 @@ class Digest(private val fromT: Long) {
                         "revoked", "destroyed", "establish_failed" -> if (offSince < 0) offSince = t
                     }
                 }
-                alertText(f)?.let { events += it }
+                if (f["comp"] == "vpn" && f["state"] == "health" && healthNow(f) in NETWORK_HEALTH) {
+                    networkTrouble++
+                } else {
+                    alertText(f)?.let { events += it }
+                }
             }
             LogEvents.TYPE_INTEGRITY -> alertText(f)?.let { events += it }
         }
@@ -117,6 +123,7 @@ class Digest(private val fromT: Long) {
             "to" to toT,
             "off_min" to (offMs + stillOff) / 60_000,
             "missing" to missing,
+            "net_trouble" to networkTrouble,
             "seq_first" to firstSeq,
             "seq_last" to lastSeq,
             "events" to events.takeLast(MAX_EVENTS).joinToString("\n"),
@@ -169,6 +176,8 @@ class Digest(private val fromT: Long) {
         fun urgentText(f: Map<String, Any?>): String? = alertText(f)?.takeIf { isUrgent(f) }
 
         private val NETWORK_HEALTH = setOf("degraded", "upstream_down")
+
+        private fun healthNow(f: Map<String, Any?>): String = (f["detail"] as? String).orEmpty().substringBefore(',')
 
         /** Compares "2.11.0-accountable"-style versions by their numeric parts; unparseable counts as equal. */
         fun compareVersions(a: String, b: String): Int {
@@ -262,6 +271,8 @@ class Digest(private val fromT: Long) {
             append("${formatTime(d["from"] as? Long ?: 0)} – ${formatTime(d["to"] as? Long ?: 0)}\n\n")
             append(if (off == 0L) "Protection: on the whole time\n" else "Protection: OFF for $off min\n")
             if (missing > 0) append("⚠ $missing records missing from the log (deleted or lost)\n")
+            val net = d["net_trouble"] as? Long ?: 0L
+            if (net > 0) append("Bad network $net times (the connection, not the filter)\n")
             val events = (d["events"] as? String).orEmpty().lines().filter { it.isNotBlank() }
             if (events.isNotEmpty()) {
                 append("\nChanges:\n")

@@ -14,6 +14,8 @@ package app.focusfence.dns
  *  - [State.UPSTREAM_DOWN]: a run of relays all failed while the phone is online,
  *    so allowed sites don't load.
  *  - [State.DEGRADED]: a high failure share over the recent window (slow/flaky).
+ *    It turns on at [degradedRate] but only clears below [clearRate]: a connection hovering around one
+ *    threshold flipped ok/degraded dozens of times an evening (2026-11-21 export: 33 records in a day).
  *  - [State.LOCKDOWN]: Android's "Block connections without VPN" is on. Our
  *    tunnel carries only DNS, so lockdown drops all other traffic — the phone
  *    has no internet at all while the VPN runs. Worst case, checked first.
@@ -23,6 +25,7 @@ class VpnHealth(
     private val window: Int = 40,
     private val minSamples: Int = 20,
     private val degradedRate: Double = 0.25,
+    private val clearRate: Double = 0.10,
     private val downStreak: Int = 6,
     private val silenceMillis: Long = 10 * 60_000L,
 ) {
@@ -45,12 +48,15 @@ class VpnHealth(
     private var screenOnSince = 0L
     private var screenOn = true
     private var startedAt = 0L
+    /** Last evaluation said the network was bad (degraded or upstream down); selects the clear threshold. */
+    private var networkBad = false
 
     @Synchronized
     fun reset(now: Long, screenOn: Boolean) {
         count = 0
         next = 0
         failStreak = 0
+        networkBad = false
         lastQueryAt = 0L
         startedAt = now
         this.screenOn = screenOn
@@ -92,18 +98,26 @@ class VpnHealth(
     fun evaluate(now: Long, lockdown: Boolean, privateDnsStrict: Boolean, online: () -> Boolean): State {
         if (lockdown) return State.LOCKDOWN
         if (privateDnsStrict) return State.BYPASSED
-        val (silent, down, rate) = synchronized(this) {
+        val (silent, down, rate, wasBad) = synchronized(this) {
             val quietSince = maxOf(lastQueryAt, screenOnSince, startedAt)
-            Triple(
+            Quad(
                 screenOn && now - quietSince >= silenceMillis,
                 failStreak >= downStreak,
                 failureRate(),
+                networkBad,
             )
         }
         if (silent) return State.SILENT
-        val degraded = rate != null && rate >= degradedRate
-        if (!down && !degraded) return State.OK
-        if (!online()) return State.OFFLINE
-        return if (down) State.UPSTREAM_DOWN else State.DEGRADED
+        val degraded = rate != null && rate >= (if (wasBad) clearRate else degradedRate)
+        val state = when {
+            !down && !degraded -> State.OK
+            !online() -> State.OFFLINE
+            down -> State.UPSTREAM_DOWN
+            else -> State.DEGRADED
+        }
+        synchronized(this) { networkBad = state == State.DEGRADED || state == State.UPSTREAM_DOWN }
+        return state
     }
+
+    private data class Quad(val silent: Boolean, val down: Boolean, val rate: Double?, val wasBad: Boolean)
 }
