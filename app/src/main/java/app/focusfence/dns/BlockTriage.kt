@@ -21,6 +21,9 @@ object BlockTriage {
 
     private val FRONT_DOOR = listOf("www.", "m.", "mobile.")
 
+    /** Second-level labels under a country code that make a three-label registrable name (example.co.uk). */
+    private val SECOND_LEVEL = setOf("co", "com", "net", "org", "ac", "gov", "edu", "or", "ne", "go", "gob", "gv", "ltd", "plc")
+
     /**
      * The site a category-blocked lookup is the front door of, or null for anything deeper (`cdn.`, `api.`, tracking
      * pixels): those are page parts or background traffic, not a person opening the site. Category lists carry no
@@ -28,16 +31,20 @@ object BlockTriage {
      */
     fun frontDoorSite(qname: String): String? {
         val host = qname.trimEnd('.').lowercase()
-        val bare = FRONT_DOOR.firstOrNull { host.startsWith(it) }?.let { host.removePrefix(it) } ?: host
-        val labels = bare.split('.')
-        if (labels.any { it.isEmpty() }) return null
-        val registrable = when {
-            labels.size == 2 -> true
-            // example.co.uk, example.com.au: a short second-level under a two-letter country code.
-            labels.size == 3 -> labels[2].length == 2 && labels[1].length <= 3
+        if (isRegistrable(host)) return host // mobile.de, m.tv: the prefix is the name itself
+        val bare = FRONT_DOOR.firstOrNull { host.startsWith(it) }?.let { host.removePrefix(it) } ?: return null
+        return if (isRegistrable(bare)) bare else null
+    }
+
+    private fun isRegistrable(name: String): Boolean {
+        val labels = name.split('.')
+        if (labels.any { it.isEmpty() }) return false
+        return when (labels.size) {
+            2 -> true
+            // example.co.uk, example.com.au; not cdn.bet.io, where "bet" is the site and "cdn" a part of it.
+            3 -> labels[2].length == 2 && labels[1] in SECOND_LEVEL
             else -> false
         }
-        return if (registrable) bare else null
     }
 
     /**
@@ -48,13 +55,23 @@ object BlockTriage {
         private val count: Int = 3,
         private val windowMs: Long = 10 * 60_000L,
         private val quietMs: Long = 60 * 60_000L,
+        /** One site counts once per this long: a tab left open re-resolves after the 60 s block TTL. */
+        private val siteGapMs: Long = 5 * 60_000L,
     ) {
         private val hits = HashMap<String, ArrayDeque<Long>>()
         private val lastFired = HashMap<String, Long>()
+        private val lastSite = HashMap<String, Long>()
 
-        /** Records one notice; returns how many hits are in the window when partners should be told now, else null. */
+        /**
+         * Records one confirmed notice for [site]; returns how many tries are in the window when partners should be
+         * told now, else null. The same site again within [siteGapMs] is the same try, not a new one.
+         */
         @Synchronized
-        fun hit(category: String, now: Long): Int? {
+        fun hit(category: String, site: String, now: Long): Int? {
+            val prevSite = lastSite[site]
+            if (prevSite != null && now - prevSite in 0 until siteGapMs) return null
+            lastSite[site] = now
+            if (lastSite.size > 256) lastSite.entries.removeIf { now - it.value >= siteGapMs }
             val q = hits.getOrPut(category) { ArrayDeque() }
             q.addLast(now)
             while (q.isNotEmpty() && (now - q.first() >= windowMs || now < q.first())) q.removeFirst()

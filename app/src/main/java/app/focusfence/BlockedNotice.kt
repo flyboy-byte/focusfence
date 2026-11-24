@@ -59,9 +59,9 @@ object BlockedNotice {
     }
 
     /** The address bar confirmed a high-risk site was opened. Tells partners if it keeps happening. */
-    fun onConfirmedHighRisk(context: Context, category: String) {
+    fun onConfirmedHighRisk(context: Context, site: String, category: String) {
         val now = System.currentTimeMillis()
-        val n = escalation.hit(category, now) ?: return
+        val n = escalation.hit(category, site, now) ?: return
         EventLog.activity(LogEvents.service(now, "block", "repeated", "cat=$category,n=$n"), urgent = true)
         app.focusfence.sync.Sync.kick(context)
     }

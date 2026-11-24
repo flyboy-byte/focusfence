@@ -219,7 +219,10 @@ class Digest(private val fromT: Long) {
                 }
                 comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection being removed"
                 comp == "admin" && state == "admin_enabled" -> "Uninstall protection turned on"
+                comp == "admin" && state == "legacy_cleared" -> null // housekeeping after D-028, not a change
                 comp == "admin" -> "Managed mode: $state" + detail(f)
+                comp == "block" && state == "partner_alerts_off" -> "Turned off partner alerts for repeated blocked tries"
+                comp == "block" && state == "partner_alerts_on" -> "Turned partner alerts for repeated blocked tries back on"
                 comp == "block" && state == "repeated" -> {
                     val d = (f["detail"] as? String).orEmpty()
                     val cat = d.substringAfter("cat=", "").substringBefore(',')

@@ -421,7 +421,7 @@ class UrlFilterService : AccessibilityService() {
                 LogEvents.enforce(System.currentTimeMillis(), action, pkg, parts.first, parts.second)
             )
         }
-        if (tellPartner && category != null) BlockedNotice.onConfirmedHighRisk(this, category)
+        if (tellPartner && category != null) BlockedNotice.onConfirmedHighRisk(this, domain, category)
     }
 
     private fun openBlockedScreen(domain: String, category: String? = null) {

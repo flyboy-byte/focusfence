@@ -33,6 +33,14 @@ object StrictStore {
         app.focusfence.sync.Sync.kick(context)
     }
 
+    /** An urgent `svc` record for another component, synced right away (same path as strict-mode changes). */
+    fun noteComponent(context: Context, comp: String, state: String, detail: String? = null) {
+        app.focusfence.data.EventLog.activity(
+            app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), comp, state, detail), urgent = true,
+        )
+        app.focusfence.sync.Sync.kick(context)
+    }
+
     fun setEnabled(context: Context, enabled: Boolean) {
         if (enabled != isEnabled(context)) note(context, if (enabled) "enabled" else "disabled")
         app.focusfence.UnlockReadyReceiver.cancel(context)

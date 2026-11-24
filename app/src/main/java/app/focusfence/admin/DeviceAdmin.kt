@@ -38,12 +38,19 @@ object DeviceAdmin {
             .onFailure { Log.w(TAG, "removeActiveAdmin failed", it) }
     }
 
-    /** Leaves device ownership set up by an older version, clearing everything it may have set. Never bricks. */
-    fun relinquish(context: Context): Boolean {
-        val dpm = dpm(context) ?: return false
-        if (!dpm.isDeviceOwnerApp(context.packageName)) return false
+    private const val KEY_LEGACY_CLEANED = "legacy_owner_cleaned"
+    private const val KEY_OLD_SUSPENDED = "suspended_packages"
+
+    /**
+     * Undoes every policy the old managed mode could have left behind (stuck strict Private DNS, an always-on VPN that
+     * brings the tunnel straight back, locked settings, suspended apps, network logging). Device ownership itself is
+     * kept: leaving it is the owner's choice on the Uninstall protection screen. Safe to call repeatedly.
+     */
+    fun clearLegacyPolicies(context: Context) {
+        val dpm = dpm(context) ?: return
+        if (!dpm.isDeviceOwnerApp(context.packageName)) return
         val admin = component(context)
-        return try {
+        try {
             runCatching { dpm.setNetworkLoggingEnabled(admin, false) }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching { dpm.setGlobalPrivateDnsModeOpportunistic(admin) }
             runCatching { dpm.setAlwaysOnVpnPackage(admin, null, false) }
@@ -51,6 +58,30 @@ object DeviceAdmin {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 runCatching { dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_PRIVATE_DNS) }
             }
+            val prefs = app.focusfence.data.BlocklistStore.prefs(context)
+            val suspended = prefs.getStringSet(KEY_OLD_SUSPENDED, emptySet()).orEmpty()
+            if (suspended.isNotEmpty()) runCatching { dpm.setPackagesSuspended(admin, suspended.toTypedArray(), false) }
+            prefs.edit().remove(KEY_OLD_SUSPENDED).apply()
+        } catch (e: SecurityException) {
+            Log.w(TAG, "legacy policy cleanup refused", e)
+        }
+    }
+
+    /** Once per install, on a phone an older version made device owner. */
+    fun clearLegacyPoliciesOnce(context: Context) {
+        val prefs = app.focusfence.data.BlocklistStore.prefs(context)
+        if (prefs.getBoolean(KEY_LEGACY_CLEANED, false) || !isDeviceOwner(context)) return
+        clearLegacyPolicies(context)
+        EventLog.activity(LogEvents.service(System.currentTimeMillis(), "admin", "legacy_cleared"), urgent = true)
+        prefs.edit().putBoolean(KEY_LEGACY_CLEANED, true).apply()
+    }
+
+    /** Leaves device ownership set up by an older version, clearing everything it may have set. Never bricks. */
+    fun relinquish(context: Context): Boolean {
+        val dpm = dpm(context) ?: return false
+        if (!dpm.isDeviceOwnerApp(context.packageName)) return false
+        return try {
+            clearLegacyPolicies(context)
             EventLog.activity(LogEvents.service(System.currentTimeMillis(), "admin", "relinquish", "device_owner"), urgent = true)
             dpm.clearDeviceOwnerApp(context.packageName)
             true

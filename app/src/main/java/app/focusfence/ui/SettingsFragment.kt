@@ -77,10 +77,13 @@ class SettingsFragment : Fragment() {
             val ctx = requireContext()
             if (binding.blockPartnerSwitch.isChecked) {
                 BlockScreenSettings.setPartnerRepeated(ctx, true)
+                app.focusfence.data.StrictStore.noteComponent(ctx, "block", "partner_alerts_on")
             } else {
                 binding.blockPartnerSwitch.isChecked = true // revert until the guard is satisfied
                 UiUtil.guard(ctx, app.focusfence.dns.GuardPolicy.Action.QUIET_BLOCK_ALERTS) {
                     BlockScreenSettings.setPartnerRepeated(ctx, false)
+                    // A partner relies on this alert, so switching it off is itself something they hear about.
+                    app.focusfence.data.StrictStore.noteComponent(ctx, "block", "partner_alerts_off")
                     _binding?.blockPartnerSwitch?.isChecked = false
                 }
             }
