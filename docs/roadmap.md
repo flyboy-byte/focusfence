@@ -117,9 +117,12 @@ anything that could involve a minor), and a false flag never sends an innocent p
 
 ## Phase 4 — Design and README
 
-- [ ] **Design pass, screen by screen**, from your screenshots: Settings (≈26 controls → grouped cards: Filtering,
-  Accountability, Monitoring, Privacy, Advanced), Home, Monitoring, Group, partner report in the app, the block
-  screen. One PR per screen; each shows before/after screenshots.
+- [x] ~~**Structure pass**~~ — DONE 2026-11-23 (#29, #35, #32, #33, #34; 2.12.0): five tabs, Settings in four groups,
+  Categories on Blocking, one Guide, Partners folds the server card; Classic layout switch for rollback. Not yet
+  seen on a device; screenshots from Logan's phone decide the next round.
+- [ ] **Look-and-feel pass, screen by screen**, from those screenshots: Home, Partners (Group and the in-app partner
+  report are still their own screens), Monitoring (Review is still its own screen), the block screen. One PR per
+  screen. Remove the Classic layout switch once the new layout has held for a release or two.
 - [ ] **"Recent flags"** and **report exclusions** (sites you never want in a report), if still wanted after the pass.
 - [ ] **README** with the `readme` skill: what it is in one screen, the optional layers, install, run-your-own-server,
   honest limits, links to privacy and decisions.

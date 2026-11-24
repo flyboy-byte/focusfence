@@ -2,13 +2,15 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
-> **D-023 (on branch `feat/e2e-email-partner`, 2026-11-23):** the server no longer receives or stores activity records; email/web partner reports are sealed on the phone and opened in the partner's browser. 🧪 tests + a Node/WebCrypto cross-check only; not on a phone, not deployed. Needs an app release (2.11) and a server deploy together.
+> **2.12.0 (2026-11-23, main) = 2.11.0 plus:** a **five-tab layout** (Home · Blocking · Partners · Monitoring · Settings; Settings → **Classic layout** brings the old four tabs back on the phone, no release needed), Settings in four groups, a Categories card on Blocking, one Guide (setup checklist + how it works; first run ends there), Partners folds the server fields once connected; **strict-mode changes alert partners** (request, wait ended, unlocked by code, turned off); **owner-sent blurred screenshots** (Review → "Send blurred to partners…", ≤ 24 px thumbnail, sealed; D-025). Tests + lint green; 🧪 none of the UI seen on a device (no emulator here); 📱 Logan checks on his phone.
+
+> **D-023 is live (2026-11-23):** server deployed from main at ac68738 (sealed reports, admin audit A1–A7 + S1–S3); 2.11.0 released. The old readable records were purged at startup. Earlier email partners need **Resend key link** to read the new reports.
 
 > **2.10.0 (code 31, 2026-11-23)** = 2.9.2 plus: DNS resolvers race in Automatic mode (`dns/Hedged`, 0.6 s, bounded pool) after a morning of 3-7 s p95 lookups, `net` diag record (link, roaming, signal), Setup screen as cards, About row (button hidden if no URL; pages served at `https://ff.flyboybyte.com/about/`), screenshot wording corrected (images never leave the phone), a paired partner's code can skip the strict wait (wait always offered), two unguarded API-29 device-owner calls fixed (lint). Tests + lint green; 🧪 none of it seen on a phone yet.
 
 > **Block notice (2026-11-23, on main after 2.10.0):** when a site blocked by a user rule is opened, Focus Fence says so. Settings → Filtering → "When a site is blocked": a notification (default), the full-screen "Blocked by Focus Fence" page (`BlockedActivity`; section rules use it too instead of the toast), or nothing. With the accessibility service on, it first confirms the browser's address bar shows that site; without it, only the notification, rate-limited per domain. Logic in `dns/BlockScreen` with tests. 🧪 not yet seen on a phone.
 
-> Screenshots never leave the phone today (checked 2026-11-23): only scores/labels reach the log and server. A flagged image is kept on the phone only if a partner key is pasted at Monitoring. Upload to partners is unbuilt; privacy page and strings now say so.
+> Screenshots: automatic capture never sends an image. Since 2.12 the owner can choose to send a **blurred** (≤ 24 px) thumbnail of a flagged shot to email/web partners (D-025, Phase 2 level B); a clear image never leaves the phone. Level C (automatic blurred sending) waits on Phase 7's false-flag work.
 
 _Last updated: 2026-11-23. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
