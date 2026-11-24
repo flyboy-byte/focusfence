@@ -78,10 +78,10 @@
   }
 
   function merge(digests) {
-    var m = { off: 0, missing: 0, lookups: 0, blocked: 0, enforce: 0, flagged: 0, events: [],
+    var m = { off: 0, missing: 0, net: 0, lookups: 0, blocked: 0, enforce: 0, flagged: 0, events: [],
       lists: { cats: {}, cat_hosts: {}, apps_min: {}, sites: {}, top_blocked: {} }, from: null, to: null };
     digests.sort(function (a, b) { return (a.from || 0) - (b.from || 0); }).forEach(function (d) {
-      m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.lookups += +d.lookups || 0;
+      m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
       m.blocked += +d.blocked || 0; m.enforce += +d.enforce || 0; m.flagged += +d.flagged_shots || 0;
       String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push(e); });
       for (var k in m.lists) addInto(m.lists[k], d[k]);
@@ -128,6 +128,11 @@
     var out = [];
     out.push(m.off === 0 ? el('p', 'Protection was on the whole time.', 'ok') : el('p', 'Protection was OFF for ' + m.off + ' minutes.', 'bad'));
     if (m.missing > 0) out.push(el('p', m.missing + ' records are missing from the log (deleted or lost).', 'bad'));
+    // Network blips used to be one line each (and 2.13 phones still send them that way): count them instead.
+    var NET = /^Filter problem: (degraded|upstream_down)$/;
+    m.net += m.events.filter(function (e) { return NET.test(e); }).length;
+    m.events = m.events.filter(function (e) { return !NET.test(e); });
+    if (m.net > 0) out.push(el('p', 'Bad network ' + m.net + (m.net === 1 ? ' time' : ' times') + '. That is the phone\u2019s connection, not the filter being off.', 'muted'));
     if (m.events.length) {
       out.push(el('p', 'Changes:'));
       var ul = el('ul');

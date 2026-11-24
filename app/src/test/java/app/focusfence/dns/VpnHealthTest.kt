@@ -80,6 +80,25 @@ class VpnHealthTest {
     }
 
     @Test
+    fun degradedStaysOnUntilFailuresDropWellBelowTheTrigger() {
+        val h = fresh()
+        h.recordQuery(1_000)
+        // 30% failures: degraded.
+        repeat(10) { h.recordForward(false); h.recordForward(true); h.recordForward(true) }
+        assertEquals(VpnHealth.State.DEGRADED, h.evaluate(2_000, false, false, online))
+        // Hovering at 20%: under the 25% trigger, but still bad, so no flip back to ok.
+        repeat(8) { h.recordForward(false); repeat(4) { h.recordForward(true) } }
+        assertEquals(0.20, h.failureRate()!!, 0.01)
+        assertEquals(VpnHealth.State.DEGRADED, h.evaluate(3_000, false, false, online))
+        // Clean again: ok.
+        repeat(40) { h.recordForward(true) }
+        assertEquals(VpnHealth.State.OK, h.evaluate(4_000, false, false, online))
+        // And from ok, 20% is not enough to go degraded.
+        repeat(8) { h.recordForward(false); repeat(4) { h.recordForward(true) } }
+        assertEquals(VpnHealth.State.OK, h.evaluate(5_000, false, false, online))
+    }
+
+    @Test
     fun rateNeedsEnoughSamples() {
         val h = fresh()
         repeat(5) { h.recordForward(false); h.recordForward(true) }

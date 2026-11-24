@@ -134,4 +134,20 @@ class DigestTest {
         assertTrue(hosts.toString(), "bet.example [gambling] (browser)" in hosts)
         assertTrue(hosts.toString(), "x.example [adult,scam] (on screen)" in hosts)
     }
+
+    @Test
+    fun networkBlipsAreOneCountNotALineEach() {
+        val d = Digest(0)
+        var seq = 1L
+        repeat(5) {
+            d.add(rec(seq++, 10L * seq, "type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "degraded,fail_pct=27,was=ok"))
+            d.add(rec(seq++, 10L * seq, "type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "ok,fail_pct=8,was=degraded"))
+        }
+        d.add(rec(seq++, 10L * seq, "type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "upstream_down,was=ok"))
+        d.add(rec(seq++, 10L * seq, "type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "bypassed,was=ok"))
+        val m = d.build(10_000)
+        assertEquals(6L, m["net_trouble"])
+        assertEquals("Filter problem: bypassed", m["events"])
+        assertTrue(Digest.render(m) { it.toString() }.contains("Bad network 6 times"))
+    }
 }
