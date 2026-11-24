@@ -100,16 +100,16 @@
     return [el('h2', title), t];
   }
 
-  // Phase 2 level B: a shot the owner chose to share, already blurred to a few hundred pixels on the phone. Painted as
+  // Phase 2 level B: a shot the owner chose to share, already blurred to at most 48 px on the phone. Painted as
   // raw pixels on a canvas (no image decoder, no img-src), and refused if larger than the phone's ceiling.
-  var SHOT_MAX = 24;
+  var SHOT_MAX = 48;
   function shotNode(s) {
     var w = +s.w, h = +s.h, raw;
     if (!(w >= 1 && h >= 1 && w <= SHOT_MAX && h <= SHOT_MAX)) return null;
     try { raw = atob(String(s.rgb || '')); } catch (e) { return null; }
     if (raw.length !== w * h * 3) return null;
     var c = el('canvas'); c.width = w; c.height = h;
-    c.style.width = '160px'; c.style.height = Math.round(160 * h / w) + 'px'; c.style.borderRadius = '8px';
+    c.style.width = '200px'; c.style.height = Math.round(200 * h / w) + 'px'; c.style.borderRadius = '8px';
     var ctx = c.getContext('2d'), img = ctx.createImageData(w, h);
     for (var i = 0; i < w * h; i++) {
       img.data[i * 4] = raw.charCodeAt(i * 3); img.data[i * 4 + 1] = raw.charCodeAt(i * 3 + 1);

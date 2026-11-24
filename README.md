@@ -54,7 +54,7 @@ one does and costs.
 | 🧪 | Encrypted partner reports in the browser |
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
 | 🧪 | App-to-app partners and groups of up to four |
-| 🧪 | Sending a partner a heavily blurred screenshot (24 px wide at most) |
+| 🧪 | Sending a partner a heavily blurred screenshot (48 px at most) |
 | 🧪 | Uninstall protection and device-owner mode |
 | ❌ | Automatic screenshot sending, hiding apps from reports, partner logins |
 
