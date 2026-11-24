@@ -34,6 +34,8 @@ object RuleEvaluator {
         // Section rules must stay resolvable so the allowed paths work; the
         // accessibility URL filter enforces them in the browser instead.
         if (rule.hasPathExceptions) return false
+        // A rule on a parent domain never takes down shared phone infrastructure (push, time, connectivity; #18).
+        if (qname != rule.domain && Blocklist.isInfrastructure(qname)) return false
         if (rule.hasCommitment) return now.epochMillis < rule.commitUntilEpochMillis
         if (rule.hasBudget) {
             // Budgets track and enforce only the site's user-facing hostnames;
