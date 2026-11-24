@@ -620,4 +620,28 @@
     <string name="home_detail_partner_waiting">%1$s · partner not synced yet</string>
     <string name="home_detail_partner_synced">%1$s · partner synced %2$s</string>
     <string name="monitor_counts">%1$s screens checked · %2$s flagged</string>
+
+    <!-- Self-update -->
+    <string name="update_channel">App updates</string>
+    <string name="update_available_title">Focus Fence AC %1$s is out</string>
+    <string name="update_available_text">Tap to update</string>
+    <string name="update_title">Update</string>
+    <string name="update_body">Version %1$s is available. You have %2$s.</string>
+    <string name="update_install">Download and install</string>
+    <string name="update_notes">What\'s new</string>
+    <string name="update_allow_installs">Allow Focus Fence to install updates, then come back and tap again.</string>
+    <string name="update_downloading">Downloading…</string>
+    <string name="update_installing">Android will ask you to confirm.</string>
+    <string name="update_failed_download">Download failed. Check your connection and try again.</string>
+    <string name="update_failed_source">That download isn\'t from this app\'s releases, so it was skipped.</string>
+    <string name="update_failed_invalid">The download isn\'t a Focus Fence AC update.</string>
+    <string name="update_failed_not_newer">The download isn\'t newer than what you have.</string>
+    <string name="update_failed_signer">The download is signed with a different key, so it wasn\'t installed.</string>
+    <string name="update_failed_install">Update failed: %1$s</string>
+    <string name="update_check_switch">Check for updates</string>
+    <string name="update_check_summary">Once a day the app asks GitHub for the latest release and tells you if there\'s a new one. Nothing installs without you.</string>
+    <string name="update_check_now">Check now</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_none">You have the latest version.</string>
+    <string name="update_check_failed">Couldn\'t reach GitHub. Try again later.</string>
 </resources>

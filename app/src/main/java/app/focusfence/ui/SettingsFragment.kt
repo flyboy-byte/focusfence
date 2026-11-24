@@ -100,6 +100,9 @@ class SettingsFragment : Fragment() {
             startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
         }
         binding.aboutButton.setOnClickListener { showAbout() }
+        binding.updateSwitch.isChecked = app.focusfence.update.Updates.isEnabled(requireContext())
+        binding.updateSwitch.setOnCheckedChangeListener { _, on -> app.focusfence.update.Updates.setEnabled(requireContext(), on) }
+        binding.updateCheckButton.setOnClickListener { checkForUpdate() }
         // Partners and Monitoring are tabs of their own in the five-tab layout; these buttons are the classic way in.
         val classic = app.focusfence.data.UiPrefs.classic(requireContext())
         binding.cardPartners.visibility = if (classic) View.VISIBLE else View.GONE
@@ -265,6 +268,26 @@ class SettingsFragment : Fragment() {
     }
 
     /** Short summary that works offline, then an optional hop to the site in the browser (no web view, no network from the app). */
+    private fun checkForUpdate() {
+        val ctx = requireContext().applicationContext
+        binding.updateCheckButton.isEnabled = false
+        binding.updateCheckButton.setText(R.string.update_checking)
+        Thread {
+            val result = runCatching { app.focusfence.update.Updates.fetchOffer(ctx) }
+            activity?.runOnUiThread {
+                if (_binding == null) return@runOnUiThread
+                binding.updateCheckButton.isEnabled = true
+                binding.updateCheckButton.setText(R.string.update_check_now)
+                val offer = result.getOrNull()
+                when {
+                    offer != null -> startActivity(app.focusfence.update.UpdateActivity.intent(ctx, offer))
+                    result.isSuccess -> Toast.makeText(ctx, R.string.update_none, Toast.LENGTH_SHORT).show()
+                    else -> Toast.makeText(ctx, R.string.update_check_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
+    }
+
     private fun showAbout() {
         val url = getString(R.string.about_url)
         val b = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())

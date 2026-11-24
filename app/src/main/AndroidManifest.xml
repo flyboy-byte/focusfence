@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Self-update: the owner taps the update notification and Android's installer still confirms. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Restart the filter after a reboot if the owner had it on (vpn/AutoStartReceiver). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Foreground-app timeline for the activity log. A special-access
@@ -138,6 +140,14 @@
 
         <receiver
             android:name=".UnlockReadyReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".update.UpdateActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <receiver
+            android:name=".update.InstallResultReceiver"
             android:exported="false" />
 
         <receiver
