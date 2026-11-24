@@ -288,16 +288,7 @@ branch.
 
 # Open — decided before the first release
 
-## O-002 — Signing key custody
-
-Blocks the first release (`docs/infrastructure.md` R2), and it is a **one-way door**: the key becomes the app's
-permanent identity. Signing a later update with a different key forces every user to uninstall
-and reinstall, losing their rules.
-
-To settle: who generates and holds the keystore; whether both of us hold a copy; where the backup
-lives; and whether CI signs from a GitHub Actions secret or releases are signed by hand.
-
-Worth settling now — losing this key later is unrecoverable.
+## ~~O-002 — Signing key custody~~ — resolved by D-021 (2026-11-23)
 
 ## O-003 — Whether an allowlist overrides user rules
 
