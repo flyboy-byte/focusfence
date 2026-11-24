@@ -340,6 +340,9 @@
     <string name="home_log_value">View, export, battery and health</string>
     <string name="settings_group_accountability">Accountability</string>
     <string name="settings_group_filtering">Filtering</string>
+    <string name="settings_group_protection">Protection</string>
+    <string name="settings_group_advanced">Advanced</string>
+    <string name="settings_group_about">About</string>
 
     <!-- Filter health / VPN error detection -->
     <string name="alert_channel_name">Protection problems</string>
