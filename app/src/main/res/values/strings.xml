@@ -343,6 +343,7 @@
     <string name="settings_group_protection">Protection</string>
     <string name="settings_group_advanced">Advanced</string>
     <string name="settings_group_about">About</string>
+    <string name="acc_change_server">Change server…</string>
     <string name="categories_card_summary">Baseline: %1$s · %2$d groups on. Tap to change.</string>
 
     <!-- Filter health / VPN error detection -->
