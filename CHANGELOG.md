@@ -6,6 +6,23 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Added
+- **ui:** one guide: setup checklist plus how-it-works, first run ends there (`d064e9f`, [#34](https://github.com/sidewinderzz/focusfence/pull/34))
+- **ui:** logs reachable from Monitoring; Partners folds the server fields once connected (`807b7f4`, [#33](https://github.com/sidewinderzz/focusfence/pull/33))
+- **ui:** categories card on the Blocking tab (`46c7ae5`, [#32](https://github.com/sidewinderzz/focusfence/pull/32))
+- **ui:** Settings in four groups (Protection, Filtering, Advanced, About) (`019da50`, [#35](https://github.com/sidewinderzz/focusfence/pull/35))
+- **ui:** five-tab layout (Home, Blocking, Partners, Monitoring, Settings) with a Classic layout switch (`933523f`, [#29](https://github.com/sidewinderzz/focusfence/pull/29))
+- send a blurred screenshot to partners (Phase 2 level B, D-025) (`2a73cf1`, [#28](https://github.com/sidewinderzz/focusfence/pull/28))
+### Fixed
+- **strict:** log every strict-mode change and send it to partners (`457b1fe`, [#27](https://github.com/sidewinderzz/focusfence/pull/27))
+### Docs
+- STATE, HANDOFF, CLAUDE.md UI section and roadmap after the 2.12 redesign (`11996e2`, [#36](https://github.com/sidewinderzz/focusfence/pull/36))
+- roadmap Phase 7, a screenshot AI that learns from your Review answers (`59eedd5`, [#30](https://github.com/sidewinderzz/focusfence/pull/30))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.11.0-accountable
+
 ### Fixed
 - **server:** admin audit pass 5 (A1-A7) (`758de46`, [#25](https://github.com/sidewinderzz/focusfence/pull/25))
 - **dns:** a parent-domain rule never blocks push, time or connectivity hosts (#18) (`fcb5f05`, [#22](https://github.com/sidewinderzz/focusfence/pull/22))
@@ -26,6 +43,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - D-024 triaged block notifications; park a browser block page (P-006, needs a CA) (`bf6957d`, [#24](https://github.com/sidewinderzz/focusfence/pull/24))
 - roadmap (phases 0-6) and a HANDOFF rewritten for main (`975fb54`, [#20](https://github.com/sidewinderzz/focusfence/pull/20))
 ### Maintenance
+- release 2.11.0 (`ac68738`, [#26](https://github.com/sidewinderzz/focusfence/pull/26))
 - generated changelog (tools/changelog.py), backfilled from every release tag; release PR steps in AGENTS (`857f3c0`, [#23](https://github.com/sidewinderzz/focusfence/pull/23))
 - PR awareness guide for people and agents (template, AGENTS section; nothing enforced) (`3874189`, [#21](https://github.com/sidewinderzz/focusfence/pull/21))
 
