@@ -1,7 +1,8 @@
 # Going public: audit and checklist
 
-_Audit run 2026-11-24 by Claude for @flyboy-byte, before switching `sidewinderzz/focusfence` from private to public.
-Code and docs were changed in PRs #40, #41 and this one; repo settings and the history decision are @sidewinderzz's.
+_Audit run 2026-11-24 by Claude for @flyboy-byte, before switching the repo from private to public. Code and docs were
+changed in PRs #40–#45. @sidewinderzz transferred the repo to @flyboy-byte the same day (now `flyboy-byte/focusfence`).
+**Outcome (D-027): made public as is**, history unchanged._
 Box-specific details are deliberately not in this file._
 
 ## Findings
@@ -23,38 +24,27 @@ Box-specific details are deliberately not in this file._
 | **README and About** | ❌ README described only the original blocker; About and topics empty | README rewritten (#41); About text below. |
 | **Security contact** | ❌ none | `SECURITY.md` added (this PR). |
 
-## The history decision (yours, @sidewinderzz)
+## The history decision
 
-The current files are clean, but older commits still contain the server details and the personal address. Options:
-
-1. **New public repo from a scrubbed history (recommended).** A verified dry run exists: every commit on `main` and
-   all `v*` tags, with the old deploy plan replaced by the generic one, names → handles, the personal address → noreply.
-   After it: 152 commits, 23 tags, zero hits on every scan. This repo stays private as the archive (its PR refs and
-   workflow history can't be scrubbed anyway). Costs: new repo URL; issues/PRs and release pages don't carry over
-   (re-upload the latest APK); commit hashes change, so `CHANGELOG.md` is regenerated once in the new repo.
-2. **One squashed commit** in a new repo: simplest and cleanest, loses all history. Only if (1) is unwanted.
-3. **Flip this repo as-is:** not recommended; the server details and the personal address go public with it.
-
-Bonus: public repos get GitHub Actions free on standard runners, which also ends the budget block on releases.
+Decided 2026-11-24 by @flyboy-byte (D-027): **flip as is.** The current files are clean; old commits still carry the
+server details and an early personal author address, all rated low. A scrubbed history was built and verified
+(`~/projects/focusfence-public`, local only) but not used: rewriting every commit hash, the changelog links and every
+clone, plus a GitHub Support purge of PR refs, was too much cost to hide things that are low risk and mostly public
+anyway. Considered and not chosen: a new repo from the scrubbed history, or a force-push in place plus the purge.
 
 ## Checklist
 
-**@flyboy-byte (prep, no settings needed)**
+**@flyboy-byte**
 - [x] Current files cleaned (#40), README (#41), `SECURITY.md`, this audit.
-- [ ] Say which history option. Then Claude rebuilds the scrubbed history fresh from `main` and re-runs the scans.
+- [x] History option: flip as is (D-027).
 - [ ] Set your local git email to the noreply address so it can't recur:
       `git config --global user.email 96597232+flyboy-byte@users.noreply.github.com`
 
-**@sidewinderzz (repo settings)**
-- [ ] Wait until the recovery artifact has expired (after 2026-11-25).
-- [ ] For option 1: create the new repo, push the scrubbed history and tags, copy the Actions secrets
-      (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`), set it public, archive this one.
-      For option 3: just Settings → General → Change visibility.
-- [ ] Default branch → `main`. Delete the old default branch and the 2026-11-13 agent branch (`ccr-…`) once nothing
-      needs them.
-- [ ] Settings → General: allow squash merging only; automatically delete head branches.
-- [ ] Settings → Security: enable private vulnerability reporting and secret scanning (free for public repos).
-- [ ] About: description "Self-accountability for Android: a DNS-only filter, an honest on-phone record, and optional
-      partners who get alerts and an end-to-end encrypted report." Topics: `android`, `kotlin`, `vpnservice`,
-      `dns-filter`, `accountability`, `privacy`, `end-to-end-encryption`, `self-hosted`.
-- [ ] Re-upload the latest release APK to the new repo's Releases (same signing key, same certificate).
+**Repo settings (@flyboy-byte, admin since the transfer)**
+- [x] The keystore-recovery artifact deleted on 2026-11-24 (it would have expired 2026-11-25).
+- [x] Default branch → `main`; squash merging only; automatically delete head branches (2026-11-24).
+- [x] About description and topics (2026-11-24): "Self-accountability for Android: a DNS-only filter, an honest
+      on-phone record, and optional partners who get alerts and an end-to-end encrypted report."
+- [ ] Delete the old default branch and the 2026-11-13 agent branch (`ccr-…`).
+- [ ] Settings → Change visibility → public.
+- [ ] After it's public: Settings → Security: private vulnerability reporting and secret scanning (free for public repos).
