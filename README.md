@@ -1,131 +1,173 @@
-# Focus Fence
+# Focus Fence AC
 
-An Android app that blocks distracting websites **you** choose — social media, news, anything —
-using an on-device VPN. No root, no account, no policy server, no telemetry: every filtering
-decision is made on your phone. Lookups that aren't blocked are resolved by a public DNS
-resolver, as they would be anyway.
+**A self-accountability app for Android.** It blocks what you choose, keeps an honest record on your
+phone, and, only if you want, lets partners you trust see a summary and get alerts when protection
+changes. Whoever runs the server can't read any of it.
 
-## How it works (and why it's efficient)
+![license](https://img.shields.io/badge/license-MIT-blue)
+![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
+![kotlin](https://img.shields.io/badge/Kotlin-app%20%2B%20server-7f52ff)
+![root](https://img.shields.io/badge/root-not%20needed-lightgrey)
 
-Focus Fence registers an Android [`VpnService`](https://developer.android.com/reference/android/net/VpnService),
-but it is *not* a real VPN — no traffic is sent to any server. The tunnel is configured so that
-**only DNS packets** are routed into the app:
+[What works](#what-works-today) · [Install](#install) · [How it works](#how-it-works) ·
+[Privacy](#privacy-model) · [Run a server](#run-your-own-server) · [Build](#build) · [Docs](#docs)
 
-- The VPN interface advertises a virtual DNS server (`10.111.222.3` / `fd66:f0cf:0:1::53`) and
-  routes *only* those two addresses through the tunnel. All of your normal traffic (web, video,
-  apps) takes the regular network path, untouched.
-- The app reads DNS queries off the tunnel. Queries for a blocked domain (or any of its
-  subdomains) are answered locally with a cacheable `0.0.0.0` / `::` address (an empty answer
-  for other record types), so the site fails to load and the phone doesn't keep re-asking.
-- Everything else is relayed to the current network's own DNS servers (the resolver every
-  network allows), falling back to DNS-over-HTTPS (Cloudflare `https://1.1.1.1`, Google
-  `https://8.8.8.8`) if that fails, and the answer is written back.
-- Don't turn on Android's **"Block connections without VPN"** for this app: the tunnel only
-  carries DNS, so that setting blocks all other traffic. The app warns if it's on.
+> [!NOTE]
+> This repo builds **Focus Fence AC** (`app.focusfence.accountable`), the accountability edition of
+> [Focus Fence](#where-it-came-from), a DNS-based site blocker. It installs **alongside** the plain app.
+> It is in daily use on one phone and most partner features have only run in tests so far. The
+> status table below says which is which.
 
-Because only DNS (a few small packets per page load) traverses the app, the architecture is
-cheap to run by design. The same approach is used by well-known apps like DNS66 and
-personalDNSfilter. Rather than claim a number, the app measures it: **Settings → Logs &
-diagnostics** records battery drain per screen state, the app's own CPU time, and resolver
-latency and failures (see [`docs/specs/event-log.md`](docs/specs/event-log.md)).
+---
 
-## Features
+## The short version
 
-- Add any domain; subdomains are blocked automatically (`reddit.com` also blocks `old.reddit.com`).
-- Input is forgiving — paste a full URL and it's normalized to the bare domain.
-- **Schedules per domain**: block always, or only during a daily window (e.g. 9:00–18:00).
-  Windows may wrap midnight (22:00–06:00).
-- **Daily time limits per domain**: e.g. 10 minutes of reddit.com per day, then blocked until
-  midnight. Usage is inferred from DNS activity — while you actively use a site your phone keeps
-  re-resolving its domains, so each lookup within a few minutes of the last extends an "active
-  session" that counts against the budget. Only time with the screen on counts, so background
-  app refreshes don't drain it. Accurate to within a minute or two, which is plenty for a fence.
-- **Material You**: dynamic color from your wallpaper on Android 12+, themed launcher icon on 13+.
-- **Section rules** ("allow only parts of a site"): e.g. allow `facebook.com/marketplace` while
-  blocking the rest of facebook.com. DNS can't do this — the feed and Marketplace share one
-  hostname and TLS hides the URL path — so these rules are enforced by a small accessibility
-  service that reads the browser's address bar and presses Back on blocked pages. Works in the
-  major browsers (Chrome, Firefox, Brave, Edge, Samsung Internet, Opera, DuckDuckGo, …); it
-  cannot see inside native apps like the Facebook app, so use the allowed section in a browser.
-  Requires enabling the "Focus Fence" accessibility service once (the app guides you there);
-  address bars are read only to match your own rules, and nothing is stored or transmitted.
-- **Ad & tracker blocking**: optional toggle that downloads the
-  [StevenBlack hosts list](https://github.com/StevenBlack/hosts) (100k+ ad/tracker/malware
-  domains, aggregated from the same sources AdGuard/uBlock use) and blocks those too — for the
-  whole device, in every app.
-- One-tap preset that adds the major social media sites.
-- **Strict mode**: while on, turning blocking off, removing rules, or un-blocking apps requires
-  requesting an unlock, waiting 10 minutes, then making changes inside a 15-minute window (you get a notification when it opens).
-  Adding new blocks is always allowed.
-- **App blocking**: chosen apps are bounced to the home screen the moment they open (same
-  accessibility service as section rules) — covers native apps DNS can't touch.
-- **Stats**: per-day block counts by domain, ad/tracker totals, budget usage, and a 7-day
-  trend. Kept on-device only, last 14 days.
-- Blocks common browser DoH endpoints and answers the `use-application-dns.net` canary while
-  active, so Firefox/Chrome can't silently bypass the filter with their own encrypted DNS.
-- Foreground notification + live counter of blocked lookups.
-- Works with Android's **always-on VPN** setting for enforcement that survives reboots.
+Focus Fence runs a VPN that carries **only DNS**, so your normal traffic never passes through the
+app. That keeps it fast and light, and it means blocking happens on the phone with no account. On
+top of that sit optional layers, **every one off until you turn it on**: an activity log, in-app
+text and screenshot checks with an on-device AI, uninstall protection, strict mode, and partners.
 
-## Logs & diagnostics
+Partners get alerts (filter off, protection removed, unlock requested) by email, and a report they
+open in their browser. The report is **sealed on your phone**; the key travels only in the link you
+send them, so the server stores ciphertext it can't open.
 
-Settings → **Logs & diagnostics** keeps two local logs:
+## What works today
 
-- **Activity**: every DNS lookup and whether it was blocked (and by which rule or list), the
-  foreground-app timeline (with Usage access), browser addresses (opt-in), enforcement actions,
-  and every change to the protection itself: VPN or accessibility stopping, Private DNS
-  changes, reboots, log clears.
-- **Diagnostics**: battery and CPU samples, DNS latency and failure rates, accessibility event
-  volume, and errors. It shows how well the app works and what it costs.
+What has run on a real phone (📱) versus what passes its tests but hasn't been tried on a device yet (🧪).
 
-Both stay on the phone until you export them (a zip shared through the system share sheet).
-`tools/analyze_logs.py` summarizes an export, and `tools/battery-baseline.sh` takes the
-matching adb `batterystats` measurement. With strict mode on, turning recording off or
-clearing the logs needs an unlock like any other loosening.
+| | Feature | Notes |
+|---|---|---|
+| 📱 | **DNS filter**: domains, schedules, daily limits, sections of a site | The original Focus Fence engine. |
+| 📱 | **Ad, tracker and threat lists**; DoH-bypass guards | Curated HaGeZi bundles; adult, gambling and others are opt-in. |
+| 📱 | **App blocking** | Bounces chosen apps to the home screen (accessibility service). |
+| 📱 | **Activity and diagnostics logs** | Every lookup, app, protection change; battery and DNS speed. Local until you export. |
+| 📱 | **Restarts itself** after an app update | No Always-on VPN needed. After a reboot too (🧪, not yet seen). |
+| 📱 | **Text capture and screenshot AI** (opt-in) | On-device model; images never leave the phone. False flags are common, so Review lets you mark them. |
+| 📱 | **Email partners and instant alerts** | Double opt-in. Running against the reference server. |
+| 🧪 | **Encrypted partner reports** in the browser | Decrypts with WebCrypto; cross-checked against the phone's sealing. |
+| 🧪 | **Strict mode** with a wait, own PIN, or a partner's code | Every unlock request and use alerts partners. |
+| 🧪 | **App-to-app partners and groups** of up to 4 | End-to-end through a blind mailbox; members approve each other by fingerprint. |
+| 🧪 | **Send a blurred screenshot** to partners | Your choice, per shot. At most 24 px across: a partner never gets a clear image. |
+| 🧪 | **Uninstall protection** (device admin) and **managed mode** (device owner) | Managed mode needs adb setup. |
+| ❌ | Automatic screenshot sending, report exclusions, a partner login | Planned; see [`docs/roadmap.md`](docs/roadmap.md). |
 
-## Building
+---
 
-Requirements: JDK 17+, Android SDK (platform 34). Then:
+## Install
 
-```sh
-./gradlew assembleDebug        # APK at app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest    # DNS/packet/blocklist unit tests
+Download the APK from **[Releases](../../releases)** and open it (allow "Install unknown apps" for
+your browser or file manager). Releases are signed with one key; the certificate SHA-256 is:
+
+```
+2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671
 ```
 
-Or just push to GitHub — the included Actions workflow builds the APK on every push and uploads
-it as an artifact (`focus-fence-debug-apk`), which you can download and sideload.
+Then open the app: the first run walks you through the filter and ends at a short **Guide**
+listing every optional layer, what it does and what it costs. Turn on only what you want.
 
-To install on your phone: enable "Install unknown apps" for your file manager or browser,
-copy the APK over (or download the CI artifact on the phone), and open it.
+> [!IMPORTANT]
+> Turn **off Private DNS** (Settings → Network & internet → Private DNS). With it on, Android sends
+> DNS straight to that provider and the filter never sees it. The app warns you if it's on.
 
-## Usage tips
+## How it works
 
-1. Add domains (or tap the presets button), then flip the switch and accept Android's VPN
-   consent dialog.
-2. For stronger commitment, enable **Settings → Network & internet → VPN → Focus Fence →
-   Always-on VPN**. Android will then keep the filter up across reboots.
-3. Turn **off Private DNS** (Settings → Network & internet → Private DNS) — when Private DNS is
-   on, Android encrypts DNS straight to the configured provider and the filter never sees it.
+```
+     your phone
+ ┌───────────────────────────┐
+ │ apps ─ web, video ────────┼──────────► internet (untouched)
+ │  └─ DNS ─► Focus Fence VPN│
+ │      block → 0.0.0.0, log │
+ │      allow → network DNS  │
+ │              (DoH backup) │  sealed report  ┌────────────┐
+ │ log → digest → seal (key) ├───────────────► │   server   │
+ │                           │  alert lines    │ ciphertext │─► email
+ └───────────────────────────┘                 └────────────┘    │
+                                     partner's browser opens it ◄┘
+                                     with the key from their link
+```
 
-## Limitations (honest ones)
+- **Only DNS enters the app.** The tunnel routes just its own virtual DNS addresses, so everything
+  else uses the normal network. Blocked names get a local `0.0.0.0`; the rest go to your network's
+  resolver, with DNS-over-HTTPS as a fallback raced in parallel when the network's DNS is slow.
+- **Sections of a site** (allow `facebook.com/marketplace`, block the feed) and app blocking use an
+  accessibility service that reads the browser's address bar; DNS can't see paths.
+- **Costs are measured, not claimed.** Settings → Logs & diagnostics records the app's own CPU,
+  battery drain by screen state and DNS latency. With every optional layer off it is a DNS filter
+  and nothing more.
 
-- **DNS-level blocking**, not packet inspection: a site already resolved and cached may load
-  until its DNS TTL expires; apps that hard-code IPs or ship their own DoH stack can bypass it.
-  In practice it works well for browsers and most apps, including social media apps.
-- **Time limits are estimates**: a DNS filter can't see page focus, so budgets are inferred from
-  lookup activity (see Features). Long-lived DNS caches undercount; leaving an app open in the
-  foreground without touching it still counts. For exact usage timers, Android's built-in
-  Digital Wellbeing offers per-app timers and Chrome site timers, and pairs well with this app.
-- YouTube/Twitch ads are served from the same domains as their video content, so DNS-level ad
-  blocking (this app, AdGuard DNS, Pi-hole alike) cannot remove them.
-- Only one VPN can run at a time on Android — this app can't be combined with a real VPN.
-- DNS over TCP is not relayed (queries over the tunnel on TCP/53 are dropped). Mobile clients
-  essentially always use UDP; the practical effect is nil.
-- This is a productivity aid, not a parental-control system — you can always toggle it off.
-  Always-on VPN + app pinning can add friction if you want it.
+## Privacy model
 
-## Alternatives
+| What | Where it goes |
+|---|---|
+| Your blocklist, logs, text and screenshots | Stay on the phone. Exports happen only when you share them. |
+| A partner report (sites, categories, app time) | Sealed on the phone (AES-GCM). The server stores it; only a browser holding the key from your link can read it. |
+| Alert lines ("Filter turned off") | Sent to the server so it can email your partners. Never site names. |
+| Screenshots | Never sent automatically. You can choose to send one, blurred to 24 px. |
+| App-to-app partners and groups | End-to-end encrypted; the server is a blind mailbox. |
 
-If you'd rather not maintain your own app: NetGuard (custom domain blocking is a paid feature),
-RethinkDNS, personalDNSfilter (all open source, same VpnService approach), or — with no app at
-all — Android's Private DNS pointed at a NextDNS/ControlD config with a denylist. Building your
-own keeps the blocklist fully local and under your control.
+What the server operator can still see: partners' email addresses, alert lines, and when your
+phone checks in. What this doesn't stop: an operator who changes the server code to serve a
+key-stealing page. The full reasoning is decision D-023 in [`DECISIONS.md`](DECISIONS.md), and the
+public privacy page is in [`docs/site/`](docs/site/).
+
+---
+
+## Run your own server
+
+Partners need a Focus Fence server; the phone works fully without one. The server is a small
+Kotlin/Ktor app with flat-file storage, admin pages with email + authenticator sign-in, and
+per-person enrollment codes, so every user on a server is independent until they choose to link.
+
+- Configuration reference: [`server/README.md`](server/README.md)
+- Layout and deploy procedure: [`docs/plans/04-backend-deploy.md`](docs/plans/04-backend-deploy.md)
+- Email via Resend; SMS (Twilio or Telnyx) is optional.
+
+## Build
+
+Requires JDK 17 or 21 and the Android SDK (platform 34).
+
+```sh
+./gradlew testDebugUnitTest assembleDebug lint   # app: tests, APK, lint
+./gradlew -p server test                         # server tests
+```
+
+The debug APK lands in `app/build/outputs/apk/debug/`. It is signed with a debug key, so it won't
+install over a release build. `CLAUDE.md` describes the architecture; `AGENTS.md` the working rules.
+
+<details>
+<summary><b>Limitations, honestly</b></summary>
+
+<br>
+
+- **DNS-level blocking**, not packet inspection: a cached answer can outlive a new rule until its
+  TTL expires, and apps with hard-coded IPs or their own encrypted DNS can bypass it.
+- **Time limits are estimates** inferred from lookups while the screen is on.
+- **One VPN at a time** on Android, so it can't run beside a real VPN.
+- **Don't enable "Block connections without VPN"** for it: the tunnel carries only DNS, so that
+  setting cuts everything else. The app flags it.
+- **The screenshot AI is wrong a lot**, mostly on photo apps and video pages. That's why images stay
+  on the phone and why partners never get a clear one.
+- **YouTube and Twitch ads** come from the same hosts as the videos; no DNS blocker can remove them.
+- It is friction and honesty, not a cage: you can always turn things off, and partners are told.
+
+</details>
+
+## Docs
+
+| File | What's in it |
+|---|---|
+| [`STATE.md`](STATE.md) | Where things stand, feature by feature, with how each was verified |
+| [`docs/roadmap.md`](docs/roadmap.md) | What's next, in order |
+| [`DECISIONS.md`](DECISIONS.md) | Why things are the way they are (D-001 onward) |
+| [`CHANGELOG.md`](CHANGELOG.md) | Every change, with the commit to revert |
+| [`docs/collaboration.md`](docs/collaboration.md) | How two maintainers and their agents share `main` |
+| [`docs/specs/`](docs/specs/) | Event log schema, friction tiers, device owner, bundles |
+
+## Where it came from
+
+Focus Fence started as a plain website blocker by [@sidewinderzz](https://github.com/sidewinderzz).
+The accountability edition was built with [@flyboy-byte](https://github.com/flyboy-byte), largely
+by Claude (Anthropic) working from the plans and decisions in this repo. The screenshot model is
+[GantMan/nsfw_model](https://github.com/GantMan/nsfw_model) converted to TensorFlow Lite.
+
+MIT licensed. See [`LICENSE`](LICENSE).
