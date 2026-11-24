@@ -54,7 +54,8 @@ class UninstallProtectionActivity : AppCompatActivity() {
                 // Turning it off is a loosening: same friction as before; the receiver logs it and partners hear.
                 UiUtil.guard(this@UninstallProtectionActivity, GuardPolicy.Action.REMOVE_PROTECTION) {
                     DeviceAdmin.deactivate(this@UninstallProtectionActivity)
-                    bind()
+                    // removeActiveAdmin is asynchronous: re-read once Android has applied it.
+                    status.postDelayed({ if (!isFinishing) bind() }, 800)
                 }
             }
         }

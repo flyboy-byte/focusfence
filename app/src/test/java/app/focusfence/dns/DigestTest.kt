@@ -157,4 +157,11 @@ class DigestTest {
         assertEquals("Tried to open blocked Adult / NSFW sites 3 times in 10 minutes", Digest.alertText(f))
         assertEquals(Digest.alertText(f), Digest.urgentText(f))
     }
+
+    @Test
+    fun turningOffRepeatedTryAlertsIsItselfAnAlert() {
+        val off = mapOf<String, Any?>("type" to "svc", "comp" to "block", "state" to "partner_alerts_off")
+        assertEquals("Turned off partner alerts for repeated blocked tries", Digest.urgentText(off))
+        assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "admin", "state" to "legacy_cleared")))
+    }
 }

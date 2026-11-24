@@ -55,7 +55,7 @@ export.
 | `device` | `rebooted` |
 | `log` | `setting` (a recording switch changed), `exported`, `cleared` |
 | `strict` | `enabled`, `disabled`, `unlock_requested` (detail: wait minutes), `unlock_open` (the wait ended), `unlocked` (detail: `own_pin`/`partner_code`), `partner_override` / `own_pin_override` (detail: the guarded action), `relocked` (owner cancelled). All but `relocked` are partner alerts |
-| `block` | `repeated` (detail: `cat=adult\|gambling\|scam,n=`): the address bar confirmed that many high-risk sites in 10 minutes (D-024 Partner tier). A partner alert, by category, never a site name |
+| `block` | `repeated` (detail: `cat=adult\|gambling\|scam,n=`): the address bar confirmed that many high-risk sites in 10 minutes (D-024 Partner tier). A partner alert, by category, never a site name. `partner_alerts_off` / `partner_alerts_on`: the owner switched that alert (Settings); also a partner alert |
 | `update` | `available` (detail: version; once per version), `install_started` (owner tapped Download and install), `failed` (detail: reason). Never partner alerts; a finished update shows as `app updated` |
 
 `integ` keys:

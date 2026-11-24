@@ -6,6 +6,9 @@ import org.junit.Test
 
 class BlockTriageTest {
 
+    private var n = 0
+    private fun nextSite() = "site${n++}.example"
+
     @Test
     fun onlyAdultGamblingAndScamAreHighRisk() {
         assertEquals("adult", BlockTriage.highRisk(listOf("security", "adult")))
@@ -21,6 +24,8 @@ class BlockTriageTest {
         assertEquals("example.com", BlockTriage.frontDoorSite("www.example.com"))
         assertEquals("example.com", BlockTriage.frontDoorSite("m.example.com."))
         assertEquals("example.co.uk", BlockTriage.frontDoorSite("www.example.co.uk"))
+        assertEquals("a site named mobile.de keeps its name", "mobile.de", BlockTriage.frontDoorSite("mobile.de"))
+        assertEquals("m.tv", BlockTriage.frontDoorSite("m.tv"))
     }
 
     @Test
@@ -30,47 +35,60 @@ class BlockTriageTest {
         assertNull(BlockTriage.frontDoorSite("www.cdn.example.com"))
         assertNull(BlockTriage.frontDoorSite("localhost"))
         assertNull(BlockTriage.frontDoorSite("a..com"))
+        assertNull("cdn of bet.io, not a front door", BlockTriage.frontDoorSite("cdn.bet.io"))
+        assertNull(BlockTriage.frontDoorSite("img.xxx.tv"))
     }
 
     @Test
     fun threeTriesInTenMinutesTellPartnersOnce() {
         val e = BlockTriage.Escalation()
         val min = 60_000L
-        assertNull(e.hit("adult", 0))
-        assertNull(e.hit("adult", 2 * min))
-        assertEquals(3, e.hit("adult", 4 * min))
-        assertNull("quiet for an hour after telling", e.hit("adult", 5 * min))
-        assertNull(e.hit("adult", 6 * min))
+        assertNull(e.hit("adult", nextSite(), 0))
+        assertNull(e.hit("adult", nextSite(), 2 * min))
+        assertEquals(3, e.hit("adult", nextSite(), 4 * min))
+        assertNull("quiet for an hour after telling", e.hit("adult", nextSite(), 5 * min))
+        assertNull(e.hit("adult", nextSite(), 6 * min))
     }
 
     @Test
     fun spreadOutTriesDoNotEscalate() {
         val e = BlockTriage.Escalation()
         val min = 60_000L
-        assertNull(e.hit("adult", 0))
-        assertNull(e.hit("adult", 8 * min))
-        assertNull("the first one aged out", e.hit("adult", 11 * min))
+        assertNull(e.hit("adult", nextSite(), 0))
+        assertNull(e.hit("adult", nextSite(), 8 * min))
+        assertNull("the first one aged out", e.hit("adult", nextSite(), 11 * min))
     }
 
     @Test
     fun categoriesCountSeparately() {
         val e = BlockTriage.Escalation()
-        assertNull(e.hit("adult", 0))
-        assertNull(e.hit("gambling", 1))
-        assertNull(e.hit("adult", 2))
-        assertNull(e.hit("gambling", 3))
-        assertEquals(3, e.hit("adult", 4))
+        assertNull(e.hit("adult", nextSite(), 0))
+        assertNull(e.hit("gambling", nextSite(), 1))
+        assertNull(e.hit("adult", nextSite(), 2))
+        assertNull(e.hit("gambling", nextSite(), 3))
+        assertEquals(3, e.hit("adult", nextSite(), 4))
     }
 
     @Test
     fun canTellAgainAfterTheQuietHour() {
         val e = BlockTriage.Escalation()
         val min = 60_000L
-        e.hit("adult", 0)
-        e.hit("adult", 1 * min)
-        assertEquals(3, e.hit("adult", 2 * min))
-        assertNull(e.hit("adult", 70 * min))
-        assertNull(e.hit("adult", 71 * min))
-        assertEquals(3, e.hit("adult", 72 * min))
+        e.hit("adult", nextSite(), 0)
+        e.hit("adult", nextSite(), 1 * min)
+        assertEquals(3, e.hit("adult", nextSite(), 2 * min))
+        assertNull(e.hit("adult", nextSite(), 70 * min))
+        assertNull(e.hit("adult", nextSite(), 71 * min))
+        assertEquals(3, e.hit("adult", nextSite(), 72 * min))
+    }
+
+    @Test
+    fun aTabLeftOpenIsOneTryNotThree() {
+        val e = BlockTriage.Escalation()
+        val min = 60_000L
+        assertNull(e.hit("adult", "x.example", 0))
+        assertNull("re-resolved after the TTL", e.hit("adult", "x.example", 2 * min))
+        assertNull(e.hit("adult", "x.example", 4 * min))
+        assertNull("a different site is a new try", e.hit("adult", "y.example", 6 * min))
+        assertEquals("third separate try: x again after 5 min, then y and x", 3, e.hit("adult", "x.example", 7 * min))
     }
 }

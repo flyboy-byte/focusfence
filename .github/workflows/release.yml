@@ -92,7 +92,8 @@ jobs:
       # (UpdateCheck.userNotes), so keep that heading.
       - name: Release notes
         run: |
-          prev=$(git tag --list 'v*-accountable' --sort=-v:refname | grep -vx "${{ github.ref_name }}" | head -1)
+          # The release just below this one by version, so a hotfix on an older line compares against its own predecessor.
+          prev=$(git tag --list 'v*-accountable' --sort=-v:refname | awk -v cur="${{ github.ref_name }}" 'found { print; exit } $0 == cur { found = 1 }')
           {
             echo "**Focus Fence AC** — a site blocker and self-accountability app for Android."
             echo

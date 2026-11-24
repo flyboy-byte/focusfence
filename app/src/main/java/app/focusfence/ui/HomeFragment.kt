@@ -96,7 +96,7 @@ class HomeFragment : Fragment() {
                 is StrictLock.State.Off -> StrictStore.setEnabled(context, true)
                 is StrictLock.State.Locked -> StrictStore.requestUnlock(context)
                 is StrictLock.State.Pending -> StrictStore.cancelUnlock(context)
-                is StrictLock.State.Unlocked -> StrictStore.setEnabled(context, true) // relock early
+                is StrictLock.State.Unlocked -> StrictStore.cancelUnlock(context) // relock early; logs "relocked"
             }
             refreshStrict()
         }
