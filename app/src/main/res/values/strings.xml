@@ -88,6 +88,11 @@
     <string name="nav_blocklist">Blocklist</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_blocking">Blocking</string>
+    <string name="nav_partners">Partners</string>
+    <string name="nav_monitoring">Monitoring</string>
+    <string name="classic_layout">Classic layout</string>
+    <string name="classic_layout_summary">The older four tabs (Home, Blocklist, Stats, Settings), with Partners and Monitoring opened from Settings. Nothing else changes.</string>
 
     <string name="group_always">Always blocked</string>
     <string name="group_window">Scheduled</string>
