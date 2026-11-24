@@ -587,13 +587,6 @@
     <string name="home_hero_on_sub">Filter on</string>
     <string name="home_hero_on_strict_sub">Filter on · strict mode locked</string>
     <string name="home_hero_problem_sub">The filter is on but not working. Tap Filter health below.</string>
-    <string name="home_stat_blocked">blocked</string>
-    <plurals name="home_stat_partners">
-        <item quantity="one">partner</item>
-        <item quantity="other">partners</item>
-    </plurals>
-    <string name="home_stat_sync">since sync</string>
-    <string name="home_ago_now">now</string>
     <string name="home_strict_off">Off. Changes take effect right away.</string>
     <string name="home_strict_locked">Loosening anything takes a 10-min wait</string>
     <string name="home_strict_pending">Unlocks in %1$s</string>
@@ -610,8 +603,7 @@
         <item quantity="one">1 · synced</item>
         <item quantity="other">%1$d · synced</item>
     </plurals>
-    <string name="home_week_title">This week</string>
-    <string name="home_week_summary">Blocks, top sites and app time</string>
+    <string name="home_week_title">This week: blocks, sites, app time</string>
     <string name="monitor_review_hint">Mark false flags so the AI gets better. You can send a partner a blurred copy from there.</string>
     <string name="monitor_advanced">Advanced</string>
     <string name="monitor_banner_short">While checks are on, a notification always shows, so anyone using the phone can see it.</string>
@@ -620,7 +612,12 @@
     <string name="monitor_head_waiting">Ready</string>
     <string name="monitor_head_off">Off</string>
     <string name="monitor_head_blocked">Not working</string>
-    <string name="monitor_stat_taken">screens checked</string>
-    <string name="monitor_stat_flagged">flagged</string>
     <string name="review_button_none">Open Review</string>
+    <plurals name="home_detail_blocked">
+        <item quantity="one">%1$d blocked</item>
+        <item quantity="other">%1$d blocked</item>
+    </plurals>
+    <string name="home_detail_partner_waiting">%1$s · partner not synced yet</string>
+    <string name="home_detail_partner_synced">%1$s · partner synced %2$s</string>
+    <string name="monitor_counts">%1$s screens checked · %2$s flagged</string>
 </resources>

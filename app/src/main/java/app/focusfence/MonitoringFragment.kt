@@ -187,23 +187,16 @@ class MonitoringFragment : Fragment() {
             else -> attr(com.google.android.material.R.attr.colorOnSurface)
         }
         val muted = if (good) res(R.color.good_container_muted) else fg
-        val tile = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorSurface)
         binding.statusCard.setCardBackgroundColor(container)
         binding.statusHeadline.setTextColor(if (good) res(R.color.good) else fg)
         binding.captureStatus.setTextColor(fg)
         binding.reviewHint.setTextColor(muted)
-        binding.statusStats.visibility = if (snap.taken > 0) View.VISIBLE else View.GONE
-        stat(binding.statTaken, java.text.NumberFormat.getIntegerInstance().format(snap.taken), getString(R.string.monitor_stat_taken), tile, fg, muted)
-        stat(binding.statFlagged, java.text.NumberFormat.getIntegerInstance().format(snap.flagged), getString(R.string.monitor_stat_flagged), tile, fg, muted)
+        val nf = java.text.NumberFormat.getIntegerInstance()
+        binding.statusCounts.visibility = if (snap.taken > 0) View.VISIBLE else View.GONE
+        binding.statusCounts.text = getString(R.string.monitor_counts, nf.format(snap.taken), nf.format(snap.flagged))
+        binding.statusCounts.setTextColor(muted)
     }
 
-    private fun stat(s: app.focusfence.databinding.ItemHeroStatBinding, value: String, label: String, tile: Int, fg: Int, muted: Int) {
-        s.statRoot.background.mutate().setTint(tile)
-        s.statValue.text = value
-        s.statValue.setTextColor(fg)
-        s.statLabel.text = label
-        s.statLabel.setTextColor(muted)
-    }
 
     private fun bind() {
         val toReview = app.focusfence.data.ReviewStore.count(requireContext())

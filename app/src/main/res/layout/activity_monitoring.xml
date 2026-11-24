@@ -58,29 +58,12 @@
                         android:layout_marginTop="2dp"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-                    <LinearLayout
-                        android:id="@+id/statusStats"
+                    <TextView
+                        android:id="@+id/statusCounts"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
-
-                        <include
-                            android:id="@+id/statTaken"
-                            layout="@layout/item_hero_stat"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-
-                        <include
-                            android:id="@+id/statFlagged"
-                            layout="@layout/item_hero_stat"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1" />
-                    </LinearLayout>
+                        android:layout_marginTop="6dp"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                     <Button
                         android:id="@+id/reviewButton"
@@ -120,9 +103,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
                         android:text="@string/monitor_section_capture"
-                        android:textAllCaps="true"
-                        android:textAppearance="?attr/textAppearanceLabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/screenshotsSwitch"
