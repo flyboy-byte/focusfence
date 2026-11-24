@@ -162,7 +162,7 @@ class MonitoringFragment : Fragment() {
         binding.captureStatus.text = status.text
         val ctx = requireContext()
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(binding.statusCard, a)
-        fun res(id: Int) = androidx.core.content.ContextCompat.getColor(ctx, id)
+        fun res(id: Int) = app.focusfence.ui.StatusColors.get(ctx, id)
         val level = status.level
         binding.statusHeadline.setText(
             when (level) {

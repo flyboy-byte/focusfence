@@ -93,7 +93,7 @@ class SettingsFragment : Fragment() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.dnsButton.setOnClickListener { chooseDnsServer() }
-        binding.categoriesButton.setOnClickListener {
+        binding.cardCategories.setOnClickListener {
             startActivity(Intent(requireContext(), CategoriesActivity::class.java))
         }
         binding.setupButton.setOnClickListener {
@@ -113,10 +113,10 @@ class SettingsFragment : Fragment() {
             app.focusfence.data.UiPrefs.setClassic(requireContext(), on)
             requireActivity().recreate()
         }
-        binding.accountabilityButton.setOnClickListener {
+        binding.cardPartners.setOnClickListener {
             startActivity(Intent(requireContext(), app.focusfence.AccountabilityActivity::class.java))
         }
-        binding.monitoringButton.setOnClickListener {
+        binding.cardMonitoring.setOnClickListener {
             startActivity(Intent(requireContext(), MonitoringActivity::class.java))
         }
         binding.strictButton.setOnClickListener {
@@ -148,7 +148,7 @@ class SettingsFragment : Fragment() {
         refreshAccessibility()
         val b = _binding ?: return
         b.dnsSummary.text = app.focusfence.dns.Upstreams.describe(app.focusfence.data.DnsUpstreamStore.load(requireContext()))
-        b.excludedAppsButton.text = getString(
+        b.excludedAppsTitle.text = getString(
             R.string.excluded_apps_button,
             ExcludedAppsStore.get(requireContext()).size,
         )

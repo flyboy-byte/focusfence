@@ -99,6 +99,19 @@ class AccountabilityFragment : Fragment() {
     private var editingServer = false
 
     private fun bindServer() {
+        // Rank: before there's a server nothing else works, so its card leads; once connected it's a status line at
+        // the bottom and the partners come first.
+        val list = binding.partnersList
+        val card = binding.serverCard
+        val connected = SyncStore.deviceId(requireContext()) != null
+        val want = if (connected) list.childCount - 1 else 0
+        if (list.indexOfChild(card) != want) {
+            list.removeView(card)
+            list.addView(card, if (connected) list.childCount else 0)
+            (card.layoutParams as ViewGroup.MarginLayoutParams).topMargin = if (connected) dp(12) else 0
+            (list.getChildAt(if (connected) 0 else 1).layoutParams as ViewGroup.MarginLayoutParams).topMargin = if (connected) 0 else dp(12)
+            list.requestLayout()
+        }
         val open = editingServer || SyncStore.deviceId(requireContext()) == null
         val v = if (open) View.VISIBLE else View.GONE
         (binding.serverInput.parent.parent as View).visibility = v

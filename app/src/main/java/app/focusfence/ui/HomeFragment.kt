@@ -164,7 +164,7 @@ class HomeFragment : Fragment() {
             else -> getString(R.string.home_hero_on_strict_sub)
         }
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.heroCard, a)
-        fun res(id: Int) = ContextCompat.getColor(context, id)
+        fun res(id: Int) = StatusColors.get(context, id)
         val container = if (good) res(R.color.good_container) else attr(com.google.android.material.R.attr.colorErrorContainer)
         val onContainer = if (good) res(R.color.on_good_container) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
         val muted = if (good) res(R.color.good_container_muted) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
@@ -243,8 +243,8 @@ class HomeFragment : Fragment() {
         fun row(labelRes: Int, state: Layer, value: String, target: Class<*>?, onClick: (() -> Unit)? = null) {
             val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
             val (icon, color) = when (state) {
-                Layer.ON -> R.drawable.ic_check_circle to ContextCompat.getColor(context, R.color.good)
-                Layer.ATTENTION -> R.drawable.ic_alert_circle to ContextCompat.getColor(context, R.color.warn)
+                Layer.ON -> R.drawable.ic_check_circle to StatusColors.get(context, R.color.good)
+                Layer.ATTENTION -> R.drawable.ic_alert_circle to StatusColors.get(context, R.color.warn)
                 Layer.OFF -> R.drawable.ic_circle_outline to
                     com.google.android.material.color.MaterialColors.getColor(r.root, com.google.android.material.R.attr.colorOutline)
             }
@@ -357,6 +357,7 @@ class HomeFragment : Fragment() {
         val needsAdList = AdListStore.isEnabled(context) && AdListStore.entryCount(context) == 0
         b.adlistRow.visibility = if (needsAdList) View.VISIBLE else View.GONE
 
+        b.attentionTitle.setTextColor(StatusColors.get(context, R.color.warn))
         b.attentionCard.visibility =
             if (needsAccessibility || needsAdList) View.VISIBLE else View.GONE
     }
