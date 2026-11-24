@@ -264,6 +264,66 @@ than anywhere else in the app).
 
 ---
 
+## D-021 — One release signing key for every Focus Fence release
+
+*Decided: 2026-11-23 by @flyboy-byte. Resolves O-002.*
+
+**Numbered D-021, not D-017,** because the unmerged `shareddev` branch already uses D-017 to D-020 (allowlist,
+partner-held keys). **It supersedes the 2026-08-18 O-002 resolution on `shareddev` (commit `9214641`)**, which
+said @sidewinderzz would generate and hold an RSA 4096 key and sign by hand. That key was never used: every
+release since 2026-11-17 has been CI-signed with the key below, so this records what actually happened and
+needs @sidewinderzz's agreement, since it reverses what he was assigned.
+
+Every release APK of this app, from any branch, is signed with the key already held in this repo's
+Actions secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, added
+2026-11-17). It has signed every `v*-accountable` release since then (up to 2.10.0), and
+those builds are on real phones, so it already is the app's identity: changing it now would force
+every install to uninstall and lose its rules, exactly the failure O-002 warned about.
+
+**The key, so anyone can check a release is genuine** (public values, not secrets):
+
+| | |
+|---|---|
+| Certificate SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
+| Public key SHA-256 | `deb822114c362ad960c2d8c3f42cfce9bcd1b0926625aabbaacc0cb2b60f3bb2` |
+| Subject | `CN=Focus Fence Accountable, OU=flyboy-byte, O=Focus Fence, C=CA` |
+| Algorithm | RSA 2048, APK Signature Scheme v2 |
+| Valid | 2026-11-16 to 2054-04-03 |
+
+Check one with `apksigner verify --print-certs <apk>`: the certificate SHA-256 must match.
+
+**Answers to O-002's questions:**
+
+1. *Who generated and holds it:* @flyboy-byte.
+2. *Does the other maintainer hold a copy:* not as a file. @sidewinderzz, as repo admin, controls the
+   secrets and the workflows that use them; that is the second point of control.
+3. *Backup:* @flyboy-byte holds the original keystore file (located 2026-11-23) and a second copy recovered from
+   the secrets the same day (fingerprint checked against the certificate above). Both stay out of the repo, chats and
+   synced drives; location deliberately not written here. Keeping one copy offline and encrypted is the holder's job.
+4. *CI or by hand:* **CI signs**, from the secrets above. The doc's hand-signing recommendation was
+   not followed; the risk is contained because only `release.yml` reads the secrets and it runs on
+   pushed `v*` tags only. `android.yml` runs on `pull_request` and never references them, and GitHub
+   does not pass secrets to fork PRs.
+
+**Deviations from `docs/signing-key-custody.md`, accepted:** RSA 2048 instead of 4096 (Android and
+every store accept it; 2048 is still the common default), and about 27 years of validity instead of
+30 or more (it outlives any plausible life of this app; Play's own floor is 2033).
+
+**Rules that follow:**
+
+- Any signing config (including the one proposed in #11, which reads `FOCUSFENCE_*` variables) must
+  use **this** key. A second key for the same application id is never acceptable.
+- Never add these secrets to a workflow that runs on `pull_request`, and never print them.
+- A build without the secrets (forks, local) stays unsigned or debug-signed, never a "release".
+- Debug and CI artifacts are signed with debug keys and do not install over a release; that is
+  expected, not a bug.
+
+**What would reopen it:** the key leaking (then: new application id, announce, reissue) or being lost
+(then: same, since there is no recovery). Moving to hand signing later keeps the same key and does not
+reopen this.
+
+---
+
 ## D-022 — `main` is the only long-lived branch; short task branches merge by PR
 
 *Decided: 2026-11-23 by @flyboy-byte, with @sidewinderzz. Supersedes D-005. (D-021 is the signing key, PR #15.)*
