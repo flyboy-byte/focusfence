@@ -75,6 +75,13 @@ class EnrollCodes(private val file: File) {
 
 /** `focusfence-server admin codes add <label> [--days N] [--uses N] | list | revoke <id>`; returns false if [args] is not an admin command. */
 fun runAdmin(args: Array<String>, dataDir: File, now: Long, out: (String) -> Unit): Boolean {
+    if (args.size >= 2 && args[0] == "admin" && args[1] == "login-link") {
+        val email = args.getOrNull(2)?.trim()?.lowercase()
+        if (email.isNullOrEmpty()) { out("usage: admin login-link <admin email>"); return true }
+        val base = (System.getenv("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/')
+        out("one-time sign-in link for $email (15 minutes; the authenticator is still asked):\n  $base/admin/link/${AdminLinks.create(dataDir, email, now)}")
+        return true
+    }
     if (args.size < 2 || args[0] != "admin" || args[1] != "codes") return false
     val codes = EnrollCodes(File(dataDir, "codes.json"))
     when (args.getOrNull(2)) {

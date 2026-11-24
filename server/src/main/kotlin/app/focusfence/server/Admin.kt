@@ -1,6 +1,7 @@
 package app.focusfence.server
 
 import io.ktor.http.ContentType
+import kotlinx.coroutines.launch
 import io.ktor.server.application.call
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -66,7 +67,8 @@ class Admin(
     @kotlinx.serialization.Serializable
     data class Rec(var totpSecret: String = "", var totpOn: Boolean = false, var recovery: List<String> = emptyList(), var lastStep: Long = 0)
 
-    private class Pending(val email: String, val codeHash: String, val expires: Long, val real: Boolean, var attempts: Int = 0)
+    /** [emailOk]: the first factor was a one-time sign-in link from the server CLI (audit A1), so only the second remains. */
+    private class Pending(val email: String, val codeHash: String, val expires: Long, val real: Boolean, var attempts: Int = 0, val emailOk: Boolean = false)
     private class Session(val email: String, val csrf: String, val created: Long, var seen: Long, var full: Boolean, var setupSecret: String = "")
 
     private val rnd = SecureRandom()
@@ -77,19 +79,44 @@ class Admin(
     private val sessions = java.util.concurrent.ConcurrentHashMap<String, Session>()
     private val ipLogin = RateLimiter(10, 3_600_000, cfg.now)
     private val emailLogin = RateLimiter(3, 3_600_000, cfg.now)
-    private val emailGlobal = RateLimiter(20, 24 * 3_600_000L, cfg.now)
+    // Audit A1: a stranger who knows an admin address must not be able to use up sign-in. The global cap is a high
+    // backstop only, test emails have their own budget, and `admin login-link` on the server never touches either.
+    private val emailGlobal = RateLimiter(100, 24 * 3_600_000L, cfg.now)
+    private val testEmail = RateLimiter(5, 24 * 3_600_000L, cfg.now)
+    private val linkFile = File(store.dir, "admin-links.json")
     private val ipFail = RateLimiter(10, 3_600_000, cfg.now)
     private val allowed = cfg.adminEmails.map { it.lowercase() }.toSet()
 
     private fun token(n: Int = 24) = Web.run { ByteArray(n).also(rnd::nextBytes).let { java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(it) } }
     private fun eq(a: String, b: String) = MessageDigest.isEqual(Integrity.sha256(a).toByteArray(), Integrity.sha256(b).toByteArray())
+    /**
+     * Audit A2: fail closed. If admin.json exists but can't be read, refuse admin sign-in (the exception becomes a
+     * plain error page) and never save over it; treating it as empty would drop every admin to email-only and a
+     * fresh authenticator.
+     */
     private fun recs(): MutableMap<String, Rec> = synchronized(recFile) {
-        if (!recFile.exists()) mutableMapOf() else runCatching { json.decodeFromString<MutableMap<String, Rec>>(recFile.readText()) }.getOrDefault(mutableMapOf())
+        if (!recFile.exists()) return mutableMapOf()
+        runCatching { json.decodeFromString<MutableMap<String, Rec>>(recFile.readText()) }.getOrElse {
+            System.err.println("ADMIN: ${recFile.path} exists but cannot be read; admin sign-in is refused until it is repaired. It is never overwritten.")
+            throw IllegalStateException("admin store unreadable")
+        }
+    }
+    /** Audit A3: every read-modify-write of admin.json happens under one lock. */
+    private fun <T> updateRecs(block: (MutableMap<String, Rec>) -> T): T = synchronized(recFile) {
+        val m = recs(); val r = block(m); saveRecs(m); r
     }
     private fun saveRecs(m: Map<String, Rec>) = synchronized(recFile) {
         val tmp = File(recFile.parentFile, "admin.json.tmp"); tmp.writeText(json.encodeToString(m))
         java.nio.file.Files.move(tmp.toPath(), recFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
     }
+    private fun consumeLink(plain: String): String? = synchronized(AdminLinks) {
+        val all = AdminLinks.read(linkFile)
+        val h = Integrity.sha256(plain)
+        val hit = all.firstOrNull { MessageDigest.isEqual(it.hash.toByteArray(), h.toByteArray()) && it.expiresMs > cfg.now() } ?: return null
+        AdminLinks.write(linkFile, all.filter { it.hash != hit.hash && it.expiresMs > cfg.now() })
+        hit.email
+    }
+
     private fun audit(who: String, ip: String, action: String, detail: String = "") = synchronized(auditFile) {
         auditFile.appendText(json.encodeToString(mapOf("t" to cfg.now().toString(), "who" to who, "ip" to ip, "action" to action, "detail" to detail.take(120))) + "\n")
     }
@@ -119,7 +146,11 @@ class Admin(
         "<h1>Focus Fence server admin</h1>" + (note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: "") +
             "<form method='post' action='/admin/login'><label>Admin email<br><input name='email' type='email' required maxlength='120'></label><button>Email me a code</button></form>"
 
-    private fun verifyForm(note: String? = null) =
+    private fun verifyForm(note: String? = null, linkUsed: Boolean = false): String = if (linkUsed)
+        "<h1>One more code</h1><p class='muted'>Signed in with a link from the server. Now the authenticator code (or a recovery code).</p>" +
+            "<form method='post' action='/admin/verify' autocomplete='off'><label>Authenticator code or a recovery code<br><input name='second' maxlength='24'></label>" +
+            "<p class='muted'>First login on this server: leave it empty; you will set up the authenticator next.</p><button>Sign in</button></form>"
+    else
         "<h1>Enter your codes</h1><p class='muted'>If that address is an admin, a one-time code was emailed (valid 10 minutes).</p>" +
             (note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: "") +
             "<form method='post' action='/admin/verify' autocomplete='off'><label>Emailed code<br><input name='email_code' required maxlength='12' inputmode='numeric'></label>" +
@@ -268,14 +299,26 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             pendings.entries.removeIf { nowMs > it.value.expires } // nothing else ever removes an unused login attempt
             sessions.entries.removeIf { nowMs - it.value.seen > 30 * 60_000L || nowMs - it.value.created > 8 * 3_600_000L }
             val real = email in allowed
+            // Audit A6: with no email provider the code would only reach the server log. Use the CLI link instead.
+            if (!cfg.emailConfigured) return@post html(call, "Admin", loginForm("Email sign-in isn't set up on this server. On the server, run: focusfence-server admin login-link <email>"), HttpStatusCode.ServiceUnavailable)
             val code = (100000 + rnd.nextInt(900000)).toString()
             // Same page and same cookie whether or not the address is an admin, so this reveals nothing.
             pendings[token().also { setCookie(call, PCOOKIE, it, 600) }] = Pending(email, Integrity.sha256(code), cfg.now() + 600_000, real)
             if (real && emailLogin.allow(email) && emailGlobal.allow("all")) {
-                notifier.email(email, "Focus Fence admin sign-in code", "<p>Your sign-in code is <b>$code</b>. It expires in 10 minutes. If you did not ask for it, ignore this email.</p>")
+                // Audit A4: sent in the background so the response time doesn't reveal which addresses are admins.
+                call.application.launch { notifier.email(email, "Focus Fence admin sign-in code", "<p>Your sign-in code is <b>$code</b>. It expires in 10 minutes. If you did not ask for it, ignore this email.</p>") }
                 audit(email, ip, "login_code_sent")
             }
             html(call, "Sign in", verifyForm())
+        }
+        // Audit A1: the operator's own way in, which no one on the internet can use up. `admin login-link <email>` on the
+        // server writes a one-time, 15-minute link; it stands in for the emailed code, and the authenticator is still asked.
+        r.get("/admin/link/{token}") {
+            val email = consumeLink(call.parameters["token"].orEmpty())?.takeIf { it in allowed }
+                ?: return@get html(call, "Admin", loginForm("That sign-in link is invalid, used or expired."), HttpStatusCode.Unauthorized)
+            pendings[token().also { setCookie(call, PCOOKIE, it, 600) }] = Pending(email, "", cfg.now() + 600_000, true, emailOk = true)
+            audit(email, clientOf(call), "login_link_used")
+            html(call, "Sign in", verifyForm(linkUsed = true))
         }
         r.post("/admin/verify") {
             val ip = clientOf(call)
@@ -285,26 +328,30 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             val pend = pendings[pid] ?: return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Unauthorized)
             pend.attempts++
             if (cfg.now() > pend.expires || pend.attempts > 5) { pendings.remove(pid); return@post html(call, "Admin", loginForm("Code expired. Start again."), HttpStatusCode.Unauthorized) }
-            val codeOk = pend.real && eq(Integrity.sha256(p["email_code"].orEmpty().filter { it.isDigit() }), pend.codeHash)
+            val codeOk = pend.real && (pend.emailOk || eq(Integrity.sha256(p["email_code"].orEmpty().filter { it.isDigit() }), pend.codeHash))
             if (!codeOk) return@post fail(call, ip, "email_code")
-            val all = recs(); val rec = all[pend.email]
-            if (rec == null || !rec.totpOn) {
+            val rec0 = recs()[pend.email]
+            if (rec0 == null || !rec0.totpOn) {
                 pendings.remove(pid)
                 val s = newSession(call, pend.email, false); s.setupSecret = Totp.newSecret(rnd)
                 audit(pend.email, ip, "login_email_ok_setup_needed")
                 return@post html(call, "Set up", setupPage(s))
             }
             val second = p["second"].orEmpty().trim()
-            val step = Totp.verify(rec.totpSecret, second, cfg.now())
             val recoveryHash = Integrity.sha256(normalizeCode(second))
-            val viaRecovery = step == null && rec.recovery.any { eq(it, recoveryHash) }
-            if ((step == null || step <= rec.lastStep) && !viaRecovery) return@post fail(call, ip, "second_factor")
-            if (viaRecovery) rec.recovery = rec.recovery.filter { !eq(it, recoveryHash) } else rec.lastStep = step!!
-            saveRecs(all)
+            val outcome = updateRecs { all ->
+                val rec = all[pend.email] ?: return@updateRecs null
+                val step = Totp.verify(rec.totpSecret, second, cfg.now())
+                val viaRecovery = step == null && rec.recovery.any { eq(it, recoveryHash) }
+                if ((step == null || step <= rec.lastStep) && !viaRecovery) return@updateRecs null
+                if (viaRecovery) rec.recovery = rec.recovery.filter { !eq(it, recoveryHash) } else rec.lastStep = step!!
+                viaRecovery to rec.recovery.size
+            } ?: return@post fail(call, ip, "second_factor")
+            val (viaRecovery, left) = outcome
             pendings.remove(pid)
             val s = newSession(call, pend.email, true)
             audit(pend.email, ip, if (viaRecovery) "login_ok_recovery_code" else "login_ok")
-            html(call, "Admin", dashboard(s, note = if (viaRecovery) "You used a recovery code (${rec.recovery.size} left)." else null))
+            html(call, "Admin", dashboard(s, note = if (viaRecovery) "You used a recovery code ($left left)." else null))
         }
         r.post("/admin/setup") {
             val s = session(call)?.takeIf { !it.full } ?: return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Unauthorized)
@@ -313,11 +360,10 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             val step = Totp.verify(s.setupSecret, p["totp"].orEmpty(), cfg.now())
                 ?: return@post html(call, "Set up", setupPage(s, "That code did not match. Check the secret and your phone's clock."), HttpStatusCode.Unauthorized)
             val plain = List(8) { newInviteCode() + newInviteCode() }
-            val all = recs()
-            all[s.email] = Rec(s.setupSecret, true, plain.map { Integrity.sha256(normalizeCode(it)) }, step)
-            saveRecs(all)
-            val full = Session(s.email, s.csrf, s.created, cfg.now(), true)
-            sessions[call.request.cookies[COOKIE]!!] = full
+            updateRecs { all -> all[s.email] = Rec(s.setupSecret, true, plain.map { Integrity.sha256(normalizeCode(it)) }, step) }
+            // Audit A5: the partial session is retired; the full one gets a fresh id and CSRF token.
+            call.request.cookies[COOKIE]?.let { sessions.remove(it) }
+            newSession(call, s.email, true)
             audit(s.email, clientOf(call), "totp_enrolled")
             html(call, "Recovery codes", "<h1>Authenticator set up</h1><p>Save these recovery codes now. Each works once if you lose your phone. They are not shown again.</p><div class='card'><code>" +
                 plain.joinToString("<br>") { it.chunked(4).joinToString("-") } + "</code></div><p><a href='/admin'>Continue to the dashboard</a></p>")
@@ -362,14 +408,13 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
         } }
         r.post("/admin/recovery/new") { call.authed { s, _ ->
             val plain = List(8) { newInviteCode() + newInviteCode() }
-            val all = recs(); val rec = all[s.email]
-            if (rec != null) { rec.recovery = plain.map { Integrity.sha256(normalizeCode(it)) }; saveRecs(all) }
+            updateRecs { all -> all[s.email]?.let { it.recovery = plain.map { c -> Integrity.sha256(normalizeCode(c)) } } }
             audit(s.email, clientOf(call), "recovery_codes_renewed")
             html(call, "Recovery codes", "<h1>New recovery codes</h1><p>The old ones no longer work. Save these now; they are not shown again.</p><div class='card'><code>" +
                 plain.joinToString("<br>") { it.chunked(4).joinToString("-") } + "</code></div><p><a href='/admin/activity'>Back</a></p>")
         } }
         r.post("/admin/test-email") { call.authed { s, _ ->
-            val ok = emailGlobal.allow("all") && notifier.email(s.email, "Focus Fence admin test", "<p>This is a test email from your Focus Fence server. Sending works.</p>")
+            val ok = cfg.emailConfigured && testEmail.allow("all") && notifier.email(s.email, "Focus Fence admin test", "<p>This is a test email from your Focus Fence server. Sending works.</p>")
             audit(s.email, clientOf(call), "test_email", if (ok) "sent" else "failed")
             html(call, "Admin", dashboard(s, "activity", note = if (ok) "Test email sent to ${s.email}." else "The email could not be sent. Check the server log."))
         } }
@@ -386,5 +431,29 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             "<p>In an authenticator app (any TOTP app), add an account by entering this key (time-based, 6 digits):</p><div class='card'><code>${Web.esc(s.setupSecret)}</code></div>" +
             "<p class='muted'>Or open this link on the phone that has the app: <a href='${Web.esc(uri)}'>${Web.esc("otpauth link")}</a></p>" +
             "<form method='post' action='/admin/setup'>${hidden(s)}<label>Code the app shows now<br><input name='totp' required maxlength='8' inputmode='numeric'></label><button>Confirm</button></form>"
+    }
+}
+
+/** One-time admin sign-in links written by the server CLI (audit A1). Only hashes are stored. */
+object AdminLinks {
+    @kotlinx.serialization.Serializable
+    data class Link(val hash: String, val email: String, val expiresMs: Long)
+
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+    private val ser = kotlinx.serialization.builtins.ListSerializer(Link.serializer())
+
+    fun read(f: File): List<Link> = if (!f.exists()) emptyList() else runCatching { json.decodeFromString(ser, f.readText()) }.getOrDefault(emptyList())
+
+    fun write(f: File, links: List<Link>) {
+        val tmp = File(f.parentFile, f.name + ".tmp"); tmp.writeText(json.encodeToString(ser, links))
+        java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+    }
+
+    /** Returns the plain link token; stores only its hash, valid 15 minutes. */
+    fun create(dataDir: File, email: String, now: Long): String {
+        val f = File(dataDir, "admin-links.json")
+        val token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32).also { java.security.SecureRandom().nextBytes(it) })
+        write(f, read(f).filter { it.expiresMs > now } + Link(Integrity.sha256(token), email.lowercase(), now + 15 * 60_000L))
+        return token
     }
 }

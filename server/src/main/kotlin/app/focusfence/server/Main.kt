@@ -70,6 +70,8 @@ class Config(
     val enrollToken: String? = null,
     /** Emails allowed to sign in to /admin; empty switches the admin page off. */
     val adminEmails: List<String> = emptyList(),
+    /** False when no email provider is set: admin email codes would only reach the log (audit A6). */
+    val emailConfigured: Boolean = true,
     /** Backstop on top of double opt-in: no address is emailed more often than this, or more than the daily cap. */
     val emailMinIntervalMs: Long = 60_000L,
     val emailDailyCap: Int = 60,
@@ -118,6 +120,7 @@ fun main(args: Array<String>) {
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
         adminEmails = env("FF_ADMIN_EMAILS").orEmpty().split(",").map { it.trim() }.filter { it.contains("@") },
+        emailConfigured = !env("RESEND_API_KEY").isNullOrBlank(),
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
         maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
@@ -145,8 +148,11 @@ fun main(args: Array<String>) {
 /** Fixed-window limiter for the few unauthenticated endpoints (invite codes are short). */
 class RateLimiter(private val max: Int, private val windowMs: Long, private val now: () -> Long) {
     private val hits = ConcurrentHashMap<String, MutableList<Long>>()
+    private val calls = java.util.concurrent.atomic.AtomicLong()
     fun allow(key: String): Boolean {
         val t = now()
+        // Audit A7: drop keys whose hits have all aged out, so per-address/IP maps can't grow forever.
+        if (calls.incrementAndGet() % 1024 == 0L) hits.entries.removeIf { e -> synchronized(e.value) { e.value.all { t - it > windowMs } } }
         val list = hits.computeIfAbsent(key) { ArrayList() }
         synchronized(list) {
             list.removeAll { t - it > windowMs }
