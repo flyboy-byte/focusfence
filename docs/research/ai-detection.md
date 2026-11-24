@@ -17,12 +17,12 @@ built unless `STATE.md` says so._
 ## The first real flag was a false positive
 
 2026-11-20 10:21, Ente Photos: `porn=0.824, neutral=0.075, drawings=0.054, hentai=0.027,
-sexy=0.020`. The owner says it was **a friend's shirtless selfie**: no nudity.
+sexy=0.020`. The owner confirmed it had no nudity.
 
 What that tells us:
 
 - The model has no idea of "male chest" vs "female breast". It sees a lot of skin and a
-  face, and its "porn" class is the closest match. A false positive on shirtless men is
+  face, and its "porn" class is the closest match. A false positive on bare skin is
   expected from this kind of whole-image classifier. Other datasets file topless men under
   "sexy" rather than "porn" (e.g. NsfwSpy's labels), which shows how loosely these classes
   are drawn.
@@ -51,10 +51,10 @@ Four of five old flags were a photo-gallery app, one confirmed false by the owne
 
 | Option | What it does | Cost | Notes |
 |---|---|---|---|
-| A. Require persistence (**built 2026-11-23**, `dns/FlagPolicy`) | Report only if 2+ captures from the same app within a few minutes are flagged | ~0 | A lone selfie scrolled past is dropped; sustained viewing still reports. Easiest win. |
+| A. Require persistence (**built 2026-11-23**, `dns/FlagPolicy`) | Report only if 2+ captures from the same app within a few minutes are flagged | ~0 | A lone photo scrolled past is dropped; sustained viewing still reports. Easiest win. |
 | B. Per-label thresholds (**built 2026-11-23**: ≥ 0.90 alone, or ≥ 0.75 plus adult words on screen in that app) | e.g. `porn` ≥ 0.90 alone, or `porn` ≥ 0.75 plus a second signal (risky words on screen, adult domain recently) | ~0 | Combines the signals we already log (`text terms`, `url cat`, DNS category). |
 | C. "Not a problem" feedback (**built in 2.7.0**: Monitoring → Review screenshots) | The owner marks a flag as wrong or real; logged as `rev` records | small | Builds the dataset needed to tune A/B honestly. No images need to leave the phone. |
-| D. Second-stage detector on flagged images only | Run a body-part **detector** (e.g. NudeNet) only when stage 1 flags | Only on flags (rare), so battery stays flat | NudeNet's classes split `MALE_BREAST_EXPOSED` from `FEMALE_BREAST_EXPOSED` and have genital/buttocks classes, so it can tell "shirtless" from nudity. This cascade design (classifier + object detector) is what Samsung's on-device moderation paper (arXiv 2107.11845) uses. **Check NudeNet's licence and its ONNX→TFLite conversion before bundling** (couldn't confirm the licence from here). |
+| D. Second-stage detector on flagged images only | Run a body-part **detector** (e.g. NudeNet) only when stage 1 flags | Only on flags (rare), so battery stays flat | NudeNet's classes split `MALE_BREAST_EXPOSED` from `FEMALE_BREAST_EXPOSED` and have genital/buttocks classes, so it can tell "bare-skin" from nudity. This cascade design (classifier + object detector) is what Samsung's on-device moderation paper (arXiv 2107.11845) uses. **Check NudeNet's licence and its ONNX→TFLite conversion before bundling** (couldn't confirm the licence from here). |
 | E. Swap the base model | A newer classifier (e.g. a CLIP-embedding head, as LAION/NVIDIA use) | larger model, slower | Probably not worth it on a phone until A–D have been tried. |
 
 **Recommendation:** A + B now (no new model, no battery cost), C so tuning is based on real
