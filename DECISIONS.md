@@ -264,6 +264,35 @@ than anywhere else in the app).
 
 ---
 
+## D-024 — Block feedback: triaged notifications, never a browser block page
+
+*Decided: 2026-11-23. Notification as the default is @sidewinderzz's (Shelby's) call in #14; the triage is
+@flyboy-byte's proposal on #13, adopted as the direction (his agreement to the triage itself: confirm on that thread).*
+
+A blocked site still gets a `0.0.0.0` answer (D-003), and the browser still shows its own error. Telling a block apart
+from bad internet is the app's job, not the browser's: **no CA, no interstitial page** (parked as P-006).
+
+**How the app tells you (from #13/#14):** "When a site is blocked" offers **notification** (default), the **full
+"Blocked by Focus Fence" screen**, or **off**. Either is shown only after the accessibility service confirms the browser's
+address bar is on the blocked site, so prefetch and other apps' background lookups never trigger it. Without that
+service: a quiet notification, at most once per site every 5 minutes.
+
+**What qualifies, by triage** (the part still to build; numbers from one phone, 9,369 blocks in 5 days, 90% trackers):
+
+| Tier | What | What happens |
+|---|---|---|
+| Silent | ads, trackers/telemetry, DoH bypass guards, non-front-door hosts, screen off | logged only; counts in the report |
+| Notice | a user rule, or a high-risk category (adult, gambling, scam/phishing), on a front-door host the address bar confirms | the chosen style: notification or full screen |
+| Partner | repeated Notice-level hits (e.g. 3 high-risk in 10 minutes) | a partner alert, like the screenshot `FlagPolicy` |
+
+Rules that go with it: notification text for a category block stays generic ("Blocked: adult content"), so a site name
+doesn't sit in the notification shade; within the "security" list, scam/phishing ranks above trackers; each tier's
+action (notify me / tell my partner / just log) is a setting, with these defaults.
+
+**What would reopen it:** a way to show a block page in the browser without a certificate authority (see P-006).
+
+---
+
 # Open — decided before the first release
 
 ## O-002 — Signing key custody
