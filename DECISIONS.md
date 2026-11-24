@@ -415,3 +415,15 @@ action (notify me / tell my partner / just log) is a setting, with these default
 Scoped in `docs/plans/00-roadmap.md` Tier 1. The conservative answer is that an allowlist should
 override only list-sourced blocks, never a rule the user deliberately set — so it can't silently
 defeat a boundary someone chose. Not yet decided.
+
+## D-025 — Screenshots to partners: owner-sent and blurred now, automatic later
+
+**Date:** 2026-11-23 · **By:** @flyboy-byte · **Status:** accepted
+
+Level B ships: the owner picks a flagged screenshot on Review and sends it. It is always the `ShotBlur` thumbnail
+(24 px long edge, blurred), never the clear image, even by the owner's choice, because a partner must never hold a
+clear explicit image (roadmap Phase 2) and an owner in a bad moment is exactly when that rule matters. It is sealed
+with the report key (D-023), so the server stores ciphertext only. Level C (automatic sending of the same thumbnail)
+is the eventual step, gated on the false-flag rate and the conditions in `docs/roadmap.md` Phase 2. Level D (a
+clear image) stays ruled out.
+

@@ -550,7 +550,14 @@
     <string name="review_title">Review flagged screenshots</string>
     <string name="review_button">Review screenshots (%1$d)</string>
     <string name="review_switch">Keep a private copy of risky screenshots</string>
-    <string name="review_privacy">Only on this phone: not in backups, never uploaded, deleted after 7 days. Answering a card deletes it. This is separate from what a partner receives, and your answers don\'t change it.</string>
+    <string name="review_privacy">Only on this phone: not in backups, deleted after 7 days, and the clear image is never uploaded. Answering a card deletes it. You can choose to send a partner a heavily blurred version.</string>
+    <string name="review_share">Send blurred to partners…</string>
+    <string name="review_share_title">Send this, blurred</string>
+    <string name="review_share_body">Your email and web partners get exactly this blurred picture, with the app, the AI\'s label and anything you add. It\'s end-to-end encrypted: the server can\'t see it. The clear screenshot never leaves the phone.</string>
+    <string name="review_share_note">Add a note (optional)</string>
+    <string name="review_share_send">Send</string>
+    <string name="review_share_sent">Queued. Your partners get an email and see it in your report.</string>
+    <string name="review_share_no_server">Add an email or web partner first (Accountability partners).</string>
     <string name="review_percent_button">Keep from %1$d%% risk ›</string>
     <string name="review_percent_title">Keep screenshots the AI scores at least…</string>
     <string name="review_empty">Nothing to review. Screenshots the AI scores above your percentage will appear here.</string>

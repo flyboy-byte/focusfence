@@ -76,7 +76,16 @@ content is unrecognisable whatever the label or score, checked by eye on real fl
 the intent, this means neither the server nor a partner ever holds explicit imagery from someone's phone (including
 anything that could involve a minor), and a false flag never sends an innocent private image either.
 
-**Still open:** B or C (or both: blurred thumbnail sent automatically, the owner able to add context).
+**Decided 2026-11-23 (@flyboy-byte): B now, C eventually (D-025).**
+- **B (built, PR "feat: send a blurred screenshot"):** on Review, "Send blurred to partners…" shows the exact
+  thumbnail, takes an optional note, and queues it. Even an owner-chosen shot goes **blurred**: the "no clear image,
+  period" rule has no owner exception. `dns/ShotBlur` area-averages to at most 24 px on the long edge plus two box
+  blurs (unit-tested ceiling); it travels as raw RGB sealed with the report key, and `report.js` paints it on a
+  canvas and refuses anything over 24 px. Email/web partners only for now; app partners and groups later.
+- **C (scoped, not built):** the same thumbnail sent automatically. Gate before building: (1) the AI's false-flag
+  rate on real reviews falls well below today's 7 of 8; (2) the blur is checked by eye on real flagged shots;
+  (3) a per-day cap and a "sent automatically" label on the partner's side; (4) the owner sees what went and can
+  add context afterwards.
 
 - [x] 👤 ~~Choose whether D is ever allowed~~: no, never a clear explicit image (2026-11-23).
 - [ ] 👤 **Choose B, C or both.**

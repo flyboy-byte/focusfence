@@ -100,7 +100,31 @@
     return [el('h2', title), t];
   }
 
-  function render(m, n) {
+  // Phase 2 level B: a shot the owner chose to share, already blurred to a few hundred pixels on the phone. Painted as
+  // raw pixels on a canvas (no image decoder, no img-src), and refused if larger than the phone's ceiling.
+  var SHOT_MAX = 24;
+  function shotNode(s) {
+    var w = +s.w, h = +s.h, raw;
+    if (!(w >= 1 && h >= 1 && w <= SHOT_MAX && h <= SHOT_MAX)) return null;
+    try { raw = atob(String(s.rgb || '')); } catch (e) { return null; }
+    if (raw.length !== w * h * 3) return null;
+    var c = el('canvas'); c.width = w; c.height = h;
+    c.style.width = '160px'; c.style.height = Math.round(160 * h / w) + 'px'; c.style.borderRadius = '8px';
+    var ctx = c.getContext('2d'), img = ctx.createImageData(w, h);
+    for (var i = 0; i < w * h; i++) {
+      img.data[i * 4] = raw.charCodeAt(i * 3); img.data[i * 4 + 1] = raw.charCodeAt(i * 3 + 1);
+      img.data[i * 4 + 2] = raw.charCodeAt(i * 3 + 2); img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    var box = el('div', null, 'card');
+    box.appendChild(c);
+    box.appendChild(el('p', String(s.app || 'An app') + ' · flagged ' + String(s.label || '') + ' ' + (+s.pct || 0) + '% · ' +
+      new Date(+s.shot_t || +s.t || 0).toLocaleString(), 'muted'));
+    if (s.note) box.appendChild(el('p', '“' + String(s.note).slice(0, 200) + '”'));
+    return box;
+  }
+
+  function render(m, n, shots) {
     var out = [];
     out.push(m.off === 0 ? el('p', 'Protection was on the whole time.', 'ok') : el('p', 'Protection was OFF for ' + m.off + ' minutes.', 'bad'));
     if (m.missing > 0) out.push(el('p', m.missing + ' records are missing from the log (deleted or lost).', 'bad'));
@@ -114,6 +138,11 @@
     if (m.flagged > 0) line += ' · ' + m.flagged + ' flagged screenshots (kept on the phone)';
     out.push(el('p', line, 'muted'));
     if (m.from && m.to) out.push(el('p', 'Covers ' + new Date(m.from).toLocaleString() + ' to ' + new Date(m.to).toLocaleString() + ' (' + n + ' slices).', 'muted'));
+    if (shots && shots.length) {
+      out.push(el('h2', 'Screenshots shared with you'));
+      out.push(el('p', 'The owner chose to send these. They are blurred on the phone on purpose; the clear image never leaves it.', 'muted'));
+      shots.sort(function (a, b) { return (+b.t || 0) - (+a.t || 0); }).slice(0, 20).forEach(function (s) { var nd = shotNode(s); if (nd) out.push(nd); });
+    }
     out = out.concat(table('Categories', m.lists.cats), table('Category sites', m.lists.cat_hosts),
       table('App time (minutes)', m.lists.apps_min), table('Browser sites', m.lists.sites), table('Top blocked', m.lists.top_blocked));
     show(out);
@@ -161,7 +190,9 @@
             'Links opened inside a chat or email app often use a separate browser.', 'muted')]);
         return;
       }
-      render(merge(digests), digests.length);
+      var shots = digests.filter(function (d) { return d.kind === 'shot'; });
+      digests = digests.filter(function (d) { return d.kind !== 'shot'; });
+      render(merge(digests), digests.length, shots);
     })
     .catch(function () { show([el('p', 'Could not load the report. Try again later.', 'bad')]); });
 })();

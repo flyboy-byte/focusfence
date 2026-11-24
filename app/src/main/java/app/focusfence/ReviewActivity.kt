@@ -24,7 +24,8 @@ import java.util.Date
  * The owner's own look at screenshots the AI scored above their chosen
  * percentage. Local-only (see [ReviewPolicy]); answering "not a problem" or
  * "real" deletes the image and logs a `rev` record so detection can be tuned
- * from what actually happened. It never changes what a partner is sent.
+ * from what actually happened. Answers never change what a partner is sent; "Send blurred" is the one way a shot
+ * reaches a partner, and only as a [app.focusfence.dns.ShotBlur] thumbnail.
  */
 class ReviewActivity : AppCompatActivity() {
 
@@ -99,7 +100,38 @@ class ReviewActivity : AppCompatActivity() {
         }
         v.findViewById<Button>(R.id.reviewWrong).setOnClickListener { answer(e, file, "wrong") }
         v.findViewById<Button>(R.id.reviewReal).setOnClickListener { answer(e, file, "ok") }
+        v.findViewById<Button>(R.id.reviewShare).setOnClickListener { share(e, file) }
         return v
+    }
+
+    /** Phase 2 level B: the owner chooses; only the [app.focusfence.dns.ShotBlur] thumbnail goes, never the image. */
+    private fun share(e: ReviewPolicy.Entry, file: File) {
+        if (app.focusfence.sync.SyncStore.deviceId(this) == null) {
+            android.widget.Toast.makeText(this, R.string.review_share_no_server, android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        val bmp = BitmapFactory.decodeFile(file.absolutePath) ?: return
+        val thumb = app.focusfence.sync.ShareQueue.thumbnail(bmp)
+        bmp.recycle()
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0) }
+        box.addView(ImageView(this).apply {
+            setImageBitmap(app.focusfence.sync.ShareQueue.preview(thumb, (160 * resources.displayMetrics.density).toInt()))
+            adjustViewBounds = true
+            contentDescription = getString(R.string.review_image_desc)
+        })
+        box.addView(TextView(this).apply { setText(R.string.review_share_body); setPadding(0, pad / 2, 0, 0) })
+        val note = android.widget.EditText(this).apply { setHint(R.string.review_share_note); maxLines = 3; filters = arrayOf(android.text.InputFilter.LengthFilter(200)) }
+        box.addView(note)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.review_share_title)
+            .setView(box)
+            .setPositiveButton(R.string.review_share_send) { _, _ ->
+                app.focusfence.sync.ShareQueue.enqueue(this, thumb, e.t, UiUtil.appLabel(this, e.pkg), e.label, e.percent, note.text?.toString().orEmpty())
+                android.widget.Toast.makeText(this, R.string.review_share_sent, android.widget.Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun answer(e: ReviewPolicy.Entry, file: File, verdict: String) {
