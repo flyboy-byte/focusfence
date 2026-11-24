@@ -567,14 +567,21 @@
     <string name="blocked_reason_commitment">You committed to staying off this site until %1$s.</string>
     <string name="blocked_reason_section">Only some parts of this site are allowed.</string>
     <string name="block_screen_label">When a site is blocked</string>
-    <string name="block_screen_summary">How Focus Fence tells you it blocked a site you opened. The site is blocked either way. The full screen needs the accessibility service; without it you get the notification.</string>
+    <string name="block_screen_summary">Ads and trackers are blocked quietly. When you open a site you blocked, Focus Fence lets you know, so it doesn\'t look like your internet is broken.</string>
     <string name="block_style_notify">Show a notification</string>
     <string name="block_style_screen">Show a full \"Blocked by Focus Fence\" screen</string>
-    <string name="block_style_off">Don\'t tell me (browser error only)</string>
+    <string name="block_style_off">Don\'t tell me</string>
     <string name="block_screen_channel">Blocked sites</string>
     <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
     <string name="block_screen_notify_text">Tap to see why.</string>
     <string name="admin_turn_off">Turn off</string>
     <string name="admin_status_on">Uninstall protection is on</string>
     <string name="admin_status_off">Uninstall protection is off</string>
+    <string name="block_notice_high_risk">Also adult, gambling and scam sites</string>
+    <string name="block_notice_high_risk_summary">Only for the lists you turned on under Categories.</string>
+    <string name="block_partner_repeated">Tell partners if I keep trying</string>
+    <string name="block_partner_repeated_summary">Three tries at an adult, gambling or scam site within 10 minutes. Partners see the category, not the site. Needs the accessibility service, so a browser loading in the background never counts.</string>
+    <string name="block_notify_category_title">Blocked: %1$s</string>
+    <string name="blocked_reason_category">It\'s on the %1$s list you turned on.</string>
+    <string name="block_style_full_screen_note">The full screen needs the accessibility service. Without it you get the notification.</string>
 </resources>

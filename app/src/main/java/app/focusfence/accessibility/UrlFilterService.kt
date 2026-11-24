@@ -96,10 +96,10 @@ class UrlFilterService : AccessibilityService() {
          * caller can fall back to a notification. Costs nothing while idle: no
          * extra event types or packages, just one address-bar read on demand.
          */
-        fun onDnsBlocked(domain: String): Boolean {
+        fun onDnsBlocked(domain: String, category: String?, tellMe: Boolean, tellPartner: Boolean): Boolean {
             val svc = instance ?: return false
             // The address bar can lag the lookup slightly; read it after a beat.
-            svc.main.postDelayed({ svc.confirmAndShow(domain, retry = true) }, CONFIRM_DELAY_MS)
+            svc.main.postDelayed({ svc.confirmAndShow(domain, category, tellMe, tellPartner, retry = true) }, CONFIRM_DELAY_MS)
             return true
         }
 
@@ -401,29 +401,33 @@ class UrlFilterService : AccessibilityService() {
      * up front-door hosts in the background. While the bar is being edited the
      * read returns null, which also keeps the screen from interrupting typing.
      */
-    private fun confirmAndShow(domain: String, retry: Boolean) {
+    private fun confirmAndShow(domain: String, category: String?, tellMe: Boolean, tellPartner: Boolean, retry: Boolean) {
         val style = blockStyle
-        if (style == BlockScreen.Style.OFF) return
+        val announce = tellMe && style != BlockScreen.Style.OFF
+        if (!announce && !(tellPartner && category != null)) return
         val pkg = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull() ?: return
         if (pkg == packageName) return
         val url = runCatching { findUrl(pkg) }.getOrNull()
         val parts = url?.let { LogEvents.splitUrl(it) }
         if (parts == null || !BlockScreen.hostMatches(parts.first, domain)) {
-            if (retry) main.postDelayed({ confirmAndShow(domain, retry = false) }, CONFIRM_RETRY_MS)
+            if (retry) main.postDelayed({ confirmAndShow(domain, category, tellMe, tellPartner, retry = false) }, CONFIRM_RETRY_MS)
             return
         }
-        val action = if (style == BlockScreen.Style.SCREEN) "block_screen" else "block_notify"
-        Monitor.perf.count(action)
-        if (style == BlockScreen.Style.SCREEN) openBlockedScreen(domain) else BlockedNotice.show(this, domain)
-        EventLog.activity(
-            LogEvents.enforce(System.currentTimeMillis(), action, pkg, parts.first, parts.second)
-        )
+        if (announce) {
+            val action = if (style == BlockScreen.Style.SCREEN) "block_screen" else "block_notify"
+            Monitor.perf.count(action)
+            if (style == BlockScreen.Style.SCREEN) openBlockedScreen(domain, category) else BlockedNotice.show(this, domain, category)
+            EventLog.activity(
+                LogEvents.enforce(System.currentTimeMillis(), action, pkg, parts.first, parts.second)
+            )
+        }
+        if (tellPartner && category != null) BlockedNotice.onConfirmedHighRisk(this, category)
     }
 
-    private fun openBlockedScreen(domain: String) {
+    private fun openBlockedScreen(domain: String, category: String? = null) {
         // Allowed from the background: Android exempts apps whose accessibility
         // service is bound by the system from background-activity-start limits.
-        runCatching { startActivity(BlockedActivity.intent(this, domain)) }
+        runCatching { startActivity(BlockedActivity.intent(this, domain, category)) }
             .onFailure { EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "block_screen_start")) }
     }
 

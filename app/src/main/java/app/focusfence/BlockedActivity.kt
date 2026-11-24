@@ -24,10 +24,12 @@ class BlockedActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_DOMAIN = "domain"
+        private const val EXTRA_CATEGORY = "category"
 
-        fun intent(context: Context, domain: String): Intent =
+        fun intent(context: Context, domain: String, category: String? = null): Intent =
             Intent(context, BlockedActivity::class.java)
                 .putExtra(EXTRA_DOMAIN, domain)
+                .putExtra(EXTRA_CATEGORY, category)
                 .addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TASK or
@@ -62,7 +64,12 @@ class BlockedActivity : AppCompatActivity() {
     private fun show(intent: Intent) {
         val domain = intent.getStringExtra(EXTRA_DOMAIN).orEmpty()
         binding.blockedDomain.text = domain
-        binding.blockedReason.text = reasonText(domain)
+        val category = intent.getStringExtra(EXTRA_CATEGORY)
+        binding.blockedReason.text = if (category != null) {
+            getString(R.string.blocked_reason_category, app.focusfence.dns.Categories.bundle(category)?.label ?: category)
+        } else {
+            reasonText(domain)
+        }
     }
 
     /** Looked up fresh rather than passed in, so the screen always matches the rule as it stands. */

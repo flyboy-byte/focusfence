@@ -26,4 +26,22 @@ object BlockScreenSettings {
     fun setStyle(context: Context, style: BlockScreen.Style) {
         BlocklistStore.prefs(context).edit().putString(KEY_BLOCK_STYLE, style.id).apply()
     }
+
+    /** Triage (D-024): also tell the owner about adult / gambling / scam blocks, not only their own rules. */
+    const val KEY_NOTICE_HIGH_RISK = "block_notice_high_risk"
+
+    /** Triage (D-024): repeated high-risk tries tell partners. Turning it off is a loosening (strict guard). */
+    const val KEY_PARTNER_REPEATED = "block_partner_repeated"
+
+    fun noticeHighRisk(context: Context): Boolean = BlocklistStore.prefs(context).getBoolean(KEY_NOTICE_HIGH_RISK, true)
+
+    fun setNoticeHighRisk(context: Context, on: Boolean) {
+        BlocklistStore.prefs(context).edit().putBoolean(KEY_NOTICE_HIGH_RISK, on).apply()
+    }
+
+    fun partnerRepeated(context: Context): Boolean = BlocklistStore.prefs(context).getBoolean(KEY_PARTNER_REPEATED, true)
+
+    fun setPartnerRepeated(context: Context, on: Boolean) {
+        BlocklistStore.prefs(context).edit().putBoolean(KEY_PARTNER_REPEATED, on).apply()
+    }
 }

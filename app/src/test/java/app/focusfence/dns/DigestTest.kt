@@ -150,4 +150,11 @@ class DigestTest {
         assertEquals("Filter problem: bypassed", m["events"])
         assertTrue(Digest.render(m) { it.toString() }.contains("Bad network 6 times"))
     }
+
+    @Test
+    fun repeatedBlockedTriesAlertPartnersByCategoryOnly() {
+        val f = mapOf<String, Any?>("type" to "svc", "comp" to "block", "state" to "repeated", "detail" to "cat=adult,n=3")
+        assertEquals("Tried to open blocked Adult / NSFW sites 3 times in 10 minutes", Digest.alertText(f))
+        assertEquals(Digest.alertText(f), Digest.urgentText(f))
+    }
 }

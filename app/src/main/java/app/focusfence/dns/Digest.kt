@@ -220,6 +220,12 @@ class Digest(private val fromT: Long) {
                 comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection being removed"
                 comp == "admin" && state == "admin_enabled" -> "Uninstall protection turned on"
                 comp == "admin" -> "Managed mode: $state" + detail(f)
+                comp == "block" && state == "repeated" -> {
+                    val d = (f["detail"] as? String).orEmpty()
+                    val cat = d.substringAfter("cat=", "").substringBefore(',')
+                    val n = d.substringAfter("n=", "").substringBefore(',')
+                    "Tried to open blocked ${Categories.bundle(cat)?.label ?: cat} sites $n times in 10 minutes"
+                }
                 comp == "strict" -> when (state) {
                     "unlock_requested" -> "Strict mode: unlock requested" + detail(f)
                     "unlock_open" -> "Strict mode: unlock window opened after the wait"
