@@ -59,12 +59,6 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             .mapNotNull { LogJson.decode(it)?.let(Digest::alertText) }
             .toList()
 
-    fun digest(deviceId: String, sinceMs: Long, toMs: Long): Map<String, Any?> {
-        val d = Digest(sinceMs)
-        for (line in store.readRecords(deviceId)) LogJson.decode(line)?.let(d::add)
-        return d.build(toMs)
-    }
-
     /** One pass of the background checks: silent devices and weekly reports. */
     suspend fun sweep() {
         val now = cfg.now()
@@ -82,11 +76,12 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             }
             if (now - d.lastReportMs >= cfg.reportEveryMs) {
                 store.updateDevice(d.id) { it.lastReportMs = now }
-                val digest = digest(d.id, now - cfg.reportEveryMs, now)
+                // D-023: the server can't read the report, so the email is only a pointer to it.
                 for (p in d.partners.filter { it.confirmed }) {
                     if (mayEmail(p.email)) notifier.email(
                         p.email, "Focus Fence: weekly report",
-                        "${Web.digestHtml(digest)}<p><a href=\"${link(p)}\">Open the full report</a></p>",
+                        "<p>This week's Focus Fence report is ready. It is end-to-end encrypted, so it opens in your browser, " +
+                            "not in this email.</p><p><a href=\"${link(p)}\">Open the report</a></p>",
                     )
                 }
             }

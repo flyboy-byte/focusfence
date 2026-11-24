@@ -159,4 +159,22 @@ class RuleEvaluatorTest {
         assertFalse(RuleEvaluator.blocks(rule, "facebook.com", now(720), usedMillis = 99_999_999L))
         assertFalse(RuleEvaluator.blocks(rule, "www.facebook.com", now(1439)))
     }
+
+    @Test
+    fun parentDomainRulesNeverBlockPushOrTimeInfrastructure() {
+        // #18: a google.com rule used to block mtalk.google.com and with it every app's push notifications.
+        val rule = BlockRule("google.com")
+        assertTrue(RuleEvaluator.blocks(rule, "google.com", now(0)))
+        assertTrue(RuleEvaluator.blocks(rule, "www.google.com", now(0)))
+        assertTrue("other subdomains are still covered", RuleEvaluator.blocks(rule, "mail.google.com", now(0)))
+        for (h in listOf("mtalk.google.com", "alt3-mtalk.google.com", "android.clients.google.com", "time.google.com")) {
+            assertFalse(h, RuleEvaluator.blocks(rule, h, now(0)))
+        }
+        val window = BlockRule("google.com", 0, 1439)
+        assertFalse(RuleEvaluator.blocks(window, "mtalk.google.com", now(10)))
+        assertFalse(RuleEvaluator.blocks(BlockRule("googleapis.com"), "fcm.googleapis.com", now(0)))
+        // Naming the host itself still blocks it: the owner asked for exactly that.
+        assertTrue(RuleEvaluator.blocks(BlockRule("mtalk.google.com"), "mtalk.google.com", now(0)))
+        assertFalse(Blocklist.isInfrastructure("altx-mtalk.google.com"))
+    }
 }

@@ -227,7 +227,9 @@ class ServerTest {
         val token = store.device(id)!!.partners.single().token
         val page = http.get("/p/$token").bodyAsText()
         assertTrue(page.contains("Focus Fence report"))
-        assertTrue(page.contains("Protection was on the whole time"))
+        // D-023: the page is a shell; the report itself is opened in the browser from sealed slices.
+        assertTrue(page.contains("data-page=\"report\"") && page.contains("/static/report.js"))
+        assertTrue(page.contains("cannot read it"))
         assertEquals(HttpStatusCode.NotFound, http.get("/p/not-a-real-token-at-all-xx").status)
         // The old unauthenticated /partner/{deviceId} view is gone.
         assertEquals(HttpStatusCode.NotFound, http.get("/partner/$id").status)
@@ -539,5 +541,82 @@ class ServerTest {
         assertEquals(HttpStatusCode.NotFound, http.get("/about/..%2Fsecret.html").status)
         assertEquals(HttpStatusCode.NotFound, http.get("/about/nothing.html").status)
         assertEquals(HttpStatusCode.Found, http.get("/about").status)
+    }
+
+    // ---- D-023: the operator can't read a user's activity ---------------------------------------------------
+
+    private suspend fun HttpClient.postReport(id: String, blob: String, from: Long = clock - 3_600_000, to: Long = clock): HttpResponse {
+        val sig = sign(Integrity.requestMessage("report", id, clock, "$from|$to|${Integrity.sha256(blob)}"))
+        return postJson("/v1/reports", json.encodeToString(ReportRequest.serializer(), ReportRequest(id, clock, from, to, blob, sig)))
+    }
+
+    @Test
+    fun sealedReportsAreStoredAsCiphertextAndOpenOnlyWithThePartnersKey() = run { http ->
+        val id = http.enroll()
+        val token = http.joinConfirmed(id)
+        val key = app.focusfence.dns.ReportSeal.newKey()
+        val plain = """{"kind":"digest","from":1,"to":2,"lookups":42,"sites":"secret-site.example\t3"}"""
+        val blob = app.focusfence.dns.ReportSeal.seal(key, plain.toByteArray(), id)
+        assertEquals(HttpStatusCode.OK, http.postReport(id, blob).status)
+        // On disk: ciphertext only. The site name never appears anywhere in the data dir.
+        val onDisk = store.dir.walkTopDown().filter { it.isFile }.joinToString("") { it.readText() }
+        assertTrue(!onDisk.contains("secret-site") && onDisk.contains(blob))
+        // The partner page's data endpoint hands back the blob, and only the key opens it.
+        val data = json.decodeFromString(ReportData.serializer(), http.get("/p/$token/data").bodyAsText())
+        assertEquals(id, data.deviceId)
+        assertEquals(plain, String(app.focusfence.dns.ReportSeal.open(key, data.reports.single().blob, data.deviceId)!!))
+        assertNull(app.focusfence.dns.ReportSeal.open(app.focusfence.dns.ReportSeal.newKey(), data.reports.single().blob, data.deviceId))
+        assertEquals(HttpStatusCode.NotFound, http.get("/p/not-a-real-token-at-all-xx/data").status)
+    }
+
+    @Test
+    fun reportUploadsAreSignedAndBounded() = run { http ->
+        val id = http.enroll()
+        val forged = json.encodeToString(ReportRequest.serializer(), ReportRequest(id, clock, 1, 2, "abc", sign("nope".toByteArray())))
+        assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/reports", forged).status)
+        assertEquals(HttpStatusCode.PayloadTooLarge, http.postReport(id, "x".repeat(Store.REPORT_MAX_CHARS + 1)).status)
+    }
+
+    @Test
+    fun alertLinesAreEmailedButBatchesAreNeverStored() = run { http ->
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        notifier.emails.clear()
+        val lines = listOf("Filter turned off")
+        val sig = sign(Integrity.requestMessage("alerts", id, clock, Integrity.sha256(lines.joinToString("\n"))))
+        val ok = http.postJson("/v1/alerts", json.encodeToString(AlertsRequest.serializer(), AlertsRequest(id, clock, lines, sig)))
+        assertEquals(HttpStatusCode.OK, ok.status)
+        assertTrue(notifier.emails.single().third.contains("Filter turned off"))
+        val bad = json.encodeToString(AlertsRequest.serializer(), AlertsRequest(id, clock, listOf("forged"), sig))
+        assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/alerts", bad).status)
+        // An older app still uploading raw batches: alerts work, nothing is written.
+        http.batch(id, 1, 1, "GENESIS", """{"seq":1,"t":$clock,"type":"dns","host":"secret-site.example","decision":"allowed"}""")
+        assertTrue(store.dir.walkTopDown().none { it.name.contains(".activity.jsonl") })
+        assertTrue(store.dir.walkTopDown().filter { it.isFile }.none { it.readText().contains("secret-site") })
+    }
+
+    @Test
+    fun legacyReadableRecordsArePurged() {
+        val f = java.io.File(store.dir, "devices/abc.activity.jsonl").apply { writeText("{}\n") }
+        java.io.File(store.dir, "devices/abc.activity.jsonl.1").writeText("{}\n")
+        assertEquals(2, store.purgeLegacyRecords())
+        assertTrue(!f.exists())
+    }
+
+    @Test
+    fun scriptsAreAllowedOnlyOnTheReportPagesAndTheWeeklyEmailCarriesNoReport() = run { http ->
+        assertTrue(http.get("/p/x").headers["Content-Security-Policy"]!!.contains("script-src 'self'"))
+        assertTrue(!http.get("/").headers["Content-Security-Policy"]!!.contains("script-src"))
+        val js = http.get("/static/report.js")
+        assertEquals(HttpStatusCode.OK, js.status)
+        assertTrue(!js.bodyAsText().contains("innerHTML ="), "report text is data: built with textContent only")
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        notifier.emails.clear()
+        clock += cfg.reportEveryMs
+        store.updateDevice(id) { it.lastSeenMs = clock }
+        Alerts(store, notifier, cfg).sweep()
+        val weekly = notifier.emails.single { it.second.contains("weekly report") }.third
+        assertTrue(weekly.contains("end-to-end encrypted") && !weekly.contains("lookups"))
     }
 }

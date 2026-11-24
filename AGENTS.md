@@ -24,8 +24,9 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
 
 ## Hard rules
 
-- Work on `claude/logging-and-accountability-plan` (or a branch off it). **Never push to `main`
-  or the default branch, never force-push, never merge** without the owner asking.
+- **Branches (D-022):** start every task on a short branch from fresh `origin/main` and open a PR to
+  `main`. **Never push to `main`, never force-push a shared branch, never merge** unless the person
+  directing you asks. Never tag a release; releases are a separate version-bump PR plus a tag on `main`.
 - **Never commit signing material**: `*.jks`, `*.keystore`, `keystore.properties`, base64 keys,
   passwords. `.gitignore` covers the common names; check anyway.
 - **Never widen the tunnel routes.** DNS-only routing is the whole design (battery, privacy).
@@ -36,6 +37,27 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
 - **Capture must stay visible.** Screen/text capture always shows the on-device indicator. No
   hidden monitoring.
 - Treat log exports as private data: analyse them locally, never send them anywhere.
+
+## Pull requests: awareness, not rules
+
+Two people (@flyboy-byte, @sidewinderzz) and their agents send PRs into one `main`, and either may merge the
+other's work. Nothing here is enforced, by a check or by an agent: it's a habit that makes the other person's job
+easier. When you write a PR, think about who will read it, and cover what they'd want to know. The template in
+`.github/pull_request_template.md` offers these sections; use the ones that help, in a sentence or two each:
+
+- **What and why**: the change and the reason, in plain words.
+- **Pros** and **cons and risks**: what gets better, what gets worse or could break.
+- **What the other maintainer might think**: their likely view (scope, privacy, battery, a decision in
+  `DECISIONS.md`, their own work this touches), and why it's still worth it, or what you'd change if they disagree.
+- **Tested**: 📱 on a phone / 🧪 CI only / not tested, and what exactly.
+- **How to revert**: usually "revert the squash commit"; say if data, a server deploy or a release is involved.
+
+**Agents:** write your own PRs this way, and when you notice the other maintainer's work nearby (an open PR on the
+same files, a decision of theirs this touches), say so in your PR. Never block, reject, rewrite or gate someone
+else's PR for missing a section; mention it at most, kindly.
+
+Keep PRs to one feature or fix, and a typed title (`feat(dns): …`, `fix(server): …`, `docs: …`, `refactor(ui): …`,
+`perf(sync): …`, `chore: …`) helps the changelog group it.
 
 ## Commands
 
@@ -86,7 +108,12 @@ with `-R sidewinderzz/focusfence`).
 - Signing: if repo secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
   exist, the stable key is used (updates install over each other). Otherwise a throwaway key is
   generated and the notes say so. The expected cert SHA-256 is in `STATE.md`.
-- Bump `versionCode` / `versionName` in `app/build.gradle.kts` before tagging.
+- Release = one small PR titled `chore: release X.Y.Z` that bumps `versionCode` / `versionName` in
+  `app/build.gradle.kts` **and** refreshes the changelog (`tools/changelog.py full > CHANGELOG.md`);
+  after it merges, tag `vX.Y.Z-accountable` on `main`. Never bump the version in a feature PR.
+- The changelog is generated, never hand-edited: one line per squash-merged PR, grouped by the type in
+  its title, each naming the commit to `git revert`. `tools/changelog.py notes <last-tag>` prints just
+  the new section, for the release description.
 - Some agent sandboxes can't push tags or edit releases. If yours can't, give the human the exact
   commands (they run them from Termux with `gh`).
 
