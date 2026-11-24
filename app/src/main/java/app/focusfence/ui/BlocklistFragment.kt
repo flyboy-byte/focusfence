@@ -80,6 +80,18 @@ class BlocklistFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refresh()
+        bindCategories()
+    }
+
+    /** Five-tab layout: the categories card leads into the full screen; the classic layout keeps it in Settings. */
+    private fun bindCategories() {
+        val b = _binding ?: return
+        val ctx = requireContext()
+        if (app.focusfence.data.UiPrefs.classic(ctx)) { b.categoriesCard.visibility = View.GONE; return }
+        b.categoriesCard.visibility = View.VISIBLE
+        val on = app.focusfence.dns.Categories.BUNDLES.count { app.focusfence.data.CategoryStore.policy(ctx, it.id) != app.focusfence.dns.Categories.Policy.OFF }
+        b.categoriesSummary.text = getString(R.string.categories_card_summary, app.focusfence.data.CategoryStore.baseTier(ctx).label, on)
+        b.categoriesCard.setOnClickListener { startActivity(android.content.Intent(ctx, app.focusfence.CategoriesActivity::class.java)) }
     }
 
     override fun onDestroyView() {

@@ -142,6 +142,7 @@
             android:textAppearance="?attr/textAppearanceLabelLarge"
             android:textColor="?attr/colorPrimary" />
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCategories"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"

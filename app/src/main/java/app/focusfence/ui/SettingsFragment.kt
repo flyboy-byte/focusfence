@@ -88,6 +88,7 @@ class SettingsFragment : Fragment() {
         val classic = app.focusfence.data.UiPrefs.classic(requireContext())
         binding.cardPartners.visibility = if (classic) View.VISIBLE else View.GONE
         binding.cardMonitoring.visibility = if (classic) View.VISIBLE else View.GONE
+        binding.cardCategories.visibility = if (classic) View.VISIBLE else View.GONE
         binding.classicSwitch.isChecked = classic
         binding.classicSwitch.setOnCheckedChangeListener { _, on ->
             app.focusfence.data.UiPrefs.setClassic(requireContext(), on)
