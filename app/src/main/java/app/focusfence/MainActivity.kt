@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         if (item.itemId == R.id.action_help) {
-            startActivity(Intent(this, HelpActivity::class.java))
+            startActivity(Intent(this, SetupActivity::class.java))
             return true
         }
         return super.onOptionsItemSelected(item)

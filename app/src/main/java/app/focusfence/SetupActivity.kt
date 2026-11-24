@@ -30,9 +30,9 @@ class SetupActivity : AppCompatActivity() {
         binding = ActivityGroupBinding.inflate(layoutInflater) // same plain scroll-view skeleton as the group screen
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-        supportActionBar?.setTitle(R.string.setup_title)
+        supportActionBar?.setTitle(R.string.help_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.title = getString(R.string.setup_title)
+        binding.toolbar.title = getString(R.string.help_title)
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -70,6 +70,12 @@ class SetupActivity : AppCompatActivity() {
         c.addView(section(R.string.setup_section_optional))
         all.filter { !it.recommended }.forEach { c.addView(card(it)) }
         c.addView(text(getString(R.string.setup_footnote), top = 20, style = com.google.android.material.R.style.TextAppearance_Material3_BodySmall, muted = true))
+        // One guide (redesign step 5): what used to be the separate Help screen follows the checklist.
+        c.addView(section(R.string.setup_section_how))
+        for (page in HelpContent.PAGES) {
+            c.addView(text(getString(page.titleRes), top = 16, style = com.google.android.material.R.style.TextAppearance_Material3_TitleMedium))
+            c.addView(text(androidx.core.text.HtmlCompat.fromHtml(getString(page.bodyRes), androidx.core.text.HtmlCompat.FROM_HTML_MODE_COMPACT), top = 6))
+        }
     }
 
     private fun section(title: Int) = text(getString(title), top = 24,
