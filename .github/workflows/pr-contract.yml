@@ -1,0 +1,46 @@
+name: PR contract
+
+# Checks that a PR description has every section from .github/pull_request_template.md with something
+# written under it (AGENTS.md, "Pull requests"). Reads only the PR text; no checkout, no secrets, read-only token.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  sections:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR description
+        env:
+          # Passed as data through the environment, never interpolated into the script.
+          BODY: ${{ github.event.pull_request.body }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          body = re.sub(r"<!--.*?-->", "", os.environ.get("BODY") or "", flags=re.S)
+          title = os.environ.get("TITLE") or ""
+          need = ["What and why", "Pros", "Cons and risks", "What the other maintainer might object to", "Tested", "How to revert"]
+          heads = [(m.start(), m.end(), m.group(1).strip()) for m in re.finditer(r"^#{2,3}\s+(.+?)\s*$", body, flags=re.M)]
+          problems = []
+          for name in need:
+              hit = [h for h in heads if h[2].lower().startswith(name.lower())]
+              if not hit:
+                  problems.append(f"missing section: {name}")
+                  continue
+              start = hit[0][1]
+              nxt = [h[0] for h in heads if h[0] > start]
+              text = body[start:(nxt[0] if nxt else len(body))].strip()
+              if len(re.sub(r"\s+", "", text)) < 3:
+                  problems.append(f"empty section: {name}")
+          if not re.match(r"^(feat|fix|docs|refactor|perf|chore|test|build|ci|revert)(\([a-z0-9-]+\))?!?: \S", title):
+              problems.append("title should start with a type and optional scope, e.g. 'fix(dns): ...'")
+          if problems:
+              print("PR description needs:\n- " + "\n- ".join(problems))
+              print("\nSee AGENTS.md, 'Pull requests: explain yourself to the other maintainer'.")
+              sys.exit(1)
+          print("PR contract satisfied.")
+          PY

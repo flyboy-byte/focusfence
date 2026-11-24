@@ -24,8 +24,9 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
 
 ## Hard rules
 
-- Work on `claude/logging-and-accountability-plan` (or a branch off it). **Never push to `main`
-  or the default branch, never force-push, never merge** without the owner asking.
+- **Branches (D-022):** start every task on a short branch from fresh `origin/main` and open a PR to
+  `main`. **Never push to `main`, never force-push a shared branch, never merge** unless the person
+  directing you asks. Never tag a release; releases are a separate version-bump PR plus a tag on `main`.
 - **Never commit signing material**: `*.jks`, `*.keystore`, `keystore.properties`, base64 keys,
   passwords. `.gitignore` covers the common names; check anyway.
 - **Never widen the tunnel routes.** DNS-only routing is the whole design (battery, privacy).
@@ -36,6 +37,26 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
 - **Capture must stay visible.** Screen/text capture always shows the on-device indicator. No
   hidden monitoring.
 - Treat log exports as private data: analyse them locally, never send them anywhere.
+
+## Pull requests: explain yourself to the other maintainer
+
+Two people (@flyboy-byte, @sidewinderzz) and their agents work on this repo, and either may merge the other's
+work. A PR should let the other person understand **why**, not just what, without a conversation. So every PR
+description has these sections (the template in `.github/pull_request_template.md` pre-fills them, and the
+`PR contract` check fails a PR that leaves one empty):
+
+- **What and why**: the change and the reason, in plain words.
+- **Pros**: what gets better.
+- **Cons and risks**: what gets worse or could break. Don't leave it at "none"; there is always a cost.
+- **What the other maintainer might object to**: put yourself in their place. Name the likely objection (scope,
+  privacy, battery, a decision in `DECISIONS.md`, their own work this touches) and say why it's still worth it,
+  or what you'd change if they disagree. A sentence or two; this is courtesy, not a defence brief.
+- **Tested**: 📱 on a phone / 🧪 CI only / not tested, and what exactly.
+- **How to revert**: usually "revert the squash commit"; say if data, a server deploy or a release is involved.
+
+Keep PRs to one feature or fix, and title them with a type and scope (`feat(dns): …`, `fix(server): …`,
+`docs: …`, `refactor(ui): …`, `perf(sync): …`, `chore: …`): squash merges inherit the title, and the changelog is
+built from it.
 
 ## Commands
 
