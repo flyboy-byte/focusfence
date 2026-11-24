@@ -67,11 +67,18 @@ Nothing is built until the level is chosen. **Fact that decides it:** of 8 flagg
 | A. Nothing (today) | score, label, app | none |
 | B. Owner sends | you pick a flagged shot to send | weak accountability, little new surface |
 | C. Blurred thumbnail | auto-sent for strong/repeated flags, heavily blurred | low: a blur can't be undone |
-| D. Full image on strong flags | the real image | highest: the most sensitive data the app can produce |
+| ~~D. Full image on strong flags~~ | ~~the real image~~ | **Ruled out 2026-11-23** (see below) |
 
-**Recommended:** C first; D only as a separate per-partner switch once the `rev` answers show flags are mostly right.
+**Decided 2026-11-23 (@flyboy-byte): a partner never receives a clear image of explicit content.** "If it's hard porn
+I don't want a clear image, period." So level D is out, and the ceiling is C: a blur strong enough that explicit
+content is unrecognisable whatever the label or score, checked by eye on real flagged shots before release. Besides
+the intent, this means neither the server nor a partner ever holds explicit imagery from someone's phone (including
+anything that could involve a minor), and a false flag never sends an innocent private image either.
 
-- [ ] 👤 **Choose the level** (and whether D is ever allowed).
+**Still open:** B or C (or both: blurred thumbnail sent automatically, the owner able to add context).
+
+- [x] 👤 ~~Choose whether D is ever allowed~~: no, never a clear explicit image (2026-11-23).
+- [ ] 👤 **Choose B, C or both.**
 - [ ] **Measure first:** the false-alarm rate from `rev` answers over two weeks; retune `FlagPolicy` with the reason
   recorded in `docs/research/ai-detection.md`.
 - [ ] **Build (whatever level is chosen), under these rules:** sealed with the report key (server never sees an image);
@@ -79,7 +86,7 @@ Nothing is built until the level is chosen. **Fact that decides it:** of 8 flagg
   pasted "partner key" box in Monitoring is replaced by this, not kept beside it.
 - [ ] 🔒 **Audit before release.**
 
-**Exit:** the chosen level is on a phone (📱), audited, and the privacy page says exactly what is sent.
+**Exit:** the chosen level is on a phone (📱), audited, the blur is verified unrecognisable on real flagged shots, and the privacy page says exactly what is sent (and that clear images never are).
 
 ---
 
