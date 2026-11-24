@@ -53,7 +53,7 @@ Two things in it need no debate and cost nothing:
 - ~~Two README claims are not accurate~~ — fixed on this branch: the README now says where
   DNS goes and points to the measured battery numbers instead of asserting them.
 
-Everything else is a judgement call and belongs to the maintainer.
+Everything else is a judgement call and belongs to the owner (@flyboy-byte).
 
 ## What this is not
 

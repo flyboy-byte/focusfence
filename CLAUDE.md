@@ -5,19 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Start with [`STATE.md`](STATE.md)** (where things stand) and [`AGENTS.md`](AGENTS.md) (how to
 > work here — rules for any AI agent). This file is the architecture reference.
 >
-> **Written by @flyboy-byte** (repo owner since 2026-11-24). It describes the codebase as it exists —
-> architecture, invariants, commands — and deliberately contains no proposals or opinions about
-> where the project should go. Those live in [`docs/`](docs/), which nothing auto-loads.
-> Rewrite or delete this file freely; it is a starting point, not a standard.
+> It describes the codebase as it exists (architecture, invariants, commands) and deliberately holds
+> no plans or opinions about direction. Those live in [`docs/`](docs/) and `DECISIONS.md`.
 
 ## Project
 
-Focus Fence — an Android app (Kotlin, views + ViewBinding, no DI/Compose) that blocks distracting
-websites via a DNS-only `VpnService`, and keeps a local activity/diagnostics log. On-device: no
-accounts, no servers yet (a backend prototype lives in `server/`, not wired up); allowed DNS is
-relayed to the network's own resolver (DoH to public resolvers as fallback), and logs leave the
-phone only via user-initiated export. This branch builds as **Focus Fence AC**
-(`applicationId app.focusfence.accountable`, namespace still `app.focusfence`). `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
+Focus Fence AC — an Android app (Kotlin, views + ViewBinding, no DI/Compose) that blocks distracting
+websites via a DNS-only `VpnService` and keeps a local activity/diagnostics log. The filter works alone:
+no account, no server. Allowed DNS is relayed to the network's own resolver (DoH to public resolvers as
+fallback). Optional accountability layers sync to a self-hostable Kotlin/Ktor server in `server/`, which
+stores partner reports sealed on the phone (D-023); logs otherwise leave the phone only via user-initiated
+export. `applicationId app.focusfence.accountable`, namespace still `app.focusfence`. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
 
 ## Commands
 
@@ -97,7 +95,7 @@ requires requesting an unlock, waiting 10 min, then acting within a 15 min windo
 always allowed. Enforcement is spread across call sites — `DnsVpnService.onStartCommand` refuses
 `ACTION_STOP` while locked, and UI paths check `StrictStore.isLocked` and route through
 `UiUtil.showStrictLockedDialog`. New destructive UI actions must add their own check.
-On this branch, loosening actions go through `UiUtil.guard(context, GuardPolicy.Action.X)`,
+Loosening actions go through `UiUtil.guard(context, GuardPolicy.Action.X)`,
 which applies the per-action friction level (None / Delay / Own PIN / Partner PIN,
 `docs/specs/friction-tiers.md`) on top of the strict lock.
 

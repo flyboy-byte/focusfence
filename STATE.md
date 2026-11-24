@@ -12,19 +12,18 @@
 
 > Screenshots: automatic capture never sends an image. Since 2.12 the owner can choose to send a **blurred** (≤ 24 px) thumbnail of a flagged shot to email/web partners (D-025, Phase 2 level B); a clear image never leaves the phone. Level C (automatic blurred sending) waits on Phase 7's false-flag work.
 
-_Last updated: 2026-11-23. Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-24. Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
 
-This branch turns Focus Fence (a DNS-only website blocker) into **Focus Fence AC**, a
-self-accountability app benchmarked against **Ever Accountable** (EA) on Android. The phone side
-is mostly built: filtering with curated bundles, an activity log for accountability, a diagnostics
-log for "is it working", filter-health detection, settings friction, device admin / device owner
-modes, and opt-in text and screenshot capture. The **partner loop is now built end to end in
-code** — email/web partners via a server, and app-to-app pairing through a blind mailbox — and
-passes its tests, but **no server is deployed yet**, so none of it has run for real. Deploying the
-server and trying it on two phones is the next step.
+**Focus Fence AC** is a free, open-source self-accountability app for Android, benchmarked against
+**Ever Accountable** (EA). The core is the DNS-only filter, which works alone with no account or server. Optional
+layers add an activity log, filter-health detection, settings friction and strict mode, device admin / device owner,
+opt-in text and screenshot capture with an on-device AI, and partners: email/web partners with end-to-end sealed
+reports through a self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23), and app-to-app pairing and
+groups through a blind mailbox. The filter, logs and email alerts are in daily use; groups, app pairing and strict
+mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
 
 ## Where the code is
 
@@ -91,7 +90,7 @@ without evidence.
 | Device owner: always-on VPN (no lockdown), VPN/Private DNS settings lock, Private DNS fallback, strategy switch, network logging | 🧪 | Needs adb and all accounts removed while provisioning. `specs/device-owner.md`. |
 
 ### Partner side
-The server is deployed (2026-11-23) but no phone has used it yet: none of this has run outside tests and curl.
+The server is live (2026-11-23). Enrollment, upload and email alerts have run with a real phone; the rest has only run in tests and curl.
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -109,12 +108,12 @@ The server is deployed (2026-11-23) but no phone has used it yet: none of this h
 | Partner unlock codes (partner PIN without handing over a PIN) | 🧪 | Rotating 8-digit code in the partner's app, verified offline. |
 | Removing a partner is guarded, logged, and tells them | 🧪 | |
 | Exclude apps from reports | ❌ | EA has it. |
-| Screenshot upload to partner | ❌ | Server endpoint exists; phone doesn't send yet. |
+| Screenshot to partner, owner-sent and blurred (level B, D-025) | 🧪 | Review → "Send blurred to partners…"; ≤ 24 px thumbnail, sealed. Automatic sending (level C) ❌. |
 
 ## What's weak (read before trusting anything)
 
-1. **The partner loop has never run for real.** It passes unit and server tests, but no server is
-   deployed and no two phones have paired. Expect first-contact bugs.
+1. **Only part of the partner loop has run for real.** Email partners and instant alerts work against the live
+   server; app-to-app pairing and groups have never run on two phones. Expect first-contact bugs there.
 2. **Most features are 🧪, not 📱.** The relay looked fine in tests twice and failed on the phone
    twice. Assume any 🧪 item can fail the same way.
 3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
@@ -122,35 +121,29 @@ The server is deployed (2026-11-23) but no phone has used it yet: none of this h
    hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
 4. **The AI's accuracy is unmeasured.** The model author claims ~92% on their own data; our only real flag so far was a false positive (a photo with no nudity → `porn` 0.82). It only flags, never blocks. Before a partner receives AI flags, add persistence/combined-signal rules (`docs/research/ai-detection.md`).
 5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switch switched Always-on off (2026-11-20 export). The integrity trail records it. **Since 2026-11-23 (unreleased, 🧪)** the app also reminds the owner when the VPN starts with Always-on off: one notification per 12 h that opens VPN settings (`dns/AlwaysOnNudge`, diag counter `always_on_nudge`).
-6. **One big unreviewed branch** on someone else's repo. No `LICENSE` file in the repo.
 
-## Open decisions (owner / maintainer)
+## Open decisions
 
-**2026-11-23, landing on `main` and group accountability: see `docs/plans/05-group-and-release.md`.** `main` is releases-only and
-`shareddev` is a 29-commit parallel line (25 conflicting files with this branch); D-010/D-012/D-016 on `main` reject what this
-branch does, so a D-017 is needed first. Group accountability (up to 4 phones, per-member roles) is designed there, not built.
+Settled since this table was first written: hosting (Logan's VPS, live), domain + HTTPS (`ff.flyboybyte.com`), privacy
+tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main` (D-017/D-022), going public (D-027).
 
 | Decision | Options / recommendation |
 |---|---|
-| Backend hosting | Logan's VPS (Resend already there) — recommended for the prototype. **Blocks everything on the partner side.** |
-| Domain + HTTPS | Needed: the app only talks to `https://` servers |
 | SMS provider + monthly budget | Twilio / Telnyx / Vonage, behind one `Notifier` interface |
-| Privacy tier | **Decided 2026-11-23 (owner): server-readable records, personal use; "less privacy now, harden later if we open it up."** Screenshots stay end-to-end encrypted to the partner key. Revisit before anyone but the owner uses the server. |
 | Log retention after upload | Keep N days locally vs delete on acknowledgement |
 | Default protection tier | Recommend device admin as default (EA parity), device owner as opt-in |
-| License | MPL-2.0 or Apache-2.0 suggested (`docs/plans/00-roadmap.md` Tier 0) |
-| Merge plan | Whether/how this branch lands in the maintainer's repo |
+| Partner login | Option B in `docs/plans/09-partner-login.md`, scoped, not built |
+| GitHub Pages for the about/privacy pages | Possible now the repo is public; today they're served by the server (`docs/plans/07-pages-and-privacy.md`) |
 
 ## Next steps, in order
 
-0. Use the review screen for a few days: the `rev` answers are the first real false-alarm rate (`docs/research/ai-detection.md` option C is now built).
-1. Deploy `server/` on the VPS behind HTTPS (`server/README.md`), set the server address in the
-   app, invite an email partner, pair a second phone, send an export after a day.
-2. ~~AI: persistence + combined-signal rules~~ — built 2026-11-23 (unreleased, `dns/FlagPolicy`); the "Not a problem" button shipped in 2.7.0. Retune only from `rev` answers.
-3. ~~Prompt to re-enable Always-on VPN~~ — built 2026-11-23 (unreleased); confirm it fires on the Pixel.
-4. UI: Home hero state, Settings grouped into cards, Monitoring "Recent flags"
-   (`docs/research/ui-design.md`).
-5. Then: report exclusions, screenshot upload to partner.
+The ordered list lives in [`docs/roadmap.md`](docs/roadmap.md). Short version (2026-11-24):
+
+1. Release 2.13 (quieter alerts #38, permanent partner link #39).
+2. Phase 0: field-test what's 🧪 on phones (strict mode, the new UI, groups and app pairing on two phones).
+3. Retune the AI flag rules only from `rev` answers on the Review screen.
+4. Then: report exclusions, automatic blurred screenshots (level C), partner login if wanted.
+5. ~~Deploy the server~~ (2026-11-23) · ~~AI persistence rules~~ · ~~Always-on prompt~~ · ~~UI regroup~~ (2.12).
 
 ## Incidents (what went wrong, so it isn't repeated)
 

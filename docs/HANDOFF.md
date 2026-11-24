@@ -64,4 +64,4 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 ## Open questions only a person can answer
 Triage details (Logan, then @sidewinderzz on #13); keystore backup confirmed (Logan);
 ~~repo settings and going public~~ done 2026-11-24 (D-027: transferred to @flyboy-byte, public as is); SMS provider and budget; running `server-release.yml`
-(publishes a GHCR image under the upstream repo).
+(publishes a GHCR image under `flyboy-byte`).
