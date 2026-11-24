@@ -17,14 +17,16 @@ Legend: 🧪 tested in CI only · 📱 seen on a phone · 🔒 security-sensitiv
 
 The work is written; it needs merging, deploying and one real test.
 
-- [ ] **Merge in order:** #15 (D-021 signing key), #16 (D-022 collaboration), #17 (retire `shareddev`), #19 (D-023 E2E
-  partner reports). Decision numbers assume that order.
+- [ ] **Merge in order** (decision numbers assume it): #15 (D-021 signing key) → #16 (D-022 collaboration) → #17 (retire
+  `shareddev`) → #19 (D-023 E2E partner reports) → #20 (this roadmap) → #21 (PR awareness guide) → #22 (fix #18) →
+  #23 (changelog) → #24 (D-024 block feedback). A local test-merge of all nine in this order builds and passes tests.
 - [ ] 🛠 **Repo settings:** default branch → `main`; protect `main` (PR + `Android CI` required); auto-delete merged
   branches; then delete `claude/android-vpn-website-blocker-1otcbn`.
 - [ ] 🛠 **Close #11** (old signing setup at 2.1.0, contradicts D-021) and delete its branch.
 - [ ] 👤 **Confirm the keystore backup exists** (D-021's one open line). If not, make it first.
 - [ ] 🖥 **Deploy the server from `main`** (D-023). The startup purge deletes the readable records from earlier versions.
-- [ ] **Release 2.11.0** from `main`: version-bump PR, merge, tag `v2.11.0-accountable`.
+- [ ] **Release 2.11.0** from `main`: a `chore: release 2.11.0` PR (version bump + `tools/changelog.py full`), merge,
+  tag `v2.11.0-accountable`.
 - [ ] 📱 **Phone checks** on 2.11 (send the export after):
   - invite your own email as a partner, open the link in your normal browser, see the report decrypt;
   - reboot with the filter on: it comes back by itself (`autostart` record);
@@ -41,9 +43,8 @@ The work is written; it needs merging, deploying and one real test.
 
 - [ ] 🔒 **Independent audit of D-023 + the admin page** (the `extraction` session): report key handling, `report.js`,
   CSP scope, `/v1/reports` and `/v1/alerts`, admin login.
-- [ ] **Key UX edge:** an invite opened in a chat app's built-in browser and a confirm link opened in Chrome leave the key
-  in the wrong browser. Options: show the key link again on the confirm page ("open this in the browser you'll use"),
-  or a short "pair this browser" code. Pick one after watching it happen once.
+- [x] **Key UX edge** (in #19): the join page shows a copyable key link when the invite carried one, for invites opened
+  inside a chat app's browser. Watch it happen once on a phone before calling it done.
 - [ ] **Key rotation:** a button to make a new report key (old partners need the new link). Removing a partner already
   cuts their server access; rotation covers a leaked link.
 - [ ] **Onboard others:** a per-person code from `/admin` only for email partners; groups and app pairing need no code.
@@ -92,11 +93,12 @@ anything that could involve a minor), and a false flag never sends an innocent p
 
 ## Phase 3 — A solid `main`
 
-- [ ] **Fix #18:** a site rule on `google.com` silently kills push notifications (recommended: never block a short list
-  of shared infrastructure hosts).
-- [ ] **Block triage + notifications** (from the #13 discussion): sort every block into Silent / Notice / Partner;
-  categories (adult, gambling, scam) can reach the block screen or notification; generic text for category blocks.
-- [ ] **Rewrite `docs/HANDOFF.md` for `main`** (it still carries the old "don't touch main" rules).
+- [ ] **Fix #18** (PR #22): a parent-domain rule never blocks push, time or connectivity hosts.
+- [x] **Block feedback settled** (D-024, PR #24): notification by default (Shelby, #14), triaged Silent / Notice / Partner
+  (#13 comment); a browser block page is parked (P-006: it would need a certificate authority).
+- [ ] **Build the triage** per D-024 (categories reach the notification/screen; generic text for category blocks;
+  per-tier settings). @flyboy-byte wants to revisit the details first.
+- [x] **Rewrite `docs/HANDOFF.md` for `main`** (in this PR).
 - [ ] **Tidy docs:** mark `docs/approach.md` and `docs/plans/00-roadmap.md` as history pointing here; one `STATE.md`.
 - [ ] **Server hardening backlog:** off-box backups, outbound firewall for the service, fail2ban on nginx logs 🖥.
 
@@ -117,32 +119,27 @@ anything that could involve a minor), and a false flag never sends an innocent p
 
 ---
 
-## Phase 5 — Collaboration that explains itself (people and agents)
+## Phase 5 — Collaboration through awareness (people and agents)
 
-@sidewinderzz said @flyboy-byte can take the lead here. The aim is mild: every PR should make it easy for the other
-maintainer to understand and merge it.
+@sidewinderzz said @flyboy-byte can take the lead here. **Nothing is enforced** (decided 2026-11-23): no check fails a
+PR and no agent gates one. The aim is a shared habit so each of us understands the other's PRs into one `main`.
 
-- [ ] **PR contract in `AGENTS.md` / `CLAUDE.md`** (read by both sides' Claude sessions): every PR states **what and
-  why**, **pros**, **cons and risks**, **what the other maintainer might object to, and why it's still worth it**,
-  **tested** (📱 / 🧪 / not), and **how to revert**.
-- [ ] **`.github/pull_request_template.md`** with those headings pre-filled.
-- [ ] **A small CI check** that fails a PR whose description is missing a heading (the actual enforcement; it only asks
-  for a sentence under each).
-- [ ] **Squash-merge only** (🛠 repo setting), so one PR = one commit on `main` and undoing a feature is one revert.
+- [ ] **`AGENTS.md` "Pull requests: awareness, not rules"** + an optional PR template (#21): what and why, pros, cons and
+  risks, what the other maintainer might think, tested, how to revert; agents mention the other maintainer's nearby
+  work and never block anyone's PR.
+- [ ] 🛠 **Squash-merge only**, so one PR = one commit on `main` and undoing a feature is one revert.
 
-*Pulled forward:* the template and the `AGENTS.md` rule are tiny; they can land in Phase 0 so every later PR uses them.
-
-**Exit:** the next three PRs from each side carry the sections without being reminded.
+**Exit:** PRs from both sides mostly carry those notes without being asked; if they don't, that's fine too.
 
 ---
 
 ## Phase 6 — A changelog you can revert from
 
+- [ ] **Generated `CHANGELOG.md` + `tools/changelog.py`** (#23), backfilled from every release tag.
 - [ ] **Labelled PR titles** (squash commits inherit them): `feat(scope):`, `fix(scope):`, `docs:`, `refactor(scope):`,
   `perf(scope):`, `chore:`; scopes such as `dns`, `sync`, `server`, `ui`, `monitor`, `group`.
-- [ ] **`CHANGELOG.md`** generated at each release from those commits (a small script or `git-cliff`, run by
-  `release.yml`), grouped by type, each line linking its PR, with a "how to revert" note per release.
-- [ ] **Backfill** from the existing `v*-accountable` tags so it starts complete.
+- [ ] **Regenerated in each release PR** (`tools/changelog.py full`), not inside the signed `release.yml`; untyped
+  titles still land, grouped by a guess. Each line names the commit to `git revert`.
 
 **Exit:** the 2.12 release notes write themselves, and reverting any listed change is one command.
 
