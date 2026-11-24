@@ -49,4 +49,4 @@ tasks.test {
 
 application { mainClass.set("app.focusfence.server.MainKt") }
 
-// The About / privacy pages (docs/site) are on GitHub Pages now; /about/ on the server redirects there.
+// The About / privacy pages (docs/site) are on GitHub Pages; the server doesn't serve them.
