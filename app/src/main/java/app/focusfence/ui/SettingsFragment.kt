@@ -84,6 +84,15 @@ class SettingsFragment : Fragment() {
             startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
         }
         binding.aboutButton.setOnClickListener { showAbout() }
+        // Partners and Monitoring are tabs of their own in the five-tab layout; these buttons are the classic way in.
+        val classic = app.focusfence.data.UiPrefs.classic(requireContext())
+        binding.accountabilityButton.visibility = if (classic) View.VISIBLE else View.GONE
+        binding.monitoringButton.visibility = if (classic) View.VISIBLE else View.GONE
+        binding.classicSwitch.isChecked = classic
+        binding.classicSwitch.setOnCheckedChangeListener { _, on ->
+            app.focusfence.data.UiPrefs.setClassic(requireContext(), on)
+            requireActivity().recreate()
+        }
         binding.accountabilityButton.setOnClickListener {
             startActivity(Intent(requireContext(), app.focusfence.AccountabilityActivity::class.java))
         }

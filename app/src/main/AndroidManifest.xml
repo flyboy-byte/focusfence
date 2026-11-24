@@ -96,6 +96,10 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
         <activity
+            android:name=".StatsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".AccountabilityActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
