@@ -1,6 +1,6 @@
 # Handoff: how to pick this project up cold
 
-_Rewritten 2026-11-23 (late), after the accountability work landed on `main`; facts table updated after 2.12.0. Read order: this file → [`STATE.md`](../STATE.md)
+_Rewritten 2026-11-23 (late); updated 2026-11-24 after 2.15.0 (repo public under @flyboy-byte, self-update, triage, redesign). Read order: this file → [`STATE.md`](../STATE.md)
 (where things stand) → [`docs/roadmap.md`](roadmap.md) (what's next, in order) → [`AGENTS.md`](../AGENTS.md) (how to work
 here). If this and `STATE.md` disagree, `STATE.md` wins._
 
@@ -34,10 +34,17 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 - **Privacy:** the server operator can't read anyone's activity (D-023): email/web partner reports are sealed on the phone
   and opened in the partner's browser; groups and app pairing were already end-to-end. Every server user is independent
   until they choose to link.
-- **Screenshots:** stay on the phone today; partners will **never** get a clear image of explicit content (level D ruled
-  out). B (owner sends) vs C (blurred thumbnail) is still Logan's call (roadmap Phase 2).
-- **Block feedback (D-024):** notification by default, optional full screen, triaged so trackers stay silent; no browser
-  block page (P-006, would need a CA). Logan wants to revisit the triage details before it's built.
+- **Screenshots:** partners **never** get a clear image (level D ruled out). Level B is built: the owner may send a
+  48 px, once-blurred thumbnail (D-025 as amended). Automatic sending (C) waits on the AI's false-flag rate.
+- **Block feedback (D-024, built in 2.14):** notification by default, optional full screen; trackers silent; notices for
+  own rules and adult/gambling/scam front doors; partners told after 3 confirmed tries in 10 min, by category. No
+  browser block page (P-006, would need a CA).
+- **Updates (D-029, D-030, D-031):** the app checks GitHub daily and offers updates (notify + tap, Home banner, What's
+  new). No downgrades: a bad release is fixed by a patch release. Privacy pages live on GitHub Pages; the server no
+  longer serves them.
+- **UI (D-032):** plain in a good way, colour only for state (harmonized with Material You), screens ordered by rank.
+  Logan dislikes anything that reads or looks "obviously AI".
+- **Device owner is gone (D-028);** uninstall protection (device admin) stays.
 - Group visibility: everyone sees every filtered member by default. Adult/gambling bundles default to Report. Strict unlock:
   wait 10 min, window 15; a paired partner's code skips the wait, the wait always remains. Capture keeps its visible
   indicator. Never block uninstall, never widen the VPN routes, never commit signing material.
@@ -60,8 +67,10 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | A strict-mode unlock request left no log record and no partner alert | #27: every strict change is a `svc strict` record and an alert |
 | Squash-merging the bottom of a stacked PR set deletes its branch and GitHub **closes** the PR above (can't reopen after a force-push) | retarget the next PR to `main` *before* merging; #31 was replaced by #35 |
 | No emulator on this machine, and a debug build can't install over the release app (different key) | UI changes are checked on Logan's phone from a release |
+| GitHub sometimes 500s on push or loses a Pages artifact | retry the push; re-run the Pages workflow |
 
 ## Open questions only a person can answer
-Triage details (Logan, then @sidewinderzz on #13); keystore backup confirmed (Logan);
+How 2.13 to 2.15 look and behave on the phone (nothing seen yet; Logan's screenshots drive the next UI pass); a day's log
+export on 2.15 for the battery pass; keystore backup confirmed (Logan);
 ~~repo settings and going public~~ done 2026-11-24 (D-027: transferred to @flyboy-byte, public as is); SMS provider and budget; running `server-release.yml`
 (publishes a GHCR image under `flyboy-byte`).

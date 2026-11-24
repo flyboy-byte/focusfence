@@ -62,7 +62,8 @@ Three enforcement layers, each covering what the others cannot:
 
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
-logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`) so it can be
+logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`, `BlockTriage`, `UpdateCheck`,
+`CaptureStatus`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -128,17 +129,37 @@ only the packages it acts on, requesting the high-volume content-changed events 
 section rules exist (URL recording, text capture and screenshots run on a foreground tick
 instead — content events cost ~75% of screen-on CPU in the 2026-11-19 export); batched stats flushes; and split block TTLs (ads cached 1h, user rules 60s).
 
-### UI
+### Block notices and triage (D-024)
 
-`MainActivity` is a bottom-nav host. The default **five-tab layout** swaps `ui/HomeFragment`, `BlocklistFragment`
-(Blocking, with a Categories card), `AccountabilityFragment` (Partners), `MonitoringFragment` and `SettingsFragment`;
-Stats opens from Home's toolbar (`StatsActivity`). Settings → Classic layout (`data/UiPrefs`, own prefs file) restores
-the old four tabs (Home, Blocklist, Stats, Settings). `AccountabilityActivity`/`MonitoringActivity` are thin hosts for
-their fragments so notifications and links still open them alone. `DomainDetailActivity` is the per-domain rule
-editor, `DiagnosticsActivity` shows/exports/clears the logs, `SetupActivity` is the one Guide (checklist + how it
-works; `HelpActivity` forwards to it) and `OnboardingActivity` ends there. Shared dialogs, permission
-prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
+`dns/BlockTriage` decides who hears about a block. Ads, trackers, guards and deeper hosts stay silent. A user rule, or the
+front door of an adult/gambling/scam list site, is a notice in the owner's chosen style (`BlockScreen.Style`,
+`BlockedNotice`), after the accessibility service confirms the browser's address bar shows that site. Three confirmed
+high-risk notices in one category within 10 minutes write an urgent `svc block repeated` record, which partners get by
+category, never by site name. Without the accessibility service partners are never told (prefetch would cause false
+alerts).
+
+### Self-update (D-029, D-031)
+
+`update/Updates` checks `releases/latest` once a day (WorkManager), remembers a newer offer for Home's banner and posts
+one notification per version; `update/UpdateActivity` downloads only on tap, checks source URL, package, version code
+and signing certificate, then hands the APK to `PackageInstaller`. Release notes come from the release body's
+`## What's new` section (written by `release.yml`), cleaned by `UpdateCheck.userNotes`. The repo slug is
+`UpdateCheck.REPO`: a fork that publishes its own releases changes that one line.
+
+### UI (D-032)
+
+`MainActivity` is a bottom-nav host with labelled tabs. The default **five-tab layout** swaps `ui/HomeFragment`,
+`BlocklistFragment` (Blocking, with a Categories card), `AccountabilityFragment` (Partners), `MonitoringFragment` (shown
+as "Screen checks" / tab "Checks") and `SettingsFragment`. Settings → Classic layout (`data/UiPrefs`, own prefs file)
+restores the old four tabs. `AccountabilityActivity`/`MonitoringActivity` are thin hosts for their fragments so
+notifications and links still open them alone. `UninstallProtectionActivity` turns device admin on and off,
+`StatsActivity` is "This week", `DomainDetailActivity` the per-domain rule editor, `DiagnosticsActivity` the logs,
+`SetupActivity` the one Guide (`HelpActivity` forwards to it), `update/WhatsNewActivity` the release notes. Shared
+dialogs, permission prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
 `ACTION_STATE_CHANGED` package-scoped broadcast plus a 1s ticker for counters/countdowns.
+
+Visual rules: colour only for state, through `ui/StatusColors` (green/amber harmonized with the Material You palette);
+plain lists with dividers rather than nested cards; each screen ordered by rank (D-032).
 
 ## Conventions
 

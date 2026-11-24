@@ -58,6 +58,7 @@ without evidence.
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
 | Block triage (D-024): owner notice for own rules and adult/gambling/scam front doors; partner alert after 3 confirmed tries in 10 min | 🧪 | `dns/BlockTriage`, Settings → Filtering → When a site is blocked. Unreleased. Partner tier needs the accessibility service. |
+| Self-update (D-029): daily GitHub check, notification + Home banner, What's new, one-tap install with signature check | 🧪 | 2.14/2.15. First real run is 2.15 → 2.16. Settings → About → Check for updates. |
 | User allowlist | 🧪 | |
 | DoH-bypass guards | 📱 | Inherited. |
 | App blocking (accessibility bounce) | 📱 | Inherited. |
@@ -137,11 +138,14 @@ tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main`
 
 The ordered list lives in [`docs/roadmap.md`](docs/roadmap.md). Short version (2026-11-24):
 
-1. Release 2.13 (quieter alerts #38, permanent partner link #39).
-2. Phase 0: field-test what's 🧪 on phones (strict mode, the new UI, groups and app pairing on two phones).
-3. Retune the AI flag rules only from `rev` answers on the Review screen.
-4. Then: report exclusions, automatic blurred screenshots (level C), partner login if wanted.
-5. ~~Deploy the server~~ (2026-11-23) · ~~AI persistence rules~~ · ~~Always-on prompt~~ · ~~UI regroup~~ (2.12).
+1. Phase 0: field-test 2.13 to 2.15 on the phone (new UI, triage, self-update 2.15 → 2.16, strict mode); then groups and
+   app pairing on two phones.
+2. UI pass two from Logan's screenshots: the screens one level down (strict mode, Categories, Review, domain editor).
+3. Battery pass from a day's log export on 2.15.
+4. Retune the AI flag rules only from `rev` answers on the Review screen.
+5. Then: report exclusions, automatic blurred screenshots (level C), partner login if wanted.
+6. ~~Release 2.13~~ · ~~go public~~ · ~~self-update~~ · ~~block triage~~ · ~~redesign Home/Checks/Settings/Partners~~
+   (2.13 to 2.15, 2026-11-24).
 
 ## Incidents (what went wrong, so it isn't repeated)
 

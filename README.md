@@ -31,6 +31,9 @@ apps for your browser or file manager. Every release is signed with the same key
 2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671
 ```
 
+After that the app keeps itself current: once a day it checks for a new release and offers it on the home screen
+(you can turn this off in Settings).
+
 The first run sets up the filter and then shows a guide to the optional features, with what each
 one does and costs.
 
@@ -56,6 +59,8 @@ one does and costs.
 | 🧪 | App-to-app partners and groups of up to four |
 | 🧪 | Sending a partner a heavily blurred screenshot (48 px at most) |
 | 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
+| 🧪 | A notice when you open a blocked adult, gambling or scam site; partners hear if you keep trying |
+| 🧪 | Updates itself: checks GitHub daily, shows what's new, installs when you tap |
 | ❌ | Automatic screenshot sending, hiding apps from reports, partner logins |
 
 What's next is in [`docs/roadmap.md`](docs/roadmap.md).
@@ -94,6 +99,7 @@ site, and blocking apps, uses an accessibility service, because DNS only sees th
 The server does see partners' email addresses, the alert text, and when your phone checks in. Someone
 who runs a server and changes its code could serve a page that steals the key; the reasoning is in
 D-023 in [`DECISIONS.md`](DECISIONS.md).
+The full privacy page is at https://flyboy-byte.github.io/focusfence/privacy.html.
 
 ## Limitations
 
@@ -126,7 +132,7 @@ JDK 17 or 21 and the Android SDK (platform 34).
 
 Debug builds use a debug key, so they won't install over a release.
 [`STATE.md`](STATE.md) has where everything stands and [`CHANGELOG.md`](CHANGELOG.md) every change.
-To report a security problem, see [`SECURITY.md`](SECURITY.md).
+To report a security problem, see [`SECURITY.md`](SECURITY.md). Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Credits
 

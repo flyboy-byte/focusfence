@@ -478,3 +478,53 @@ Uninstall protection (device admin with no policies, Ever Accountable's model) s
 with Turn on / Turn off (the latter behind the `REMOVE_PROTECTION` friction guard). A phone provisioned by an older
 version gets one button that clears every policy those versions could set and leaves device ownership.
 
+## D-029 — The app updates itself from GitHub: notify, one tap
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+The app isn't in a store, so without this nobody updates. Once a day (WorkManager, `update/Updates`) it asks GitHub for
+the latest release; a newer full release shows one notification per version and a banner on Home ("X is available ·
+What's new · Update · ✕", after @sidewinderzz's Tokalot). Nothing downloads until the owner taps; the APK must come
+from this repo's release downloads, be this app, be newer, and carry the installed copy's signing certificate, and
+Android's installer still confirms. On by default with a Settings switch, because it is the one request the app makes
+that the owner didn't set up (GitHub sees the phone's IP). Considered: fully automatic where Android allows (rejected:
+Logan chose notify-and-tap); off by default (rejected: people would stay on old versions). If the app ever goes to
+F-Droid, this must be off in that build.
+
+## D-030 — No downgrades in the app; a bad release is fixed by rolling forward
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+Android refuses to install a lower version over a higher one; the only on-phone route is uninstalling, which wipes
+rules, strict mode and partner links and tells partners the app was removed. So there is no "revert to an older
+version" in the app. A bad release is undone with a new one (2.x.1) that reverts the change: every changelog line names
+the commit to `git revert`, and the update banner delivers it within a day. Settings → About links to the GitHub repo,
+where every release stays available. A settings backup/restore was offered and declined for now.
+
+## D-031 — Release notes carry "What's new"; the privacy pages live on GitHub Pages
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+The release workflow writes a `## What's new` section from `tools/changelog.py notes <previous tag>`; the app reads it
+for the update banner, the Update screen and Settings → About → What's new (`UpdateCheck.userNotes` drops commit and PR
+references, scope prefixes and the Docs/Maintenance/Tests sections). Releases 2.11 to 2.14 were backfilled. The About,
+Privacy, Limits and self-hosting pages (`docs/site`) publish to https://flyboy-byte.github.io/focusfence/
+(`.github/workflows/pages.yml`); the server no longer serves them at all (Logan: delete, no redirect), so apps up to
+2.14 get a not-found page from that button until they update.
+
+## D-032 — UI direction: plain in a good way, colour only for state, ordered by rank
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+From Logan's reactions to a mockup and to 2.14: "plain in a good way", not generic AI. Rules for every screen:
+- Colour carries state only: green = working, amber = needs you, error colours = off or broken. The fixed greens and
+  ambers (`values/colors.xml`, `values-night`) always go through `ui/StatusColors` (Material's
+  `harmonizeWithPrimary`), so they sit inside the Material You palette instead of fighting it; everything else is the
+  dynamic theme.
+- One strong element per screen (Home's status card, Screen checks' Review button); the rest is plain lists with
+  dividers, sentence-case headings, short copy. No dashboard tiles, icon circles or uppercase micro-labels.
+- Each screen is ordered by rank: what matters and gets used most first, rare and technical last or folded under
+  Advanced. Settings: Protection, Blocking, Advanced, About. Partners: partners first, the server connection last once
+  set up (first until then).
+- Never show the AI's label unless something was flagged.
+
