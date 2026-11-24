@@ -87,6 +87,10 @@ class DigestTest {
         )
         assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "ok,was=degraded")))
         assertEquals("Activity log cleared", Digest.alertText(mapOf("type" to "svc", "comp" to "log", "state" to "cleared")))
+        assertEquals("Strict mode: unlock requested (wait_min=10)", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "unlock_requested", "detail" to "wait_min=10")))
+        assertEquals("Strict mode: unlocked with a code (partner_code)", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "unlocked", "detail" to "partner_code")))
+        assertEquals("Strict mode turned off", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "disabled")))
+        assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "relocked")))
         assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "vpn", "state" to "stop", "detail" to "restart")))
     }
 

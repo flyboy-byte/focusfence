@@ -173,6 +173,15 @@ class Digest(private val fromT: Long) {
                 comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection being removed"
                 comp == "admin" && state == "admin_enabled" -> "Uninstall protection turned on"
                 comp == "admin" -> "Managed mode: $state" + detail(f)
+                comp == "strict" -> when (state) {
+                    "unlock_requested" -> "Strict mode: unlock requested" + detail(f)
+                    "unlock_open" -> "Strict mode: unlock window opened after the wait"
+                    "unlocked" -> "Strict mode: unlocked with a code" + detail(f)
+                    "partner_override", "own_pin_override" -> "Strict mode: a protected setting was changed with a code" + detail(f)
+                    "disabled" -> "Strict mode turned off"
+                    "enabled" -> "Strict mode turned on"
+                    else -> null // "relocked": the owner cancelled their own request
+                }
                 comp == "app" && state == "updated" -> "App updated" + detail(f)
                 comp == "log" && state == "cleared" -> "Activity log cleared"
                 comp == "log" && state == "setting" -> "Recording setting changed" + detail(f)

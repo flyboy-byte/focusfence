@@ -60,7 +60,7 @@ object UiUtil {
                     return showPinDialog(context, R.string.strict_pin_owner_prompt,
                         { PinStore.verifyOwner(context, it) },
                         onVerified = {
-                            StrictStore.unlockNow(context)
+                            StrictStore.unlockNow(context, "own_pin")
                             Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
                             onChanged?.invoke()
                         },
@@ -69,7 +69,7 @@ object UiUtil {
                     return showPinDialog(context, R.string.strict_pin_partner_prompt,
                         { PinStore.verifyPartner(context, it) },
                         onVerified = {
-                            StrictStore.unlockNow(context)
+                            StrictStore.unlockNow(context, "partner_code")
                             Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
                             onChanged?.invoke()
                         },
@@ -143,6 +143,7 @@ object UiUtil {
                         context, R.string.strict_wait_or_partner_prompt, { PinStore.verifyPartner(context, it) },
                         onVerified = {
                             Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                            StrictStore.note(context, "partner_override", action.name.lowercase())
                             onAllowed()
                         },
                         timerFallback = { StrictStore.requestUnlock(context); showStrictLockedDialog(context) },
@@ -160,6 +161,7 @@ object UiUtil {
                     context, prompt, verify,
                     onVerified = {
                         Toast.makeText(context, R.string.strict_pin_ok, Toast.LENGTH_SHORT).show()
+                        StrictStore.note(context, if (req.partner) "partner_override" else "own_pin_override", action.name.lowercase())
                         onAllowed()
                     },
                     // Lost-PIN fallback: open the timed path instead of this action.

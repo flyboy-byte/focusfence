@@ -23,6 +23,7 @@ class UnlockReadyReceiver : BroadcastReceiver() {
         // The request may have been cancelled or replaced since the alarm was set.
         val state = StrictStore.state(context)
         if (state !is StrictLock.State.Unlocked) return
+        StrictStore.note(context, "unlock_open", "after_wait")
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         if (!nm.areNotificationsEnabled()) return
         nm.createNotificationChannel(
