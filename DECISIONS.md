@@ -273,7 +273,8 @@ and never reached `main`, while the accountability work went from its own branch
 in #12. Both of us now work through Claude sessions that open PRs, so the gate adds a second place for
 work to strand without adding review. The shape that matches how we actually work:
 
-- **`main` is the only long-lived branch**, the default branch, and is changed only by PR with CI green.
+- **`main` is the only long-lived branch**, the default branch, and is changed by PR. Nothing about a PR is enforced on
+  the other person: PRs carry a little awareness for them instead (AGENTS.md).
 - **One short branch per task**, from fresh `main`, opened as a draft PR early so the other person (and
   their Claude) can see the area is claimed. Merge within a day or two; head branches are deleted on merge.
 - **Releases are tags on `main`**, and the version is bumped only in the release PR, so two builds never

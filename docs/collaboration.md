@@ -34,7 +34,8 @@ both sides at once: update them in the same PR as the change.
 ## Repo settings (admin, @sidewinderzz)
 
 1. Default branch → `main` (it is still `claude/android-vpn-website-blocker-1otcbn`).
-2. Protect `main`: require a PR and the `Android CI` check.
+2. Optional, your call: protect `main` (require a PR, or the `Android CI` build). Nothing about PR *content* is enforced;
+   see AGENTS.md, "Pull requests: awareness, not rules".
 3. Settings → General → "Automatically delete head branches".
 
 ## Branch cleanup on 2026-11-23
