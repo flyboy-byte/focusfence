@@ -31,12 +31,12 @@ both sides at once: update them in the same PR as the change.
 | `vpn/DnsVpnService.kt` | filter, relay and logging all live here | keep changes small; mention it in the PR title |
 | `app/build.gradle.kts` | version numbers | only the release PR changes the version |
 
-## Repo settings (admin, @sidewinderzz)
+## Repo settings (admin, @flyboy-byte since the transfer on 2026-11-24)
 
-1. Default branch → `main` (it is still `claude/android-vpn-website-blocker-1otcbn`).
-2. Optional, your call: protect `main` (require a PR, or the `Android CI` build). Nothing about PR *content* is enforced;
+1. ~~Default branch → `main`~~ done 2026-11-24.
+2. Optional: protect `main` (require a PR, or the `Android CI` build). Nothing about PR *content* is enforced;
    see AGENTS.md, "Pull requests: awareness, not rules".
-3. Settings → General → "Automatically delete head branches".
+3. ~~Squash merging only; automatically delete head branches~~ done 2026-11-24.
 
 ## Branch cleanup on 2026-11-23
 

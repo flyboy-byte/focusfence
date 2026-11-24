@@ -443,3 +443,15 @@ own link if the key is missing. Option B, a partner password that unlocks the ke
 server ever seeing it, is scoped in `docs/plans/09-partner-login.md` and not built. Dropping end-to-end encryption to
 make email links work was considered and rejected.
 
+## D-027 — The repo moves to @flyboy-byte and goes public as is
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+@sidewinderzz transferred the repo to @flyboy-byte (`flyboy-byte/focusfence`; GitHub redirects the old URL). It goes
+public with its history unchanged. The current files were cleaned first (#40–#44); old commits still show the server
+details and an early personal author address, rated low risk in `docs/public-release.md`. A rewritten history was built
+and verified but not used: Logan wanted "a clean public repo", and what visitors see is clean, while a rewrite would
+change every commit hash, break changelog links and clones, and still need GitHub Support to purge PR refs. The
+encrypted keystore-recovery artifact was deleted first, so it never became public. Public also means GitHub Actions
+runs free.
+

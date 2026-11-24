@@ -9,7 +9,7 @@ a phone. Every item names its **exit**: the thing that has to be true, not the d
 they land (`[x]`, with the PR number); strike through, never delete.
 
 Legend: 🧪 tested in CI only · 📱 seen on a phone · 🔒 security-sensitive (needs an independent audit before release) ·
-👤 needs a decision from a person · 🛠 needs repo admin (@sidewinderzz) · 🖥 needs the server operator (root on the box).
+👤 needs a decision from a person · 🛠 needs repo admin (@flyboy-byte) · 🖥 needs the server operator (root on the box).
 
 ---
 

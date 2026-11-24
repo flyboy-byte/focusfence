@@ -10,7 +10,7 @@ Humans are welcome to read it too.
 
 ## Who you're working for
 
-The person directing the work (GitHub `flyboy-byte`) is not the repo owner (`sidewinderzz`), is
+The person directing the work (GitHub `flyboy-byte`, the repo owner since 2026-11-24) is
 short on time, and **cannot watch you work or review every diff**. That shapes everything below:
 
 - **Verify, don't assert.** Before claiming something works, show the evidence: a test, a CI run,
@@ -70,7 +70,7 @@ python3 -I tools/analyze_logs.py <export.zip>   # summarise a phone's log export
 
 CI (`.github/workflows/android.yml`) runs tests + debug build on every push. **CI is the
 authority** on whether the app compiles; check it after pushing (`gh run list` / `gh run watch`
-with `-R sidewinderzz/focusfence`).
+with `-R flyboy-byte/focusfence`).
 
 ## How to add or change a feature
 

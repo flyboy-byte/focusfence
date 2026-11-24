@@ -30,12 +30,12 @@ server and trying it on two phones is the next step.
 
 | | |
 |---|---|
-| Repo | `sidewinderzz/focusfence` (owner: sidewinderzz; contributor: flyboy-byte) |
-| Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR. The repo's default branch setting still points at an old branch (a repo-settings item for @sidewinderzz). |
+| Repo | `flyboy-byte/focusfence` (owner: flyboy-byte since 2026-11-24, transferred from sidewinderzz; public, D-027) |
+| Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR (squash-only, branches auto-deleted). `main` is the default branch. |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR (when Actions minutes allow) |
-| Latest release | `v2.12.0-accountable` (2026-11-23, code 33). `main` has two more merged changes waiting for 2.13 (quieter alerts #38, permanent partner link #39), held until Actions can build again. |
+| Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR |
+| Latest release | `v2.12.0-accountable` (2026-11-23, code 33). `main` has two more merged changes waiting for 2.13 (quieter alerts #38, permanent partner link #39), next to release. |
 
 ## Verification levels
 

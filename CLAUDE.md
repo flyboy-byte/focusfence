@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Start with [`STATE.md`](STATE.md)** (where things stand) and [`AGENTS.md`](AGENTS.md) (how to
 > work here — rules for any AI agent). This file is the architecture reference.
 >
-> **Contributed by @flyboy-byte, not the maintainer.** It describes the codebase as it exists —
+> **Written by @flyboy-byte** (repo owner since 2026-11-24). It describes the codebase as it exists —
 > architecture, invariants, commands — and deliberately contains no proposals or opinions about
 > where the project should go. Those live in [`docs/`](docs/), which nothing auto-loads.
 > Rewrite or delete this file freely; it is a starting point, not a standard.

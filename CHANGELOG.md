@@ -7,45 +7,63 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Added
-- **ui:** one guide: setup checklist plus how-it-works, first run ends there (`d064e9f`, [#34](https://github.com/sidewinderzz/focusfence/pull/34))
-- **ui:** logs reachable from Monitoring; Partners folds the server fields once connected (`807b7f4`, [#33](https://github.com/sidewinderzz/focusfence/pull/33))
-- **ui:** categories card on the Blocking tab (`46c7ae5`, [#32](https://github.com/sidewinderzz/focusfence/pull/32))
-- **ui:** Settings in four groups (Protection, Filtering, Advanced, About) (`019da50`, [#35](https://github.com/sidewinderzz/focusfence/pull/35))
-- **ui:** five-tab layout (Home, Blocking, Partners, Monitoring, Settings) with a Classic layout switch (`933523f`, [#29](https://github.com/sidewinderzz/focusfence/pull/29))
-- send a blurred screenshot to partners (Phase 2 level B, D-025) (`2a73cf1`, [#28](https://github.com/sidewinderzz/focusfence/pull/28))
+- the invite link is the partner's report link for good (D-026); partner login scoped (plan 09) (`6d134ec`, [#39](https://github.com/flyboy-byte/focusfence/pull/39))
 ### Fixed
-- **strict:** log every strict-mode change and send it to partners (`457b1fe`, [#27](https://github.com/sidewinderzz/focusfence/pull/27))
+- **alerts:** app updates and flaky-network health go in the report, not an email (`f035a28`, [#38](https://github.com/flyboy-byte/focusfence/pull/38))
 ### Docs
-- STATE, HANDOFF, CLAUDE.md UI section and roadmap after the 2.12 redesign (`11996e2`, [#36](https://github.com/sidewinderzz/focusfence/pull/36))
-- roadmap Phase 7, a screenshot AI that learns from your Review answers (`59eedd5`, [#30](https://github.com/sidewinderzz/focusfence/pull/30))
+- describe the first AI false flag neutrally (`a210a37`, [#44](https://github.com/flyboy-byte/focusfence/pull/44))
+- plan 06 without the operator's tool name (`3606e9f`, [#43](https://github.com/flyboy-byte/focusfence/pull/43))
+- public-release audit and checklist; SECURITY.md; STATE's stale branch and release rows (`05813ef`, [#42](https://github.com/flyboy-byte/focusfence/pull/42))
+- README for the public repo: what Focus Fence AC is, what's verified, privacy model, self-hosting (`1584c81`, [#41](https://github.com/flyboy-byte/focusfence/pull/41))
+### Maintenance
+- public-release prep: server internals out of the docs, names to handles (`df71abc`, [#40](https://github.com/flyboy-byte/focusfence/pull/40))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.12.0-accountable
+
+### Added
+- **ui:** one guide: setup checklist plus how-it-works, first run ends there (`d064e9f`, [#34](https://github.com/flyboy-byte/focusfence/pull/34))
+- **ui:** logs reachable from Monitoring; Partners folds the server fields once connected (`807b7f4`, [#33](https://github.com/flyboy-byte/focusfence/pull/33))
+- **ui:** categories card on the Blocking tab (`46c7ae5`, [#32](https://github.com/flyboy-byte/focusfence/pull/32))
+- **ui:** Settings in four groups (Protection, Filtering, Advanced, About) (`019da50`, [#35](https://github.com/flyboy-byte/focusfence/pull/35))
+- **ui:** five-tab layout (Home, Blocking, Partners, Monitoring, Settings) with a Classic layout switch (`933523f`, [#29](https://github.com/flyboy-byte/focusfence/pull/29))
+- send a blurred screenshot to partners (Phase 2 level B, D-025) (`2a73cf1`, [#28](https://github.com/flyboy-byte/focusfence/pull/28))
+### Fixed
+- **strict:** log every strict-mode change and send it to partners (`457b1fe`, [#27](https://github.com/flyboy-byte/focusfence/pull/27))
+### Docs
+- STATE, HANDOFF, CLAUDE.md UI section and roadmap after the 2.12 redesign (`11996e2`, [#36](https://github.com/flyboy-byte/focusfence/pull/36))
+- roadmap Phase 7, a screenshot AI that learns from your Review answers (`59eedd5`, [#30](https://github.com/flyboy-byte/focusfence/pull/30))
+### Maintenance
+- release 2.12.0 (`1f5783a`, [#37](https://github.com/flyboy-byte/focusfence/pull/37))
 
 _Undo any line with `git revert <commit>`._
 
 ## v2.11.0-accountable
 
 ### Fixed
-- **server:** admin audit pass 5 (A1-A7) (`758de46`, [#25](https://github.com/sidewinderzz/focusfence/pull/25))
-- **dns:** a parent-domain rule never blocks push, time or connectivity hosts (#18) (`fcb5f05`, [#22](https://github.com/sidewinderzz/focusfence/pull/22))
+- **server:** admin audit pass 5 (A1-A7) (`758de46`, [#25](https://github.com/flyboy-byte/focusfence/pull/25))
+- **dns:** a parent-domain rule never blocks push, time or connectivity hosts (#18) (`fcb5f05`, [#22](https://github.com/flyboy-byte/focusfence/pull/22))
 ### Changed
-- D-023: the server operator can't read users' activity (E2E email/web partner reports) (`92d3d78`, [#19](https://github.com/sidewinderzz/focusfence/pull/19))
-- Port research, benchmarks and the D-017..D-020 record from the retired shareddev branch (`7ee07ef`, [#17](https://github.com/sidewinderzz/focusfence/pull/17))
-- D-022: main is the only long-lived branch; collaboration guide and branch cleanup record (`ae649e7`, [#16](https://github.com/sidewinderzz/focusfence/pull/16))
-- D-021: one release signing key for every Focus Fence release (resolves O-002) (`330a668`, [#15](https://github.com/sidewinderzz/focusfence/pull/15))
-- Make a notification the default way to say a site was blocked (`9f6867a`, [#14](https://github.com/sidewinderzz/focusfence/pull/14))
-- Show a "Blocked by Focus Fence" screen when a blocked site opens (`9de21aa`, [#13](https://github.com/sidewinderzz/focusfence/pull/13))
-- Merge Focus Fence AC (2.10.0) into main (`7dcec4e`, [#12](https://github.com/sidewinderzz/focusfence/pull/12))
+- D-023: the server operator can't read users' activity (E2E email/web partner reports) (`92d3d78`, [#19](https://github.com/flyboy-byte/focusfence/pull/19))
+- Port research, benchmarks and the D-017..D-020 record from the retired shareddev branch (`7ee07ef`, [#17](https://github.com/flyboy-byte/focusfence/pull/17))
+- D-022: main is the only long-lived branch; collaboration guide and branch cleanup record (`ae649e7`, [#16](https://github.com/flyboy-byte/focusfence/pull/16))
+- D-021: one release signing key for every Focus Fence release (resolves O-002) (`330a668`, [#15](https://github.com/flyboy-byte/focusfence/pull/15))
+- Make a notification the default way to say a site was blocked (`9f6867a`, [#14](https://github.com/flyboy-byte/focusfence/pull/14))
+- Show a "Blocked by Focus Fence" screen when a blocked site opens (`9de21aa`, [#13](https://github.com/flyboy-byte/focusfence/pull/13))
+- Merge Focus Fence AC (2.10.0) into main (`7dcec4e`, [#12](https://github.com/flyboy-byte/focusfence/pull/12))
 - Add docs/work/NEXT.md: a standing queue an unsupervised agent can run from (`a85f87e`)
 - Record the shareddev restructure (D-005, third revision today) (`e2a33db`)
 - Merge in the pre-planning app-blocking entry-point fix (`60724f4`)
 - Record the branch-strategy change and update status after the merge (`f3aaf18`)
 - Merge logandev into main: MIT licence, adult-content decision, W1/W2/W6/W7 (`c13bef2`)
 ### Docs
-- D-024 triaged block notifications; park a browser block page (P-006, needs a CA) (`bf6957d`, [#24](https://github.com/sidewinderzz/focusfence/pull/24))
-- roadmap (phases 0-6) and a HANDOFF rewritten for main (`975fb54`, [#20](https://github.com/sidewinderzz/focusfence/pull/20))
+- D-024 triaged block notifications; park a browser block page (P-006, needs a CA) (`bf6957d`, [#24](https://github.com/flyboy-byte/focusfence/pull/24))
+- roadmap (phases 0-6) and a HANDOFF rewritten for main (`975fb54`, [#20](https://github.com/flyboy-byte/focusfence/pull/20))
 ### Maintenance
-- release 2.11.0 (`ac68738`, [#26](https://github.com/sidewinderzz/focusfence/pull/26))
-- generated changelog (tools/changelog.py), backfilled from every release tag; release PR steps in AGENTS (`857f3c0`, [#23](https://github.com/sidewinderzz/focusfence/pull/23))
-- PR awareness guide for people and agents (template, AGENTS section; nothing enforced) (`3874189`, [#21](https://github.com/sidewinderzz/focusfence/pull/21))
+- release 2.11.0 (`ac68738`, [#26](https://github.com/flyboy-byte/focusfence/pull/26))
+- generated changelog (tools/changelog.py), backfilled from every release tag; release PR steps in AGENTS (`857f3c0`, [#23](https://github.com/flyboy-byte/focusfence/pull/23))
+- PR awareness guide for people and agents (template, AGENTS section; nothing enforced) (`3874189`, [#21](https://github.com/flyboy-byte/focusfence/pull/21))
 
 _Undo any line with `git revert <commit>`._
 
@@ -261,7 +279,7 @@ _Undo any line with `git revert <commit>`._
 - Phase 1 UI: categories & allowlist screen (`39e5e3b`)
 - Phase 1 engine: content categories, allowlist, PIN + partner crypto core (`f8de5eb`)
 - Add activity/diagnostics logging and accountability plan docs (`4b7dc01`)
-- Merge pull request #9 from sidewinderzz/docs/research-audit-pack (`a23e1fa`, [#10](https://github.com/sidewinderzz/focusfence/pull/10))
+- Merge pull request #9 from sidewinderzz/docs/research-audit-pack (`a23e1fa`, [#10](https://github.com/flyboy-byte/focusfence/pull/10))
 - Cut battery draw further: cacheable block answers, upstream and event tuning (`0552f11`)
 - Restructure UI into tabs with grouped blocklist and a domain wizard (v2.0) (`3ef9592`)
 - Add strict mode, whole-app blocking, and a stats screen (`543907a`)

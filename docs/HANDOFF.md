@@ -8,8 +8,8 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 - **@flyboy-byte (Logan):** a self-accountability app (benchmark: Ever Accountable) on his Pixel 9, aimed at groups of up to
   4 phones; every layer optional ("recommended" means guided, never forced); FOSS spirit, light. Leads collaboration and
   the accountability direction. Short on time to test: verify harder than feels necessary and label 🧪 vs 📱.
-- **@sidewinderzz:** repo owner and admin; merged the accountability work into `main` (#12) and added the blocked
-  screen/notification (#13, #14). His agents work from Claude project threads and open PRs too.
+- **@sidewinderzz:** wrote the original app; merged the accountability work into `main` (#12) and added the blocked
+  screen/notification (#13, #14). Transferred the repo to @flyboy-byte on 2026-11-24 (now `flyboy-byte/focusfence`). His agents work from Claude project threads and open PRs too.
 - **How we work together (D-022):** `main` is the only long-lived branch; short task branches, PRs, squash merges; releases
   are tags on `main`. PRs carry a little awareness for the other person (`AGENTS.md`, "Pull requests: awareness, not
   rules"); **nothing is enforced** and agents never gate anyone's PR.
@@ -62,7 +62,6 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | No emulator on this machine, and a debug build can't install over the release app (different key) | UI changes are checked on Logan's phone from a release |
 
 ## Open questions only a person can answer
-Screenshot level B or C (Logan); triage details (Logan, then @sidewinderzz on #13); keystore backup confirmed (Logan); repo
-settings: default branch `main`, squash-only, auto-delete branches, close #11 (@sidewinderzz); whether the repo goes public (then
-scrub `docs/plans/04-backend-deploy.md` and owner references); SMS provider and budget; running `server-release.yml`
+Triage details (Logan, then @sidewinderzz on #13); keystore backup confirmed (Logan);
+~~repo settings and going public~~ done 2026-11-24 (D-027: transferred to @flyboy-byte, public as is); SMS provider and budget; running `server-release.yml`
 (publishes a GHCR image under the upstream repo).
