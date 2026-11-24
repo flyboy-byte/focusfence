@@ -445,6 +445,7 @@
 
                 <Button
                     android:id="@+id/setupButton"
+                    android:visibility="gone"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -461,7 +462,7 @@
 
                 <Button
                     android:id="@+id/guideButton"
-                    style="@style/Widget.Material3.Button.TextButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"

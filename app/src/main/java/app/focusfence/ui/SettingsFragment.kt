@@ -110,7 +110,7 @@ class SettingsFragment : Fragment() {
             startActivity(Intent(requireContext(), DeviceOwnerActivity::class.java))
         }
         binding.guideButton.setOnClickListener {
-            startActivity(Intent(requireContext(), HelpActivity::class.java))
+            startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
         }
     }
 

@@ -62,6 +62,8 @@ class OnboardingActivity : AppCompatActivity() {
 
     private fun done() {
         BlocklistStore.prefs(this).edit().putBoolean(KEY_ONBOARDED, true).apply()
+        // Straight into the guide's checklist, so the first run ends with what to turn on, not an empty home screen.
+        startActivity(android.content.Intent(this, SetupActivity::class.java))
         finish()
     }
 }
