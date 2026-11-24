@@ -390,7 +390,7 @@ from bad internet is the app's job, not the browser's: **no CA, no interstitial 
 address bar is on the blocked site, so prefetch and other apps' background lookups never trigger it. Without that
 service: a quiet notification, at most once per site every 5 minutes.
 
-**What qualifies, by triage** (the part still to build; numbers from one phone, 9,369 blocks in 5 days, 90% trackers):
+**What qualifies, by triage** (built 2026-11-24, `dns/BlockTriage`; numbers from one phone, 9,369 blocks in 5 days, 90% trackers):
 
 | Tier | What | What happens |
 |---|---|---|
@@ -401,6 +401,13 @@ service: a quiet notification, at most once per site every 5 minutes.
 Rules that go with it: notification text for a category block stays generic ("Blocked: adult content"), so a site name
 doesn't sit in the notification shade; within the "security" list, scam/phishing ranks above trackers; each tier's
 action (notify me / tell my partner / just log) is a setting, with these defaults.
+
+**As built (2026-11-24):** high-risk = adult, gambling, scam (only the lists the owner turned on). A list block's
+"front door" is shape-based (bare name or www./m./mobile.), since lists carry no rule domain. The Partner tier counts only
+address-bar-confirmed hits, so it needs the accessibility service: without it the owner still gets the notification, but
+partners are never told (a wrong partner alert is worse than a missed one). It fires once per category, then stays quiet
+for an hour. Settings → Filtering: "Also adult, gambling and scam sites" and "Tell partners if I keep trying" (on by
+default; turning the latter off is behind the `QUIET_BLOCK_ALERTS` friction guard).
 
 **What would reopen it:** a way to show a block page in the browser without a certificate authority (see P-006).
 

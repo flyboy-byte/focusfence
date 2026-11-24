@@ -57,6 +57,7 @@ without evidence.
 | VPN exclusions by risk (`dns/ExclusionPolicy`): games/music/maps toggle instantly even in strict mode; everything that could show adult content needs the strict delay | 🧪 | Settings → VPN exclusions. Added because games with anti-cheat refuse to run behind a VPN. Risk comes from Android's app category, so an app that declares the wrong category is misfiled (unknown = guarded); a few open games (Roblox, Discord) are forced to guarded. Excluded apps bypass **all** filtering and capture-by-DNS, so this is a real hole for anything free. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
+| Block triage (D-024): owner notice for own rules and adult/gambling/scam front doors; partner alert after 3 confirmed tries in 10 min | 🧪 | `dns/BlockTriage`, Settings → Filtering → When a site is blocked. Unreleased. Partner tier needs the accessibility service. |
 | User allowlist | 🧪 | |
 | DoH-bypass guards | 📱 | Inherited. |
 | App blocking (accessibility bounce) | 📱 | Inherited. |

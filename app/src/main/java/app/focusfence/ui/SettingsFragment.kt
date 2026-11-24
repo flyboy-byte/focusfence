@@ -69,6 +69,22 @@ class SettingsFragment : Fragment() {
             }
             BlockScreenSettings.setStyle(requireContext(), style)
         }
+        binding.blockHighRiskSwitch.isChecked = BlockScreenSettings.noticeHighRisk(requireContext())
+        binding.blockHighRiskSwitch.setOnCheckedChangeListener { _, on -> BlockScreenSettings.setNoticeHighRisk(requireContext(), on) }
+        // Turning partner alerts off is a loosening: behind the friction guard, like removing a partner.
+        binding.blockPartnerSwitch.isChecked = BlockScreenSettings.partnerRepeated(requireContext())
+        binding.blockPartnerSwitch.setOnClickListener {
+            val ctx = requireContext()
+            if (binding.blockPartnerSwitch.isChecked) {
+                BlockScreenSettings.setPartnerRepeated(ctx, true)
+            } else {
+                binding.blockPartnerSwitch.isChecked = true // revert until the guard is satisfied
+                UiUtil.guard(ctx, app.focusfence.dns.GuardPolicy.Action.QUIET_BLOCK_ALERTS) {
+                    BlockScreenSettings.setPartnerRepeated(ctx, false)
+                    _binding?.blockPartnerSwitch?.isChecked = false
+                }
+            }
+        }
 
         binding.excludedAppsButton.setOnClickListener {
             UiUtil.chooseExcludedApps(requireContext()) { refreshAll() }

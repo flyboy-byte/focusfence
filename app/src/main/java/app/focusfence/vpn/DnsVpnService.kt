@@ -36,6 +36,7 @@ import app.focusfence.dns.AlwaysOnNudge
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.BlockScreen
+import app.focusfence.dns.BlockTriage
 import app.focusfence.dns.Blocklist
 import app.focusfence.dns.Categories
 import app.focusfence.dns.Dns
@@ -209,6 +210,8 @@ class DnsVpnService : VpnService() {
 
     @Volatile
     private var blockStyle = BlockScreen.Style.DEFAULT
+    @Volatile private var noticeHighRisk = true
+    @Volatile private var partnerRepeated = true
 
     private var tunFd: ParcelFileDescriptor? = null
     private var readerThread: Thread? = null
@@ -287,6 +290,8 @@ class DnsVpnService : VpnService() {
             AllowlistStore.KEY_ALLOWLIST -> allowlist = AllowlistStore.get(this)
             LogSettings.KEY_LOG_ALLOWED_DNS -> logAllowed = LogSettings.logAllowedDns(this)
             BlockScreenSettings.KEY_BLOCK_STYLE -> blockStyle = BlockScreenSettings.style(this)
+            BlockScreenSettings.KEY_NOTICE_HIGH_RISK -> noticeHighRisk = BlockScreenSettings.noticeHighRisk(this)
+            BlockScreenSettings.KEY_PARTNER_REPEATED -> partnerRepeated = BlockScreenSettings.partnerRepeated(this)
             DnsUpstreamStore.KEY_REV -> {
                 upstreamConfig = DnsUpstreamStore.load(this)
                 preferredUpstream = null
@@ -400,6 +405,8 @@ class DnsVpnService : VpnService() {
         powerManager = getSystemService(PowerManager::class.java)
         logAllowed = LogSettings.logAllowedDns(this)
         blockStyle = BlockScreenSettings.style(this)
+        noticeHighRisk = BlockScreenSettings.noticeHighRisk(this)
+        partnerRepeated = BlockScreenSettings.partnerRepeated(this)
         rules = BlocklistStore.rulesByDomain(this)
         preloadBudgetUsage()
         reloadAdHostsAsync()
@@ -597,14 +604,21 @@ class DnsVpnService : VpnService() {
                 val dnsResponse =
                     Dns.buildBlockedResponse(udp.packet, udp.payloadOffset, question, ttl)
                 writeToTun(Packets.buildUdpReply(udp, dnsResponse))
-                // After the answer is written, so the blocked screen never delays it.
-                // User rules only: ads, guards and categories fire constantly in
-                // the background and aren't something the person chose to open.
+                // After the answer is written, so a notice never delays it. Triage (D-024): ads, trackers and
+                // guards stay silent; a user rule, or an adult/gambling/scam site's front door, is a notice.
                 val rule = decision.rule
-                if (blockStyle != BlockScreen.Style.OFF && decision.reason == LogEvents.REASON_RULE && rule != null &&
-                    BlockScreen.shouldSignal(question.qname, rule, powerManager.isInteractive)
-                ) {
-                    app.focusfence.BlockedNotice.onDnsBlock(this, rule.domain)
+                val screenOn = powerManager.isInteractive
+                if (decision.reason == LogEvents.REASON_RULE && rule != null) {
+                    if (blockStyle != BlockScreen.Style.OFF && BlockScreen.shouldSignal(question.qname, rule, screenOn)) {
+                        app.focusfence.BlockedNotice.onDnsBlock(this, rule.domain, null, tellMe = true, tellPartner = false)
+                    }
+                } else if (decision.reason == LogEvents.REASON_CATEGORY && screenOn) {
+                    val category = BlockTriage.highRisk(decision.categories)
+                    val site = category?.let { BlockTriage.frontDoorSite(question.qname) }
+                    val tellMe = noticeHighRisk && blockStyle != BlockScreen.Style.OFF
+                    if (category != null && site != null && (tellMe || partnerRepeated)) {
+                        app.focusfence.BlockedNotice.onDnsBlock(this, site, category, tellMe, partnerRepeated)
+                    }
                 }
                 return
             }

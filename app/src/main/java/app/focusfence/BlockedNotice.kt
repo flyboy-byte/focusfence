@@ -9,7 +9,11 @@ import android.os.Looper
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import app.focusfence.accessibility.UrlFilterService
+import app.focusfence.data.EventLog
 import app.focusfence.dns.BlockScreen
+import app.focusfence.dns.BlockTriage
+import app.focusfence.dns.Categories
+import app.focusfence.dns.LogEvents
 
 /**
  * Routes a blocked front-door lookup to the user. Called on the DNS reader
@@ -35,17 +39,35 @@ object BlockedNotice {
 
     private val main = Handler(Looper.getMainLooper())
 
-    fun onDnsBlock(context: Context, domain: String) {
+    /** Repeated confirmed high-risk notices -> one partner alert (D-024 "Partner" tier). */
+    private val escalation = BlockTriage.Escalation()
+
+    /**
+     * [category] is set for an adult/gambling/scam list block, null for the owner's own rule. [tellMe]: announce it
+     * to the owner in the chosen style. [tellPartner]: count it toward the repeated-tries partner alert.
+     */
+    fun onDnsBlock(context: Context, domain: String, category: String?, tellMe: Boolean, tellPartner: Boolean) {
         val now = SystemClock.elapsedRealtime()
         if (!signalCooldown.accept(domain, now)) return
-        if (UrlFilterService.onDnsBlocked(domain)) return
+        if (UrlFilterService.onDnsBlocked(domain, category, tellMe, tellPartner)) return
+        // Without the accessibility service nothing confirms a person opened the site (browsers prefetch while you
+        // type), so partners are never told from here: a wrong partner alert is worse than a missed one.
+        if (!tellMe) return
         if (!notifyCooldown.accept(domain, now)) return
         val app = context.applicationContext
-        main.post { show(app, domain) }
+        main.post { show(app, domain, category) }
+    }
+
+    /** The address bar confirmed a high-risk site was opened. Tells partners if it keeps happening. */
+    fun onConfirmedHighRisk(context: Context, category: String) {
+        val now = System.currentTimeMillis()
+        val n = escalation.hit(category, now) ?: return
+        EventLog.activity(LogEvents.service(now, "block", "repeated", "cat=$category,n=$n"), urgent = true)
+        app.focusfence.sync.Sync.kick(context)
     }
 
     /** Posts (or replaces) the "blocked" notification. Tapping it opens [BlockedActivity]. */
-    fun show(context: Context, domain: String) {
+    fun show(context: Context, domain: String, category: String? = null) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
             NotificationChannel(
@@ -55,7 +77,7 @@ object BlockedNotice {
             )
         )
         val open = PendingIntent.getActivity(
-            context, domain.hashCode(), BlockedActivity.intent(context, domain),
+            context, domain.hashCode(), BlockedActivity.intent(context, domain, category),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         // Without the notification permission (Android 13+) this is a no-op;
@@ -65,7 +87,14 @@ object BlockedNotice {
                 NOTIFICATION_ID,
                 NotificationCompat.Builder(context, CHANNEL)
                     .setSmallIcon(R.drawable.ic_shield)
-                    .setContentTitle(context.getString(R.string.block_screen_notify_title, domain))
+                    // A list block stays generic, so a site name never sits in the notification shade.
+                    .setContentTitle(
+                        if (category != null) {
+                            context.getString(R.string.block_notify_category_title, Categories.bundle(category)?.label ?: category)
+                        } else {
+                            context.getString(R.string.block_screen_notify_title, domain)
+                        }
+                    )
                     .setContentText(context.getString(R.string.block_screen_notify_text))
                     .setContentIntent(open)
                     .setAutoCancel(true)

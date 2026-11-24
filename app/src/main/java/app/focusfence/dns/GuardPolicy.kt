@@ -30,6 +30,7 @@ object GuardPolicy {
         DISABLE_STRICT("guard_disable_strict", "Turn off strict mode", Level.DELAY),
         REMOVE_PROTECTION("guard_remove_protection", "Turn off uninstall protection", Level.DELAY),
         REMOVE_PARTNER("guard_remove_partner", "Remove an accountability partner", Level.DELAY),
+        QUIET_BLOCK_ALERTS("guard_quiet_block_alerts", "Stop telling partners about repeated blocked tries", Level.DELAY),
         /** Leave a group, stop filtering inside it, narrow who sees my report, or remove a member. */
         LEAVE_GROUP("guard_leave_group", "Leave or loosen a group", Level.DELAY);
 
