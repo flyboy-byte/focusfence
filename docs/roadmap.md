@@ -20,8 +20,8 @@ The work is written; it needs merging, deploying and one real test.
 - [ ] **Merge in order** (decision numbers assume it): #15 (D-021 signing key) → #16 (D-022 collaboration) → #17 (retire
   `shareddev`) → #19 (D-023 E2E partner reports) → #20 (this roadmap) → #21 (PR awareness guide) → #22 (fix #18) →
   #23 (changelog) → #24 (D-024 block feedback). A local test-merge of all nine in this order builds and passes tests.
-- [ ] 🛠 **Repo settings:** default branch → `main`; protect `main` (PR + `Android CI` required); auto-delete merged
-  branches; then delete `claude/android-vpn-website-blocker-1otcbn`.
+- [ ] 🛠 **Repo settings:** default branch → `main`; squash merges; auto-delete merged branches; (optional) protect `main`;
+  then delete `claude/android-vpn-website-blocker-1otcbn`.
 - [ ] 🛠 **Close #11** (old signing setup at 2.1.0, contradicts D-021) and delete its branch.
 - [ ] 👤 **Confirm the keystore backup exists** (D-021's one open line). If not, make it first.
 - [ ] 🖥 **Deploy the server from `main`** (D-023). The startup purge deletes the readable records from earlier versions.
@@ -35,7 +35,7 @@ The work is written; it needs merging, deploying and one real test.
   - `net` records + DNS race: was the morning slowness gone?
 - [ ] 📱 **Second phone:** group create/join/approve both ways; each sees the other's report and alerts.
 
-**Exit:** `main` is the default and protected, 2.11 is on your phone, and the checks above are 📱, or have issues filed.
+**Exit:** `main` is the default, 2.11 is on your phone, and the checks above are 📱, or have issues filed.
 
 ---
 
