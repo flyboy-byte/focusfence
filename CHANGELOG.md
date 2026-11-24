@@ -6,12 +6,21 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- What's new drops bare 'ui:' / 'server:' prefixes too (`f6d303c`, [#62](https://github.com/flyboy-byte/focusfence/pull/62))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.15.0-accountable
+
 ### Added
 - update banner and What's new, release notes with changes, pages on GitHub Pages (`44564a8`, [#58](https://github.com/flyboy-byte/focusfence/pull/58))
 ### Changed
 - server: stop serving the About / privacy pages (they're on GitHub Pages) (`52a09ff`, [#60](https://github.com/flyboy-byte/focusfence/pull/60))
 - ui: Settings → About links to the GitHub repo (`e1f45ac`, [#59](https://github.com/flyboy-byte/focusfence/pull/59))
 - ui: Settings as an ordered list, Partners by rank, status colours harmonized (`8ff7797`, [#57](https://github.com/flyboy-byte/focusfence/pull/57))
+### Maintenance
+- release 2.15.0 (`06a4726`, [#61](https://github.com/flyboy-byte/focusfence/pull/61))
 
 _Undo any line with `git revert <commit>`._
 

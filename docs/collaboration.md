@@ -1,7 +1,7 @@
 # Working on Focus Fence together without conflicts
 
 > **Tier:** How we work · **Audience:** @flyboy-byte, @sidewinderzz and any Claude session either of us
-> runs · **Decided in:** D-022 (2026-11-23), superseding D-005.
+> runs · **Decided in:** D-022 (2026-11-23), superseding D-005. Outside contributors: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## The shape
 
@@ -13,6 +13,8 @@
 - **Release**: bump `versionCode`/`versionName` in a small release PR, merge, tag `vX.Y.Z-accountable` on
   `main`. Never bump the version in a feature PR, and never tag anything but `main`.
 - **Signing**: one key for every release (D-021). CI signs from the repo secrets on tag pushes only.
+- **PR titles are user-facing** (D-031): each becomes a "What's new" line in the app. Plain words, typed prefix.
+- **A bad release** is fixed by a patch release that reverts it (D-030); phones can't downgrade.
 
 ## Before a Claude session starts
 
