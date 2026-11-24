@@ -313,9 +313,15 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
         }
         // Audit A1: the operator's own way in, which no one on the internet can use up. `admin login-link <email>` on the
         // server writes a one-time, 15-minute link; it stands in for the emailed code, and the authenticator is still asked.
+        // Audit S2: GET only shows a button, so a chat app's link preview can't use the link up; the POST spends it.
         r.get("/admin/link/{token}") {
+            val tok = call.parameters["token"].orEmpty().filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+            html(call, "Sign in", "<h1>Sign in</h1><p>Continue with this one-time link. The authenticator is asked next.</p>" +
+                "<form method='post' action='/admin/link/${Web.esc(tok)}'><button>Continue</button></form>")
+        }
+        r.post("/admin/link/{token}") {
             val email = consumeLink(call.parameters["token"].orEmpty())?.takeIf { it in allowed }
-                ?: return@get html(call, "Admin", loginForm("That sign-in link is invalid, used or expired."), HttpStatusCode.Unauthorized)
+                ?: return@post html(call, "Admin", loginForm("That sign-in link is invalid, used or expired."), HttpStatusCode.Unauthorized)
             pendings[token().also { setCookie(call, PCOOKIE, it, 600) }] = Pending(email, "", cfg.now() + 600_000, true, emailOk = true)
             audit(email, clientOf(call), "login_link_used")
             html(call, "Sign in", verifyForm(linkUsed = true))
@@ -442,7 +448,8 @@ object AdminLinks {
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     private val ser = kotlinx.serialization.builtins.ListSerializer(Link.serializer())
 
-    fun read(f: File): List<Link> = if (!f.exists()) emptyList() else runCatching { json.decodeFromString(ser, f.readText()) }.getOrDefault(emptyList())
+    fun read(f: File): List<Link> = if (!f.exists()) emptyList() else runCatching { json.decodeFromString(ser, f.readText()) }
+        .getOrElse { System.err.println("admin-links: cannot read ${f.absolutePath}: $it (made as another user?)"); emptyList() } // audit S1: say why a link shows as invalid
 
     fun write(f: File, links: List<Link>) {
         val tmp = File(f.parentFile, f.name + ".tmp"); tmp.writeText(json.encodeToString(ser, links))

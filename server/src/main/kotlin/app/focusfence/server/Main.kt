@@ -151,15 +151,17 @@ class RateLimiter(private val max: Int, private val windowMs: Long, private val 
     private val calls = java.util.concurrent.atomic.AtomicLong()
     fun allow(key: String): Boolean {
         val t = now()
-        // Audit A7: drop keys whose hits have all aged out, so per-address/IP maps can't grow forever.
-        if (calls.incrementAndGet() % 1024 == 0L) hits.entries.removeIf { e -> synchronized(e.value) { e.value.all { t - it > windowMs } } }
-        val list = hits.computeIfAbsent(key) { ArrayList() }
-        synchronized(list) {
+        // Audit A7: drop keys whose hits have all aged out, so per-address/IP maps can't grow forever. Both the sweep and
+        // the check run inside the map's per-key compute, so a sweep can't drop a list a caller is about to add to (S3).
+        if (calls.incrementAndGet() % 1024 == 0L) for (k in hits.keys) hits.computeIfPresent(k) { _, v -> if (v.all { t - it > windowMs }) null else v }
+        var ok = false
+        hits.compute(key) { _, v ->
+            val list = v ?: ArrayList()
             list.removeAll { t - it > windowMs }
-            if (list.size >= max) return false
-            list += t
-            return true
+            if (list.size < max) { list += t; ok = true }
+            list
         }
+        return ok
     }
 }
 

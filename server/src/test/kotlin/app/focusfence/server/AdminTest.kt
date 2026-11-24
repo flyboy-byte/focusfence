@@ -145,12 +145,14 @@ class AdminTest {
     fun theServerCliLinkIsSingleUseAndStillAsksForTheAuthenticator() = run { http ->
         // Audit A1: an owner path no one on the internet can use up.
         val tok = AdminLinks.create(store.dir, "boss@example.com", clock)
-        val first = http.get("/admin/link/$tok")
+        // Audit S2: a GET (a chat app's link preview) shows a button and spends nothing.
+        repeat(2) { assertTrue(http.get("/admin/link/$tok").bodyAsText().contains("Continue")) }
+        val first = http.form("/admin/link/$tok", "")
         assertEquals(HttpStatusCode.OK, first.status)
         assertTrue(first.bodyAsText().contains("One more code"))
-        assertEquals(HttpStatusCode.Unauthorized, http.get("/admin/link/$tok").status, "single use")
+        assertEquals(HttpStatusCode.Unauthorized, http.form("/admin/link/$tok", "").status, "single use")
         val stranger = AdminLinks.create(store.dir, "nobody@example.com", clock)
-        assertEquals(HttpStatusCode.Unauthorized, http.get("/admin/link/$stranger").status, "only allow-listed admins")
+        assertEquals(HttpStatusCode.Unauthorized, http.form("/admin/link/$stranger", "").status, "only allow-listed admins")
         // First login through the link leads to authenticator setup, with a fresh session id (audit A5).
         val setup = http.form("/admin/verify", cookieOf(first, "__Host-ffap")!!, "second" to "")
         val partial = cookieOf(setup, "__Host-ffa")!!
@@ -174,5 +176,15 @@ class AdminTest {
         assertTrue(r.bodyAsText().contains("login-link"))
         Thread.sleep(100)
         assertEquals(0, notifier.emails.size)
+    }
+
+    @Test
+    fun theLoginLinkCliRefusesOutsideTheServiceEnvironment() {
+        // Audit S1: an empty directory is not the live store, so no link is written.
+        val empty = Files.createTempDirectory("ff-empty").toFile()
+        val out = mutableListOf<String>()
+        assertTrue(runAdmin(arrayOf("admin", "login-link", "boss@example.com"), empty, clock) { out += it })
+        assertTrue(out.single().startsWith("refusing"))
+        assertFalse(java.io.File(empty, "admin-links.json").exists())
     }
 }

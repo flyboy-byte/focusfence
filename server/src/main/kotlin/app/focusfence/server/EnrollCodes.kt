@@ -78,7 +78,15 @@ fun runAdmin(args: Array<String>, dataDir: File, now: Long, out: (String) -> Uni
     if (args.size >= 2 && args[0] == "admin" && args[1] == "login-link") {
         val email = args.getOrNull(2)?.trim()?.lowercase()
         if (email.isNullOrEmpty()) { out("usage: admin login-link <admin email>"); return true }
-        val base = (System.getenv("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/')
+        // Audit S1: run by hand without the service's environment, this would write a link the running server never
+        // reads and print a localhost URL, exactly when the owner is locked out. Refuse unless it is pointed at the live
+        // store and the public URL; server/deploy/ff-admin.sh runs it as the service user with the service's env file.
+        if (!File(dataDir, "devices").isDirectory && !File(dataDir, "admin.json").isFile) {
+            out("refusing: ${dataDir.absolutePath} holds no server store. Run this with the service's environment (server/deploy/ff-admin.sh).")
+            return true
+        }
+        val base = System.getenv("FF_PUBLIC_URL")?.trimEnd('/')
+            ?: return true.also { out("refusing: FF_PUBLIC_URL is not set, so the link would point nowhere. Run this with the service's environment (server/deploy/ff-admin.sh).") }
         out("one-time sign-in link for $email (15 minutes; the authenticator is still asked):\n  $base/admin/link/${AdminLinks.create(dataDir, email, now)}")
         return true
     }
