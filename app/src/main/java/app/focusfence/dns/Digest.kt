@@ -144,8 +144,46 @@ class Digest(private val fromT: Long) {
         private const val MAX_EVENTS = 50
 
         /**
-         * Human text for a record a partner should hear about immediately, or
-         * null. The same rule decides digest "events" and instant alerts.
+         * Whether [f] (already given [alertText]) is worth an instant email/notification, not just a line in the report.
+         * Routine things stay report-only (2026-11-24, Logan: partners were mailed on every app update and whenever
+         * mobile DNS got flaky): an update to a newer version, and network-quality health states. A downgrade, and
+         * the health states that mean the filter is bypassed or not seeing traffic, still go out at once.
+         */
+        fun isUrgent(f: Map<String, Any?>): Boolean {
+            if (f["type"] != LogEvents.TYPE_SERVICE) return true
+            val comp = f["comp"]; val state = f["state"]
+            if (comp == "app" && state == "updated") {
+                val d = f["detail"] as? String ?: return true
+                val from = d.substringAfter("from=", "").substringBefore(',')
+                val to = d.substringAfter("to=", "").substringBefore(',')
+                return compareVersions(to, from) < 0 // only a downgrade is urgent
+            }
+            if (comp == "vpn" && state == "health") {
+                val now = (f["detail"] as? String)?.substringBefore(',')
+                return now !in NETWORK_HEALTH
+            }
+            return true
+        }
+
+        /** The alert text if [f] should be sent right away, else null. */
+        fun urgentText(f: Map<String, Any?>): String? = alertText(f)?.takeIf { isUrgent(f) }
+
+        private val NETWORK_HEALTH = setOf("degraded", "upstream_down")
+
+        /** Compares "2.11.0-accountable"-style versions by their numeric parts; unparseable counts as equal. */
+        fun compareVersions(a: String, b: String): Int {
+            val x = a.substringBefore('-').split('.').map { it.toIntOrNull() ?: return 0 }
+            val y = b.substringBefore('-').split('.').map { it.toIntOrNull() ?: return 0 }
+            for (i in 0 until maxOf(x.size, y.size)) {
+                val c = (x.getOrElse(i) { 0 }).compareTo(y.getOrElse(i) { 0 })
+                if (c != 0) return c
+            }
+            return 0
+        }
+
+        /**
+         * Human text for a record a partner should know about, or null. It decides the report's "events"; instant
+         * alerts are the subset [isUrgent] passes ([urgentText]).
          */
         fun alertText(f: Map<String, Any?>): String? {
             val type = f["type"]
