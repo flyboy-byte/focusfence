@@ -88,33 +88,19 @@ class HomeFragment : Fragment() {
             }
         }
 
-        // Per-action friction lives on its own screen; the card links there
-        // (it used to be a duplicate "Friction" status row).
-        binding.frictionButton.setOnClickListener { startActivity(Intent(requireContext(), StrictModeActivity::class.java)) }
-        binding.strictSwitch.setOnCheckedChangeListener { _, checked ->
-            val context = requireContext()
-            if (checked == StrictStore.isEnabled(context)) return@setOnCheckedChangeListener
-            if (checked) {
-                StrictStore.setEnabled(context, true)
-                refreshStrict()
-            } else {
-                binding.strictSwitch.isChecked = true // revert; disable only once the guard is satisfied
-                UiUtil.guard(context, GuardPolicy.Action.DISABLE_STRICT) {
-                    StrictStore.setEnabled(context, false)
-                    refreshStrict()
-                }
-            }
-        }
-
+        // Strict mode is one line here; turning it off, and the per-action friction, live on its own screen.
+        binding.strictCard.setOnClickListener { startActivity(Intent(requireContext(), StrictModeActivity::class.java)) }
         binding.strictActionButton.setOnClickListener {
             val context = requireContext()
             when (StrictStore.state(context)) {
+                is StrictLock.State.Off -> StrictStore.setEnabled(context, true)
                 is StrictLock.State.Locked -> StrictStore.requestUnlock(context)
                 is StrictLock.State.Pending -> StrictStore.cancelUnlock(context)
-                else -> {}
+                is StrictLock.State.Unlocked -> StrictStore.setEnabled(context, true) // relock early
             }
             refreshStrict()
         }
+        binding.weekCard.setOnClickListener { startActivity(Intent(requireContext(), app.focusfence.StatsActivity::class.java)) }
 
         binding.accessibilityActionButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -157,13 +143,9 @@ class HomeFragment : Fragment() {
 
     private fun refreshState() {
         val b = _binding ?: return
+        val context = context ?: return
         val running = DnsVpnService.isRunning
         if (b.vpnSwitch.isChecked != running) b.vpnSwitch.isChecked = running
-        b.statusText.text = if (running) {
-            getString(R.string.status_active, DnsVpnService.blockedCount.get())
-        } else {
-            getString(R.string.status_inactive)
-        }
         // A filter problem (bypassed, lockdown, failing) shows as "not protected"
         // too: the hero must never look green while filtering isn't working.
         val problem = running && DnsVpnService.health !in setOf("ok", "offline")
@@ -175,127 +157,157 @@ class HomeFragment : Fragment() {
                 else -> R.string.hero_off
             }
         )
-        fun c(attr: Int) = com.google.android.material.color.MaterialColors.getColor(b.heroCard, attr)
-        val container = c(if (good) com.google.android.material.R.attr.colorPrimaryContainer else com.google.android.material.R.attr.colorErrorContainer)
-        val onContainer = c(if (good) com.google.android.material.R.attr.colorOnPrimaryContainer else com.google.android.material.R.attr.colorOnErrorContainer)
-        val accent = c(if (good) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorError)
-        val onAccent = c(if (good) com.google.android.material.R.attr.colorOnPrimary else com.google.android.material.R.attr.colorOnError)
+        b.statusText.text = when {
+            !running -> getString(R.string.status_inactive)
+            problem -> getString(R.string.home_hero_problem_sub)
+            StrictStore.state(context) is StrictLock.State.Off -> getString(R.string.home_hero_on_sub)
+            else -> getString(R.string.home_hero_on_strict_sub)
+        }
+        fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.heroCard, a)
+        fun res(id: Int) = ContextCompat.getColor(context, id)
+        val container = if (good) res(R.color.good_container) else attr(com.google.android.material.R.attr.colorErrorContainer)
+        val onContainer = if (good) res(R.color.on_good_container) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
+        val muted = if (good) res(R.color.good_container_muted) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
+        val tile = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorSurface)
+        val accent = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorError)
+        val onAccent = if (good) res(R.color.good) else attr(com.google.android.material.R.attr.colorOnError)
         b.heroCard.setCardBackgroundColor(container)
         b.heroTitle.setTextColor(onContainer)
-        b.statusText.setTextColor(onContainer)
+        b.statusText.setTextColor(muted)
         b.heroIconBg.background.mutate().setTint(accent)
         b.heroIcon.setColorFilter(onAccent)
+
+        b.statsRow.visibility = if (running) View.VISIBLE else View.GONE
+        if (running) {
+            val partners = partnerCount(context)
+            val lastSync = app.focusfence.sync.SyncStore.lastOk(context)
+            stat(b.statBlocked, DnsVpnService.blockedCount.get().toString(), getString(R.string.home_stat_blocked), tile, onContainer, muted)
+            stat(b.statPartners, partners.toString(), resources.getQuantityString(R.plurals.home_stat_partners, partners), tile, onContainer, muted)
+            stat(
+                b.statSync,
+                if (partners == 0 || lastSync == 0L) "–" else shortAgo(System.currentTimeMillis() - lastSync),
+                getString(R.string.home_stat_sync), tile, onContainer, muted,
+            )
+        }
     }
+
+    private fun stat(s: app.focusfence.databinding.ItemHeroStatBinding, value: String, label: String, tile: Int, fg: Int, muted: Int) {
+        s.statRoot.background.mutate().setTint(tile)
+        s.statValue.text = value
+        s.statValue.setTextColor(fg)
+        s.statLabel.text = label
+        s.statLabel.setTextColor(muted)
+    }
+
+    /** "now", "4m", "3h", "2d": fits a stat tile. */
+    private fun shortAgo(ms: Long): String {
+        val m = ms / 60_000
+        return when {
+            m < 1 -> getString(R.string.home_ago_now)
+            m < 60 -> "${m}m"
+            m < 48 * 60 -> "${m / 60}h"
+            else -> "${m / (24 * 60)}d"
+        }
+    }
+
+    private fun partnerCount(context: Context): Int =
+        app.focusfence.sync.SyncStore.ownPairings(context).size +
+            (if (app.focusfence.sync.SyncStore.deviceId(context) != null) 1 else 0)
 
     private fun refreshStrict() {
         val b = _binding ?: return
         val context = context ?: return
         val state = StrictStore.state(context)
-        val enabled = state !is StrictLock.State.Off
-        if (b.strictSwitch.isChecked != enabled) b.strictSwitch.isChecked = enabled
+        fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.strictCard, a)
+        val on = state !is StrictLock.State.Off
+        b.strictIconBg.background.mutate().setTint(
+            attr(if (on) com.google.android.material.R.attr.colorPrimaryContainer else com.google.android.material.R.attr.colorSurfaceVariant)
+        )
+        b.strictIcon.setColorFilter(
+            attr(if (on) com.google.android.material.R.attr.colorOnPrimaryContainer else com.google.android.material.R.attr.colorOnSurfaceVariant)
+        )
         when (state) {
             is StrictLock.State.Off -> {
-                b.strictStatusText.text = getString(R.string.strict_off)
-                b.strictActionButton.visibility = View.GONE
+                b.strictStatusText.text = getString(R.string.home_strict_off)
+                b.strictActionButton.text = getString(R.string.home_strict_turn_on)
             }
             is StrictLock.State.Locked -> {
-                b.strictStatusText.text = getString(R.string.strict_locked)
-                b.strictActionButton.visibility = View.VISIBLE
-                b.strictActionButton.text = getString(R.string.strict_request_unlock)
+                b.strictStatusText.text = getString(R.string.home_strict_locked)
+                b.strictActionButton.text = getString(R.string.home_strict_unlock)
             }
             is StrictLock.State.Pending -> {
-                b.strictStatusText.text =
-                    getString(R.string.strict_pending, UiUtil.formatCountdown(state.remainingMs))
-                b.strictActionButton.visibility = View.VISIBLE
+                b.strictStatusText.text = getString(R.string.home_strict_pending, UiUtil.formatCountdown(state.remainingMs))
                 b.strictActionButton.text = getString(android.R.string.cancel)
             }
             is StrictLock.State.Unlocked -> {
-                b.strictStatusText.text =
-                    getString(R.string.strict_unlocked, UiUtil.formatCountdown(state.remainingMs))
-                b.strictActionButton.visibility = View.GONE
+                b.strictStatusText.text = getString(R.string.home_strict_unlocked, UiUtil.formatCountdown(state.remainingMs))
+                b.strictActionButton.text = getString(R.string.home_strict_relock)
             }
         }
     }
 
+    private enum class Layer { ON, OFF, ATTENTION }
+
     /**
-     * Status at a glance: one row per protection component with its current
-     * state, each opening the screen that controls it. Rebuilt on resume (states
-     * only change in those screens), not on the 1s ticker.
+     * The layers at a glance: one row each, opening the screen that controls it. Rebuilt on resume (states only
+     * change in those screens) and on state broadcasts, not on the 1 s ticker.
      */
     private fun refreshStatusRows() {
         val b = _binding ?: return
         val context = requireContext()
         b.statusContainer.removeAllViews()
+        var on = 0
+        var total = 0
 
-        fun row(labelRes: Int, on: Boolean, value: String, target: Class<*>?, onClick: (() -> Unit)? = null) {
+        fun row(labelRes: Int, state: Layer, value: String, target: Class<*>?, onClick: (() -> Unit)? = null) {
             val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
-            r.statusDot.text = if (on) "\u25CF" else "\u25CB"
-            // Shape carries the state (filled/hollow); colour reinforces it.
-            r.statusDot.setTextColor(
-                com.google.android.material.color.MaterialColors.getColor(
-                    r.statusDot,
-                    if (on) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorOutline,
-                )
-            )
+            val (icon, color) = when (state) {
+                Layer.ON -> R.drawable.ic_check_circle to ContextCompat.getColor(context, R.color.good)
+                Layer.ATTENTION -> R.drawable.ic_alert_circle to ContextCompat.getColor(context, R.color.warn)
+                Layer.OFF -> R.drawable.ic_circle_outline to
+                    com.google.android.material.color.MaterialColors.getColor(r.root, com.google.android.material.R.attr.colorOutline)
+            }
+            r.statusIcon.setImageResource(icon)
+            r.statusIcon.setColorFilter(color)
             r.statusLabel.setText(labelRes)
             r.statusValue.text = value
+            if (state == Layer.ATTENTION) r.statusValue.setTextColor(color)
+            r.root.contentDescription = getString(labelRes) + ": " + value
             r.root.setOnClickListener { if (onClick != null) onClick() else if (target != null) startActivity(Intent(context, target)) }
+            total++
+            if (state == Layer.ON) on++
         }
-
-        // Battery optimization: the most common reason protection silently stops.
-        val exempt = UiUtil.isBatteryExempt(context)
-        row(
-            R.string.home_row_battery, exempt,
-            getString(if (exempt) R.string.home_battery_ok else R.string.home_battery_fix),
-            null,
-        ) { if (!exempt) UiUtil.requestBatteryExemption(requireContext()) }
-
-        val health = DnsVpnService.health
-        row(
-            R.string.home_row_health, health == "ok",
-            getString(
-                when (health) {
-                    "ok" -> R.string.home_health_ok
-                    "offline" -> R.string.home_health_offline
-                    "degraded" -> R.string.home_health_degraded
-                    "upstream_down" -> R.string.home_health_down
-                    "silent" -> R.string.home_health_silent
-                    "bypassed" -> R.string.home_health_bypassed
-                    "lockdown" -> R.string.home_health_lockdown
-                    else -> R.string.home_health_off
-                }
-            ),
-            DiagnosticsActivity::class.java,
-        )
-
-        val partnerCount = app.focusfence.sync.SyncStore.ownPairings(context).size +
-            (if (app.focusfence.sync.SyncStore.deviceId(context) != null) 1 else 0)
-        val lastSync = app.focusfence.sync.SyncStore.lastOk(context)
-        row(
-            R.string.home_row_partners, partnerCount > 0 && app.focusfence.sync.SyncStore.lastError(context) == null,
-            if (partnerCount == 0) getString(R.string.home_partners_none)
-            else getString(
-                R.string.home_partners_count, partnerCount,
-                if (lastSync == 0L) getString(R.string.acc_status_never)
-                else android.text.format.DateUtils.getRelativeTimeSpanString(lastSync).toString(),
-            ),
-            app.focusfence.AccountabilityActivity::class.java,
-        )
 
         val policies = CategoryStore.policies(context).values
         val bundlesOn = policies.count { it != Categories.Policy.OFF }
         val bundlesBlocking = policies.count { it == Categories.Policy.BLOCK }
         row(
-            R.string.home_row_bundles, bundlesOn > 0,
-            if (bundlesOn == 0) getString(R.string.home_none_on)
-            else resources.getQuantityString(R.plurals.home_bundles_on, bundlesOn, bundlesOn, bundlesBlocking),
+            R.string.home_row_bundles, if (bundlesOn > 0) Layer.ON else Layer.OFF,
+            if (bundlesOn == 0) getString(R.string.home_off) else getString(R.string.home_lists_blocking, bundlesBlocking),
             CategoriesActivity::class.java,
+        )
+
+        val partners = partnerCount(context)
+        val syncError = app.focusfence.sync.SyncStore.lastError(context) != null
+        row(
+            R.string.home_row_partners,
+            when {
+                partners == 0 -> Layer.OFF
+                syncError -> Layer.ATTENTION
+                else -> Layer.ON
+            },
+            when {
+                partners == 0 -> getString(R.string.home_off)
+                syncError -> getString(R.string.home_partners_sync_error)
+                else -> resources.getQuantityString(R.plurals.home_partners_short, partners, partners)
+            },
+            app.focusfence.AccountabilityActivity::class.java,
         )
 
         val shots = MonitorSettings.screenshotsEnabled(context)
         val text = MonitorSettings.textEnabled(context)
         row(
-            R.string.home_row_monitoring, shots || text,
+            R.string.home_row_monitoring, if (shots || text) Layer.ON else Layer.OFF,
             getString(
                 when {
                     shots && text -> R.string.home_mon_both
@@ -307,23 +319,49 @@ class HomeFragment : Fragment() {
             MonitoringActivity::class.java,
         )
 
-        val timeline = UsageCollector.hasAccess(context)
-        row(
-            R.string.home_row_timeline, timeline,
-            getString(if (timeline) R.string.home_timeline_on else R.string.home_timeline_off),
-            DiagnosticsActivity::class.java,
-        )
-
-
-        // Uninstall protection (device admin, EA's model).
         val admin = DeviceAdmin.isDeviceOwner(context) || DeviceAdmin.isAdminActive(context)
         row(
-            R.string.home_row_managed, admin,
-            getString(if (admin) R.string.home_managed_admin else R.string.home_managed_off),
+            R.string.home_row_managed, if (admin) Layer.ON else Layer.OFF,
+            getString(if (admin) R.string.home_on else R.string.home_off),
             UninstallProtectionActivity::class.java,
         )
 
-        row(R.string.home_row_log, true, getString(R.string.home_log_value), DiagnosticsActivity::class.java)
+        val timeline = UsageCollector.hasAccess(context)
+        row(
+            R.string.home_row_timeline, if (timeline) Layer.ON else Layer.OFF,
+            getString(if (timeline) R.string.home_on else R.string.home_off),
+            DiagnosticsActivity::class.java,
+        )
+
+        // Battery optimization: the most common reason protection silently stops. Not optional, so "needs you".
+        val exempt = UiUtil.isBatteryExempt(context)
+        row(
+            R.string.home_row_battery, if (exempt) Layer.ON else Layer.ATTENTION,
+            getString(if (exempt) R.string.home_battery_ok else R.string.home_battery_fix),
+            null,
+        ) { if (!exempt) UiUtil.requestBatteryExemption(requireContext()) }
+
+        // Filter health only earns a row when something's wrong; "working" is what the hero already says.
+        val health = DnsVpnService.health
+        if (DnsVpnService.isRunning && health != "ok") {
+            row(
+                R.string.home_row_health, if (health == "offline") Layer.OFF else Layer.ATTENTION,
+                getString(
+                    when (health) {
+                        "offline" -> R.string.home_health_offline
+                        "degraded" -> R.string.home_health_degraded
+                        "upstream_down" -> R.string.home_health_down
+                        "silent" -> R.string.home_health_silent
+                        "bypassed" -> R.string.home_health_bypassed
+                        "lockdown" -> R.string.home_health_lockdown
+                        else -> R.string.home_health_off
+                    }
+                ),
+                DiagnosticsActivity::class.java,
+            )
+        }
+
+        b.layersCount.text = getString(R.string.home_layers_count, on, total)
     }
 
     private fun refreshAttention() {

@@ -41,8 +41,8 @@ class CaptureStatusTest {
         val s = d(base.copy(lastShotAt = 1, lastPkg = "com.android.chrome", lastLabel = "neutral", lastScore = 0.97, taken = 5))
         assertEquals(CaptureStatus.Level.WORKING, s.level)
         assertTrue(s.text, s.text.contains("2 min ago in com.android.chrome"))
-        assertTrue(s.text, s.text.contains("AI: neutral (97%)"))
-        assertTrue(s.text, s.text.contains("5 taken, 0 flagged"))
+        assertTrue(s.text, s.text.contains("Nothing found"))
+        assertTrue("an unflagged label is never named", !s.text.contains("neutral"))
     }
 
     @Test
@@ -54,11 +54,10 @@ class CaptureStatusTest {
     }
 
     @Test
-    fun flaggedWithoutPartnerKeyWarns() {
+    fun aFlaggedShotNamesTheLabel() {
         val s = d(base.copy(lastShotAt = 1, lastLabel = "porn", lastScore = 0.9, lastFlagged = true, taken = 3, flagged = 1, partnerKeySet = false))
-        assertEquals(CaptureStatus.Level.WARNING, s.level)
-        assertTrue(s.text.contains("— flagged"))
-        assertTrue(s.text.contains("aren't being kept"))
+        assertEquals("flagged shots go to Review, no partner key needed", CaptureStatus.Level.WORKING, s.level)
+        assertTrue(s.text, s.text.contains("was flagged: porn 90%"))
     }
 
     @Test

@@ -81,6 +81,11 @@ class MonitoringFragment : Fragment() {
         binding.logsButton.setOnClickListener {
             startActivity(android.content.Intent(requireContext(), DiagnosticsActivity::class.java))
         }
+        binding.advancedToggle.setOnClickListener {
+            val open = binding.advancedContent.visibility != View.VISIBLE
+            binding.advancedContent.visibility = if (open) View.VISIBLE else View.GONE
+            binding.advancedChevron.rotation = if (open) 180f else 0f
+        }
         binding.watchedAppsButton.setOnClickListener {
             UiUtil.chooseWatchScope(requireContext()) { bind() }
         }
@@ -155,10 +160,54 @@ class MonitoringFragment : Fragment() {
             System.currentTimeMillis(),
         ) { t -> android.text.format.DateUtils.getRelativeTimeSpanString(t).toString() }
         binding.captureStatus.text = status.text
+        val ctx = requireContext()
+        fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(binding.statusCard, a)
+        fun res(id: Int) = androidx.core.content.ContextCompat.getColor(ctx, id)
+        val level = status.level
+        binding.statusHeadline.setText(
+            when (level) {
+                app.focusfence.dns.CaptureStatus.Level.WORKING -> R.string.monitor_head_working
+                app.focusfence.dns.CaptureStatus.Level.WARNING -> R.string.monitor_head_warning
+                app.focusfence.dns.CaptureStatus.Level.WAITING -> R.string.monitor_head_waiting
+                app.focusfence.dns.CaptureStatus.Level.OFF -> R.string.monitor_head_off
+                app.focusfence.dns.CaptureStatus.Level.BLOCKED -> R.string.monitor_head_blocked
+            }
+        )
+        // Green while working or ready; amber when it needs you; plain surface when off.
+        val good = level == app.focusfence.dns.CaptureStatus.Level.WORKING || level == app.focusfence.dns.CaptureStatus.Level.WAITING
+        val bad = level == app.focusfence.dns.CaptureStatus.Level.WARNING || level == app.focusfence.dns.CaptureStatus.Level.BLOCKED
+        val container = when {
+            good -> res(R.color.good_container)
+            bad -> attr(com.google.android.material.R.attr.colorErrorContainer)
+            else -> attr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+        }
+        val fg = when {
+            good -> res(R.color.on_good_container)
+            bad -> attr(com.google.android.material.R.attr.colorOnErrorContainer)
+            else -> attr(com.google.android.material.R.attr.colorOnSurface)
+        }
+        val muted = if (good) res(R.color.good_container_muted) else fg
+        val tile = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorSurface)
+        binding.statusCard.setCardBackgroundColor(container)
+        binding.statusHeadline.setTextColor(if (good) res(R.color.good) else fg)
+        binding.captureStatus.setTextColor(fg)
+        binding.reviewHint.setTextColor(muted)
+        binding.statusStats.visibility = if (snap.taken > 0) View.VISIBLE else View.GONE
+        stat(binding.statTaken, java.text.NumberFormat.getIntegerInstance().format(snap.taken), getString(R.string.monitor_stat_taken), tile, fg, muted)
+        stat(binding.statFlagged, java.text.NumberFormat.getIntegerInstance().format(snap.flagged), getString(R.string.monitor_stat_flagged), tile, fg, muted)
+    }
+
+    private fun stat(s: app.focusfence.databinding.ItemHeroStatBinding, value: String, label: String, tile: Int, fg: Int, muted: Int) {
+        s.statRoot.background.mutate().setTint(tile)
+        s.statValue.text = value
+        s.statValue.setTextColor(fg)
+        s.statLabel.text = label
+        s.statLabel.setTextColor(muted)
     }
 
     private fun bind() {
-        binding.reviewButton.text = getString(R.string.review_button, app.focusfence.data.ReviewStore.count(requireContext()))
+        val toReview = app.focusfence.data.ReviewStore.count(requireContext())
+        binding.reviewButton.text = if (toReview > 0) getString(R.string.review_button, toReview) else getString(R.string.review_button_none)
         binding.screenshotsSwitch.isChecked = MonitorSettings.screenshotsEnabled(requireContext()) && ScreenCapture.available
         binding.textSwitch.isChecked = MonitorSettings.textEnabled(requireContext())
         binding.aiSwitch.isEnabled = ScreenCapture.available
