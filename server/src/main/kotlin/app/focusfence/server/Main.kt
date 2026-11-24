@@ -111,8 +111,6 @@ class Config(
 @Serializable data class PostMailResponse(val id: Long)
 @Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
 
-/** Where the public About / privacy pages live (GitHub Pages, from docs/site). */
-const val ABOUT_PAGES = "https://flyboy-byte.github.io/focusfence/"
 
 fun main(args: Array<String>) {
     val env: (String) -> String? = { System.getenv(it) }
@@ -270,14 +268,6 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     routing {
         Admin(cfg, store, notifier, enrollCodes) { it.client() }.routes(this)
-        // The About / privacy pages moved to GitHub Pages (2026-11-24). Apps up to 2.14 link here, so these redirect
-        // there permanently; only plain page names, never a path or query, are passed through.
-        get("/about") { call.respondRedirect(ABOUT_PAGES + "privacy.html", permanent = true) }
-        get("/about/{name}") {
-            val name = call.parameters["name"].orEmpty()
-            if (!Regex("[a-z]{1,20}\\.html").matches(name)) return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
-            call.respondRedirect(ABOUT_PAGES + name, permanent = true)
-        }
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }

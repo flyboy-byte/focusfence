@@ -565,12 +565,10 @@ class ServerTest {
     }
 
     @Test
-    fun aboutPagesRedirectToGitHubPages() = run { http ->
-        val page = http.get("/about/privacy.html")
-        assertEquals(HttpStatusCode.MovedPermanently, page.status)
-        assertEquals(ABOUT_PAGES + "privacy.html", page.headers[HttpHeaders.Location])
-        assertEquals(HttpStatusCode.NotFound, http.get("/about/..%2Fsecret.html").status)
-        assertEquals(HttpStatusCode.MovedPermanently, http.get("/about").status)
+    fun theServerNoLongerServesTheAboutPages() = run { http ->
+        // They live on GitHub Pages (2026-11-24); the server has no /about at all.
+        assertEquals(HttpStatusCode.NotFound, http.get("/about/privacy.html").status)
+        assertEquals(HttpStatusCode.NotFound, http.get("/about").status)
     }
 
     // ---- D-023: the operator can't read a user's activity ---------------------------------------------------
