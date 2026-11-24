@@ -60,6 +60,9 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
             append("<h1>Become an accountability partner</h1>")
             append("<p>Someone asked you to be their accountability partner on Focus Fence. Enter the invite code they sent you. You'll get a weekly report by email and an alert if their protection changes.</p>")
             if (error != null) append("<p class='bad'>${esc(error)}</p>")
+            // Filled by /static/report.js when the link carried a report key (D-023), so a partner who opened this inside a
+            // chat app can carry the key to the browser they'll read reports in.
+            append("<div id='keystatus' class='muted'></div>")
             append("<form method='post' action='/join'>")
             append("<label>Invite code<br><input name='code' required value='${esc(code)}' autocapitalize='characters'></label>")
             append("<label>Your name<br><input name='name' required maxlength='60'></label>")

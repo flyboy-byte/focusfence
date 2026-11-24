@@ -41,6 +41,21 @@
     if (st) st.textContent = saved ? 'Key saved in this browser.' : 'No valid key in this link. Ask for the link again.';
     return;
   }
+  if (page === 'join') {
+    // Chat apps open links in their own browser, and the confirmation email often opens in another. Offer the key as a
+    // link the partner can copy into the browser they'll read reports in. Shown only here, only from the link they hold.
+    var js = document.getElementById('keystatus');
+    if (js && saved) {
+      js.appendChild(el('p', 'The key that unlocks the report is saved in this browser. If you will read reports in a different browser (for example, this link opened inside a chat app), copy this link and open it there:'));
+      var inp = el('input');
+      inp.value = location.origin + '/key#k=' + fromHash;
+      inp.readOnly = true;
+      inp.style.width = '100%';
+      inp.addEventListener('focus', function () { inp.select(); });
+      js.appendChild(inp);
+    }
+    return;
+  }
   if (page !== 'report') return;
 
   var box = document.getElementById('report');
