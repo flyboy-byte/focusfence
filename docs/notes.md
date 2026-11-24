@@ -92,7 +92,7 @@ before building against it.
 This packet deviates from the `plan-scaffolding` template in three places, deliberately:
 
 - **`FRAMEWORK.md` at the repo root**, not alongside a packet README — it's the entry point for
-  the whole repo, matching the convention in `~/projects/makecom`.
+  the whole repo, matching the convention in the owner's other projects.
 - **No packet-level `README.md`.** The repo root already has a user-facing app README that must
   not be clobbered; [`README.md`](README.md) in this directory serves as the doc index instead.
 - **Research intake at [`research/`](research/) inside `docs/`**, because

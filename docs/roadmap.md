@@ -9,7 +9,7 @@ a phone. Every item names its **exit**: the thing that has to be true, not the d
 they land (`[x]`, with the PR number); strike through, never delete.
 
 Legend: 🧪 tested in CI only · 📱 seen on a phone · 🔒 security-sensitive (needs an independent audit before release) ·
-👤 needs a decision from a person · 🛠 needs repo admin (@sidewinderzz) · 🖥 needs the VPS `vps-sudo` window.
+👤 needs a decision from a person · 🛠 needs repo admin (@sidewinderzz) · 🖥 needs the server operator (root on the box).
 
 ---
 
@@ -103,7 +103,7 @@ anything that could involve a minor), and a false flag never sends an innocent p
 ## Phase 3 — A solid `main`
 
 - [ ] **Fix #18** (PR #22): a parent-domain rule never blocks push, time or connectivity hosts.
-- [x] **Block feedback settled** (D-024, PR #24): notification by default (Shelby, #14), triaged Silent / Notice / Partner
+- [x] **Block feedback settled** (D-024, PR #24): notification by default (@sidewinderzz, #14), triaged Silent / Notice / Partner
   (#13 comment); a browser block page is parked (P-006: it would need a certificate authority).
 - [ ] **Build the triage** per D-024 (categories reach the notification/screen; generic text for category blocks;
   per-tier settings). @flyboy-byte wants to revisit the details first.

@@ -379,7 +379,7 @@ missing records).
 
 ## D-024 — Block feedback: triaged notifications, never a browser block page
 
-*Decided: 2026-11-23. Notification as the default is @sidewinderzz's (Shelby's) call in #14; the triage is
+*Decided: 2026-11-23. Notification as the default is @sidewinderzz's call in #14; the triage is
 @flyboy-byte's proposal on #13, adopted as the direction (his agreement to the triage itself: confirm on that thread).*
 
 A blocked site still gets a `0.0.0.0` answer (D-003), and the browser still shows its own error. Telling a block apart

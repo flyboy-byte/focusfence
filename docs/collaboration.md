@@ -6,7 +6,7 @@
 ## The shape
 
 - **`main`** is the only long-lived branch. Everything else is a short task branch.
-- **Task branch:** one per task, from fresh `main`. Any name works (`logan/...`, `shelby/...` or a Claude
+- **Task branch:** one per task, from fresh `main`. Any name works (`logan/...`, `sidewinderzz/...` or a Claude
   session's own `claude/...` name). Open a **draft PR right away**: it is the claim that tells the other
   person, and their Claude, that this area is taken.
 - **Merge** by PR with CI green, within a day or two. Longer work: update from `main` daily.
