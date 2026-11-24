@@ -60,5 +60,12 @@
                 android:layout_weight="1"
                 android:text="@string/review_real" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/reviewShare"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/review_share" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -60,6 +60,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                     { heartbeat = heartbeat(ctx, api, now) },
                     { serverAlerts(ctx, api, now) },
                     { serverReport(ctx, api, now) },
+                    { serverShares(ctx, api) },
                 )) {
                     try { step() } catch (e: Exception) { error = error ?: "server: ${e.javaClass.simpleName}: ${e.message}" }
                 }
@@ -157,6 +158,21 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         })
         if (r.code != 200) throw IllegalStateException("report HTTP ${r.code} ${r.body?.optString("error")}")
         SyncStore.setLastReportMs(ctx, now)
+    }
+
+    /** Owner-chosen blurred screenshots (Phase 2 level B), each sealed like a report and sent as its own slice. */
+    private fun serverShares(ctx: Context, api: Api) {
+        val deviceId = SyncStore.deviceId(ctx) ?: return
+        for (f in ShareQueue.pending(ctx).take(5)) {
+            val now = System.currentTimeMillis()
+            val blob = app.focusfence.dns.ReportSeal.seal(SyncStore.reportKey(ctx), f.readBytes(), deviceId)
+            val r = api.post("/v1/reports", JSONObject().apply {
+                put("deviceId", deviceId); put("t", now); put("from", now); put("to", now); put("blob", blob)
+                put("signature", DeviceKey.sign("report|$deviceId|$now|$now|$now|${sha256(blob)}".toByteArray()))
+            })
+            if (r.code != 200) throw IllegalStateException("share HTTP ${r.code}")
+            f.delete()
+        }
     }
 
     /** Same encoding as the server's `Integrity.sha256`: base64url, no padding. */
