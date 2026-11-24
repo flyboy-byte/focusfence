@@ -57,7 +57,7 @@
     <string name="app_rule_until">Blocked until %1$s</string>
     <string name="app_rule_until_passed">Commitment finished — no longer blocking</string>
     <string name="app_rule_budget_unsupported">Daily limits for apps aren\'t supported yet — not blocking</string>
-    <string name="excluded_apps_button">VPN exclusions (%1$d)</string>
+    <string name="excluded_apps_button">Apps that skip the filter (%1$d)</string>
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
     <string name="excluded_guarded_suffix">%1$s  ·  needs delay in strict mode</string>
 
@@ -71,10 +71,10 @@
     <string name="stats_week_header">Blocked lookups, last 7 days</string>
     <string name="stats_today_label">Today</string>
 
-    <string name="section_service_label">App &amp; section blocking</string>
-    <string name="section_idle">Block whole apps here, or add section rules from a domain\'s menu.</string>
-    <string name="section_enabled">Active — watching browser address bars</string>
-    <string name="section_disabled">Needs the accessibility permission to read browser address bars</string>
+    <string name="section_service_label">Accessibility service</string>
+    <string name="section_idle">Needed for blocking apps, parts of sites, and telling partners about repeated tries.</string>
+    <string name="section_enabled">On. Reading browser address bars.</string>
+    <string name="section_disabled">Off, but your rules need it. Tap to turn on.</string>
     <string name="section_enable_button">Enable</string>
     <string name="section_enable_message">Section rules work by reading the browser\'s address bar and backing out of blocked pages, which Android only allows via an accessibility service. Enable "Focus Fence" on the next screen. Nothing is stored or sent anywhere.</string>
     <string name="section_blocked_toast">Blocked by Focus Fence</string>
@@ -92,7 +92,7 @@
     <string name="nav_partners">Partners</string>
     <string name="nav_monitoring">Checks</string>
     <string name="classic_layout">Classic layout</string>
-    <string name="classic_layout_summary">The older four tabs (Home, Blocklist, Stats, Settings), with Partners and Monitoring opened from Settings. Nothing else changes.</string>
+    <string name="classic_layout_summary">The older four tabs. Nothing else changes.</string>
 
     <string name="group_always">Always blocked</string>
     <string name="group_window">Scheduled</string>
@@ -128,7 +128,7 @@
     <string name="attention_adlist">Ad blocking is on, but no filter list is downloaded yet.</string>
     <string name="attention_adlist_action">Open settings</string>
     <string name="settings_accessibility_button">Open accessibility settings</string>
-    <string name="settings_guide">Setup and guide</string>
+    <string name="settings_guide">Guide</string>
     <string name="list_hint">Tap a domain to choose how it\'s blocked: always, on a schedule, with a daily limit, or allowing only some sections.</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
@@ -156,7 +156,7 @@
     <string name="help_start_title">A good starter setup</string>
     <string name="help_start_body"><![CDATA[1. On the <b>Blocklist</b> tab, tap <b>+</b> and add your own domains — or use <b>Add all social media presets</b> there.<br><br>2. Tap any domain to set hours, a daily limit, or allowed sections; block whole apps from the same tab.<br><br>3. On <b>Settings</b>, optionally switch on <b>Block ads &amp; trackers</b> — it downloads a 100k+ domain filter list once and blocks ads device-wide.<br><br>4. On <b>Home</b>, flip the switch and accept the VPN prompt.<br><br>You can reopen this guide anytime from the <b>?</b> icon at the top.]]></string>
 
-    <string name="adblock_label">Block ads &amp; trackers</string>
+    <string name="adblock_label">Block ads and trackers</string>
     <string name="adlist_none">No filter list downloaded yet</string>
     <string name="adlist_status">%1$s domains · updated %2$s</string>
     <string name="adlist_downloading">Downloading filter list…</string>
@@ -164,8 +164,8 @@
     <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
 
     <!-- Logs & diagnostics -->
-    <string name="diag_title">Logs &amp; diagnostics</string>
-    <string name="diag_settings_summary">What happened on this phone, how well protection is working, and battery cost. Stored only on this phone until you export it.</string>
+    <string name="diag_title">Logs and diagnostics</string>
+    <string name="diag_settings_summary">What happened on this phone, how well the filter works, and battery cost. Stays on the phone unless you export it.</string>
     <string name="diag_open">Open logs &amp; diagnostics</string>
     <string name="diag_recording">What gets recorded</string>
     <string name="diag_log_allowed">Record allowed lookups, not just blocked ones</string>
@@ -187,9 +187,9 @@
     <string name="diag_error">Couldn\'t read the logs: %1$s</string>
 
     <!-- Categories & allowlist -->
-    <string name="categories_title">Categories &amp; allowlist</string>
+    <string name="categories_title">Categories and allowlist</string>
     <string name="categories_open">Categories &amp; allowlist</string>
-    <string name="categories_settings_summary">Curated blocklist bundles: security and bypass protection on by default, with adult, gambling and more you can switch on.</string>
+    <string name="categories_settings_summary">Security lists are on by default. Adult, gambling and more are there to switch on.</string>
     <string name="base_tier_hint">Security strictness</string>
     <string name="categories_intro">Toggle curated lists Off, Report (recorded only) or Block. You don\'t manage individual sites; the allowlist below is just for the rare false positive.</string>
     <string name="policy_hint">Policy</string>
@@ -219,7 +219,7 @@
     <!-- Monitoring (experimental) -->
     <string name="monitor_title">Screen checks</string>
     <string name="monitor_open">Monitoring (experimental)</string>
-    <string name="monitor_settings_summary">Screenshots and on-screen text from chosen apps, for accountability. While on, a permanent notification shows it is running.</string>
+    <string name="monitor_settings_summary">Screenshots and on-screen text, checked on this phone.</string>
     <string name="monitor_banner">This records what is on your screen.</string>
     <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
     <string name="monitor_shots">Screenshots</string>
@@ -248,7 +248,7 @@
 
     <!-- Strict mode configuration + PIN unlock -->
     <string name="strict_open">Strict mode</string>
-    <string name="strict_settings_summary">Make loosening changes wait out a delay, or require a PIN you or your partner hold.</string>
+    <string name="strict_settings_summary">Make loosening anything wait, or need a PIN you or a partner hold.</string>
     <string name="strict_enable">Strict mode</string>
     <string name="strict_explain">While on, turning off protection, clearing logs, or reducing monitoring takes a delay (or a PIN). Adding protection is always allowed.</string>
     <string name="strict_unlock_mode">How to unlock</string>
@@ -386,7 +386,7 @@
     <string name="setup_footnote">Tap a card to open the screen where that layer is switched on or off. Nothing changes from this list.</string>
     <!-- Group accountability -->
     <string name="group_title">Group accountability</string>
-    <string name="group_open">Group accountability</string>
+    <string name="group_open">Open group</string>
     <string name="group_open_summary">Up to 4 phones keep each other accountable. Each person is filtered, or only a partner.</string>
     <string name="group_channel_name">Group changes</string>
     <string name="group_notice_title">Your group changed</string>
@@ -439,7 +439,7 @@
     <string name="group_cancel">Cancel</string>
     <string name="acc_title">Accountability partners</string>
     <string name="acc_open">Partners &amp; reports</string>
-    <string name="acc_settings_summary">Who sees this phone\'s reports: a partner by email (and text), or by their own Focus Fence app.</string>
+    <string name="acc_settings_summary">Who gets this phone\'s alerts and reports.</string>
     <string name="acc_server_title">Server</string>
     <string name="acc_server_hint">Both kinds of partner go through a Focus Fence server. Web and email partners get reports from it; app-to-app partners only use it as a blind mailbox it can\'t read.</string>
     <string name="acc_enroll_code">Enrollment code (only if your server asks for one)</string>
@@ -644,4 +644,7 @@
     <string name="update_checking">Checking…</string>
     <string name="update_none">You have the latest version.</string>
     <string name="update_check_failed">Couldn\'t reach GitHub. Try again later.</string>
+    <string name="settings_group_blocking">Blocking</string>
+    <string name="excluded_apps_summary">Games, music and maps can bypass the filter if they break behind it.</string>
+    <string name="group_card_title">Group</string>
 </resources>

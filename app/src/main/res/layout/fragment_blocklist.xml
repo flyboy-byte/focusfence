@@ -19,8 +19,8 @@
         android:layout_marginTop="12dp"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
-        app:contentPadding="16dp">
+        app:cardCornerRadius="24dp"
+        app:contentPadding="18dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,7 +37,7 @@
                 android:id="@+id/categoriesSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
