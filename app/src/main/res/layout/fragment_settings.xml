@@ -504,6 +504,26 @@
                     android:text="@string/settings_guide" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/updateSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/update_check_switch" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/update_check_summary"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+
+                <Button
+                    android:id="@+id/updateCheckButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/update_check_now" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/classicSwitch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

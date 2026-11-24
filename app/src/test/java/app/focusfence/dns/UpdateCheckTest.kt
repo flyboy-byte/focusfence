@@ -1,0 +1,73 @@
+package app.focusfence.dns
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class UpdateCheckTest {
+
+    private fun apk(tag: String, name: String = "focus-fence-accountable-$tag.apk") =
+        UpdateCheck.Asset(name, UpdateCheck.DOWNLOAD_PREFIX + "$tag/$name", 9_000_000)
+
+    private fun release(tag: String, vararg assets: UpdateCheck.Asset, draft: Boolean = false, pre: Boolean = false) =
+        UpdateCheck.Release(tag, draft, pre, assets.toList(), "https://github.com/x/releases/tag/$tag")
+
+    @Test
+    fun offersANewerFullRelease() {
+        val o = UpdateCheck.offer(release("v2.14.0-accountable", apk("v2.14.0-accountable")), "2.13.0-accountable")!!
+        assertEquals("2.14.0-accountable", o.version)
+        assertTrue(o.apkUrl.endsWith("/v2.14.0-accountable/focus-fence-accountable-v2.14.0-accountable.apk"))
+    }
+
+    @Test
+    fun ignoresTheSameOrAnOlderVersion() {
+        assertNull(UpdateCheck.offer(release("v2.13.0-accountable", apk("v2.13.0-accountable")), "2.13.0-accountable"))
+        assertNull(UpdateCheck.offer(release("v2.12.0-accountable", apk("v2.12.0-accountable")), "2.13.0-accountable"))
+    }
+
+    @Test
+    fun comparesNumbersNotText() {
+        assertTrue(UpdateCheck.offer(release("v2.10.0-accountable", apk("v2.10.0-accountable")), "2.9.2-accountable") != null)
+    }
+
+    @Test
+    fun ignoresDraftsAndPrereleases() {
+        val tag = "v2.14.0-rc1-accountable"
+        assertNull(UpdateCheck.offer(release(tag, apk(tag), pre = true), "2.13.0-accountable"))
+        assertNull(UpdateCheck.offer(release(tag, apk(tag), draft = true), "2.13.0-accountable"))
+    }
+
+    @Test
+    fun ignoresAnUnparseableTag() {
+        assertNull(UpdateCheck.offer(release("nightly", apk("nightly")), "2.13.0-accountable"))
+    }
+
+    @Test
+    fun onlyTakesAnApkFromThisRepoAndThisTag() {
+        val tag = "v2.14.0-accountable"
+        val elsewhere = UpdateCheck.Asset("focus-fence-accountable.apk", "https://example.com/$tag/focus-fence-accountable.apk", 1)
+        val otherTag = apk("v2.11.0-accountable")
+        val mapping = UpdateCheck.Asset("mapping.txt", UpdateCheck.DOWNLOAD_PREFIX + "$tag/mapping.txt", 1)
+        assertNull(UpdateCheck.offer(release(tag, elsewhere, otherTag, mapping), "2.13.0-accountable"))
+        assertNull(UpdateCheck.offer(release(tag), "2.13.0-accountable"))
+    }
+
+    @Test
+    fun checksOnceADay() {
+        val day = UpdateCheck.CHECK_EVERY_MS
+        assertTrue(UpdateCheck.isDue(0, 1_000))
+        assertFalse(UpdateCheck.isDue(10 * day, 10 * day + day - 1))
+        assertTrue(UpdateCheck.isDue(10 * day, 11 * day))
+        assertTrue("clock went backwards", UpdateCheck.isDue(10 * day, 9 * day))
+    }
+
+    @Test
+    fun signerMustMatchExactly() {
+        assertTrue(UpdateCheck.sameSigner(listOf("AB12"), listOf("ab12")))
+        assertFalse(UpdateCheck.sameSigner(listOf("ab12"), listOf("cd34")))
+        assertFalse(UpdateCheck.sameSigner(listOf("ab12"), listOf("ab12", "cd34")))
+        assertFalse(UpdateCheck.sameSigner(emptyList(), emptyList()))
+    }
+}
