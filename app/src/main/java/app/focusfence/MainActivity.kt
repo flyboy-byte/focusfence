@@ -21,6 +21,8 @@ import app.focusfence.ui.StatsFragment
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private var classic = false
+    private var currentTab = R.id.nav_home
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -31,13 +33,22 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
+        // Five tabs by default; Settings → Classic layout brings the old four back (rollback without a release).
+        classic = app.focusfence.data.UiPrefs.classic(this)
+        binding.bottomNav.menu.clear()
+        binding.bottomNav.inflateMenu(if (classic) R.menu.menu_bottom_nav else R.menu.menu_bottom_nav_tabs)
         binding.bottomNav.setOnItemSelectedListener { item ->
             val fragment: Fragment = when (item.itemId) {
                 R.id.nav_blocklist -> BlocklistFragment()
                 R.id.nav_stats -> StatsFragment()
+                R.id.nav_partners -> AccountabilityFragment.asTab()
+                R.id.nav_monitoring -> MonitoringFragment.asTab()
                 R.id.nav_settings -> SettingsFragment()
                 else -> HomeFragment()
             }
+            supportActionBar?.title = if (item.itemId == R.id.nav_home) getString(R.string.app_name) else item.title
+            currentTab = item.itemId
+            invalidateOptionsMenu()
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .commit()
@@ -65,10 +76,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
+        // No Stats tab in the five-tab layout: Home's toolbar opens it instead.
+        menu.findItem(R.id.action_stats)?.isVisible = !classic && currentTab == R.id.nav_home
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_stats) {
+            startActivity(Intent(this, StatsActivity::class.java))
+            return true
+        }
         if (item.itemId == R.id.action_help) {
             startActivity(Intent(this, HelpActivity::class.java))
             return true
