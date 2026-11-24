@@ -40,9 +40,10 @@ object Web {
             "<form method=\"post\" action=\"/confirm/${esc(token)}\"><button type=\"submit\">Yes, confirm</button></form>",
     )
 
-    fun page(title: String, body: String): String = """<!doctype html>
+    /** [script] names a page for `/static/report.js` (D-023); pages without it carry no script at all. */
+    fun page(title: String, body: String, script: String? = null): String = """<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title>
+<title>${esc(title)}</title>${if (script != null) "<script src=\"/static/report.js\" defer></script>" else ""}
 <style>
 body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:16px;color:#1b1b1f;line-height:1.45}
 h1{font-size:1.4em}h2{font-size:1.1em;margin-top:1.6em}
@@ -51,7 +52,7 @@ h1{font-size:1.4em}h2{font-size:1.1em;margin-top:1.6em}
 input,button{font:inherit;padding:8px;margin:4px 0;border-radius:8px;border:1px solid #bbb}
 button{background:#3f51b5;color:#fff;border:0;padding:8px 16px}
 label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px 12px 2px 0}
-</style></head><body>$body</body></html>"""
+</style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
     fun joinForm(code: String, error: String?, smsAvailable: Boolean): String = page(
         "Become an accountability partner",
@@ -69,6 +70,7 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
             }
             append("<p><button type='submit'>Join</button></p></form>")
         },
+        "join",
     )
 
     fun message(title: String, text: String): String =
@@ -78,7 +80,6 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
         partner: Store.Partner,
         deviceOnline: Boolean,
         lastSeenMs: Long,
-        digest: Map<String, Any?>,
         smsAvailable: Boolean,
         notice: String?,
     ): String = page("Focus Fence report", buildString {
@@ -90,7 +91,10 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
             if (deviceOnline) "<p class='ok'>The phone is checking in normally (last ${time(lastSeenMs)}).</p>"
             else "<p class='bad'>The phone hasn't checked in since ${time(lastSeenMs)} — protection may be off, or the app may have been removed.</p>"
         )
-        append(digestHtml(digest))
+        // D-023: the report is sealed on the phone; /static/report.js opens it here with the key from the partner's link.
+        append("<div id='report' class='card'><p class='muted'>Opening the encrypted report…</p></div>")
+        append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
+        append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you, and stays in this browser.</p>")
         append("<h2>Text alerts</h2>")
         when {
             !smsAvailable -> append("<p class='muted'>Text alerts aren't set up on this server.</p>")
@@ -109,38 +113,15 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
             )
         }
         append("<h2>Leave</h2><form method='post' action='/p/$t/leave'><button style='background:#b3261e'>Stop being their partner</button></form>")
-    })
+    }, "report")
 
-    fun digestHtml(d: Map<String, Any?>): String = buildString {
-        val off = d["off_min"] as? Long ?: 0L
-        val missing = d["missing"] as? Long ?: 0L
-        append("<div class='card'>")
-        append(if (off == 0L) "<p class='ok'>Protection was on the whole time.</p>" else "<p class='bad'>Protection was OFF for $off minutes.</p>")
-        if (missing > 0) append("<p class='bad'>$missing records are missing from the log (deleted or lost).</p>")
-        val events = (d["events"] as? String).orEmpty().lines().filter { it.isNotBlank() }
-        if (events.isNotEmpty()) {
-            append("<p>Changes:</p><ul>")
-            events.forEach { append("<li>${esc(it)}</li>") }
-            append("</ul>")
-        }
-        append("<p class='muted'>${d["lookups"] ?: 0} lookups · ${d["blocked"] ?: 0} blocked")
-        val flagged = d["flagged_shots"] as? Long ?: 0L
-        if (flagged > 0) append(" · $flagged flagged screenshots (end-to-end encrypted)")
-        append("</p></div>")
-        table("Categories", d["cats"])
-        table("Category sites", d["cat_hosts"])
-        table("App time (minutes)", d["apps_min"])
-        table("Browser sites", d["sites"])
-        table("Top blocked", d["top_blocked"])
-    }
-
-    private fun StringBuilder.table(title: String, raw: Any?) {
-        val items = Digest.parsePairs(raw as? String)
-        if (items.isEmpty()) return
-        append("<h2>${esc(title)}</h2><table>")
-        items.forEach { (k, v) -> append("<tr><td>${esc(k)}</td><td>$v</td></tr>") }
-        append("</table>")
-    }
+    /** Where a resent key link lands: the script keeps the key from after '#', which never reaches this server. */
+    fun keyPage(): String = page(
+        "Report key",
+        "<h1>Report key</h1><p id='keystatus'>Saving the key in this browser…</p>" +
+            "<p class='muted'>Now open your report from the link in your Focus Fence email. The key stays in this browser; this server never receives it.</p>",
+        "key",
+    )
 
     fun mask(phoneOrEmail: String): String = when {
         '@' in phoneOrEmail -> phoneOrEmail.substringBefore('@').take(2) + "…@" + phoneOrEmail.substringAfter('@')

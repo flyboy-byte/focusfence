@@ -28,6 +28,8 @@ object SyncStore {
     private const val KEY_HEARTBEAT = "last_heartbeat"
     private const val KEY_OK = "last_ok"
     private const val KEY_ERROR = "last_error"
+    private const val KEY_REPORT_KEY = "report_key"
+    private const val KEY_LAST_REPORT = "last_report_ms"
     private const val OWN = "own:"
     private const val WATCH = "watch:"
 
@@ -58,6 +60,22 @@ object SyncStore {
         prefs(context).edit().putString(KEY_DEVICE, deviceId).putLong(KEY_SEQ, startSeq).putString(KEY_HASH, "GENESIS").commit()
     }
 
+    /**
+     * The key that seals this phone's web/email partner report (D-023). Created on first use, kept only here and in
+     * the links handed to partners; the server never sees it. Clearing app data makes a new one, and partners then
+     * need the new link.
+     */
+    fun reportKey(context: Context): String {
+        prefs(context).getString(KEY_REPORT_KEY, null)?.takeIf { app.focusfence.dns.ReportSeal.keyBytes(it) != null }?.let { return it }
+        val k = app.focusfence.dns.ReportSeal.newKey()
+        prefs(context).edit().putString(KEY_REPORT_KEY, k).apply()
+        return k
+    }
+
+    fun lastReportMs(context: Context): Long = prefs(context).getLong(KEY_LAST_REPORT, 0)
+    fun setLastReportMs(context: Context, t: Long) { prefs(context).edit().putLong(KEY_LAST_REPORT, t).apply() }
+
+    /** Since D-023 this is the alert cursor: activity records up to here have been checked for alerts. */
     fun uploadedSeq(context: Context): Long = prefs(context).getLong(KEY_SEQ, 0)
     fun lastHash(context: Context): String = prefs(context).getString(KEY_HASH, "GENESIS") ?: "GENESIS"
 

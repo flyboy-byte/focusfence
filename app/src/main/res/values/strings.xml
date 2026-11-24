@@ -475,7 +475,9 @@
     <string name="acc_email_hint">Send them an invite code. They join on a web page and get a weekly report and alerts by email, plus optional text alerts.</string>
     <string name="acc_invite">Invite a partner</string>
     <string name="acc_invite_ready_title">Invite ready</string>
-    <string name="acc_invite_ready">Code %1$s, good for 24 hours and one person.</string>
+    <string name="acc_invite_ready">Code %1$s, good for 24 hours and one person. Send the whole link: the part after # is the key that unlocks your report, and the server never sees it.</string>
+    <string name="acc_key_link">Resend key link</string>
+    <string name="acc_key_link_share">Open this on the device where you read my Focus Fence report, so it can unlock it (the server can\'t read it): %1$s</string>
     <string name="acc_invite_share">Would you be my accountability partner on Focus Fence? Open %1$s (invite code %2$s, expires in 24 hours).</string>
     <string name="acc_share">Share</string>
     <string name="acc_app_title">App-to-app partners</string>
@@ -564,7 +566,7 @@
     <!-- About and privacy: the site URL lives here so it can change. Served by the accountability server (docs/site is packaged into it). GitHub Pages is not an option: Logan has no admin on the repo and it is private. Empty hides the button. -->
     <string name="about_url" translatable="false">https://ff.flyboybyte.com/about/privacy.html</string>
     <string name="about_title">About and privacy</string>
-    <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, your activity records go to the accountability server you choose, and that server\'s operator can read them; screenshots are not uploaded, only their scores. Uninstalling removes everything on the phone.</string>
+    <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, only an end-to-end encrypted summary and protection alerts go through the server you choose; whoever runs it cannot read your activity. Uninstalling removes everything on the phone.</string>
     <string name="about_open_site">Open the full page</string>
     <string name="about_no_browser">No browser found. The page is at %1$s</string>
 
