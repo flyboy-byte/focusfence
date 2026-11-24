@@ -51,7 +51,7 @@ The work is written; it needs merging, deploying and one real test.
   Short "Using my server" note (what the operator can and can't see), linked from the privacy page.
 - [ ] 🖥 **Capacity:** raise `FF_MAX_DEVICES` (now 4) when the third email-partner user arrives.
 - [ ] **Docker Compose end to end** (never run yet), so anyone can host their own server; then decide 👤 whether to run
-  `server-release.yml` (publishes a GHCR image under the upstream repo).
+  `server-release.yml` (publishes a GHCR image under `flyboy-byte`).
 
 **Exit:** the audit's findings are fixed, someone other than you uses the server (email partner or group), and the
 compose path has been run once.

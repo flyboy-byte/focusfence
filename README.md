@@ -1,8 +1,9 @@
 # Focus Fence AC
 
-**A self-accountability app for Android.** It blocks what you choose, keeps an honest record on your
-phone, and, only if you want, lets partners you trust see a summary and get alerts when protection
-changes. Whoever runs the server can't read any of it.
+**A free, open-source site blocker and self-accountability app for Android.** At its core it's a
+DNS-only filter that needs no account, no server and no root. On top of that, only if you want, it
+keeps an honest record on your phone and lets partners you trust get alerts and an end-to-end
+encrypted report that whoever runs the server can't read.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
@@ -11,12 +12,6 @@ changes. Whoever runs the server can't read any of it.
 
 [What works](#what-works-today) · [Install](#install) · [How it works](#how-it-works) ·
 [Privacy](#privacy-model) · [Run a server](#run-your-own-server) · [Build](#build) · [Docs](#docs)
-
-> [!NOTE]
-> This repo builds **Focus Fence AC** (`app.focusfence.accountable`), the accountability edition of
-> [Focus Fence](#where-it-came-from), a DNS-based site blocker. It installs **alongside** the plain app.
-> It is in daily use on one phone and most partner features have only run in tests so far. The
-> status table below says which is which.
 
 ---
 
@@ -33,17 +28,17 @@ send them, so the server stores ciphertext it can't open.
 
 ## What works today
 
-What has run on a real phone (📱) versus what passes its tests but hasn't been tried on a device yet (🧪).
+✅ in everyday use · 🧪 built and passing its tests, newer and not yet field-tested · ❌ planned
 
 | | Feature | Notes |
 |---|---|---|
-| 📱 | **DNS filter**: domains, schedules, daily limits, sections of a site | The original Focus Fence engine. |
-| 📱 | **Ad, tracker and threat lists**; DoH-bypass guards | Curated HaGeZi bundles; adult, gambling and others are opt-in. |
-| 📱 | **App blocking** | Bounces chosen apps to the home screen (accessibility service). |
-| 📱 | **Activity and diagnostics logs** | Every lookup, app, protection change; battery and DNS speed. Local until you export. |
-| 📱 | **Restarts itself** after an app update | No Always-on VPN needed. After a reboot too (🧪, not yet seen). |
-| 📱 | **Text capture and screenshot AI** (opt-in) | On-device model; images never leave the phone. False flags are common, so Review lets you mark them. |
-| 📱 | **Email partners and instant alerts** | Double opt-in. Running against the reference server. |
+| ✅ | **DNS filter**: domains, schedules, daily limits, sections of a site | The original Focus Fence engine. |
+| ✅ | **Ad, tracker and threat lists**; DoH-bypass guards | Curated HaGeZi bundles; adult, gambling and others are opt-in. |
+| ✅ | **App blocking** | Bounces chosen apps to the home screen (accessibility service). |
+| ✅ | **Activity and diagnostics logs** | Every lookup, app, protection change; battery and DNS speed. Local until you export. |
+| ✅ | **Restarts itself** after an app update | No Always-on VPN needed. After a reboot too (🧪, not yet seen). |
+| ✅ | **Text capture and screenshot AI** (opt-in) | On-device model; images never leave the phone. False flags are common, so Review lets you mark them. |
+| ✅ | **Email partners and instant alerts** | Double opt-in. Running against the reference server. |
 | 🧪 | **Encrypted partner reports** in the browser | Decrypts with WebCrypto; cross-checked against the phone's sealing. |
 | 🧪 | **Strict mode** with a wait, own PIN, or a partner's code | Every unlock request and use alerts partners. |
 | 🧪 | **App-to-app partners and groups** of up to 4 | End-to-end through a blind mailbox; members approve each other by fingerprint. |
@@ -160,14 +155,15 @@ install over a release build. `CLAUDE.md` describes the architecture; `AGENTS.md
 | [`docs/roadmap.md`](docs/roadmap.md) | What's next, in order |
 | [`DECISIONS.md`](DECISIONS.md) | Why things are the way they are (D-001 onward) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Every change, with the commit to revert |
-| [`docs/collaboration.md`](docs/collaboration.md) | How two maintainers and their agents share `main` |
+| [`docs/collaboration.md`](docs/collaboration.md) | How contributors and their agents share `main` |
 | [`docs/specs/`](docs/specs/) | Event log schema, friction tiers, device owner, bundles |
 
 ## Where it came from
 
 Focus Fence started as a plain website blocker by [@sidewinderzz](https://github.com/sidewinderzz).
-The accountability edition was built with [@flyboy-byte](https://github.com/flyboy-byte), largely
-by Claude (Anthropic) working from the plans and decisions in this repo. The screenshot model is
+[@flyboy-byte](https://github.com/flyboy-byte) took it from there into Focus Fence AC and now maintains
+it, much of it built by Claude (Anthropic) working from the plans and decisions in this repo. The app id
+is `app.focusfence.accountable`, so it installs separately from the original `app.focusfence`. The screenshot model is
 [GantMan/nsfw_model](https://github.com/GantMan/nsfw_model) converted to TensorFlow Lite.
 
 MIT licensed. See [`LICENSE`](LICENSE).

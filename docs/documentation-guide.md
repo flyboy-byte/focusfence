@@ -78,8 +78,8 @@ you re-introduce a battery regression that's already been fixed.
 
 ## Who this packet is actually for, concretely
 
-@flyboy-byte wrote or commissioned all of it; @sidewinderzz is the original author and owner of
-the project and has not reviewed most of it. Two decisions in `notes.md` (license, signing key
+@flyboy-byte wrote or commissioned all of it; @sidewinderzz is the original author of
+the project (owner until he transferred the repo to @flyboy-byte on 2026-11-24) and has not reviewed most of it. Two decisions in `notes.md` (license, signing key
 custody) are explicitly blocked on him.
 
 **None of the forward-looking material has been pressure-tested against reality.** No device test

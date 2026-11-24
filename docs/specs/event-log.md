@@ -1,6 +1,6 @@
 # Event log specification (schema v1)
 
-**Status: implemented on this branch.** Code: `dns/LogEvents.kt` (schema), `dns/LogJson.kt`
+**Status: implemented.** Code: `dns/LogEvents.kt` (schema), `dns/LogJson.kt`
 (codec), `data/EventLog.kt` (storage), `monitor/Monitor.kt` (battery, perf, integrity),
 `monitor/UsageCollector.kt` (app timeline). Off-device reader: `tools/analyze_logs.py`.
 
