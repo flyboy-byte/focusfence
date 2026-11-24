@@ -297,9 +297,9 @@ Check one with `apksigner verify --print-certs <apk>`: the certificate SHA-256 m
 1. *Who generated and holds it:* @flyboy-byte.
 2. *Does the other maintainer hold a copy:* not as a file. @sidewinderzz, as repo admin, controls the
    secrets and the workflows that use them; that is the second point of control.
-3. *Backup:* @flyboy-byte keeps an offline, encrypted backup, never in the repo, a chat or a synced
-   drive. Location deliberately not written here. **To confirm when merging:** that this backup exists
-   (the secrets cannot be read back out of GitHub, so it is the only copy if the original is lost).
+3. *Backup:* @flyboy-byte holds the original keystore file (located 2026-11-23) and a second copy recovered from
+   the secrets the same day (fingerprint checked against the certificate above). Both stay out of the repo, chats and
+   synced drives; location deliberately not written here. Keeping one copy offline and encrypted is the holder's job.
 4. *CI or by hand:* **CI signs**, from the secrets above. The doc's hand-signing recommendation was
    not followed; the risk is contained because only `release.yml` reads the secrets and it runs on
    pushed `v*` tags only. `android.yml` runs on `pull_request` and never references them, and GitHub
