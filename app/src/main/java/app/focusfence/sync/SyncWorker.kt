@@ -113,7 +113,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             if (seq <= after) return@scan true
             if (seq > maxSeq) maxSeq = seq
             if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
-                LogJson.decode(line)?.let(Digest::alertText)?.let { lines += it }
+                LogJson.decode(line)?.let(Digest::urgentText)?.let { lines += it }
             }
             true
         }
@@ -204,7 +204,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             SyncStore.saveOwn(ctx, p)
         }
 
-        // Instant alerts: everything Digest.alertText flags since the last scan.
+        // Instant alerts: what Digest.urgentText passes since the last scan (routine changes wait for the report).
         val alerts = ArrayList<String>()
         var maxSeq = p.alertSeq
         EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = p.alertSeq) { line ->
@@ -213,7 +213,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             if (seq > maxSeq) maxSeq = seq
             // Cheap prefilter: only svc/integ lines can be alerts.
             if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
-                LogJson.decode(line)?.let(Digest::alertText)?.let { alerts += it }
+                LogJson.decode(line)?.let(Digest::urgentText)?.let { alerts += it }
             }
             true
         }

@@ -72,6 +72,19 @@ class DigestTest {
     }
 
     @Test
+    fun routineChangesStayInTheReportButDoNotMail() {
+        val update = mapOf<String, Any?>("type" to "svc", "comp" to "app", "state" to "updated", "detail" to "from=2.11.0-accountable,to=2.12.0-accountable")
+        assertEquals("App updated (from=2.11.0-accountable,to=2.12.0-accountable)", Digest.alertText(update))
+        assertNull(Digest.urgentText(update))
+        val downgrade = mapOf<String, Any?>("type" to "svc", "comp" to "app", "state" to "updated", "detail" to "from=2.12.0-accountable,to=2.9.2-accountable")
+        assertEquals("App updated (from=2.12.0-accountable,to=2.9.2-accountable)", Digest.urgentText(downgrade))
+        assertNull(Digest.urgentText(mapOf("type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "degraded,fail_pct=25,was=ok")))
+        assertEquals("Filter problem: bypassed", Digest.urgentText(mapOf("type" to "svc", "comp" to "vpn", "state" to "health", "detail" to "bypassed,was=ok")))
+        assertEquals("Filter turned off", Digest.urgentText(mapOf("type" to "svc", "comp" to "vpn", "state" to "stop", "detail" to "user")))
+        assertEquals(-1, Digest.compareVersions("2.9.2", "2.10.0"))
+    }
+
+    @Test
     fun alertTextRules() {
         // An app update briefly drops the tunnel: vpn_metered flips true -> no_vpn -> true. Not an alert.
         assertNull(Digest.alertText(mapOf("type" to "integ", "key" to "vpn_metered", "value" to "no_vpn", "was" to "true")))
