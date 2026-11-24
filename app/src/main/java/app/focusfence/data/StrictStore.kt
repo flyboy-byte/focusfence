@@ -21,7 +21,20 @@ object StrictStore {
 
     fun isLocked(context: Context): Boolean = StrictLock.isLocked(state(context))
 
+    /**
+     * Every strict-mode change goes in the activity log and on to partners right away: an unlock asked for or used
+     * where no partner hears about it is the gap an accountability app exists to close (2026-11-23 export: a request
+     * left no trace at all). Urgent, so it is on disk before the sync that carries it.
+     */
+    fun note(context: Context, state: String, detail: String? = null) {
+        app.focusfence.data.EventLog.activity(
+            app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), "strict", state, detail), urgent = true,
+        )
+        app.focusfence.sync.Sync.kick(context)
+    }
+
     fun setEnabled(context: Context, enabled: Boolean) {
+        if (enabled != isEnabled(context)) note(context, if (enabled) "enabled" else "disabled")
         app.focusfence.UnlockReadyReceiver.cancel(context)
         BlocklistStore.prefs(context).edit()
             .putBoolean(KEY_ENABLED, enabled)
@@ -34,6 +47,7 @@ object StrictStore {
             .putLong(KEY_UNLOCK_READY_AT, now + StrictLock.UNLOCK_DELAY_MS)
             .apply()
         app.focusfence.UnlockReadyReceiver.schedule(context, now + StrictLock.UNLOCK_DELAY_MS)
+        note(context, "unlock_requested", "wait_min=${StrictLock.UNLOCK_DELAY_MS / 60_000}")
     }
 
     /**
@@ -41,12 +55,14 @@ object StrictStore {
      * timed path still exists as a fallback for a forgotten PIN, so a PIN never
      * permanently locks the user out.
      */
-    fun unlockNow(context: Context, now: Long = System.currentTimeMillis()) {
+    fun unlockNow(context: Context, how: String, now: Long = System.currentTimeMillis()) {
         app.focusfence.UnlockReadyReceiver.cancel(context)
         BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, now).apply()
+        note(context, "unlocked", how)
     }
 
     fun cancelUnlock(context: Context) {
+        if (StrictLock.state(isEnabled(context), BlocklistStore.prefs(context).getLong(KEY_UNLOCK_READY_AT, 0L), System.currentTimeMillis()) !is StrictLock.State.Locked) note(context, "relocked")
         app.focusfence.UnlockReadyReceiver.cancel(context)
         BlocklistStore.prefs(context).edit().putLong(KEY_UNLOCK_READY_AT, 0L).apply()
     }

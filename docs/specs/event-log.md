@@ -54,6 +54,7 @@ export.
 | `app` | `process_start` (detail: boot count, version), `updated` (from/to) |
 | `device` | `rebooted` |
 | `log` | `setting` (a recording switch changed), `exported`, `cleared` |
+| `strict` | `enabled`, `disabled`, `unlock_requested` (detail: wait minutes), `unlock_open` (the wait ended), `unlocked` (detail: `own_pin`/`partner_code`), `partner_override` / `own_pin_override` (detail: the guarded action), `relocked` (owner cancelled). All but `relocked` are partner alerts |
 
 `integ` keys:
 
