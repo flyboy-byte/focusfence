@@ -168,7 +168,6 @@ class HomeFragment : Fragment() {
         val container = if (good) res(R.color.good_container) else attr(com.google.android.material.R.attr.colorErrorContainer)
         val onContainer = if (good) res(R.color.on_good_container) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
         val muted = if (good) res(R.color.good_container_muted) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
-        val tile = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorSurface)
         val accent = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorError)
         val onAccent = if (good) res(R.color.good) else attr(com.google.android.material.R.attr.colorOnError)
         b.heroCard.setCardBackgroundColor(container)
@@ -177,36 +176,21 @@ class HomeFragment : Fragment() {
         b.heroIconBg.background.mutate().setTint(accent)
         b.heroIcon.setColorFilter(onAccent)
 
-        b.statsRow.visibility = if (running) View.VISIBLE else View.GONE
+        b.heroDetail.visibility = if (running) View.VISIBLE else View.GONE
         if (running) {
             val partners = partnerCount(context)
             val lastSync = app.focusfence.sync.SyncStore.lastOk(context)
-            stat(b.statBlocked, DnsVpnService.blockedCount.get().toString(), getString(R.string.home_stat_blocked), tile, onContainer, muted)
-            stat(b.statPartners, partners.toString(), resources.getQuantityString(R.plurals.home_stat_partners, partners), tile, onContainer, muted)
-            stat(
-                b.statSync,
-                if (partners == 0 || lastSync == 0L) "–" else shortAgo(System.currentTimeMillis() - lastSync),
-                getString(R.string.home_stat_sync), tile, onContainer, muted,
-            )
-        }
-    }
-
-    private fun stat(s: app.focusfence.databinding.ItemHeroStatBinding, value: String, label: String, tile: Int, fg: Int, muted: Int) {
-        s.statRoot.background.mutate().setTint(tile)
-        s.statValue.text = value
-        s.statValue.setTextColor(fg)
-        s.statLabel.text = label
-        s.statLabel.setTextColor(muted)
-    }
-
-    /** "now", "4m", "3h", "2d": fits a stat tile. */
-    private fun shortAgo(ms: Long): String {
-        val m = ms / 60_000
-        return when {
-            m < 1 -> getString(R.string.home_ago_now)
-            m < 60 -> "${m}m"
-            m < 48 * 60 -> "${m / 60}h"
-            else -> "${m / (24 * 60)}d"
+            val n = DnsVpnService.blockedCount.get().toInt()
+            val blocked = resources.getQuantityString(R.plurals.home_detail_blocked, n, n)
+            b.heroDetail.text = when {
+                partners == 0 -> blocked
+                lastSync == 0L -> getString(R.string.home_detail_partner_waiting, blocked)
+                else -> getString(
+                    R.string.home_detail_partner_synced, blocked,
+                    android.text.format.DateUtils.getRelativeTimeSpanString(lastSync, System.currentTimeMillis(), 60_000L).toString().lowercase(),
+                )
+            }
+            b.heroDetail.setTextColor(muted)
         }
     }
 
@@ -220,11 +204,8 @@ class HomeFragment : Fragment() {
         val state = StrictStore.state(context)
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.strictCard, a)
         val on = state !is StrictLock.State.Off
-        b.strictIconBg.background.mutate().setTint(
-            attr(if (on) com.google.android.material.R.attr.colorPrimaryContainer else com.google.android.material.R.attr.colorSurfaceVariant)
-        )
         b.strictIcon.setColorFilter(
-            attr(if (on) com.google.android.material.R.attr.colorOnPrimaryContainer else com.google.android.material.R.attr.colorOnSurfaceVariant)
+            attr(if (on) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant)
         )
         when (state) {
             is StrictLock.State.Off -> {
