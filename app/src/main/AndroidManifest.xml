@@ -90,9 +90,8 @@
             android:name=".StrictModeActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
-
         <activity
-            android:name=".DeviceOwnerActivity"
+            android:name=".UninstallProtectionActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
         <activity
@@ -126,9 +125,8 @@
             android:exported="false"
             android:parentActivityName=".AccountabilityActivity" />
 
-        <!-- Managed mode. We never block uninstall; this receiver exists to run
-             device-owner policies (Private DNS, network logging, suspension) and
-             to log every admin lifecycle event. -->
+        <!-- Uninstall protection. We never block uninstall; this receiver logs every
+             admin lifecycle event so turning protection off is recorded. -->
         <receiver
             android:name=".vpn.AutoStartReceiver"
             android:exported="true">

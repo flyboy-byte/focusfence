@@ -21,8 +21,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.focusfence.MainActivity
 import app.focusfence.R
-import app.focusfence.admin.DeviceAdmin
-import app.focusfence.admin.DnsFallback
 import app.focusfence.data.AdListStore
 import app.focusfence.data.AllowlistStore
 import app.focusfence.data.BlockScreenSettings
@@ -32,7 +30,6 @@ import app.focusfence.data.EventLog
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.data.LogSettings
 import app.focusfence.data.StatsStore
-import app.focusfence.data.StrategyStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.dns.AlwaysOnNudge
@@ -371,11 +368,6 @@ class DnsVpnService : VpnService() {
             if (!restart) {
                 VpnWanted.set(this, false) // the owner turned it off: do not bring it back on boot or update
                 app.focusfence.sync.Sync.kick(this)
-                // Always-on would have the OS bring the tunnel straight back; drop
-                // it for this stop (startVpn re-applies it), and hand filtering to
-                // the Private DNS fallback while we're down.
-                if (DeviceAdmin.isAlwaysOnVpnOurs(this)) DeviceAdmin.setAlwaysOnVpn(this, false)
-                DnsFallback.engage(this)
             }
             stopVpn()
             stopSelf()
@@ -390,7 +382,6 @@ class DnsVpnService : VpnService() {
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "revoked"), urgent = true)
         postStoppedAlert(this, R.string.alert_stopped_revoked)
         app.focusfence.sync.Sync.kick(this)
-        DnsFallback.engage(this)
         stopVpn()
         stopSelf()
     }
@@ -417,10 +408,6 @@ class DnsVpnService : VpnService() {
         upstreamConfig = DnsUpstreamStore.load(this)
         StatsStore.prune(this, (0L..13L).map { LocalDate.now().minusDays(it).toString() })
         BlocklistStore.prefs(this).registerOnSharedPreferenceChangeListener(prefsListener)
-
-        // Our own Private DNS fallback must go before the tunnel is up: strict
-        // Private DNS sends lookups around it.
-        DnsFallback.release(this)
 
         val builder = Builder()
             .setSession(getString(R.string.app_name))
@@ -462,7 +449,6 @@ class DnsVpnService : VpnService() {
             )
             postStoppedAlert(this, R.string.alert_stopped_establish)
             app.focusfence.sync.Sync.kick(this)
-            DnsFallback.engage(this)
             stopSelf()
             return
         }
@@ -500,11 +486,6 @@ class DnsVpnService : VpnService() {
         health = healthState.key
         instance = this
         getSystemService(NotificationManager::class.java)?.cancel(ALERT_ID)
-        if (StrategyStore.alwaysOnVpn(this) && !DeviceAdmin.isAlwaysOnVpnOurs(this) &&
-            StrategyStore.strategy(this) == StrategyStore.Strategy.LOCAL_DNS_VPN
-        ) {
-            DeviceAdmin.setAlwaysOnVpn(this, true)
-        }
 
         startForeground(NOTIFICATION_ID, buildNotification())
         refreshUnderlying(force = true)
@@ -513,8 +494,6 @@ class DnsVpnService : VpnService() {
             it.isDaemon = true
             it.start()
         }
-        // Device owner can repair lockdown itself: re-apply always-on without it.
-        if (lockdownOn() && DeviceAdmin.isDeviceOwner(this)) DeviceAdmin.setAlwaysOnVpn(this, true)
         broadcastState()
         // Flag a broken setup (lockdown, strict Private DNS) right away.
         evaluateHealth(force = true)

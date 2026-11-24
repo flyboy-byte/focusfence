@@ -1,5 +1,8 @@
 # Managed mode (Device Owner) & the strategy switch
 
+> **Removed 2026-11-24 (D-028).** None of this is in the app any more; uninstall protection (device admin) stays.
+> Kept as a record of what was built and why.
+
 **Status: implemented, not yet device-tested.** Compiles and is CI-built, but Device Owner APIs
 can't run in CI or on an un-provisioned device, so treat runtime behaviour as unverified until
 tried on a real phone. Code: `admin/FocusFenceAdminReceiver.kt`, `admin/DeviceAdmin.kt`,

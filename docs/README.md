@@ -33,7 +33,7 @@ code and organised so it can be used, argued with, or ignored a piece at a time.
 | [`specs/accountability-architecture.md`](specs/accountability-architecture.md) | Component specs: categories, capture, screenshots, integrity/heartbeat, backend (incl. partner linking by invite code, email + SMS), settings lock, Device Owner. Device side mostly built; backend parts proposed. Open decisions listed. |
 | [`specs/bundles.md`](specs/bundles.md) | **Implemented.** Curated filter-bundle set, strictness tier, bypass guard, defaults. |
 | [`specs/friction-tiers.md`](specs/friction-tiers.md) | **Implemented.** Per-action guard levels (None/Delay/Own PIN/Partner PIN). |
-| [`specs/device-owner.md`](specs/device-owner.md) | **Implemented, not device-tested.** Managed mode (detect-not-block), always-on VPN (no lockdown), settings lock, Private DNS fallback, the strategy switch, package suspension, network logging, filter health detection. |
+| [`specs/device-owner.md`](specs/device-owner.md) | **Removed 2026-11-24 (D-028); historical.** Managed mode (detect-not-block), always-on VPN (no lockdown), settings lock, Private DNS fallback, the strategy switch, package suspension, network logging, filter health detection. |
 | [`../server/`](../server) | **Prototype** Kotlin/Ktor accountability backend (enroll, signed ingest, heartbeat, Resend reports, E2EE screenshots). Not CI-built. |
 
 ## How to read it

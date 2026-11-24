@@ -97,7 +97,6 @@ with `-R flyboy-byte/focusfence`).
 | Sockets from the VPN app without binding | Bind to the underlying `Network` (or `protect()`) so they can't loop into the tunnel. |
 | Strict Private DNS + our VPN | Lookups skip the tunnel entirely. `VpnHealth` reports `bypassed`. |
 | Shutting down an executor in `stopVpn()` | The service restarts; a dead executor throws. |
-| Device owner provisioning | `dpm set-device-owner` fails while any account is on the phone. |
 | Assuming a 🧪 feature works | See the Incidents table in `STATE.md`. |
 
 ## Releases

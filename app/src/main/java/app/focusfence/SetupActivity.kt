@@ -51,7 +51,7 @@ class SetupActivity : AppCompatActivity() {
             Layer(R.string.setup_filter, R.string.setup_filter_what, R.string.setup_filter_cost, true, DnsVpnService.isRunning, MainActivity::class.java),
             Layer(R.string.setup_log, R.string.setup_log_what, R.string.setup_log_cost, true, LogSettings.logAllowedDns(this), DiagnosticsActivity::class.java),
             Layer(R.string.setup_strict, R.string.setup_strict_what, R.string.setup_strict_cost, true, StrictStore.isEnabled(this), StrictModeActivity::class.java),
-            Layer(R.string.setup_admin, R.string.setup_admin_what, R.string.setup_admin_cost, true, admin, DeviceOwnerActivity::class.java),
+            Layer(R.string.setup_admin, R.string.setup_admin_what, R.string.setup_admin_cost, true, admin, UninstallProtectionActivity::class.java),
             Layer(R.string.setup_partners, R.string.setup_partners_what, R.string.setup_partners_cost, true, partners, AccountabilityActivity::class.java),
             Layer(R.string.setup_group, R.string.setup_group_what, R.string.setup_group_cost, false, GroupStore.active(this), GroupActivity::class.java),
             Layer(R.string.setup_text, R.string.setup_text_what, R.string.setup_text_cost, false, MonitorSettings.textEnabled(this), MonitoringActivity::class.java),

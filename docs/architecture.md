@@ -72,13 +72,11 @@ its own resolver, which is what DNS66 and similar apps relay to. DoH stays as th
 
 **Never enable lockdown.** Android's "Block connections without VPN" drops every packet that
 isn't routed into the tunnel. With DNS-only routes that is all real traffic: the phone keeps DNS
-and loses the internet. `VpnHealth` reports it as `lockdown` and the alert opens VPN settings;
-in managed mode the app re-applies always-on without lockdown.
+and loses the internet. `VpnHealth` reports it as `lockdown` and the alert opens VPN settings.
 
 **Filter health.** `dns/VpnHealth` classifies the running filter (ok, offline, degraded,
 upstream_down, silent, bypassed by strict Private DNS, lockdown) from relay outcomes, query
-arrivals, screen state and system settings, with no timers. See
-[`specs/device-owner.md`](specs/device-owner.md#health-detection).
+arrivals, screen state and system settings, with no timers.
 
 ## Layering
 
@@ -88,7 +86,7 @@ data/    thin SharedPreferences wrappers
 vpn/     the VpnService — packet loop, upstream relay, health, stats, budget accrual
 accessibility/  the AccessibilityService — section rules, app blocking, URL/text capture
 monitor/ Monitor (battery, perf, integrity trail), usage timeline, text/screen capture
-admin/   Device Owner wrapper, app suspension, Private DNS fallback
+admin/   uninstall protection (device admin, no policies)
 ui/      fragments + the domain editor
 ```
 

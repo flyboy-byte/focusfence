@@ -20,7 +20,6 @@ object GuardPolicy {
     /** Loosening actions that can be gated. [default] keeps partner gating opt-in. */
     enum class Action(val key: String, val label: String, val default: Level) {
         TURN_OFF_VPN("guard_vpn_off", "Turn off the VPN", Level.DELAY),
-        SWITCH_STRATEGY("guard_switch_strategy", "Switch filtering strategy", Level.DELAY),
         DISABLE_LOGGING("guard_disable_logging", "Turn off activity logging", Level.DELAY),
         DISABLE_CAPTURE("guard_disable_capture", "Turn off screenshot / text capture", Level.DELAY),
         REMOVE_BLOCK_RULE("guard_remove_rule", "Remove a block rule", Level.DELAY),
@@ -29,8 +28,7 @@ object GuardPolicy {
         UNBLOCK_APP("guard_unblock_app", "Unblock an app", Level.DELAY),
         EXCLUDE_APP("guard_exclude_app", "Exclude a browser/social/video app from the filter", Level.DELAY),
         DISABLE_STRICT("guard_disable_strict", "Turn off strict mode", Level.DELAY),
-        REMOVE_PROTECTION("guard_remove_protection", "Remove device protection", Level.DELAY),
-        LOOSEN_MANAGED("guard_loosen_managed", "Loosen managed-mode protection", Level.DELAY),
+        REMOVE_PROTECTION("guard_remove_protection", "Turn off uninstall protection", Level.DELAY),
         REMOVE_PARTNER("guard_remove_partner", "Remove an accountability partner", Level.DELAY),
         /** Leave a group, stop filtering inside it, narrow who sees my report, or remove a member. */
         LEAVE_GROUP("guard_leave_group", "Leave or loosen a group", Level.DELAY);

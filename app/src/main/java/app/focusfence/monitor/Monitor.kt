@@ -251,8 +251,8 @@ object Monitor {
         }
         state["a11y_enabled"] = UiUtil.isUrlFilterEnabled(context).toString()
         state["usage_access"] = UsageCollector.hasAccess(context).toString()
-        // Managed mode: losing device-owner, or network logging being turned
-        // off, weakens protection and must show in the trail.
+        // Uninstall protection being turned off must show in the trail. device_owner stays so a phone leaving the
+        // old managed mode (removed 2026-11-24) records it.
         state["device_owner"] = app.focusfence.admin.DeviceAdmin.isDeviceOwner(context).toString()
         state["admin_active"] = app.focusfence.admin.DeviceAdmin.isAdminActive(context).toString()
         // Battery optimization on = Doze/OEM savers may delay or kill protection.
@@ -265,12 +265,6 @@ object Monitor {
         } ?: "no_vpn"
         state["battery_exempt"] = (context.getSystemService(android.os.PowerManager::class.java)
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false).toString()
-        if (app.focusfence.admin.DeviceAdmin.isDeviceOwner(context)) {
-            state["network_logging"] = app.focusfence.admin.DeviceAdmin.isNetworkLoggingEnabled(context).toString()
-            state["always_on_vpn_ours"] = app.focusfence.admin.DeviceAdmin.isAlwaysOnVpnOurs(context).toString()
-            state["network_settings_locked"] =
-                app.focusfence.admin.DeviceAdmin.isNetworkSettingsLocked(context).toString()
-        }
         // Capture state in the integrity trail: turning monitoring on or off is
         // itself an accountability event.
         state["capture_screenshots"] = MonitorSettings.screenshotsEnabled(context).toString()

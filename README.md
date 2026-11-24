@@ -55,7 +55,7 @@ one does and costs.
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
 | 🧪 | App-to-app partners and groups of up to four |
 | 🧪 | Sending a partner a heavily blurred screenshot (48 px at most) |
-| 🧪 | Uninstall protection and device-owner mode |
+| 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
 | ❌ | Automatic screenshot sending, hiding apps from reports, partner logins |
 
 What's next is in [`docs/roadmap.md`](docs/roadmap.md).

@@ -15,7 +15,7 @@ you'd rather not be.
 ## In scope
 
 - The Android app (`app/`): bypassing the filter or strict mode without it being logged, leaking activity off the
-  phone, the accessibility and device-owner paths.
+  phone, the accessibility service and uninstall protection.
 - The server (`server/`): reading a sealed report or someone else's data, sending email or SMS as the server, the
   admin sign-in, the join and partner-link flows.
 - The partner report page (`server/src/main/resources/static/report.js`) and its key handling.
