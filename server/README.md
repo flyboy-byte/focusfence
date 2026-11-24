@@ -11,8 +11,9 @@ the same `Digest` the partner app does. One rule set for both ends.
 ## Two ways to be a partner, side by side
 
 **1. Web + email (+ optional SMS) — the default.**
-The phone enrolls a hardware-backed P-256 key, then uploads its activity log as signed,
-hash-chained batches every 15 minutes and heartbeats. The owner creates a one-time invite code
+The phone enrolls a hardware-backed P-256 key. It **never uploads its activity log** (D-023): it builds the partner
+report on the phone, seals it with a key only it and its partners hold, and uploads the ciphertext hourly, plus signed
+alert lines and heartbeats. The partner's browser opens the report; the key rides after `#` in the invite link. The owner creates a one-time invite code
 in the app and sends it to their partner. The partner joins at `/join`, and gets:
 - an email alert when protection changes (filter off, accessibility off, log cleared, records
   missing, partner removed, …) and when the phone goes silent;

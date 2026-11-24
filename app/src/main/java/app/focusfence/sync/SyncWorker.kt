@@ -53,13 +53,16 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val api = Api(SyncStore.serverUrl(ctx))
             var error: String? = null
             var heartbeat = false
-            try {
-                if (SyncStore.deviceId(ctx) != null) {
-                    upload(ctx, api)
-                    heartbeat = heartbeat(ctx, api, now)
+            if (SyncStore.deviceId(ctx) != null) {
+                // Independent steps: a server that predates D-023 (no /v1/reports) must not also stop the heartbeat,
+                // or partners would get a false "phone went silent".
+                for (step in listOf<() -> Unit>(
+                    { heartbeat = heartbeat(ctx, api, now) },
+                    { serverAlerts(ctx, api, now) },
+                    { serverReport(ctx, api, now) },
+                )) {
+                    try { step() } catch (e: Exception) { error = error ?: "server: ${e.javaClass.simpleName}: ${e.message}" }
                 }
-            } catch (e: Exception) {
-                error = "server: ${e.javaClass.simpleName}: ${e.message}"
             }
             // Groups first: a hand-over made now becomes a pairing the loops below can start using this same pass.
             if (app.focusfence.data.GroupStore.active(ctx)) {
@@ -95,48 +98,70 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
     // ---- server path ---------------------------------------------------------
 
-    private fun upload(ctx: Context, api: Api) {
+    /**
+     * D-023: the server never receives activity records. Protection changes go up as their alert text only (the same
+     * [Digest.alertText] lines app partners get: "Filter turned off", never a site), and the server emails them.
+     */
+    private fun serverAlerts(ctx: Context, api: Api, now: Long) {
         val deviceId = SyncStore.deviceId(ctx) ?: return
-        repeat(MAX_BATCHES_PER_RUN) {
-            val after = SyncStore.uploadedSeq(ctx)
-            val lines = ArrayList<String>()
-            var bytes = 0
-            var first = -1L
-            var last = -1L
-            EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = after) { line ->
-                val seq = EventLog.seqOf(line) ?: return@scan true
-                if (seq <= after) return@scan true
-                if (first < 0) first = seq
-                last = seq
-                lines += line
-                bytes += line.length + 1
-                bytes < MAX_BATCH_BYTES
+        val after = SyncStore.uploadedSeq(ctx)
+        val lines = ArrayList<String>()
+        var maxSeq = after
+        EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = after) { line ->
+            val seq = EventLog.seqOf(line) ?: return@scan true
+            if (seq <= after) return@scan true
+            if (seq > maxSeq) maxSeq = seq
+            if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
+                LogJson.decode(line)?.let(Digest::alertText)?.let { lines += it }
             }
-            if (lines.isEmpty()) return
-            val raw = lines.joinToString("\n")
-            val prev = SyncStore.lastHash(ctx)
-            val sig = DeviceKey.sign("batch|$deviceId|$first|$last|$prev|$raw".toByteArray())
-            val r = api.post("/v1/batches", JSONObject().apply {
-                put("deviceId", deviceId)
-                put("firstSeq", first)
-                put("lastSeq", last)
-                put("prevHash", prev)
-                put("recordsRaw", raw)
-                put("signature", sig)
-            })
-            when (r.code) {
-                200 -> SyncStore.setCursor(ctx, last, r.body?.optString("nextHash") ?: return)
-                409 -> {
-                    // The server is ahead of us (a response got lost) or our cursor is
-                    // stale: resume from its cursor. Nothing is hidden by this — the
-                    // server keeps what it has and counts any gap itself.
-                    val b = r.body ?: return
-                    SyncStore.setCursor(ctx, maxOf(after, b.optLong("expectedNextSeq", 1) - 1), b.optString("lastHash", prev))
-                }
-                else -> throw IllegalStateException("upload HTTP ${r.code} ${r.body?.optString("error")}")
-            }
+            true
         }
+        if (lines.isNotEmpty()) {
+            val sent = lines.takeLast(20)
+            val joined = sent.joinToString("\n")
+            val r = api.post("/v1/alerts", JSONObject().apply {
+                put("deviceId", deviceId)
+                put("t", now)
+                put("lines", org.json.JSONArray(sent))
+                put("signature", DeviceKey.sign("alerts|$deviceId|$now|${sha256(joined)}".toByteArray()))
+            })
+            if (r.code != 200) throw IllegalStateException("alerts HTTP ${r.code} ${r.body?.optString("error")}")
+        }
+        if (maxSeq != after) SyncStore.setCursor(ctx, maxSeq, SyncStore.lastHash(ctx))
     }
+
+    /**
+     * D-023: the partner's report is a [Digest] sealed with this phone's report key ([ReportSeal]); the server stores
+     * ciphertext and the partner's browser opens it. Hourly slices, merged by the report page, so each run reads at
+     * most an hour of log (the first one reads up to a week).
+     */
+    private fun serverReport(ctx: Context, api: Api, now: Long) {
+        val deviceId = SyncStore.deviceId(ctx) ?: return
+        val last = SyncStore.lastReportMs(ctx)
+        if (last > 0 && now - last < REPORT_EVERY_MS) return
+        val from = if (last > 0) last else now - 7 * 24 * 3_600_000L
+        val d = Digest(from)
+        EventLog.scan(EventLog.Channel.ACTIVITY, sinceT = from) { line ->
+            val t = LogJson.peekT(line)
+            if (t != null && t >= from) LogJson.decode(line)?.let(d::add)
+            true
+        }
+        val blob = app.focusfence.dns.ReportSeal.seal(SyncStore.reportKey(ctx), LogJson.encode(d.build(now)).toByteArray(), deviceId)
+        val r = api.post("/v1/reports", JSONObject().apply {
+            put("deviceId", deviceId)
+            put("t", now)
+            put("from", from)
+            put("to", now)
+            put("blob", blob)
+            put("signature", DeviceKey.sign("report|$deviceId|$now|$from|$now|${sha256(blob)}".toByteArray()))
+        })
+        if (r.code != 200) throw IllegalStateException("report HTTP ${r.code} ${r.body?.optString("error")}")
+        SyncStore.setLastReportMs(ctx, now)
+    }
+
+    /** Same encoding as the server's `Integrity.sha256`: base64url, no padding. */
+    private fun sha256(s: String): String =
+        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
 
     private fun heartbeat(ctx: Context, api: Api, now: Long): Boolean {
         val deviceId = SyncStore.deviceId(ctx) ?: return false
@@ -270,8 +295,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     companion object {
         private val LOCK = Any()
         private const val CHANNEL = "partner_alerts"
-        private const val MAX_BATCHES_PER_RUN = 20
-        private const val MAX_BATCH_BYTES = 256 * 1024
+        /** How often the sealed web/email report slice goes up (D-023). */
+        const val REPORT_EVERY_MS = 3_600_000L
         const val DIGEST_EVERY_MS = 6 * 3_600_000L
         /** Two missed digests plus slack: Doze can hold work for a few hours. */
         const val STALE_AFTER_MS = 14 * 3_600_000L

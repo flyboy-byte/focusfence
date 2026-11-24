@@ -2,6 +2,8 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
+> **D-023 (on branch `feat/e2e-email-partner`, 2026-11-23):** the server no longer receives or stores activity records; email/web partner reports are sealed on the phone and opened in the partner's browser. 🧪 tests + a Node/WebCrypto cross-check only; not on a phone, not deployed. Needs an app release (2.11) and a server deploy together.
+
 > **2.10.0 (code 31, 2026-11-23)** = 2.9.2 plus: DNS resolvers race in Automatic mode (`dns/Hedged`, 0.6 s, bounded pool) after a morning of 3-7 s p95 lookups, `net` diag record (link, roaming, signal), Setup screen as cards, About row (button hidden if no URL; pages served at `https://ff.flyboybyte.com/about/`), screenshot wording corrected (images never leave the phone), a paired partner's code can skip the strict wait (wait always offered), two unguarded API-29 device-owner calls fixed (lint). Tests + lint green; 🧪 none of it seen on a phone yet.
 
 > **Block notice (2026-11-23, on main after 2.10.0):** when a site blocked by a user rule is opened, Focus Fence says so. Settings → Filtering → "When a site is blocked": a notification (default), the full-screen "Blocked by Focus Fence" page (`BlockedActivity`; section rules use it too instead of the toast), or nothing. With the accessibility service on, it first confirms the browser's address bar shows that site; without it, only the notification, rate-limited per domain. Logic in `dns/BlockScreen` with tests. 🧪 not yet seen on a phone.
