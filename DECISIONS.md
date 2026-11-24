@@ -427,3 +427,19 @@ with the report key (D-023), so the server stores ciphertext only. Level C (auto
 is the eventual step, gated on the false-flag rate and the conditions in `docs/roadmap.md` Phase 2. Level D (a
 clear image) stays ruled out.
 
+## D-026 — A partner holds one link: the invite link is their report link for good
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
+
+Before this, the report key reached a partner's browser only by opening the invite (or a "key link") in that
+browser, so opening an alert email in a different browser showed "the key is missing". Logan: "They should be able to
+just hold the link." Now each invite has a long secret (`/i/{secret}`, besides the short typed code). Opened before
+joining it is the join form; after joining and confirming the address it redirects to the partner's report, and the
+`#k=` key rides along, so the one link works in any browser, any time. Removing the partner kills it. Unconfirmed
+partners get a "confirm your email first" page and no report token (the double opt-in rule stands).
+
+Alert emails keep a clickable `/p/{token}` link but can't carry the key (D-023), so they say to open the partner's
+own link if the key is missing. Option B, a partner password that unlocks the key from any email link without the
+server ever seeing it, is scoped in `docs/plans/09-partner-login.md` and not built. Dropping end-to-end encryption to
+make email links work was considered and rejected.
+

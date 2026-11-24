@@ -50,10 +50,16 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var smsCodeHash: String? = null,
         var smsCodeExpiresMs: Long = 0,
         var lastSmsMs: Long = 0,
+        /**
+         * SHA-256 of the secret in the invite link (/i/{secret}) this partner joined with. That link is theirs for good:
+         * it carries the report key after '#', so opening it in any browser shows the report (2026-11-24, "they should be
+         * able to just hold the link"). Null for partners who joined by typing a code or before this existed.
+         */
+        var linkHash: String? = null,
     )
 
     @Serializable
-    data class Invite(val codeHash: String, val expiresMs: Long)
+    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "")
 
     @Serializable
     data class Device(
@@ -175,6 +181,13 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
             val p = d.partners.firstOrNull { it.confirmHash != null && java.security.MessageDigest.isEqual(it.confirmHash!!.toByteArray(), want) } ?: continue
             return d to p
         }
+        return null
+    }
+
+    /** The partner who joined with the invite link whose secret hashes to [hash]. */
+    fun partnerByLinkHash(hash: String): Pair<Device, Partner>? {
+        if (hash.isEmpty()) return null
+        for (d in allDevices()) d.partners.firstOrNull { it.linkHash != null && java.security.MessageDigest.isEqual(it.linkHash!!.toByteArray(), hash.toByteArray()) }?.let { return d to it }
         return null
     }
 

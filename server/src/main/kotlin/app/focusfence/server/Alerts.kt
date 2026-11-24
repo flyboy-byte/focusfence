@@ -39,7 +39,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             if (!p.confirmed) continue
             val html = "<p>${Web.esc(subject)}</p><ul>" +
                 lines.joinToString("") { "<li>${Web.esc(it)}</li>" } +
-                "</ul><p><a href=\"${link(p)}\">Open the report</a></p>"
+                "</ul><p><a href=\"${link(p)}\">Open the report</a>. If it says the key is missing, open the Focus Fence link the phone's owner sent you instead: that one always works.</p>"
             if (mayEmail(p.email)) notifier.email(p.email, "Focus Fence: $subject", html)
             val phone = p.phone
             if (p.phoneVerified && phone != null && now - p.lastSmsMs >= cfg.smsMinIntervalMs) {
@@ -81,7 +81,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
                     if (mayEmail(p.email)) notifier.email(
                         p.email, "Focus Fence: weekly report",
                         "<p>This week's Focus Fence report is ready. It is end-to-end encrypted, so it opens in your browser, " +
-                            "not in this email.</p><p><a href=\"${link(p)}\">Open the report</a></p>",
+                            "not in this email.</p><p><a href=\"${link(p)}\">Open the report</a>. If it says the key is missing, open the Focus Fence link the phone's owner sent you instead: that one always works.</p>",
                     )
                 }
             }

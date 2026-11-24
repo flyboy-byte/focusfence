@@ -10,6 +10,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
@@ -23,6 +24,7 @@ import java.security.spec.ECGenParameterSpec
 import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -114,7 +116,7 @@ class ServerTest {
     fun inviteJoinListAndUnlink() = run { http ->
         val id = http.enroll()
         val inv = http.invite(id)
-        assertTrue(inv.joinUrl.startsWith("https://ff.test/join?code="))
+        assertTrue(inv.joinUrl.startsWith("https://ff.test/i/"))
         // Codes are forgiving to type: lowercase, no dash.
         val r = http.join(inv.code.lowercase().replace("-", ""))
         assertEquals(HttpStatusCode.OK, r.status) // a "check your email" page, not a redirect to a report
@@ -139,6 +141,36 @@ class ServerTest {
         assertEquals(HttpStatusCode.OK, http.postJson("/v1/partners/unlink", signed("unlink", id, pid, partnerId = pid)).status)
         assertTrue(notifier.emails.drop(before).any { it.second.contains("removed") }) // confirmed, so they are told
         assertEquals(0, store.device(id)!!.partners.size)
+    }
+
+    @Test
+    fun theInviteLinkBecomesThePartnersReportLinkForGood() = run { http ->
+        // D-026: the partner holds one link; after joining and confirming it opens the report, any browser, any time.
+        val id = http.enroll()
+        val secret = http.invite(id).joinUrl.substringAfter("/i/")
+        val form = http.get("/i/$secret")
+        assertEquals(HttpStatusCode.OK, form.status)
+        assertTrue(form.bodyAsText().contains("name='link'"))
+        assertFalse(form.bodyAsText().contains("name='code'"), "no code to type when the link is the invite")
+        http.submitForm("/join", Parameters.build { append("link", secret); append("name", "Sam"); append("email", "sam@example.com") })
+        // Joined but not confirmed: the link says so and hands out no report token.
+        val waiting = http.get("/i/$secret")
+        assertEquals(HttpStatusCode.OK, waiting.status)
+        assertTrue(waiting.bodyAsText().contains("Confirm your email"))
+        assertEquals(HttpStatusCode.Found, http.post("/confirm/${emailedConfirmToken()}").status)
+        val token = store.device(id)!!.partners.single().token
+        repeat(2) {
+            val go = http.get("/i/$secret")
+            assertEquals(HttpStatusCode.Found, go.status)
+            assertEquals("/p/$token", go.headers[HttpHeaders.Location], "the same link keeps working")
+        }
+        // The link can't be used to join a second time, and a removed partner's link stops working.
+        val again = http.submitForm("/join", Parameters.build { append("link", secret); append("name", "Eve"); append("email", "eve@example.com") })
+        assertTrue(again.bodyAsText().contains("It may have expired or already been used"))
+        assertEquals(1, store.device(id)!!.partners.size)
+        store.updateDevice(id) { it.partners = emptyList() }
+        assertEquals(HttpStatusCode.NotFound, http.get("/i/$secret").status)
+        assertEquals(HttpStatusCode.NotFound, http.get("/i/short").status)
     }
 
     @Test
