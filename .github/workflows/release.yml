@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history, for the "What's new" notes
 
       - uses: actions/setup-java@v4
         with:
@@ -86,6 +88,25 @@ jobs:
             *) echo "PRERELEASE=false" >> "$GITHUB_ENV" ;;
           esac
 
+      # The app's update banner and What's new screen read the "## What's new" section of this body
+      # (UpdateCheck.userNotes), so keep that heading.
+      - name: Release notes
+        run: |
+          prev=$(git tag --list 'v*-accountable' --sort=-v:refname | grep -vx "${{ github.ref_name }}" | head -1)
+          {
+            echo "**Focus Fence AC** — a site blocker and self-accountability app for Android."
+            echo
+            echo "## What's new"
+            echo
+            if [ -n "$prev" ]; then python3 tools/changelog.py notes "$prev" "${{ github.ref_name }}" | tail -n +2; fi
+            echo
+            echo "## Install"
+            echo
+            echo "- Signing key: **$SIGNING_KIND** (cert SHA-256 \`$CERT_SHA256\`). Stable releases install over each other; a throwaway build needs the previous one uninstalled first."
+            echo "- App id \`app.focusfence.accountable\`. Works on its own; partners need a Focus Fence server (\`server/README.md\`)."
+            echo "- Where every feature stands, and how far it's been tested: \`STATE.md\`."
+          } > release-notes.md
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -93,12 +114,4 @@ jobs:
           make_latest: ${{ env.PRERELEASE == 'false' }}
           name: "Focus Fence AC ${{ github.ref_name }}"
           files: focus-fence-accountable-*.apk
-          body: |
-            **Focus Fence AC** — accountability build, separate from the original Focus Fence.
-
-            - App id `app.focusfence.accountable` (installs alongside the original)
-            - Signing key: **${{ env.SIGNING_KIND }}** (cert SHA-256 `${{ env.CERT_SHA256 }}`)
-              - stable: installs over earlier stable releases
-              - throwaway: uninstall the previous build first
-            - Works on its own (filtering, logs, uninstall protection). Partner reports are optional and need a Focus Fence server (see `server/README.md`).
-            - Status of every feature, and how far it's been tested: `STATE.md` on the branch.
+          body_path: release-notes.md

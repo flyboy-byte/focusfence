@@ -125,14 +125,13 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 ## Open decisions
 
 Settled since this table was first written: hosting (Logan's VPS, live), domain + HTTPS (`ff.flyboybyte.com`), privacy
-tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main` (D-017/D-022), going public (D-027).
+tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main` (D-017/D-022), going public (D-027), about/privacy pages on GitHub Pages (2026-11-24).
 
 | Decision | Options / recommendation |
 |---|---|
 | SMS provider + monthly budget | Twilio / Telnyx / Vonage, behind one `Notifier` interface |
 | Log retention after upload | Keep N days locally vs delete on acknowledgement |
 | Partner login | Option B in `docs/plans/09-partner-login.md`, scoped, not built |
-| GitHub Pages for the about/privacy pages | Possible now the repo is public; today they're served by the server (`docs/plans/07-pages-and-privacy.md`) |
 
 ## Next steps, in order
 

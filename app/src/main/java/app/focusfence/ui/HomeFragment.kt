@@ -100,6 +100,10 @@ class HomeFragment : Fragment() {
             }
             refreshStrict()
         }
+        binding.updateNotesToggle.setOnClickListener {
+            val open = binding.updateNotes.visibility != View.VISIBLE
+            binding.updateNotes.visibility = if (open) View.VISIBLE else View.GONE
+        }
         binding.weekCard.setOnClickListener { startActivity(Intent(requireContext(), app.focusfence.StatsActivity::class.java)) }
 
         binding.accessibilityActionButton.setOnClickListener {
@@ -127,6 +131,7 @@ class HomeFragment : Fragment() {
         refreshStrict()
         refreshAttention()
         refreshStatusRows()
+        refreshUpdateBanner()
         binding.root.postDelayed(ticker, 1000)
     }
 
@@ -343,6 +348,21 @@ class HomeFragment : Fragment() {
         }
 
         b.layersCount.text = getString(R.string.home_layers_count, on, total)
+    }
+
+    private fun refreshUpdateBanner() {
+        val b = _binding ?: return
+        val context = requireContext()
+        val offer = app.focusfence.update.Updates.pendingOffer(context)
+        b.updateCard.visibility = if (offer == null) View.GONE else View.VISIBLE
+        if (offer == null) return
+        b.updateTitle.text = getString(R.string.update_banner_title, offer.version.substringBefore('-'))
+        b.updateNotes.text = offer.notes.ifEmpty { getString(R.string.update_no_notes) }
+        b.updateButton.setOnClickListener { startActivity(app.focusfence.update.UpdateActivity.intent(context, offer)) }
+        b.updateDismiss.setOnClickListener {
+            app.focusfence.update.Updates.dismissBanner(context, offer.tag)
+            refreshUpdateBanner()
+        }
     }
 
     private fun refreshAttention() {

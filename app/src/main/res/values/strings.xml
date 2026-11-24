@@ -549,7 +549,7 @@
     <string name="unlock_ready_title">Unlock is open</string>
     <string name="unlock_ready_text">Make your change now: %1$d min left.</string>
     <!-- About and privacy: the site URL lives here so it can change. Served by the accountability server (docs/site is packaged into it). GitHub Pages is not an option: Logan has no admin on the repo and it is private. Empty hides the button. -->
-    <string name="about_url" translatable="false">https://ff.flyboybyte.com/about/privacy.html</string>
+    <string name="about_url" translatable="false">https://flyboy-byte.github.io/focusfence/privacy.html</string>
     <string name="about_title">About and privacy</string>
     <string name="about_summary">With every optional layer off, nothing leaves this phone. Text and screenshot capture stay on the phone and show an indicator. If you add a partner or group, only an end-to-end encrypted summary and protection alerts go through the server you choose; whoever runs it cannot read your activity. Uninstalling removes everything on the phone.</string>
     <string name="about_open_site">Open the full page</string>
@@ -647,4 +647,14 @@
     <string name="settings_group_blocking">Blocking</string>
     <string name="excluded_apps_summary">Games, music and maps can bypass the filter if they break behind it.</string>
     <string name="group_card_title">Group</string>
+    <string name="update_whats_new">What\'s new</string>
+    <string name="update_banner_title">Focus Fence AC %1$s is available</string>
+    <string name="update_banner_action">Update</string>
+    <string name="update_banner_dismiss">Hide until the next version</string>
+    <string name="update_no_notes">No notes for this version. Tap Update to see the release page.</string>
+    <string name="whats_new_title">What\'s new</string>
+    <string name="whats_new_summary">Changes in recent versions</string>
+    <string name="whats_new_loading">Loading from GitHub…</string>
+    <string name="whats_new_failed">Couldn\'t reach GitHub. Try again later.</string>
+    <string name="whats_new_installed">(installed)</string>
 </resources>

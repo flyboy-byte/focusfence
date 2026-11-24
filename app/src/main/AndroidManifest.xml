@@ -146,6 +146,10 @@
             android:name=".update.UpdateActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".update.WhatsNewActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
         <receiver
             android:name=".update.InstallResultReceiver"
             android:exported="false" />

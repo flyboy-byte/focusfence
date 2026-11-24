@@ -11,6 +11,7 @@ object UpdateCheck {
     /** Where releases come from. A fork that publishes its own releases changes this one line. */
     const val REPO = "flyboy-byte/focusfence"
     const val LATEST_URL = "https://api.github.com/repos/$REPO/releases/latest"
+    const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases"
     const val DOWNLOAD_PREFIX = "https://github.com/$REPO/releases/download/"
 
     const val CHECK_EVERY_MS = 24 * 3_600_000L
@@ -23,9 +24,18 @@ object UpdateCheck {
         val prerelease: Boolean,
         val assets: List<Asset>,
         val pageUrl: String = "",
+        val body: String = "",
     )
 
-    data class Offer(val version: String, val tag: String, val apkUrl: String, val size: Long, val pageUrl: String)
+    data class Offer(
+        val version: String,
+        val tag: String,
+        val apkUrl: String,
+        val size: Long,
+        val pageUrl: String,
+        /** Plain "What's new" text for the owner ([userNotes]); empty when the release has none. */
+        val notes: String = "",
+    )
 
     /** "v2.13.0-accountable" -> "2.13.0-accountable". */
     fun versionOf(tag: String): String = tag.removePrefix("v")
@@ -36,7 +46,42 @@ object UpdateCheck {
         if (Digest.compareVersions(version, installedVersion) <= 0) return null
         // compareVersions treats unparseable as equal, so a garbage tag already stopped above.
         val apk = release.assets.firstOrNull { isOurApk(it, release.tag) } ?: return null
-        return Offer(version, release.tag, apk.url, apk.size, release.pageUrl)
+        return Offer(version, release.tag, apk.url, apk.size, release.pageUrl, userNotes(release.body))
+    }
+
+    private val HIDDEN_SECTIONS = setOf("docs", "maintenance", "tests", "ci")
+    private val REF = Regex("""\s*\(`[0-9a-f]{7,}`(, \[#\d+]\([^)]*\))?\)\s*$""")
+    private val SCOPE = Regex("""^\*\*[\w-]+:\*\*\s*""")
+
+    /**
+     * The release body's "## What's new" section as plain text for the phone: section names kept ("Added",
+     * "Fixed"), developer-only sections dropped, and each line stripped of its commit and PR reference and
+     * `**scope:**` prefix. Empty when the body has no such section (releases before 2.15).
+     */
+    fun userNotes(body: String): String {
+        val lines = body.lines()
+        val start = lines.indexOfFirst { it.trim().equals("## What's new", ignoreCase = true) }
+        if (start < 0) return ""
+        val out = ArrayList<String>()
+        var keep = true
+        for (raw in lines.drop(start + 1)) {
+            val line = raw.trim()
+            if (line.startsWith("## ")) break
+            when {
+                line.startsWith("### ") -> {
+                    val name = line.removePrefix("### ").trim()
+                    keep = name.lowercase() !in HIDDEN_SECTIONS
+                    if (keep) out += name
+                }
+                keep && line.startsWith("- ") -> {
+                    val text = line.removePrefix("- ").replace(REF, "").replace(SCOPE, "").trim()
+                    if (text.isNotEmpty()) out += "• " + text.replaceFirstChar { it.uppercase() }
+                }
+            }
+        }
+        // A section heading left with no lines under it says nothing.
+        val cleaned = out.filterIndexed { i, l -> l.startsWith("• ") || out.getOrNull(i + 1)?.startsWith("• ") == true }
+        return cleaned.joinToString("\n")
     }
 
     private fun isOurApk(a: Asset, tag: String): Boolean =

@@ -34,6 +34,8 @@ object Updates {
     private const val KEY_ENABLED = "enabled"
     private const val KEY_LAST_CHECK = "last_check"
     private const val KEY_NOTIFIED_TAG = "notified_tag"
+    private const val KEY_OFFER = "offer"
+    private const val KEY_DISMISSED_TAG = "dismissed_tag"
     private const val WORK = "focusfence_update_check"
     private const val CHANNEL = "app_updates"
     private const val NOTIFICATION_ID = 0x0FF0_0001
@@ -68,21 +70,57 @@ object Updates {
         ""
     }
 
-    /** Asks GitHub for the latest release. Blocking; call off the main thread. Null when nothing newer; throws when GitHub can't be reached. */
+    /**
+     * Asks GitHub for the latest release. Blocking; call off the main thread. Null when nothing newer; throws when
+     * GitHub can't be reached. The answer is remembered for Home's update banner ([pendingOffer]).
+     */
     fun fetchOffer(c: Context): UpdateCheck.Offer? {
-        val conn = URL(UpdateCheck.LATEST_URL).openConnection() as HttpURLConnection
+        val offer = UpdateCheck.offer(parse(get(UpdateCheck.LATEST_URL)), installedVersion(c))
+        prefs(c).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).putString(KEY_OFFER, offer?.let { toJson(it) }).apply()
+        return offer
+    }
+
+    /** The last few releases, newest first, for the What's new screen: (version, plain notes). Blocking. */
+    fun recentReleases(count: Int = 6): List<Pair<String, String>> {
+        val arr = org.json.JSONArray(get(UpdateCheck.RELEASES_URL + "?per_page=$count"))
+        return (0 until arr.length()).map { parse(arr.getJSONObject(it).toString()) }
+            .filter { !it.draft && !it.prerelease }
+            .map { UpdateCheck.versionOf(it.tag) to UpdateCheck.userNotes(it.body) }
+    }
+
+    private fun get(url: String): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 15_000
         conn.readTimeout = 15_000
         conn.setRequestProperty("Accept", "application/vnd.github+json")
         conn.setRequestProperty("User-Agent", "FocusFenceAC")
-        val body = try {
+        return try {
             check(conn.responseCode == 200) { "GitHub answered ${conn.responseCode}" }
             conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect() // a one-off request; nothing to keep alive
         }
-        prefs(c).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-        return UpdateCheck.offer(parse(body), installedVersion(c))
+    }
+
+    /** The newer version found by the last check, unless the owner dismissed its banner or already has it. */
+    fun pendingOffer(c: Context): UpdateCheck.Offer? {
+        if (!isEnabled(c)) return null
+        val o = prefs(c).getString(KEY_OFFER, null)?.let { runCatching { fromJson(it) }.getOrNull() } ?: return null
+        if (app.focusfence.dns.Digest.compareVersions(o.version, installedVersion(c)) <= 0) return null
+        if (prefs(c).getString(KEY_DISMISSED_TAG, null) == o.tag) return null
+        return o
+    }
+
+    fun dismissBanner(c: Context, tag: String) {
+        prefs(c).edit().putString(KEY_DISMISSED_TAG, tag).apply()
+    }
+
+    private fun toJson(o: UpdateCheck.Offer) = JSONObject()
+        .put("version", o.version).put("tag", o.tag).put("apk", o.apkUrl).put("size", o.size)
+        .put("page", o.pageUrl).put("notes", o.notes).toString()
+
+    private fun fromJson(s: String): UpdateCheck.Offer = JSONObject(s).let {
+        UpdateCheck.Offer(it.getString("version"), it.getString("tag"), it.getString("apk"), it.optLong("size"), it.optString("page"), it.optString("notes"))
     }
 
     private fun parse(body: String): UpdateCheck.Release {
@@ -94,6 +132,7 @@ object Updates {
         }
         return UpdateCheck.Release(
             o.optString("tag_name"), o.optBoolean("draft"), o.optBoolean("prerelease"), assets, o.optString("html_url"),
+            o.optString("body"),
         )
     }
 
