@@ -79,6 +79,7 @@ class UpdateCheckTest {
         ### Added
         - check GitHub for updates and install with one tap (`abb69ad`, [#49](https://github.com/x/pull/49))
         - **ui:** five-tab layout (`933523f`, [#29](https://github.com/x/pull/29))
+        - ui: Settings as an ordered list (`8ff7797`)
         ### Docs
         - README in plain words (`bbcb835`, [#47](https://github.com/x/pull/47))
         ### Fixed
@@ -93,7 +94,7 @@ class UpdateCheckTest {
     @Test
     fun notesArePlainForThePhone() {
         assertEquals(
-            "Added\n• Check GitHub for updates and install with one tap\n• Five-tab layout\nFixed\n• Network blips are one count",
+            "Added\n• Check GitHub for updates and install with one tap\n• Five-tab layout\n• Settings as an ordered list\nFixed\n• Network blips are one count",
             UpdateCheck.userNotes(body),
         )
     }

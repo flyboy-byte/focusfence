@@ -51,7 +51,8 @@ object UpdateCheck {
 
     private val HIDDEN_SECTIONS = setOf("docs", "maintenance", "tests", "ci")
     private val REF = Regex("""\s*\(`[0-9a-f]{7,}`(, \[#\d+]\([^)]*\))?\)\s*$""")
-    private val SCOPE = Regex("""^\*\*[\w-]+:\*\*\s*""")
+    /** `**ui:** ` from a scoped title, or a bare `ui: ` / `server: ` prefix from an untyped one. */
+    private val SCOPE = Regex("""^(\*\*[\w-]+:\*\*|[a-z][\w-]{1,15}:)\s+""")
 
     /**
      * The release body's "## What's new" section as plain text for the phone: section names kept ("Added",
