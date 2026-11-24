@@ -7,6 +7,17 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Added
+- update banner and What's new, release notes with changes, pages on GitHub Pages (`44564a8`, [#58](https://github.com/flyboy-byte/focusfence/pull/58))
+### Changed
+- server: stop serving the About / privacy pages (they're on GitHub Pages) (`52a09ff`, [#60](https://github.com/flyboy-byte/focusfence/pull/60))
+- ui: Settings → About links to the GitHub repo (`e1f45ac`, [#59](https://github.com/flyboy-byte/focusfence/pull/59))
+- ui: Settings as an ordered list, Partners by rank, status colours harmonized (`8ff7797`, [#57](https://github.com/flyboy-byte/focusfence/pull/57))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.14.0-accountable
+
+### Added
 - check GitHub for updates and install with one tap (`abb69ad`, [#49](https://github.com/flyboy-byte/focusfence/pull/49))
 - block triage: notices for adult/gambling/scam sites, partner alert on repeated tries (D-024) (`9d9d15a`, [#53](https://github.com/flyboy-byte/focusfence/pull/53))
 - shared screenshots at 48 px with one blur (D-025 amended) (`3c7b020`, [#51](https://github.com/flyboy-byte/focusfence/pull/51))
@@ -16,6 +27,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - ui: plainer Home and Screen checks (no stat tiles, no card around the list) (`4dc21c9`, [#55](https://github.com/flyboy-byte/focusfence/pull/55))
 - ui: Home and Screen checks redesign (green = working, amber = needs you) (`49e6751`, [#54](https://github.com/flyboy-byte/focusfence/pull/54))
 ### Maintenance
+- release 2.14.0 (`6f65ad5`, [#56](https://github.com/flyboy-byte/focusfence/pull/56))
 - remove device owner (managed mode); uninstall protection gets its own screen (D-028) (`d95602a`, [#52](https://github.com/flyboy-byte/focusfence/pull/52))
 
 _Undo any line with `git revert <commit>`._
