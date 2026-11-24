@@ -2,12 +2,12 @@ package app.focusfence.dns
 
 /**
  * Decides which classifier hits become a partner flag. A "raw hit" is a risky label at or above the owner's
- * threshold; on its own that is NOT evidence: the only real flag so far (2026-11-20) was a shirtless selfie
+ * threshold; on its own that is NOT evidence: the only real flag so far (2026-11-20) was a photo with no nudity
  * scored `porn` 0.82 (`docs/research/ai-detection.md`). A raw hit is reported and its image kept for the
  * partner only when one of these holds:
  *
  *  - [STRONG]: the score is very high on its own;
- *  - persistence: the same app had another raw hit within [WINDOW_MS] (a selfie scrolled past once is dropped,
+ *  - persistence: the same app had another raw hit within [WINDOW_MS] (a photo scrolled past once is dropped,
  *    sustained viewing is not);
  *  - corroboration: a lower but real score ([CORROBORATED]) while adult words were on screen in the same app
  *    within [WINDOW_MS] ([RiskTerms]).

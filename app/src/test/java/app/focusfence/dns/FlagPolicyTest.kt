@@ -9,7 +9,7 @@ class FlagPolicyTest {
 
     @Test
     fun loneModerateHitIsHeldBack() {
-        // the 2026-11-20 shirtless selfie: porn 0.82, nothing else going on
+        // the 2026-11-20 false positive: porn 0.82, nothing else going on
         assertNull(FlagPolicy().onRawHit("photos", 0.82, 0))
     }
 
