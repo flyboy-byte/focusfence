@@ -183,12 +183,13 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         return null
     }
 
-    /** Appends raw JSONL records (already validated) and advances the device cursor. */
-    fun appendRecords(id: String, recordsRaw: String, lastSeq: Long, newHash: String, gap: Long, now: Long) =
+    /**
+     * D-023: activity records are never written. An older app still uploading batches only advances the cursor here;
+     * its records are checked for alerts in memory and dropped.
+     */
+    fun advanceCursor(id: String, lastSeq: Long, newHash: String, gap: Long, now: Long) =
         synchronized(lock(id)) {
             val d = device(id) ?: return@synchronized
-            recordsFile(id).appendText(recordsRaw.trimEnd('\n') + "\n")
-            rotateRecords(recordsFile(id))
             d.expectedNextSeq = lastSeq + 1
             d.lastHash = newHash
             d.lastSeenMs = now
@@ -197,28 +198,27 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
             saveDevice(d)
         }
 
-    /** Streams the file (never `readLines` on a whole file: the heap is small and the file is attacker-influenced). */
-    fun readRecords(id: String): List<String> {
-        val f = recordsFile(id)
-        if (!f.exists()) return emptyList()
-        return f.useLines { seq -> seq.filter { it.isNotBlank() }.toList() }
+    @Serializable
+    data class SealedReport(val t: Long, val from: Long, val to: Long, val blob: String)
+
+    private fun reportsFile(id: String) = File(root, "devices/$id.reports.jsonl")
+
+    /** Stores one sealed report slice (ciphertext only, D-023), keeping the newest [REPORTS_KEEP] within [REPORTS_MAX_AGE_MS]. */
+    fun saveReport(id: String, r: SealedReport, now: Long) = synchronized(lock(id)) {
+        val kept = (readReports(id) + r).filter { now - it.to <= REPORTS_MAX_AGE_MS }.sortedBy { it.to }.takeLast(REPORTS_KEEP)
+        writeAtomic(reportsFile(id), kept.joinToString("") { json.encodeToString(SealedReport.serializer(), it) + "\n" })
     }
 
-    /** Past [RECORDS_MAX_BYTES], drop the oldest lines so about [RECORDS_KEEP_BYTES] of the newest remain. */
-    private fun rotateRecords(f: File) {
-        if (f.length() <= RECORDS_MAX_BYTES) return
-        val tail = java.io.RandomAccessFile(f, "r").use { raf ->
-            raf.seek(f.length() - RECORDS_KEEP_BYTES)
-            raf.readLine() // discard the partial line we landed in
-            val out = java.io.ByteArrayOutputStream()
-            val buf = ByteArray(64 * 1024)
-            while (true) { val n = raf.read(buf); if (n < 0) break; out.write(buf, 0, n) }
-            out.toByteArray()
-        }
-        val tmp = File(f.parentFile, f.name + ".tmp")
-        tmp.writeBytes(tail)
-        java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+    fun readReports(id: String): List<SealedReport> {
+        if (!SAFE_ID.matches(id)) return emptyList()
+        val f = reportsFile(id)
+        if (!f.exists()) return emptyList()
+        return f.useLines { seq -> seq.filter { it.isNotBlank() }.mapNotNull { runCatching { json.decodeFromString(SealedReport.serializer(), it) }.getOrNull() }.toList() }
     }
+
+    /** D-023 migration: delete readable activity records left by earlier versions. Returns how many files went. */
+    fun purgeLegacyRecords(): Int =
+        File(root, "devices").listFiles { f -> f.name.contains(".activity.jsonl") }.orEmpty().count { it.delete() }
 
     fun saveBlob(deviceId: String, shotId: String, bytes: ByteArray) {
         require(SAFE_ID.matches(deviceId) && SAFE_ID.matches(shotId))
@@ -282,10 +282,11 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     }
 
     companion object {
+        const val REPORTS_KEEP = 240
+        const val REPORTS_MAX_AGE_MS = 9L * 24 * 3_600_000
+        const val REPORT_MAX_CHARS = 64 * 1024
         val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,80}$")
         const val MAIL_KEEP = 300
-        const val RECORDS_MAX_BYTES = 16L * 1024 * 1024
-        const val RECORDS_KEEP_BYTES = 10L * 1024 * 1024
         const val SHOT_MAX_BYTES = 2 * 1024 * 1024
         const val SHOTS_PER_DEVICE = 200
         const val SHOT_BYTES_PER_DEVICE = 64L * 1024 * 1024

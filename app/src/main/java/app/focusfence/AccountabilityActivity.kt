@@ -133,6 +133,8 @@ class AccountabilityActivity : AppCompatActivity() {
                 .setTitle(R.string.acc_invite_ready_title)
                 .setMessage(getString(R.string.acc_invite_ready, inv.code) + "\n\n" + inv.joinUrl)
                 .setPositiveButton(R.string.acc_share) { _, _ -> share(getString(R.string.acc_invite_share, inv.joinUrl, inv.code)) }
+                // A partner on a new phone or browser needs the report key again; it never goes through the server.
+                .setNeutralButton(R.string.acc_key_link) { _, _ -> share(getString(R.string.acc_key_link_share, Accountability.keyLink(this))) }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
             bind()

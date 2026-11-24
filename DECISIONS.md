@@ -346,6 +346,37 @@ branch.
 
 ---
 
+## D-023 — A server operator cannot read a user's activity
+
+*Decided: 2026-11-23 by @flyboy-byte. Replaces the "server-readable records" privacy tier.*
+
+Anyone a server is shared with is an independent user: nothing links two people unless they choose to (an invite,
+an app pairing, a group with fingerprint approval). The one place an operator could still read someone's history
+was the email/web partner path, where the phone uploaded its raw activity log and the server built the report. So:
+
+- **The phone never uploads activity records.** For an email/web partner it builds the same `Digest` the partner app
+  gets, seals it with AES-256-GCM under a per-phone report key (`dns/ReportSeal`), and uploads the ciphertext hourly.
+- **The key never reaches the server.** It travels to partners after the `#` of the invite link (or a resent key
+  link), which browsers never send. The report page decrypts it in the partner's browser with WebCrypto
+  (`server/src/main/resources/static/report.js`) and merges the hourly slices.
+- **Alerts are the phone's alert lines only** (`Digest.alertText`: "Filter turned off", never a site). Weekly emails
+  are a link, not content. Silence detection still uses check-ins.
+- **Older apps** that still upload batches: the server checks them for alerts in memory and never stores them.
+  Readable records left by earlier versions are deleted at startup.
+
+**What the operator still sees:** partner emails (and phones, for SMS), alert texts, check-in and upload times and
+sizes. **What this does not stop:** an operator who changes the server to serve a key-stealing page. It stops reading
+stored history, not an attack on one's own users; running your own server is the answer to that, and the server code
+stays in this repo for exactly that reason.
+
+**Costs accepted:** the report page needs a script (only on `/p/`, `/join`, `/key`, only our own file); a partner on a
+new browser needs the link again; the server can no longer cross-check record gaps itself (the phone's digest reports
+missing records).
+
+**What would reopen it:** a need for server-side analysis of activity, which this rules out by design.
+
+---
+
 # Open — decided before the first release
 
 ## ~~O-002 — Signing key custody~~ — resolved by D-021 (2026-11-23)

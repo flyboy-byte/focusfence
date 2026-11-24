@@ -59,8 +59,13 @@ object Accountability {
         val b = r.body
         check(r.code == 200 && b != null) { "Couldn't create an invite (HTTP ${r.code})." }
         log("invite_created", null)
-        return Invite(b.getString("code"), b.getString("joinUrl"), b.getLong("expiresMs"))
+        // The report key rides after '#', which browsers never send to the server (D-023): the partner's browser keeps it
+        // and opens the sealed report; the server only ever holds ciphertext.
+        return Invite(b.getString("code"), b.getString("joinUrl") + "#k=" + SyncStore.reportKey(ctx), b.getLong("expiresMs"))
     }
+
+    /** A link that gives a partner's browser this phone's report key again (new device, cleared browser). */
+    fun keyLink(ctx: Context): String = SyncStore.serverUrl(ctx) + "/key#k=" + SyncStore.reportKey(ctx)
 
     fun partners(ctx: Context): List<Partner> {
         if (SyncStore.deviceId(ctx) == null) return emptyList()

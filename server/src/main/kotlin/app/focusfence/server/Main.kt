@@ -97,6 +97,9 @@ class Config(
 @Serializable data class BatchResponse(val acceptedThrough: Long, val gap: Long, val nextHash: String)
 /** Sent with a 409 so the phone can resume from where the server actually is. */
 @Serializable data class CursorResponse(val error: String, val expectedNextSeq: Long, val lastHash: String)
+@Serializable data class ReportRequest(val deviceId: String, val t: Long, val from: Long, val to: Long, val blob: String, val signature: String)
+@Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
+@Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(val deviceId: String, val t: Long, val lastSeq: Long, val signature: String)
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
@@ -121,6 +124,7 @@ fun main(args: Array<String>) {
     )
     if (runAdmin(args, File(env("FF_DATA_DIR") ?: "data"), System.currentTimeMillis(), ::println)) return
     val store = Store(File(env("FF_DATA_DIR") ?: "data"))
+    store.purgeLegacyRecords().takeIf { it > 0 }?.let { println("D-023: deleted $it readable activity record files from earlier versions") }
     val notifier = LiveNotifier(
         resendKey = env("RESEND_API_KEY"),
         mailFrom = env("FF_MAIL_FROM") ?: "accountability@localhost",
@@ -193,8 +197,12 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     // and turns any future escaping slip into a non-event.
     install(createApplicationPlugin("SecurityHeaders") {
         onCall { call ->
+            // Scripts only where D-023 needs them (the partner's browser opens the sealed report), and only our own file.
+            val path = call.request.local.uri.substringBefore('?')
+            val scripts = path.startsWith("/p/") || path == "/join" || path == "/key"
             call.response.headers.append("Content-Security-Policy",
-                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
+                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" +
+                    if (scripts) "; script-src 'self'; connect-src 'self'" else "")
             call.response.headers.append("X-Content-Type-Options", "nosniff")
             call.response.headers.append("Referrer-Policy", "no-referrer")
         }
@@ -346,7 +354,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     // A device's first batch starts wherever its local log was at
                     // enrollment; that jump isn't missing data.
                     val gap = if (device.expectedNextSeq > 1) r.gap else 0
-                    store.appendRecords(device.id, req.recordsRaw, req.lastSeq, r.newHash, gap, cfg.now())
+                    // D-023: an older app's records are read for alerts here, in memory, and never stored.
+                    store.advanceCursor(device.id, req.lastSeq, r.newHash, gap, cfg.now())
                     val lines = alerts.alertLines(req.recordsRaw).toMutableList()
                     if (gap > 0) lines += "$gap activity records never arrived (deleted, or lost on the phone)"
                     if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines)
@@ -363,6 +372,29 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 d.lastSeenMs = cfg.now()
                 d.staleAlerted = false
             }
+            call.respond(OkResponse())
+        }
+
+        // D-023: the partner report, sealed on the phone; stored as ciphertext and opened only in the partner's browser.
+        post("/v1/reports") {
+            val req = call.receive<ReportRequest>()
+            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (req.blob.length > Store.REPORT_MAX_CHARS) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
+            if (!signedOk(device, "report", req.t, "${req.from}|${req.to}|${Integrity.sha256(req.blob)}", req.signature)) return@post call.unauthorized()
+            if (req.to < req.from || req.to > cfg.now() + cfg.clockSkewMs) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad range"))
+            if (full()) return@post call.serverFull()
+            store.saveReport(device.id, Store.SealedReport(req.t, req.from, req.to, req.blob), cfg.now())
+            store.updateDevice(device.id) { d -> d.lastSeenMs = cfg.now(); d.staleAlerted = false }
+            call.respond(OkResponse())
+        }
+
+        // D-023: protection changes arrive as the phone's own alert lines (Digest.alertText), never as records.
+        post("/v1/alerts") {
+            val req = call.receive<AlertsRequest>()
+            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            val lines = req.lines.take(20).map { l -> l.filter { !it.isISOControl() || it == ' ' }.take(300) }.filter { it.isNotBlank() }
+            if (!signedOk(device, "alerts", req.t, Integrity.sha256(req.lines.take(20).joinToString("\n")), req.signature)) return@post call.unauthorized()
+            if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines)
             call.respond(OkResponse())
         }
 
@@ -498,7 +530,6 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         get("/p/{token}") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            val now = cfg.now()
             val notice = when {
                 call.request.queryParameters["welcome"] != null && !partner.confirmed ->
                     "Check your email and confirm your address to start getting alerts. Until then nothing is sent to you."
@@ -507,11 +538,26 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 call.request.queryParameters["sms"] == "bad" -> "That code didn't match. Try again."
                 else -> null
             }
-            call.respondText(
-                Web.partnerPage(partner, now - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs,
-                    alerts.digest(device.id, now - cfg.reportEveryMs, now), notifier.smsAvailable, notice),
-                ContentType.Text.Html,
-            )
+            call.respondText(Web.partnerPage(partner, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, notifier.smsAvailable, notice),
+                ContentType.Text.Html)
+        }
+
+        // The sealed report slices for this partner's phone. Ciphertext only: the key is in the partner's browser.
+        get("/p/{token}/data") {
+            val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            call.response.headers.append("Cache-Control", "no-store")
+            call.respond(ReportData(device.id, partner.name, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs,
+                store.readReports(device.id).filter { cfg.now() - it.to <= cfg.reportEveryMs + 3_600_000L }))
+        }
+
+        // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
+        get("/key") { call.respondText(Web.keyPage(), ContentType.Text.Html) }
+
+        get("/static/report.js") {
+            val js = object {}.javaClass.getResource("/static/report.js")?.readText()
+                ?: return@get call.respond(HttpStatusCode.NotFound)
+            call.respondText(js, ContentType.parse("text/javascript"))
         }
 
         post("/p/{token}/sms") {
