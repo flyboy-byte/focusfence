@@ -11,6 +11,9 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ### Fixed
 - **alerts:** app updates and flaky-network health go in the report, not an email (`f035a28`, [#38](https://github.com/flyboy-byte/focusfence/pull/38))
 ### Docs
+- README in plain words (`bbcb835`, [#47](https://github.com/flyboy-byte/focusfence/pull/47))
+- AC is the app, not an edition; current-state docs reframed for the new owner (`a31da5f`, [#46](https://github.com/flyboy-byte/focusfence/pull/46))
+- repo now flyboy-byte/focusfence, going public as is (D-027) (`c498ad6`, [#45](https://github.com/flyboy-byte/focusfence/pull/45))
 - describe the first AI false flag neutrally (`a210a37`, [#44](https://github.com/flyboy-byte/focusfence/pull/44))
 - plan 06 without the operator's tool name (`3606e9f`, [#43](https://github.com/flyboy-byte/focusfence/pull/43))
 - public-release audit and checklist; SECURITY.md; STATE's stale branch and release rows (`05813ef`, [#42](https://github.com/flyboy-byte/focusfence/pull/42))
