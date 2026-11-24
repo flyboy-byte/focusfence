@@ -156,3 +156,27 @@ PR and no agent gates one. The aim is a shared habit so each of us understands t
 | "Your partner is trying to unlock X" message | extra server round trip; revisit after Phase 2 |
 | A "test my speed" button | uses data; the `net` records may answer the question first |
 | Weekly report / silence alert / SMS seen on a phone | will happen naturally in Phase 0–1; tick in `STATE.md` |
+
+---
+
+## Phase 7 — A screenshot AI that learns from your answers (on the phone) 🔒
+
+Agreed 2026-11-23 (@flyboy-byte), modelled on how Ente's face grouping learns from "same person?" answers. The model
+(GantMan nsfw_model MobileNet v2, `assets/classifier/`) can't be retrained on a phone and doesn't need to be.
+
+1. [ ] **Opt-in deep logging** (off by default; on the phone only; leaves only in an export you start): every
+   screenshot's full scores and its embedding (the model's internal fingerprint), and reviewed shots kept longer as a
+   private test set. Gives a measured false-flag rate per app and a way to score any change against real history.
+2. [ ] **Embeddings:** re-export the model with the penultimate layer as a second output
+   (`tools/convert_classifier_model.py`); a vector, never an image.
+3. [ ] **Learn from Review answers:** each "Real hit" / "Not a problem" stores that shot's embedding. New shots are
+   compared to them: close to a real hit raises the flag; close to "not a problem" lowers it.
+4. [ ] **Guard rails, because the person teaching is the person watched:** "real" may raise sensitivity broadly,
+   "not a problem" only lowers it for near-identical images (tight radius); the partner report shows how many flags
+   your answers lowered and how many examples you've taught; wiping the examples is a loosening action (strict mode).
+5. [ ] **Ship only on evidence:** run the matcher against the step-1 test set; enable it when it cuts false flags
+   without missing the real hits you marked.
+
+**Exit:** false flags well below today's 7 of 8, measured on your own history. That is also the first gate for
+level C in Phase 2.
+
