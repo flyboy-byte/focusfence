@@ -132,10 +132,13 @@ instead — content events cost ~75% of screen-on CPU in the 2026-11-19 export);
 
 ### UI
 
-`MainActivity` is a bottom-nav host swapping four fragments (`ui/HomeFragment`,
-`BlocklistFragment`, `StatsFragment`, `SettingsFragment`); `DomainDetailActivity` is the per-domain
-rule editor, `DiagnosticsActivity` (from Settings) shows/export/clears the logs, and
-`OnboardingActivity`/`HelpActivity` are standalone. Shared dialogs, permission
+`MainActivity` is a bottom-nav host. The default **five-tab layout** swaps `ui/HomeFragment`, `BlocklistFragment`
+(Blocking, with a Categories card), `AccountabilityFragment` (Partners), `MonitoringFragment` and `SettingsFragment`;
+Stats opens from Home's toolbar (`StatsActivity`). Settings → Classic layout (`data/UiPrefs`, own prefs file) restores
+the old four tabs (Home, Blocklist, Stats, Settings). `AccountabilityActivity`/`MonitoringActivity` are thin hosts for
+their fragments so notifications and links still open them alone. `DomainDetailActivity` is the per-domain rule
+editor, `DiagnosticsActivity` shows/exports/clears the logs, `SetupActivity` is the one Guide (checklist + how it
+works; `HelpActivity` forwards to it) and `OnboardingActivity` ends there. Shared dialogs, permission
 prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
 `ACTION_STATE_CHANGED` package-scoped broadcast plus a 1s ticker for counters/countdowns.
 

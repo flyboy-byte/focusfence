@@ -1,6 +1,6 @@
 # Handoff: how to pick this project up cold
 
-_Rewritten 2026-11-23 (late), after the accountability work landed on `main`. Read order: this file → [`STATE.md`](../STATE.md)
+_Rewritten 2026-11-23 (late), after the accountability work landed on `main`; facts table updated after 2.12.0. Read order: this file → [`STATE.md`](../STATE.md)
 (where things stand) → [`docs/roadmap.md`](roadmap.md) (what's next, in order) → [`AGENTS.md`](../AGENTS.md) (how to work
 here). If this and `STATE.md` disagree, `STATE.md` wins._
 
@@ -60,6 +60,9 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | 7 of 8 reviewed AI flags were false (rocket-engine videos, a 1958 film, photo apps) | why screenshots stay on the phone |
 | ~90% of ~1,800 blocks a day are trackers/telemetry; 0 adult or user-rule hits in 5 days | why D-024 triages |
 | A `google.com` rule killed push notifications for every app | #18, fixed in #22 |
+| A strict-mode unlock request left no log record and no partner alert | #27: every strict change is a `svc strict` record and an alert |
+| Squash-merging the bottom of a stacked PR set deletes its branch and GitHub **closes** the PR above (can't reopen after a force-push) | retarget the next PR to `main` *before* merging; #31 was replaced by #35 |
+| No emulator on this machine, and a debug build can't install over the release app (different key) | UI changes are checked on Logan's phone from a release |
 
 ## Open questions only a person can answer
 Screenshot level B or C (Logan); triage details (Logan, then Shelby on #13); keystore backup confirmed (Logan); repo
