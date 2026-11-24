@@ -103,6 +103,11 @@ class SettingsFragment : Fragment() {
         binding.updateSwitch.isChecked = app.focusfence.update.Updates.isEnabled(requireContext())
         binding.updateSwitch.setOnCheckedChangeListener { _, on -> app.focusfence.update.Updates.setEnabled(requireContext(), on) }
         binding.updateCheckButton.setOnClickListener { checkForUpdate() }
+        binding.githubButton.setOnClickListener {
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/" + app.focusfence.dns.UpdateCheck.REPO)))
+            }
+        }
         binding.whatsNewButton.setOnClickListener { startActivity(Intent(requireContext(), app.focusfence.update.WhatsNewActivity::class.java)) }
         // Partners and Monitoring are tabs of their own in the five-tab layout; these buttons are the classic way in.
         val classic = app.focusfence.data.UiPrefs.classic(requireContext())
