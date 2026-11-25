@@ -172,8 +172,11 @@ writing an existing one needs only its token. A group invite carries an enroll-o
 new member's phone can enroll; it never works as a partner invite. The admin page's *People* message (server address +
 enrollment code) is pasted into the same *Join with an invite* box.
 
-The owner's phone posts instant alerts and a digest every 6 h; the partner's app polls every 15 min, notifies on alerts,
-and flags 14 h of silence.
+The owner's phone posts instant alerts and a digest every 6 h. Since 2026-11-25 an app partner with a server report link
+reads alerts from the server instead (`GET /p/{token}/alerts`, every sync, about 15 min): the same lines email partners
+get, plus "phone went silent" after `FF_STALE_MINUTES` (60) and "checking in again" when it's back. The mailbox still
+carries unlock codes; a partner without a report link (old pairing, or a server without the feed) falls back to mailbox
+alerts and its own 14 h silence check.
 
 **Removing a partner is never silent.** Both paths go through the `REMOVE_PARTNER` friction guard,
 log a `svc partner` record (which other partners are alerted about), and tell the removed partner:

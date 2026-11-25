@@ -284,6 +284,62 @@ class ServerTest {
     }
 
     @Test
+    fun silenceAndReturnReachEmailAndAppPartners() = run { http ->
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        val token = "t".repeat(32)
+        store.updateDevice(id) { it.appPartners = listOf(Store.AppPartner("ap1", "other-phone", "Sam", clock, token = token)) }
+        notifier.emails.clear()
+        val sweeper = Alerts(store, notifier, cfg)
+        suspend fun feed(after: Long = 0) = json.decodeFromString(AlertFeed.serializer(), http.get("/p/$token/alerts?after=$after").bodyAsText())
+        assertTrue(feed().online)
+        assertTrue(feed().alerts.isEmpty())
+
+        clock += cfg.staleMs - 60_000
+        sweeper.sweep()
+        assertTrue(feed().alerts.isEmpty(), "not silent yet")
+        clock += 2 * 60_000
+        sweeper.sweep()
+        val silent = feed()
+        assertTrue(!silent.online)
+        assertTrue(silent.alerts.single().text.contains("hasn't checked in for 61 minutes"), silent.alerts.toString())
+        assertEquals(1, notifier.emails.count { it.second.contains("silent") })
+
+        // A check-in tells everyone it's back, once.
+        clock += 60_000
+        val gap = "While it was quiet: the phone had no internet; protection stayed on the whole time."
+        val forged = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"Nothing happened.","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        val hb = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"$gap","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        // A gap account whose signature doesn't match is dropped; the phone is still back.
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", forged).status)
+        var back = feed(after = silent.alerts.single().t)
+        assertEquals("The phone is checking in again after 62 minutes without a check-in.", back.alerts.single().text)
+        // Silence again, and this time the phone explains it.
+        clock += cfg.staleMs + 60_000
+        sweeper.sweep()
+        val again = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"$gap","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", again).status)
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", again).status)
+        back = feed(after = back.alerts.single().t)
+        assertTrue(back.online)
+        assertEquals(2, back.alerts.size, back.alerts.toString()) // silent, then back
+        assertEquals("The phone is checking in again after 61 minutes without a check-in. $gap", back.alerts.last().text)
+        assertEquals(2, notifier.emails.count { it.second.contains("phone is back") })
+        assertEquals(HttpStatusCode.NotFound, http.get("/p/${"x".repeat(32)}/alerts").status)
+    }
+
+    @Test
+    fun theOpenReportSliceIsReplacedNotPiledUp() {
+        val s = Store(Files.createTempDirectory("ff-slices").toFile())
+        val h = 3_600_000L
+        s.saveReport("d1", Store.SealedReport(10 * h, 9 * h, 10 * h, "closed"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 1, 10 * h, 10 * h + 15 * 60_000, "open-1"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 2, 10 * h + 20 * 60_000, 10 * h + 20 * 60_000, "shot"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 3, 10 * h, 10 * h + 30 * 60_000, "open-2"), 10 * h)
+        assertEquals(listOf("closed", "shot", "open-2"), s.readReports("d1").map { it.blob })
+    }
+
+    @Test
     fun blindMailboxEndToEnd() = run { http ->
         // Owner's phone side. D-035: only an enrolled phone opens a new mailbox.
         val secret = Pairing.generateSecret()

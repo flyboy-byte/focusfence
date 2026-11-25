@@ -599,3 +599,57 @@ partner kinds, "don't worry about breaking users, I'm the only user".
 **Not kept.** Pairings and invites made before this: old app versions can't open new mailboxes, and old pairing-key
 messages aren't accepted by Join.
 
+
+## D-036 — The dead man's switch: one hour of silence, every partner told, and told when it's back
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted
+
+The phone already checks in with every sync (WorkManager, about 15 min). The 2026-11-25 export measured it: no gap over
+21 minutes in any state, all night (on the charger; 115 screen-off gaps, median 15 min). So the server's silence window
+drops from 4 h to 60 min (`FF_STALE_MINUTES`, four missed check-ins). Uninstall protection keeps its instant alert at
+"Deactivate" (#76); the silence alert covers what that can't see: a wipe, a USB uninstall, a force-stopped app, a
+phone switched off.
+
+Three changes with it:
+- **App partners hear it too.** Before, only email partners got "phone went silent"; an app partner's phone noticed
+  after 14 h of mailbox silence. The server now keeps what partners were told (alert lines, 100 / 14 days) and app
+  partners read it from `/p/{token}/alerts` each sync, so they get the same alerts as email partners within about
+  15 min. Their mailbox alerts are skipped when the feed answers, so nothing arrives twice.
+- **"Checking in again."** When a silent phone checks in, partners are told, so a dead battery doesn't leave an alarm
+  hanging.
+- Alert text is the same as email already carries (D-023): no sites, no activity.
+
+**Not yet known:** an unplugged night. If deep Doze stretches check-ins, the window gets longer at night rather than
+everywhere.
+
+**Amended 2026-11-25 by @flyboy-byte, as an experiment (Logan: "not necessarily locking this one in"): no internet is explained, not excused.** A dead zone still sets off the silence
+alert after 60 minutes (the server can't tell it from protection being off), and the alert now says partners will be
+told what happened if the phone reconnects. On the first check-in after a gap of 30+ minutes the phone sends its own
+account of the gap (`dns/GapAccount`, signed separately as `gap|…`): whether it had internet (diag `net` samples),
+whether it restarted, whether the filter was off and for how long, and missing log records. The "checking in again"
+message carries it: "…after 2 h 3 min without a check-in. While it was quiet: the phone had no internet; protection
+stayed on the whole time." A bad signature drops the account, never the check-in. A "heads-up before going offline"
+that would hold the alert was offered and declined: it would give anyone a way to buy quiet time.
+To drop the experiment: stop sending `gap` in `SyncWorker.heartbeat`; the server already treats it as optional.
+
+## D-037 — Flagged screenshots go to partners automatically, after a delay, uncapped
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted, built on branch `silence-alerts` (not released)
+
+Level C of roadmap Phase 2, chosen by Logan: a flagged screenshot is sent to partners automatically after a short delay.
+The owner gets a notification when it's flagged and can add a note before it goes, but can't stop it. **No daily cap**
+(Logan: "do not cap"), which overrides gate (3) in the roadmap. Unchanged: it is always the 48 px blurred thumbnail
+(D-025), never a clear image; sealed with the report key; labelled "sent automatically" for the partner.
+
+Known risk, stated so it isn't rediscovered: the AI's flags are mostly wrong today (all 7 reviews in the 2026-11-25
+export were "wrong", the same pattern as 7 of 8 before), so most automatic sends will be innocent screens. The blur is
+what makes that acceptable. Order agreed: silence alerts first, then the report page, then this.
+
+How it works: a shot `FlagPolicy` flags (the partner-level bar, not the owner's lower review bar) is turned into the
+`ShotBlur` thumbnail at once and queued (`ShareQueue.enqueue(auto = true)`, `dns/AutoShare.DELAY_MS` = 10 min). The
+owner gets a notification with that exact picture and an inline "Add a note" reply (`monitor/AutoShareNotice`); there
+is no cancel. A one-off WorkManager run at the send time uploads it as a sealed report slice; only then is
+`svc partner shot_auto_sent` logged, so the partner's alert ("A screenshot was flagged and sent to you blurred") never
+arrives before the picture. The report labels it "Sent automatically". Needs a server connection (an enrolled phone);
+without one nothing is queued.
+

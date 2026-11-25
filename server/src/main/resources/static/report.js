@@ -58,6 +58,12 @@
   }
   if (page !== 'report') return;
 
+  // The check-in time is written by the server in its own time zone; say it in the reader's terms instead.
+  var seen = document.getElementById('seen');
+  if (seen && +seen.getAttribute('data-t') > 0) {
+    var st = +seen.getAttribute('data-t');
+    seen.textContent = (seen.getAttribute('data-online') === '1' ? 'Last check-in ' : 'Silent since ') + ago(st) + ' (' + hm(st) + ')';
+  }
   var box = document.getElementById('report');
   function show(nodes) { box.textContent = ''; nodes.forEach(function (n) { box.appendChild(n); }); }
 
@@ -84,7 +90,7 @@
       m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
       m.blocked += +d.blocked || 0; m.enforce += +d.enforce || 0; m.flagged += +d.flagged_shots || 0;
       // A change has no time of its own: it happened within its slice, so it is shown under that slice's day.
-      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, text: e }); });
+      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, from: +d.from || 0, text: e }); });
       for (var k in m.lists) addInto(m.lists[k], d[k]);
       if (m.from == null || d.from < m.from) m.from = d.from;
       if (m.to == null || d.to > m.to) m.to = d.to;
@@ -99,6 +105,7 @@
     var wrap = el('div');
     if (!rows.length) { wrap.appendChild(el('p', 'Nothing in this period.', 'muted')); return wrap; }
     var by = 1, desc = true, q = '';
+    var max = rows.reduce(function (a, r) { return Math.max(a, r[1]); }, 1);
     var input = el('input', null, 'filter'); input.placeholder = 'Filter ' + title.toLowerCase();
     var t = el('table', null, 'sort');
     function draw() {
@@ -112,7 +119,14 @@
       t.appendChild(head);
       rows.filter(function (r) { return !q || r[0].toLowerCase().indexOf(q) >= 0; })
         .sort(function (a, b) { var c = by === 1 ? a[1] - b[1] : a[0].localeCompare(b[0]); return desc ? -c : c; })
-        .slice(0, 100).forEach(function (r) { var tr = el('tr'); tr.appendChild(el('td', r[0])); tr.appendChild(el('td', r[1], 'n')); t.appendChild(tr); });
+        .slice(0, 100).forEach(function (r) {
+          var tr = el('tr'), name = el('td'), bar = el('span', null, 'bar');
+          name.appendChild(el('span', r[0]));
+          // The row's share of the biggest value, so the list reads at a glance without comparing numbers.
+          bar.style.width = Math.max(2, Math.round(100 * r[1] / max)) + '%';
+          name.appendChild(bar);
+          tr.appendChild(name); tr.appendChild(el('td', r[1], 'n')); t.appendChild(tr);
+        });
     }
     input.addEventListener('input', function () { q = input.value.trim().toLowerCase(); draw(); });
     draw();
@@ -149,52 +163,127 @@
     ctx.putImageData(img, 0, 0);
     var box = el('div', null, 'card');
     box.appendChild(c);
+    if (s.auto) box.appendChild(el('p', 'Sent automatically', 'tag'));
     box.appendChild(el('p', String(s.app || 'An app') + ' · flagged ' + String(s.label || '') + ' ' + (+s.pct || 0) + '% · ' +
       new Date(+s.shot_t || +s.t || 0).toLocaleString(), 'muted'));
     if (s.note) box.appendChild(el('p', '“' + String(s.note).slice(0, 200) + '”'));
     return box;
   }
 
+  function ago(t) {
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    if (m < 48 * 60) return Math.round(m / 60) + ' h ago';
+    return Math.round(m / 1440) + ' days ago';
+  }
+  function hm(t) { return new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
+  function dayName(t) { return new Date(t).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }); }
+  // Server alerts that are bad news; "checking in again" is good news and shown plainly.
+  function alarming(text) { return !/checking in again|turned on\b|→ true$/.test(text); }
+  // The first sentence is enough in a summary; the timeline has the full text.
+  function short(text) { var i = text.indexOf('. '); return i > 0 ? text.slice(0, i + 1) : text; }
+
+  // One bar per day: blocked lookups, with protection-off minutes and changes called out under it.
+  function dayBars(digests) {
+    var days = {}, order = [];
+    digests.forEach(function (d) {
+      var key = new Date(+d.to || 0).toDateString();
+      if (!days[key]) { days[key] = { t: +d.to || 0, blocked: 0, off: 0, changes: 0, flagged: 0 }; order.push(key); }
+      var x = days[key];
+      x.blocked += +d.blocked || 0; x.off += +d.off_min || 0; x.flagged += +d.flagged_shots || 0;
+      x.changes += String(d.events || '').split('\n').filter(function (e) { return e.trim(); }).length;
+    });
+    var max = order.reduce(function (a, k) { return Math.max(a, days[k].blocked); }, 1);
+    var wrap = el('div', null, 'days');
+    order.sort(function (a, b) { return days[a].t - days[b].t; }).forEach(function (k) {
+      var x = days[k], row = el('div', null, 'dayrow');
+      row.appendChild(el('span', new Date(x.t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }), 'dl'));
+      var track = el('span', null, 'track'), fill = el('span', null, 'fill');
+      fill.style.width = Math.max(1, Math.round(100 * x.blocked / max)) + '%';
+      track.appendChild(fill); row.appendChild(track);
+      var notes = [x.blocked + ' blocked'];
+      if (x.off) notes.push(x.off + ' min off');
+      if (x.flagged) notes.push(x.flagged + ' flagged');
+      row.appendChild(el('span', notes.join(' · '), x.off ? 'dn bad' : 'dn muted'));
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  // Alerts (exact times, from the server) and setting changes (from the report, by slice) in one list, newest first.
+  function timeline(alerts, events) {
+    var items = alerts.map(function (a) { return { t: a.t, text: a.text, kind: alarming(a.text) ? 'alert' : 'good', exact: true }; })
+      .concat(events.map(function (e) { return { t: e.t, text: e.text, kind: 'change', exact: false }; }))
+      .sort(function (a, b) { return b.t - a.t; });
+    var body = el('div');
+    if (!items.length) body.appendChild(el('p', 'Nothing happened in this period.', 'muted'));
+    var lastDay = '';
+    items.forEach(function (it) {
+      var day = dayName(it.t);
+      if (day !== lastDay) { body.appendChild(el('p', day, 'day')); lastDay = day; }
+      var row = el('div', null, 'ev ' + it.kind);
+      row.appendChild(el('span', it.exact ? hm(it.t) : 'by ' + hm(it.t), 'evt'));
+      row.appendChild(el('span', it.text));
+      body.appendChild(row);
+    });
+    return body;
+  }
+
   var state = { range: 1, tab: 0 };
   var RANGES = [['Today', 24 * 3600e3], ['7 days', 7 * 24 * 3600e3]];
 
-  function render(allDigests, allShots) {
+  function render(allDigests, allShots, allAlerts) {
     var cut = Date.now() - RANGES[state.range][1];
+    var alerts = allAlerts.filter(function (a) { return a.t >= cut; });
     var digests = allDigests.filter(function (d) { return (+d.to || 0) >= cut; });
     var shots = allShots.filter(function (s) { return (+s.shot_t || +s.t || 0) >= cut; });
     var m = merge(digests);
     var NET = /^Filter problem: (degraded|upstream_down)$/;
     m.net += m.events.filter(function (e) { return NET.test(e.text); }).length;
     m.events = m.events.filter(function (e) { return !NET.test(e.text); });
+    // A protection change is both a server alert (exact time) and a line in its report slice: show it once, as the alert.
+    m.events = m.events.filter(function (e) {
+      return !alerts.some(function (a) { return a.text === e.text && a.t >= e.from - 60e3 && a.t <= e.t + 60e3; });
+    });
 
-    var out = [seg(RANGES.map(function (r) { return r[0]; }), state.range, function (i) { state.range = i; render(allDigests, allShots); })];
-    if (!digests.length) { out.push(el('p', 'No report slices in this period.', 'muted')); return show(out); }
+    var out = [seg(RANGES.map(function (r) { return r[0]; }), state.range, function (i) { state.range = i; render(allDigests, allShots, allAlerts); })];
+    if (!digests.length) {
+      out.push(el('p', 'No report data in this period.', 'muted'));
+      if (alerts.length) out.push(timeline(alerts, []));
+      return show(out);
+    }
 
     // Summary first: the answer to "is it on, and did anything happen".
-    out.push(m.off === 0 ? el('p', 'Protection was on the whole time.', 'ok') : el('p', 'Protection was OFF for ' + m.off + ' minutes.', 'bad'));
-    if (m.missing > 0) out.push(el('p', m.missing + ' records are missing from the log (deleted or lost).', 'bad'));
+    var attn = el('div', null, 'card attn');
+    attn.appendChild(el('h2', 'Needs attention'));
+    var items = [];
+    if (m.off > 0) items.push(['Protection was off for ' + m.off + ' minutes.', 'bad']);
+    if (m.missing > 0) items.push([m.missing + ' records are missing from the log (deleted or lost).', 'bad']);
+    alerts.filter(function (a) { return alarming(a.text); }).slice(-5).reverse().forEach(function (a) {
+      items.push([dayName(a.t).split(',')[0] + ' ' + hm(a.t) + ': ' + short(a.text), 'bad']);
+    });
+    if (m.flagged > 0) items.push([m.flagged + ' flagged screenshot' + (m.flagged === 1 ? '' : 's') + '. See Screenshots.', '']);
+    if (!items.length) attn.appendChild(el('p', 'Nothing. Protection was on the whole time.', 'ok'));
+    items.forEach(function (x) { attn.appendChild(el('p', x[0], x[1])); });
+    out.push(attn);
     var stats = el('div', null, 'stats');
-    [['Changes', m.events.length], ['Blocked', m.blocked], ['Lookups', m.lookups], ['Flagged screenshots', m.flagged]].forEach(function (s) {
+    [['Alerts', alerts.filter(function (a) { return alarming(a.text); }).length], ['Changes', m.events.length], ['Blocked', m.blocked], ['Flagged', m.flagged]].forEach(function (s) {
       var c = el('div', null, 'stat'); c.appendChild(el('b', s[1])); c.appendChild(el('span', s[0], 'muted')); stats.appendChild(c);
     });
     out.push(stats);
     if (m.net > 0) out.push(el('p', 'Bad network ' + m.net + (m.net === 1 ? ' time' : ' times') + '. That is the phone\u2019s connection, not the filter being off.', 'muted'));
-    if (m.from && m.to) out.push(el('p', 'Covers ' + new Date(m.from).toLocaleString() + ' to ' + new Date(m.to).toLocaleString() + ' (' + digests.length + ' slices).', 'muted'));
+    if (m.to) out.push(el('p', 'Latest data ' + ago(m.to) + ' (' + hm(m.to) + '). New data arrives about every 15 minutes; alerts come at once.', 'muted'));
+    if (state.range === 1 && digests.length) { out.push(el('h2', 'Day by day')); out.push(dayBars(digests)); }
 
-    var tabs = ['Changes (' + m.events.length + ')', 'Screenshots (' + shots.length + ')', 'Apps & sites', 'Blocked'];
-    out.push(seg(tabs, state.tab, function (i) { state.tab = i; render(allDigests, allShots); }));
+    var tabs = ['Timeline (' + (m.events.length + alerts.length) + ')', 'Screenshots (' + shots.length + ')', 'Apps & sites', 'Blocked'];
+    out.push(seg(tabs, state.tab, function (i) { state.tab = i; render(allDigests, allShots, allAlerts); }));
     var body = el('div', null, 'card');
     if (state.tab === 0) {
-      if (!m.events.length) body.appendChild(el('p', 'No changes in this period.', 'muted'));
-      var lastDay = '';
-      m.events.slice().reverse().forEach(function (e) {
-        var day = new Date(e.t).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-        if (day !== lastDay) { body.appendChild(el('p', day, 'day')); lastDay = day; }
-        body.appendChild(el('p', e.text));
-      });
+      body.appendChild(timeline(alerts, m.events));
     } else if (state.tab === 1) {
       if (!shots.length) body.appendChild(el('p', 'No screenshots shared in this period.', 'muted'));
-      else body.appendChild(el('p', 'The owner chose to send these. They are blurred on the phone on purpose; the clear image never leaves it.', 'muted'));
+      else body.appendChild(el('p', 'Flagged screenshots go to you automatically about 10 minutes after the AI flags them; the owner can add a note but can\u2019t stop them. They are blurred on the phone on purpose: the clear image never leaves it. The AI is often wrong, so read the note before assuming the worst.', 'muted'));
       shots.sort(function (a, b) { return (+b.t || 0) - (+a.t || 0); }).slice(0, 50).forEach(function (s) { var nd = shotNode(s); if (nd) body.appendChild(nd); });
     } else if (state.tab === 2) {
       body.appendChild(el('h2', 'App time')); body.appendChild(sortable('App', m.lists.apps_min, 'Minutes'));
@@ -230,12 +319,20 @@
     return digests;
   }
 
-  fetch(location.pathname.replace(/\/$/, '') + '/data', { cache: 'no-store', credentials: 'omit' })
+  var base = location.pathname.replace(/\/$/, '');
+  // Alerts are the plain lines partners are emailed (no key needed); a failure here must not hide the report.
+  var alertsReq = fetch(base + '/alerts', { cache: 'no-store', credentials: 'omit' })
+    .then(function (r) { return r.ok ? r.json() : { alerts: [] }; })
+    .then(function (a) { return (a.alerts || []).filter(function (x) { return x && typeof x.text === 'string' && +x.t > 0; }); })
+    .catch(function () { return []; });
+  fetch(base + '/data', { cache: 'no-store', credentials: 'omit' })
     .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(async function (data) {
+      var serverAlerts = await alertsReq;
       var reports = data.reports || [];
       if (!reports.length) {
-        show([el('p', 'No report yet. The phone sends one every hour, once it runs Focus Fence AC 2.11 or newer.', 'muted')]);
+        show([el('p', 'No report yet. The phone sends one every hour, once it runs Focus Fence AC 2.11 or newer.', 'muted')]
+          .concat(serverAlerts.length ? [timeline(serverAlerts, [])] : []));
         return;
       }
       var keys = loadKeys();
@@ -251,7 +348,7 @@
         return;
       }
       var shots = digests.filter(function (d) { return d.kind === 'shot'; });
-      render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots);
+      render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots, serverAlerts);
     })
     .catch(function () { show([el('p', 'Could not load the report. Try again later.', 'bad')]); });
 })();

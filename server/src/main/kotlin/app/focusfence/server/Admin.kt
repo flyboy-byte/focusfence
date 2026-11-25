@@ -313,10 +313,10 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
                     "<div class='card'><div class='mut'>Data</div><div class='big'>${mb(used)}</div>${bar(used.toDouble() / cfg.maxDataBytes)}<div class='mut'>of ${mb(cfg.maxDataBytes)}</div></div>" +
                     "<div class='card'><div class='mut'>Phones</div><div class='big'>$devs</div>${bar(devs.toDouble() / cfg.maxDevices)}<div class='mut'>of ${cfg.maxDevices}</div></div>" +
                     "<div class='card'><div class='mut'>Blind mailboxes</div><div class='big'>$boxes</div>${bar(boxes.toDouble() / cfg.maxMailboxes)}<div class='mut'>of ${cfg.maxMailboxes}</div></div>" +
-                    "<div class='card'><div class='mut'>Silent phones</div><div class='big ${if (silent > 0) "bad" else "ok"}'>$silent</div><div class='mut'>no check-in for ${cfg.staleMs / 3_600_000} h</div></div></div>" +
+                    "<div class='card'><div class='mut'>Silent phones</div><div class='big ${if (silent > 0) "bad" else "ok"}'>$silent</div><div class='mut'>no check-in for ${Alerts.minutes(cfg.staleMs)}</div></div></div>" +
                     "<div class='card'><h2>Enrollment</h2><p>${if (cfg.enrollToken == null && live == 0 && codes.list().isEmpty()) "<span class='bad'>Open: anyone who finds this server can enroll a phone.</span>" else "Closed: a code is needed."} " +
                     "$live live code(s)${if (cfg.enrollToken != null) " plus the bootstrap code" else ""}. <a href='/admin/codes'>People and codes</a></p></div>" +
-                    "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${cfg.staleMs / 3_600_000} h silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · confirmation emails capped at ${cfg.confirmGlobalDailyCap}/day</p></div>"
+                    "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${Alerts.minutes(cfg.staleMs)} of silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · confirmation emails capped at ${cfg.confirmGlobalDailyCap}/day</p></div>"
             }
         }
         return shell(s, tab, body)

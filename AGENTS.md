@@ -12,6 +12,15 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
+- **Branch `silence-alerts` (2026-11-25, PR #89, not released or deployed):** D-036 dead man's switch: server silence
+  window 60 min, "checking in again" notice, and the server keeps what partners were told (`Device.alerts`) for app
+  partners to poll at `/p/{token}/alerts` (mailbox alerts are skipped when that answers). D-037: flagged screenshots go
+  to partners automatically, blurred, 10 min after the flag, with an owner notification and inline note
+  (`dns/AutoShare`, `monitor/AutoShareNotice`, `ShareQueue.enqueue(auto = true)`). Delivery: the open report slice is
+  re-sent at every sync and the server replaces it by `from`, so reports are ~15 min fresh. Report page: status card,
+  Needs attention, one timeline (server alerts + changes), day bars, inline bars. **Deploy the server first**: an old
+  server would store each re-sent slice as a new one and double the counts.
+
 - **2.20.0 / server dcadeb4 (2026-11-25):** an app partner gets its own `/p/{token}` report link and the app opens that
   server page in a WebView: one report for every partner. The report page has a range switch, a summary and tabs with
   sortable tables (`server/src/main/resources/static/report.js`).

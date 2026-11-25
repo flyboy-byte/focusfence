@@ -7,8 +7,9 @@
 > an invite* it enrolls and pairs that phone), every phone enrolled, the server knows who watches whom, and an app partner
 > opens **the same server report** as an email partner. 📱 2026-11-25: a second phone joined by invite and shows the main
 > phone's reports. Update checks run every time the app comes to the foreground (📱 2.18.1 → 2.18.2 offered with no tap).
-> Admin sign-in is an emailed code or an authenticator code. **Next (with Logan): accountability networking and
-> mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
+> Admin sign-in is an emailed code or an authenticator code. **In progress (PR #89, not shipped):** 60 min silence
+> alerts for every partner, reports ~15 min fresh, a reworked report page, automatic blurred screenshots (D-036, D-037).
+> **Next (with Logan): accountability networking and mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
 
 > Screenshots: automatic capture never sends an image. The owner can choose to send a **blurred** (≤ 48 px) thumbnail of
 > a flagged shot to partners (D-025, Phase 2 level B); a clear image never leaves the phone.
@@ -36,7 +37,7 @@ real phones; groups and strict mode pass their tests but haven't been field-test
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.20.0-accountable` (2026-11-25, code 44). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at dcadeb4, installed with the release `install.sh`. |
+| Latest release | `v2.21.0-accountable` (2026-11-25, code 45). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at dcadeb4, installed with the release `install.sh`. |
 
 ## Verification levels
 
@@ -119,9 +120,10 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
    against the live server; app-partner alerts, unlock codes and groups have never run on two phones.
 2. **Most features are 🧪, not 📱.** The relay looked fine in tests twice and failed on the phone
    twice. Assume any 🧪 item can fail the same way.
-3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
-   check-in; the partner app after 14 h without a message. Doze can delay background work for
-   hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
+3. **Silence detection is measured on the charger only.** The 2026-11-25 export: check-ins every 15 min all night,
+   longest gap 21 min, but the phone was charging overnight and the longest unplugged screen-off stretch was 42 min, so
+   deep Doze is untested. The server window is now 60 min (branch `silence-alerts`, not yet deployed). Next: an
+   unplugged-night export; if gaps grow, a longer window at night.
 4. **The AI's accuracy is unmeasured.** The model author claims ~92% on their own data; our only real flag so far was a false positive (a photo with no nudity → `porn` 0.82). It only flags, never blocks. Before a partner receives AI flags, add persistence/combined-signal rules (`docs/research/ai-detection.md`).
 5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switch switched Always-on off (2026-11-20 export). The integrity trail records it. **Since 2026-11-23 (unreleased, 🧪)** the app also reminds the owner when the VPN starts with Always-on off: one notification per 12 h that opens VPN settings (`dns/AlwaysOnNudge`, diag counter `always_on_nudge`).
 
