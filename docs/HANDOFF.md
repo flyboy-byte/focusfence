@@ -85,6 +85,13 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 
 ## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
 "Networking" here means **accountability networking**: how phones, partners and the server reach each other.
+0. **Shipped 2026-11-25 (late): app 2.25.0, server 1.2.0 (tag) and live server main-4b27613.** Plan 10
+   (`docs/plans/10-first-time-journeys.md`) sections 0–5 built: 5-step onboarding, adult blocked by default, self-host
+   path + SMTP, guarded Leave this server, no-email invites point to the app, welcome email, loosening alerts in plain
+   words, strict mode offered in onboarding. Protocol window D-041 (level 1, window 2, CI compat suites, release check).
+   Settings → Feedback & bug reports (three GitHub forms). **Next:** Logan's clean-install test on the second phone
+   (journey 1's exit condition), then phone feedback on journeys 3–5; explicit-text detection per app (report-only);
+   the Docker image has no VERSION file, so `/v1/version` says "dev" there.
 0. **Shipped 2026-11-25: app 2.21.0 → 2.23.0, server 7edb093 (`FF_STALE_MINUTES=60` set live). Not yet seen on the phones.**
    2.22: licence MIT → AGPL-3.0 and NudeNet body check before any partner flag (D-038; Logan's review screen showed
    video-call faces at 65–83% "porn"). 2.23: covered parts on a risky picture = "suggestive", report-only for a week,
