@@ -7,6 +7,19 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Fixed
+- server image builds for arm64 (the Alpine Java image has no arm64 variant) (`ee58e09`, [#69](https://github.com/flyboy-byte/focusfence/pull/69))
+### Changed
+- ui: Blocking as one list; Update screen fits the app; updates found within hours (`f98b9a2`, [#72](https://github.com/flyboy-byte/focusfence/pull/72))
+### Docs
+- handoff after 2.16 and the first server release (`b8e2e42`, [#70](https://github.com/flyboy-byte/focusfence/pull/70))
+### Maintenance
+- server releases carry install steps for Docker and systemd (`c6bf699`, [#71](https://github.com/flyboy-byte/focusfence/pull/71))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.16.0-accountable
+
+### Fixed
 - This week shows screen time and the apps it went to (`6fb2f34`, [#65](https://github.com/flyboy-byte/focusfence/pull/65))
 - review findings: old managed-mode leftovers, quiet alert switch, tab revisits, front doors (`f4b70e5`, [#64](https://github.com/flyboy-byte/focusfence/pull/64))
 - What's new drops bare 'ui:' / 'server:' prefixes too (`f6d303c`, [#62](https://github.com/flyboy-byte/focusfence/pull/62))
@@ -15,6 +28,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - server: systemd install with automatic rollback; server releases never become the app's Latest (`76efb4a`, [#66](https://github.com/flyboy-byte/focusfence/pull/66))
 ### Docs
 - decisions D-029 to D-032, CONTRIBUTING, agent and contributor guides for 2.15 (`ce0ba77`, [#63](https://github.com/flyboy-byte/focusfence/pull/63))
+### Maintenance
+- release 2.16.0 (`3b393a7`, [#68](https://github.com/flyboy-byte/focusfence/pull/68))
 
 _Undo any line with `git revert <commit>`._
 
