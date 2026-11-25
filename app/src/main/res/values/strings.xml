@@ -162,6 +162,10 @@
     <string name="onb_checks_permission">Give the permission</string>
     <string name="onb_checks_needs_permission">Screen checks are on but can\'t run until the accessibility permission is given.</string>
     <string name="onb_checks_on">Screen checks are on.</string>
+    <string name="onb_strict_title">Make loosening wait</string>
+    <string name="onb_strict_body">Recommended. With strict mode on, anything that loosens protection (turning the filter off, letting adult sites through, switching off screen checks) needs you to ask, wait 10 minutes, then act within 15.\n\nAdding blocks is always instant. A bad moment usually passes in 10 minutes.</string>
+    <string name="onb_strict_action">Turn on strict mode</string>
+    <string name="onb_strict_on">Strict mode is on.</string>
     <string name="onb_partner_title">Just you, or with a partner?</string>
     <string name="onb_partner_body">A partner gets an alert when protection changes and a private, encrypted report. They can use email or the Focus Fence app.\n\nPartners need a Focus Fence server. The Partners screen walks you through it, and you can add one any time.</string>
     <string name="onb_partner_add">Add a partner</string>

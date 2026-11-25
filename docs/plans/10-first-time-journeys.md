@@ -17,7 +17,7 @@ are written.
 | 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | built; server-v1.1.0 released 2026-11-25 |
 | 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | built, not yet on a phone |
 | 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | built, not yet on a phone |
-| 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | — |
+| 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | built, not yet on a phone; groups only field-test pending |
 
 ## 0. Bug hunt (2.21–2.24)
 
@@ -87,6 +87,17 @@ Built: `Notifier.emailAvailable`; without email the invite page and `/join` poin
 invite; the welcome email says what alerts and reports to expect and how the key link works; app partners capped at
 five on their own, with a readable error.
 
-## 5
+## 5. Config after setup
+
+Traced 2026-11-25. Found: strict mode is off on a fresh install, so every guard is a no-op until someone finds
+Settings → Strict mode; lowering the adult or bypass list from Block to Report, or turning off the screen-check AI,
+never reached partners (the integrity trail watched the screenshot switch only, and those settings weren't in it);
+integrity alerts read like "capture_screenshots changed: true → false". Logan: offer strict mode in onboarding; the
+review bar stays at 50%.
+
+Built: onboarding's fourth step offers strict mode ("Make loosening wait", recommended); the integrity trail now
+holds `capture_ai`, `list_adult` and `list_bypass`, checked right after those settings change, and partners read
+"Adult sites list: Block → Report", "Screen-check AI: on → off". Groups were not changed; they still need the
+two-phone field test listed in `docs/HANDOFF.md`.
 
 Notes are added here as each section runs.

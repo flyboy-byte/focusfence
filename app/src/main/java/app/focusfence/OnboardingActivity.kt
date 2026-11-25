@@ -19,16 +19,17 @@ import app.focusfence.ui.StatusColors
 import app.focusfence.vpn.DnsVpnService
 
 /**
- * First launch (plan 10, journey 1, 2026-11-25): four short steps that end with the phone protected, instead of seven
- * pages of reading. What it's for (porn accountability), turn the filter on (Android's VPN prompt, then notifications),
- * screen checks (screenshots + AI, which need the accessibility permission), then just me or with a partner. Every
+ * First launch (plan 10, journeys 1 and 5, 2026-11-25): five short steps that end with the phone protected, instead of
+ * seven pages of reading. What it's for (porn accountability), turn the filter on (Android's VPN prompt, then
+ * notifications), screen checks (screenshots + AI, which need the accessibility permission), strict mode (changes that
+ * loosen anything wait 10 minutes), then just me or with a partner. Every
  * step can be skipped; the long guide stays under Help (SetupActivity).
  */
 class OnboardingActivity : AppCompatActivity() {
 
     companion object {
         const val KEY_ONBOARDED = "onboarded"
-        private const val STEPS = 4
+        private const val STEPS = 5
     }
 
     private lateinit var binding: ActivityOnboardingBinding
@@ -100,6 +101,16 @@ class OnboardingActivity : AppCompatActivity() {
                     }
                     else -> action(b.stepAction, R.string.onb_checks_action, true) { enableChecks() }
                 }
+            }
+            3 -> {
+                b.pageTitle.setText(R.string.onb_strict_title)
+                b.pageBody.setText(R.string.onb_strict_body)
+                val on = app.focusfence.data.StrictStore.isEnabled(this)
+                action(b.stepAction, R.string.onb_strict_action, !on) {
+                    app.focusfence.data.StrictStore.setEnabled(this, true)
+                    render()
+                }
+                status(if (on) R.string.onb_strict_on else null, ok = true)
             }
             else -> {
                 b.pageTitle.setText(R.string.onb_partner_title)
