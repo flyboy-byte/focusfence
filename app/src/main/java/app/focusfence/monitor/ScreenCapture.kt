@@ -158,6 +158,8 @@ object ScreenCapture {
 
     /** Which raw hits become partner flags; text capture feeds it adult-word sightings. */
     internal val flagPolicy = app.focusfence.dns.FlagPolicy()
+    private val lastSuggestive = HashMap<String, Long>()
+    private const val SUGGESTIVE_EVERY_MS = 10 * 60_000L
 
     // Last scored screen, for skipping unchanged ones. Capture is serialized
     // (inFlight), so plain fields are safe here.
@@ -286,9 +288,13 @@ object ScreenCapture {
         val bodyResult = body?.let(app.focusfence.dns.BodyCheck::classify)
         val confirmed = bodyResult?.takeIf { it.kind == app.focusfence.dns.BodyCheck.Kind.NUDITY }?.let { it.part!! to it.score }
         // Suggestive (lingerie, swimwear): captured, report-only for now. A line in the partner report, no alert, no picture.
+        // One line per app per SUGGESTIVE_EVERY_MS: scrolling one page changes every capture and would fill the report.
         if (bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE) {
             Monitor.perf.count("body_suggestive")
-            EventLog.activity(LogEvents.service(now, "monitor", "suggestive", app.focusfence.UiUtil.appLabel(context, pkg)))
+            if (now - (lastSuggestive[pkg] ?: 0L) >= SUGGESTIVE_EVERY_MS) {
+                lastSuggestive[pkg] = now
+                EventLog.activity(LogEvents.service(now, "monitor", "suggestive", app.focusfence.UiUtil.appLabel(context, pkg)))
+            }
         }
         val why: String? = when {
             body != null -> if (confirmed != null) "body" else null
