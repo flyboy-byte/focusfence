@@ -6,6 +6,12 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+_No changes._
+
+## v2.22.0-accountable
+
+### Added
+- **screenshots:** AGPL-3.0 and a NudeNet body-part check before any partner flag; release 2.22.0 (`803dc7c`, [#91](https://github.com/flyboy-byte/focusfence/pull/91))
 ### Docs
 - 2.21.0 and server 7edb093 are live (`32f0511`, [#90](https://github.com/flyboy-byte/focusfence/pull/90))
 

@@ -52,17 +52,20 @@ one does and costs.
 | ✅ | Ad, tracker and malware lists; adult, gambling, social and others if you want them |
 | ✅ | Block apps by sending them back to the home screen |
 | ✅ | A log of lookups, apps and protection changes, kept on the phone |
-| ✅ | Screenshot checks with an on-device model (optional; images never leave the phone) |
+| ✅ | Screenshot checks with on-device AI (optional; clear images never leave the phone) |
+| 🧪 | Two-step screenshot check: a whole-picture model, then NudeNet looks for exposed or covered body parts, so faces and skin don't count as porn |
 | ✅ | Email partners with instant alerts |
+| 🧪 | Dead man's switch: partners hear within about an hour if the phone stops checking in, and what happened once it's back |
 | ✅ | One invite for any partner: opened in a browser they get email reports, pasted into Focus Fence on their phone they see the same report in the app |
-| 🧪 | Encrypted partner reports: summary, today or 7 days, changes by day, screenshots, sortable app and site tables |
+| 🧪 | Encrypted partner reports, about 15 minutes fresh: status, needs-attention, one timeline, day-by-day bars, screenshots, sortable app and site tables |
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
 | 🧪 | Groups of up to four, and partner unlock codes in the partner's app |
-| 🧪 | Sending a partner a heavily blurred screenshot (48 px at most) |
+| 🧪 | Flagged screenshots sent to partners automatically, heavily blurred (48 px at most), with a note from you |
+| 🧪 | Suggestive images (lingerie, swimwear) noted in the partner report |
 | 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
 | 🧪 | A notice (or nothing) when you open a blocked adult, gambling or scam site; partners hear if you keep trying; a Block history page |
 | ✅ | Updates itself: checks GitHub whenever you open the app, shows what's new, installs when you tap |
-| ❌ | Automatic screenshot sending, hiding apps from reports, partner logins |
+| ❌ | Hiding apps from reports, partner logins, scanning on-screen text for explicit content (planned) |
 
 What's next is in [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -93,8 +96,8 @@ site, and blocking apps, uses an accessibility service, because DNS only sees th
 |---|---|
 | Blocklist, logs, captured text, screenshots | Stay on the phone unless you export them |
 | Partner report | Encrypted on the phone. The server stores it but can't open it |
-| Alerts ("filter turned off") | Go through the server so it can email partners. No site names |
-| Screenshots | Only if you send one, and only blurred |
+| Alerts ("filter turned off", "phone went silent") | Go through the server so it can email partners and app partners can fetch them. No site names |
+| Screenshots | Only flagged ones (an exposed body part), or one you send; always blurred to 48 px, never the clear image |
 | App partners | Read the same sealed report as email partners; alerts and unlock codes are end-to-end encrypted between the two apps |
 
 The server does see partners' email addresses, which phone is whose partner, the alert text, and when your phone checks
