@@ -357,6 +357,15 @@ class ServerTest {
         assertEquals(partner, store.device(owner)!!.appPartners.single().deviceId, "the server knows who watches whom")
         assertEquals(HttpStatusCode.OK, http.postJson("/v1/partners/unlink", signed("unlink", owner, ap.id, partnerId = ap.id)).status)
         assertTrue(store.device(owner)!!.appPartners.isEmpty())
+
+        // A group's enroll-only invite lets a phone on, but isn't a partner invite in the app or in a browser.
+        val g = json.decodeFromString(InviteResponse.serializer(), http.postJson("/v1/invites", signed("invite", owner).dropLast(1) + ""","kind":"enroll"}""").bodyAsText())
+        val gs = g.joinUrl.substringAfter("/i/")
+        assertEquals(HttpStatusCode.NotFound, http.get("/i/$gs").status)
+        val gBody = """{"deviceId":"$partner","t":$clock,"signature":"${psign("accept", Integrity.sha256(gs))}","secret":"$gs","name":"Sam"}"""
+        assertEquals(HttpStatusCode.NotFound, http.postJson("/v1/invites/accept", gBody).status)
+        store.deleteDevice(partner)
+        assertEquals(HttpStatusCode.OK, enrollWith("X-FF-Invite", gs).status)
     }
 
     // ---- audit fixes (extraction session, 2026-11-23) ------------------------------------------------

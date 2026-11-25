@@ -61,7 +61,10 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     )
 
     @Serializable
-    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "", val id: String = "")
+    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "", val id: String = "", val kind: String = "") {
+        /** A group invite's way onto the server (D-035): it enrolls a phone, and is never a partner invite. */
+        val enrollOnly: Boolean get() = kind == "enroll"
+    }
 
     /** D-035: an enrolled phone that watches this one through the app. Reports stay sealed in their pairing mailbox. */
     @Serializable

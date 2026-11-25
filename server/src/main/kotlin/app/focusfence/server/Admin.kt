@@ -250,8 +250,9 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
         ).joinToString(", ")
         return "Hi ${name.ifBlank { "there" }}, here's how to join my Focus Fence server:\n" +
             "1. Install Focus Fence AC: ${cfg.appUrl}\n" +
-            "2. In the app, open Partners and, under Server, enter ${cfg.publicUrl}\n" +
-            "3. Enrollment code: $code" + (if (limits.isNotEmpty()) " ($limits)" else "")
+            "2. In the app, open Partners, tap Join with an invite and paste this whole message.\n" +
+            "Server: ${cfg.publicUrl}\n" +
+            "Enrollment code: $code" + (if (limits.isNotEmpty()) " ($limits)" else "")
     }
 
     private fun dashboard(s: Session, tab: String = "overview", newCode: String? = null, note: String? = null): String {

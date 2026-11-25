@@ -37,7 +37,10 @@ object GroupSync {
         val token = mapOf("X-FF-Token" to group.token)
 
         if (!st.boxReady) {
-            val r = api.post("/v1/mailbox/$groupId", JSONObject().put("tokenHash", Pairing.tokenHash(group.token)))
+            // Opening a new mailbox needs an enrolled phone (D-035); a joiner only re-checks the one the creator opened.
+            val body = if (SyncStore.deviceId(ctx) != null) Accountability.mailboxRequest(ctx, groupId, Pairing.tokenHash(group.token))
+                else JSONObject().put("tokenHash", Pairing.tokenHash(group.token))
+            val r = api.post("/v1/mailbox/$groupId", body)
             if (r.code != 200) throw IllegalStateException("group mailbox HTTP ${r.code}")
             st = st.copy(boxReady = true)
             GroupStore.save(ctx, st)
@@ -184,13 +187,16 @@ object GroupManager {
         if (GroupStore.active(ctx)) return Result.Error(ctx.getString(R.string.group_already))
         val server = SyncStore.serverUrl(ctx)
         if (!server.startsWith("https://")) return Result.Error(ctx.getString(R.string.acc_need_server))
+        // Blocking: the group's mailbox needs an enrolled phone, and the invite carries a way on for the others (D-035).
+        val link = runCatching { Accountability.ensureEnrolled(ctx); Accountability.enrollLink(ctx) }
+            .getOrElse { return Result.Error(it.message ?: it.javaClass.simpleName) }
         val n = name.filter { !it.isISOControl() }.trim().take(Group.MAX_NAME)
         if (n.isEmpty()) return Result.Error(ctx.getString(R.string.group_need_name))
         val code = Pairing.encode(Pairing.generateSecret())
         val st = GroupStore.newState(ctx, code, n, role, joiner = false)
         post(ctx) { GroupProtocol.hello(st.identity, Pairing.derive(Pairing.decode(code)!!).mailboxId, role, now()) }
         log(ctx, "group_created")
-        return Result.Ok(GroupInvite.format(code, server))
+        return Result.Ok(GroupInvite.format(code, server, link))
     }
 
     fun join(ctx: Context, inviteText: String, name: String, role: Group.Role): Result {
@@ -203,6 +209,11 @@ object GroupManager {
         if (inv.server != null && inv.server.trimEnd('/') != SyncStore.serverUrl(ctx).trimEnd('/')) {
             return Result.Error(ctx.getString(R.string.group_other_server, inv.server))
         }
+        // Every phone in a group is enrolled (D-035): its own pairings with the others need a mailbox.
+        if (SyncStore.deviceId(ctx) == null) {
+            runCatching { Accountability.ensureEnrolled(ctx, invite = inv.enrollSecret) }
+                .getOrElse { return Result.Error(it.message ?: it.javaClass.simpleName) }
+        }
         val code = Pairing.encode(inv.secret)
         val st = GroupStore.newState(ctx, code, n, role, joiner = true)
         post(ctx) { GroupProtocol.hello(st.identity, Pairing.derive(inv.secret).mailboxId, role, now()) }
@@ -212,7 +223,8 @@ object GroupManager {
 
     fun inviteText(ctx: Context): String? {
         val st = GroupStore.load(ctx) ?: return null
-        return GroupInvite.format(st.code, SyncStore.serverUrl(ctx))
+        // Blocking. Without a fresh link the invite still works for phones already on this server.
+        return GroupInvite.format(st.code, SyncStore.serverUrl(ctx), runCatching { Accountability.enrollLink(ctx) }.getOrNull())
     }
 
     fun view(ctx: Context): GroupProtocol.View? {

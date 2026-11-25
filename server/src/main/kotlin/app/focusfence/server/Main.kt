@@ -86,7 +86,7 @@ class Config(
 
 @Serializable data class EnrollRequest(val publicKeySpki: String)
 @Serializable data class EnrollResponse(val deviceId: String)
-@Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null)
+@Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null, val kind: String? = null)
 @Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
 @Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
 @Serializable data class AcceptResponse(val ownerId: String, val ownerName: String)
@@ -323,7 +323,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val inviteId = java.util.UUID.randomUUID().toString()
             store.updateDevice(device.id) { d ->
                 // At most 5 live invites; expired ones are dropped.
-                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret), inviteId)).takeLast(5)
+                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret), inviteId, if (req.kind == "enroll") "enroll" else "")).takeLast(5)
             }
             val shown = code.chunked(4).joinToString("-")
             call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/i/$secret", inviteId))
@@ -336,7 +336,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val me = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(me, "accept", req.t, Integrity.sha256(req.secret), req.signature)) return@post call.unauthorized()
             if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-            val (owner, invite) = inviteOwner(req.secret) ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("invite not valid"))
+            val (owner, invite) = inviteOwner(req.secret)?.takeIf { !it.second.enrollOnly } ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("invite not valid"))
             if (owner.id == me.id) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("that's this phone's own invite"))
             if (owner.partners.size + owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("partner limit"))
             val name = req.name.filter { !it.isISOControl() }.trim().take(60).ifEmpty { me.label.ifEmpty { "Partner" } }
@@ -509,7 +509,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     ContentType.Text.Html)
             }
             val now = cfg.now()
-            if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now } }) {
+            if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now && !it.enrollOnly } }) {
                 return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
             }
             call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret), ContentType.Text.Html)
@@ -537,7 +537,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 return@post call.respondText(again("Enter your name and email."), ContentType.Text.Html)
             }
             val now = cfg.now()
-            fun Store.Invite.matches() = expiresMs > now && (if (linkHash.isNotEmpty()) this.linkHash == linkHash else this.codeHash == codeHash)
+            fun Store.Invite.matches() = expiresMs > now && !enrollOnly && (if (linkHash.isNotEmpty()) this.linkHash == linkHash else this.codeHash == codeHash)
             val device = store.allDevices().firstOrNull { d -> d.invites.any { it.matches() } }
                 ?: return@post call.respondText(again("That invite isn't valid. It may have expired or already been used."), ContentType.Text.Html)
             val invite = device.invites.first { it.matches() }

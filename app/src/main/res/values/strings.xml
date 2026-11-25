@@ -466,14 +466,14 @@
     <string name="acc_status">Last sync %1$s%2$s</string>
     <string name="acc_status_never">never</string>
     <string name="acc_status_error">\nLast error: %1$s</string>
-    <string name="acc_email_title">Email partners (default)</string>
-    <string name="acc_email_hint">Send them an invite code. They join on a web page and get a weekly report and alerts by email, plus optional text alerts.</string>
+    <string name="acc_email_title">Your partners</string>
+    <string name="acc_email_hint">Send someone an invite. Opened in a browser, they get your reports by email. Pasted into Focus Fence on their phone, they see them in the app.</string>
     <string name="acc_invite">Invite a partner</string>
     <string name="acc_invite_ready_title">Invite ready</string>
-    <string name="acc_invite_ready">Send this link to one person within 24 hours. It becomes their report link for good: it opens your report in any browser, and the part after # is the key the server never sees. (Typing code %1$s works too, but then they need a key link.)</string>
+    <string name="acc_invite_ready">Send this to %1$s within 24 hours. It works once. They can open it in a browser, or paste it into Focus Fence on their phone (Partners → Join with an invite).</string>
     <string name="acc_key_link">Resend key link</string>
     <string name="acc_key_link_share">Open this on the device where you read my Focus Fence report, so it can unlock it (the server can\'t read it): %1$s</string>
-    <string name="acc_invite_share">Would you be my accountability partner on Focus Fence? Open %1$s (invite code %2$s, expires in 24 hours).</string>
+    <string name="acc_invite_share">Would you be my accountability partner on Focus Fence? Open this link, or paste it into the Focus Fence app under Partners → Join with an invite. It works once, for 24 hours: %1$s</string>
     <string name="acc_share">Share</string>
     <string name="acc_app_title">App-to-app partners</string>
     <string name="acc_app_hint">If your partner uses Focus Fence too, pair your apps with a key you send them. Reports are encrypted with that key; the server only passes them along. Their app also shows the unlock code for anything you\'ve set to need a partner PIN.</string>
@@ -482,9 +482,9 @@
     <string name="acc_pair_ready_title">Pairing key</string>
     <string name="acc_pair_ready">Send this key to %1$s. In their Focus Fence app: Partners &amp; reports → set the same server → I\'m a partner for → Add.\n\n%2$s\n\nServer: %3$s</string>
     <string name="acc_pair_share">Focus Fence pairing key: %1$s\nServer: %2$s\n(Partners &amp; reports → set the server → I\'m a partner for → Add)</string>
-    <string name="acc_watch_title">I\'m a partner for</string>
-    <string name="acc_watch_hint">Add someone who sent you a pairing key to see their reports here.</string>
-    <string name="acc_watch_add">Add with pairing key</string>
+    <string name="acc_watch_title">Reports you see</string>
+    <string name="acc_watch_hint">Someone sent you an invite? Paste it here. The message from your server\'s admin page works here too.</string>
+    <string name="acc_watch_add">Join with an invite</string>
     <string name="acc_watch_key">Pairing key</string>
     <string name="acc_watch_bad_key">That key doesn\'t check out. Look for a typo.</string>
     <string name="acc_remove">Remove</string>
@@ -711,4 +711,11 @@
     <string name="history_blocked_n">%1$d blocked</string>
     <string name="notices_notify_title">Notify me</string>
     <string name="notices_notify_summary">Blocked sites never load either way. Off means they just fail silently.</string>
+    <string name="acc_invite_for">Who is this invite for?</string>
+    <string name="acc_pending">Invite sent, not used yet</string>
+    <string name="acc_in_app">in the app</string>
+    <string name="acc_join_name">Your name, as they\'ll see it</string>
+    <string name="acc_join_paste">Paste the invite</string>
+    <string name="acc_joined">You now see %1$s\'s reports here.</string>
+    <string name="acc_connected">This phone is connected to the server.</string>
 </resources>

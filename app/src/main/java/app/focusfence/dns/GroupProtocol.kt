@@ -296,16 +296,19 @@ object GroupProtocol {
  * send it over a message app, not a public channel) and the server address, so the joiner doesn't have to type it.
  */
 object GroupInvite {
-    class Parsed(val secret: ByteArray, val server: String?)
+    /** [enrollSecret]: the server invite that lets a phone with no account on that server enroll (D-035). */
+    class Parsed(val secret: ByteArray, val server: String?, val enrollSecret: String? = null)
 
-    fun format(secretCode: String, serverUrl: String): String =
-        "Focus Fence group invite\nCode: $secretCode\nServer: $serverUrl"
+    fun format(secretCode: String, serverUrl: String, enrollLink: String? = null): String =
+        "Focus Fence group invite\nCode: $secretCode\nServer: $serverUrl" + (enrollLink?.let { "\nJoin link: $it" } ?: "")
+
+    private val ENROLL = Regex("""/i/([A-Za-z0-9_-]{20,})""")
 
     /** Lenient: finds the code and an https:// address anywhere in the pasted text. Null if there's no valid code. */
     fun parse(text: String): Parsed? {
         val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
         val secret = tokens.firstNotNullOfOrNull { Pairing.decode(it) } ?: return null
-        val server = tokens.firstOrNull { it.startsWith("https://", ignoreCase = true) }?.trimEnd('/', '.', ',', ')')
-        return Parsed(secret, server)
+        val server = tokens.firstOrNull { it.startsWith("https://", ignoreCase = true) && !ENROLL.containsMatchIn(it) }?.trimEnd('/', '.', ',', ')')
+        return Parsed(secret, server, ENROLL.find(text)?.groupValues?.get(1))
     }
 }

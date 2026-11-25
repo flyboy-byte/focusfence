@@ -32,6 +32,7 @@ class AccountabilityFragment : Fragment() {
     private lateinit var binding: ActivityAccountabilityBinding
     private val io = Executors.newSingleThreadExecutor()
     private var emailPartners: List<Accountability.Partner> = emptyList()
+    private var appPartners: List<Accountability.AppPartner> = emptyList()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = ActivityAccountabilityBinding.inflate(inflater, container, false)
@@ -54,16 +55,26 @@ class AccountabilityFragment : Fragment() {
         binding.serverSave.setOnClickListener {
             // Once connected, the server fields fold away behind "Change server": set once, rarely touched.
             if (!editingServer && SyncStore.deviceId(requireContext()) != null) { editingServer = true; bindServer(); return@setOnClickListener }
-            editingServer = false
-            SyncStore.setServerUrl(requireContext(), binding.serverInput.text?.toString().orEmpty())
-            SyncStore.setEnrollCode(requireContext(), binding.enrollInput.text?.toString().orEmpty())
-            bind()
-            refreshPartners()
+            val url = binding.serverInput.text?.toString().orEmpty().trim().trimEnd('/')
+            val code = binding.enrollInput.text?.toString().orEmpty().trim()
+            val ctx = requireContext().applicationContext
+            // Save connects at once and says how it went, instead of leaving it to the next background sync.
+            binding.serverSave.isEnabled = false
+            background({
+                if (url != SyncStore.serverUrl(ctx).trimEnd('/')) SyncStore.clearEnrollment(ctx)
+                SyncStore.setServerUrl(ctx, url)
+                SyncStore.setEnrollCode(ctx, code)
+                Accountability.ensureEnrolled(ctx)
+            }, always = { binding.serverSave.isEnabled = true; bind() }) {
+                editingServer = false
+                Toast.makeText(requireContext(), R.string.acc_connected, Toast.LENGTH_LONG).show()
+                bind()
+                refreshPartners()
+            }
         }
         binding.groupButton.setOnClickListener { startActivity(Intent(requireContext(), GroupActivity::class.java)) }
         binding.inviteButton.setOnClickListener { invite() }
-        binding.pairButton.setOnClickListener { pair() }
-        binding.watchButton.setOnClickListener { addWatch() }
+        binding.watchButton.setOnClickListener { join() }
     }
 
     override fun onResume() {
@@ -84,11 +95,12 @@ class AccountabilityFragment : Fragment() {
     }
 
     /** Runs [work] off the main thread; failures become a toast, not a crash. */
-    private fun <T> background(work: () -> T, done: (T) -> Unit) {
+    private fun <T> background(work: () -> T, always: () -> Unit = {}, done: (T) -> Unit) {
         io.execute {
             val r = runCatching(work)
             activity?.runOnUiThread {
                 if (!isAdded || view == null) return@runOnUiThread
+                always()
                 r.onSuccess(done).onFailure {
                     Toast.makeText(requireContext(), getString(R.string.acc_failed, it.message ?: it.javaClass.simpleName), Toast.LENGTH_LONG).show()
                 }
@@ -132,8 +144,7 @@ class AccountabilityFragment : Fragment() {
             )
         }
         bindServer()
-        renderEmailPartners()
-        renderPairings()
+        renderPartners()
         renderWatches()
     }
 
@@ -141,18 +152,30 @@ class AccountabilityFragment : Fragment() {
 
     private fun refreshPartners() {
         if (SyncStore.serverUrl(requireContext()).isBlank() || SyncStore.deviceId(requireContext()) == null) return
-        background({ Accountability.partners(requireContext()) }) {
-            emailPartners = it
-            renderEmailPartners()
+        val ctx = requireContext().applicationContext
+        background({ Accountability.resolvePending(ctx); Accountability.partners(ctx) }) {
+            emailPartners = it.email
+            appPartners = it.app
+            renderPartners()
         }
     }
 
-    private fun renderEmailPartners() {
+    /** Everyone who sees this phone's reports, email and app alike (D-035), plus invites not used yet. */
+    private fun renderPartners() {
         val c = binding.emailPartners
         c.removeAllViews()
-        if (emailPartners.isEmpty()) {
+        val pairings = SyncStore.ownPairings(requireContext())
+        if (emailPartners.isEmpty() && pairings.isEmpty()) {
             c.addView(note(getString(R.string.acc_none)))
             return
+        }
+        for (p in pairings) {
+            val sub = if (p.pending) getString(R.string.acc_pending) else getString(R.string.acc_in_app)
+            c.addView(row(p.name, sub, getString(R.string.acc_remove)) {
+                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
+                    background({ Accountability.removePairing(requireContext(), p) }) { bind() }
+                }
+            })
         }
         for (p in emailPartners) {
             val sub = p.email + if (p.sms) " · " + getString(R.string.acc_sms_on) else ""
@@ -166,49 +189,19 @@ class AccountabilityFragment : Fragment() {
 
     private fun invite() {
         if (!hasServer()) return
-        background({ Accountability.createInvite(requireContext()) }) { inv ->
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.acc_invite_ready_title)
-                .setMessage(getString(R.string.acc_invite_ready, inv.code) + "\n\n" + inv.joinUrl)
-                .setPositiveButton(R.string.acc_share) { _, _ -> share(getString(R.string.acc_invite_share, inv.joinUrl, inv.code)) }
-                // A partner on a new phone or browser needs the report key again; it never goes through the server.
-                .setNeutralButton(R.string.acc_key_link) { _, _ -> share(getString(R.string.acc_key_link_share, Accountability.keyLink(requireContext()))) }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-            bind()
-        }
-    }
-
-    // ---- app-to-app ------------------------------------------------------------
-
-    private fun renderPairings() {
-        val c = binding.appPartners
-        c.removeAllViews()
-        val pairings = SyncStore.ownPairings(requireContext())
-        if (pairings.isEmpty()) {
-            c.addView(note(getString(R.string.acc_none)))
-            return
-        }
-        for (p in pairings) {
-            c.addView(row(p.name, p.code.take(9) + "…", getString(R.string.acc_remove)) {
-                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
-                    background({ Accountability.removePairing(requireContext(), p) }) { bind() }
-                }
-            })
-        }
-    }
-
-    private fun pair() {
-        if (!hasServer()) return
-        prompt(R.string.acc_pair_name) { name ->
-            val key = Accountability.newPairing(requireContext(), name)
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.acc_pair_ready_title)
-                .setMessage(getString(R.string.acc_pair_ready, name, key, SyncStore.serverUrl(requireContext())))
-                .setPositiveButton(R.string.acc_share) { _, _ -> share(getString(R.string.acc_pair_share, key, SyncStore.serverUrl(requireContext()))) }
-                .setNegativeButton(android.R.string.ok, null)
-                .show()
-            bind()
+        prompt(R.string.acc_invite_for) { name ->
+            val ctx = requireContext().applicationContext
+            background({ Accountability.createInvite(ctx, name) }) { inv ->
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.acc_invite_ready_title)
+                    .setMessage(getString(R.string.acc_invite_ready, name) + "\n\n" + inv.link)
+                    .setPositiveButton(R.string.acc_share) { _, _ -> share(getString(R.string.acc_invite_share, inv.link)) }
+                    // A partner on a new phone or browser needs the report key again; it never goes through the server.
+                    .setNeutralButton(R.string.acc_key_link) { _, _ -> share(getString(R.string.acc_key_link_share, Accountability.keyLink(requireContext()))) }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+                bind()
+            }
         }
     }
 
@@ -229,22 +222,28 @@ class AccountabilityFragment : Fragment() {
         }
     }
 
-    private fun addWatch() {
-        if (!hasServer()) return
+    /** D-035: one paste box for every invite: a partner's invite link, or the admin page's server message. */
+    private fun join() {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_two_fields, null)
-        val name = view.findViewById<EditText>(R.id.field1)
-        val key = view.findViewById<EditText>(R.id.field2)
-        name.setHint(R.string.acc_pair_name)
-        key.setHint(R.string.acc_watch_key)
+        val text = view.findViewById<EditText>(R.id.field1)
+        val name = view.findViewById<EditText>(R.id.field2)
+        text.setHint(R.string.acc_join_paste)
+        name.setHint(R.string.acc_join_name)
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.acc_watch_add)
             .setView(view)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val n = name.text.toString().ifBlank { "Partner" }
-                if (!Accountability.addWatch(requireContext(), n, key.text.toString())) {
-                    Toast.makeText(requireContext(), R.string.acc_watch_bad_key, Toast.LENGTH_LONG).show()
+                val ctx = requireContext().applicationContext
+                val pasted = text.text.toString()
+                val me = name.text.toString()
+                background({ Accountability.join(ctx, pasted, me) }) { owner ->
+                    val msg = if (owner.isEmpty()) getString(R.string.acc_connected) else getString(R.string.acc_joined, owner)
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    binding.serverInput.setText(SyncStore.serverUrl(requireContext()))
+                    binding.enrollInput.setText(SyncStore.enrollCode(requireContext()))
+                    bind()
+                    refreshPartners()
                 }
-                bind()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
