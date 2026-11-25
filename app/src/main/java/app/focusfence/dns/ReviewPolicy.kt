@@ -54,8 +54,11 @@ object ReviewPolicy {
         val main = labels.sortedByDescending { it.second }.joinToString(" · ") { "${it.first} ${Math.round(it.second * 100)}%" }
         val check = body.firstOrNull()?.let { (k, v) ->
             val part = k.removePrefix("body.")
-            if (part == "none") "body check: nothing exposed"
-            else "body check: ${part.lowercase().replace('_', ' ')} ${Math.round(v * 100)}%"
+            when {
+                part == "none" -> "body check: nothing exposed"
+                part in BodyCheck.SUGGESTIVE -> "body check: suggestive (${BodyCheck.words(part)} ${Math.round(v * 100)}%)"
+                else -> "body check: ${BodyCheck.words(part)} ${Math.round(v * 100)}%"
+            }
         }
         return listOfNotNull(main.ifEmpty { null }, check).joinToString("\n")
     }

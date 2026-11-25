@@ -155,7 +155,8 @@ carry an enroll-only server invite so members enroll too.
 `monitor/ScreenCapture` scores each capture with the GantMan MobileNet (`TfliteClassifier`). A risky one (the owner's
 threshold, or at least `BodyCheck.CHECK_FROM`) gets a second look from NudeNet's body-part detector
 (`monitor/NudeDetector`, `assets/classifier/nudenet_320n_f16.tflite`): a partner flag needs an exposed body part
-(`dns/BodyCheck.confirm`), because the first model calls faces and skin "porn". If NudeNet can't run, `dns/FlagPolicy`
+(`dns/BodyCheck.confirm`), because the first model calls faces and skin "porn". Covered intimate parts (lingerie,
+swimwear) make it "suggestive" instead: report-only, a `svc monitor suggestive` line, never urgent. If NudeNet can't run, `dns/FlagPolicy`
 decides as before. A flag queues the 48 px blurred thumbnail for partners after a 10 min note window
 (`ShareQueue.enqueue(auto = true)`, `monitor/AutoShareNotice`). NudeNet is AGPL-3.0, which is why the project is
 AGPL-3.0 (D-038); `tools/convert_nudenet_model.py` rebuilds the model.

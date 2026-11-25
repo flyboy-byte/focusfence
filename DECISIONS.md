@@ -676,3 +676,11 @@ fallback if NudeNet can't load. A confirmed body part flags even when the first 
 owner's threshold, since the first model under-scores real nudity as often as it over-scores faces. Converted model
 checked against the ONNX original on the five screenshots: max difference 0.0008; ops all v1 plus DEQUANTIZE v3.
 
+**Amended 2026-11-25 by @flyboy-byte: suggestive is captured, report-only.** 2.22 threw away NudeNet's covered-part
+classes, so lingerie and swimwear were ruled out with the faces. Now a risky picture (first model ≥ 0.50, `sexy` counts)
+whose body check finds a covered breast, buttocks or genitals at ≥ 0.45 is "suggestive" (`BodyCheck.classify`):
+on the owner's review card ("body check: suggestive (…)") and a line in the partner report ("Suggestive image (lingerie
+or swimwear) in Instagram", `svc monitor suggestive`, never urgent). No alert, no picture, for its first week; then the
+owner's review answers decide whether it alerts or sends like nudity. Both models must agree because each alone
+mistakes ordinary things (faces; T-shirts).
+
