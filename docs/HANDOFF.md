@@ -1,6 +1,6 @@
 # Handoff: how to pick this project up cold
 
-_Rewritten 2026-11-23 (late); updated 2026-11-24 after 2.15.0 (repo public under @flyboy-byte, self-update, triage, redesign). Read order: this file → [`STATE.md`](../STATE.md)
+_Rewritten 2026-11-23 (late); updated 2026-11-25 after 2.16.0 and the first server release (server-v1.0.1). Read order: this file → [`STATE.md`](../STATE.md)
 (where things stand) → [`docs/roadmap.md`](roadmap.md) (what's next, in order) → [`AGENTS.md`](../AGENTS.md) (how to work
 here). If this and `STATE.md` disagree, `STATE.md` wins._
 
@@ -24,8 +24,9 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
    authorised Claude to tag, **but only after he has tried the previous build or asks**: no rapid-fire releases.
 4. Exports: he uses **Settings → Logs & diagnostics → Save to Downloads** and shares them with the session; analyse
    locally only (private). Split numbers by version using the `app updated` records.
-5. **Server deploys:** the generic procedure is in `docs/plans/04-backend-deploy.md` (build, keep the previous build,
-   copy, restart, check `/healthz`, restore automatically if unhealthy). The live box's specifics (host, root window,
+5. **Server releases and deploys (D-033):** tag `server-vX.Y.Z` on `main`; `server-release.yml` publishes the image and
+   a tarball, never as GitHub's Latest. Deploy = unpack that tarball on the box and run `install.sh` (keeps the old
+   copy, checks `/healthz`, rolls back by itself). The live box's specifics (host, root window,
    paths, what never to touch) are in the git-ignored `docs/ops.local.md` on Logan's machine; ask him if it's missing.
 6. **Secrets** live only in the server's env file and the repo's Actions secrets. Never print them, never commit them.
    The signing keystore is held by Logan (D-021); never in the repo.
@@ -42,8 +43,11 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 - **Updates (D-029, D-030, D-031):** the app checks GitHub daily and offers updates (notify + tap, Home banner, What's
   new). No downgrades: a bad release is fixed by a patch release. Privacy pages live on GitHub Pages; the server no
   longer serves them.
-- **UI (D-032):** plain in a good way, colour only for state (harmonized with Material You), screens ordered by rank.
+- **UI (D-032):** plain in a good way, colour only for state and taken from the system theme (no fixed green),
+  screens ordered by rank.
   Logan dislikes anything that reads or looks "obviously AI".
+- **Server delivery (D-033):** Docker Compose for others, tarball + systemd for hosts without Docker. The server
+  never becomes a DNS resolver for phones; the separate dns-filter stack was retired 2026-11-25 (repo archived).
 - **Device owner is gone (D-028);** uninstall protection (device admin) stays.
 - Group visibility: everyone sees every filtered member by default. Adult/gambling bundles default to Report. Strict unlock:
   wait 10 min, window 15; a paired partner's code skips the wait, the wait always remains. Capture keeps its visible
