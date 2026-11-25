@@ -85,7 +85,9 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 
 ## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
 "Networking" here means **accountability networking**: how phones, partners and the server reach each other.
-0. **2026-11-25, branch `silence-alerts` (PR #89), built and tested, not deployed or released:** items 1 and 2 below
+0. **Shipped 2026-11-25: app 2.21.0, server 7edb093 (`FF_STALE_MINUTES=60` set live). Not yet seen on the phones.**
+   Phone checks: airplane mode for 70 min (second phone gets silent, then back with the reconnect explanation); the
+   next real flag (notification, note, "Sent automatically" in the report); the report page. Was PR #89: items 1 and 2 below
    (open slice re-sent each sync; app partners read server alerts; 60 min silence; back-online notice), the report page
    rework and automatic blurred screenshots (D-037). To ship: merge, deploy the server (set `FF_STALE_MINUTES=60` in
    `/etc/ffbackend/env`, it says 240), then release the app. Still to measure: an unplugged night; sync CPU after the
