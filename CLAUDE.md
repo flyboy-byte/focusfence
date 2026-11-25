@@ -63,7 +63,7 @@ Three enforcement layers, each covering what the others cannot:
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
 logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`, `BlockTriage`, `UpdateCheck`, `AppTime`,
-`CaptureStatus`, `BlockHistory`, `InviteLink`) so it can be
+`CaptureStatus`, `BlockHistory`, `InviteLink`, `AutoShare`, `GapAccount`, `BodyCheck`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -149,6 +149,16 @@ partner: `/i/SECRET#k=REPORT_KEY&p=PAIRING_KEY` (built by `dns/InviteLink`, whic
 stays `pending` until `resolvePending` sees which way its invite went. Alerts and unlock codes still use the pairing
 mailbox (`dns/Pairing`); only enrolled phones may open a new mailbox (signed request). Groups (`GroupSync`, up to 4)
 carry an enroll-only server invite so members enroll too.
+
+### Screenshot flagging (D-025, D-037, D-038)
+
+`monitor/ScreenCapture` scores each capture with the GantMan MobileNet (`TfliteClassifier`). A risky one (the owner's
+threshold, or at least `BodyCheck.CHECK_FROM`) gets a second look from NudeNet's body-part detector
+(`monitor/NudeDetector`, `assets/classifier/nudenet_320n_f16.tflite`): a partner flag needs an exposed body part
+(`dns/BodyCheck.confirm`), because the first model calls faces and skin "porn". If NudeNet can't run, `dns/FlagPolicy`
+decides as before. A flag queues the 48 px blurred thumbnail for partners after a 10 min note window
+(`ShareQueue.enqueue(auto = true)`, `monitor/AutoShareNotice`). NudeNet is AGPL-3.0, which is why the project is
+AGPL-3.0 (D-038); `tools/convert_nudenet_model.py` rebuilds the model.
 
 ### Self-update (D-029, D-031)
 

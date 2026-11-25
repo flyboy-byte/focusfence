@@ -669,3 +669,10 @@ closed-source version with NudeNet inside. The server doesn't run the model and 
 up to 2.21.0 stay MIT. Not tested: either model on real explicit content (we don't fetch any to test with); the
 measure is the owner's review answers after release.
 
+How it's wired (2.22.0): a capture whose risky score is at least the owner's threshold or 0.50 runs NudeNet
+(`monitor/NudeDetector`, 320x320, ~6 MB float16). A partner flag needs an exposed breast, genitals, buttocks or anus at
+0.40 or more (`dns/BodyCheck`); that replaces `FlagPolicy`'s persistence and corroboration rules, which stay as the
+fallback if NudeNet can't load. A confirmed body part flags even when the first model scored it between 0.50 and the
+owner's threshold, since the first model under-scores real nudity as often as it over-scores faces. Converted model
+checked against the ONNX original on the five screenshots: max difference 0.0008; ops all v1 plus DEQUANTIZE v3.
+

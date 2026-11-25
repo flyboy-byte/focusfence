@@ -7,6 +7,15 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Docs
+- 2.21.0 and server 7edb093 are live (`32f0511`, [#90](https://github.com/flyboy-byte/focusfence/pull/90))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.21.0-accountable
+
+### Added
+- **partners:** 1 h silence alerts with reconnect explanation, ~15 min reports, report page, automatic blurred screenshots; release 2.21.0 (`7edb093`, [#89](https://github.com/flyboy-byte/focusfence/pull/89))
+### Docs
 - full state after 2.20 (README, server README, AGENTS, CLAUDE, STATE, roadmap, handoff, changelog) (`60f3ea3`, [#88](https://github.com/flyboy-byte/focusfence/pull/88))
 - handoff after 2.20 and D-035; next is networking and accountability mechanics (`95e69f1`, [#87](https://github.com/flyboy-byte/focusfence/pull/87))
 
