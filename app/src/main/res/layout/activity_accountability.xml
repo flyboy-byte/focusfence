@@ -189,6 +189,13 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="@string/acc_save" />
+                    <Button
+                        android:id="@+id/serverLeave"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/acc_leave_server"
+                        android:visibility="gone" />
                     <TextView
                         android:id="@+id/syncStatus"
                         android:layout_width="match_parent"

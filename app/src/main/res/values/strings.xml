@@ -517,6 +517,10 @@
     <string name="acc_none">None yet</string>
     <string name="acc_sms_on">text alerts on</string>
     <string name="acc_need_server">Set the server address first.</string>
+    <string name="acc_leave_server">Leave this server</string>
+    <string name="acc_leave_confirm">Your partners on this server get one last alert saying this phone is leaving, then stop hearing from it. Blocking on the phone keeps working.</string>
+    <string name="acc_left_server">Left the server. Your partners were told.</string>
+    <string name="acc_operator_note">Whoever runs %1$s can see that this phone is on it, when it checks in, who its partners are, and protection alerts like \"Filter turned off\". Your reports and screenshots are encrypted on this phone, so they can\'t read those.</string>
     <string name="acc_failed">Didn\'t work: %1$s</string>
     <string name="acc_watch_status_waiting">Waiting for their first report</string>
     <string name="acc_watch_status">Last report %1$s</string>

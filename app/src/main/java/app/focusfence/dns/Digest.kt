@@ -249,6 +249,8 @@ class Digest(private val fromT: Long) {
                 comp == "partner" && (state == "partner_removed" || state == "pairing_removed") ->
                     "A partner was removed" + detail(f)
                 // the group's own change log: joins, leaves, removals, role and visibility changes
+                comp == "partner" && state == "server_left" ->
+                    "This phone is leaving the server" + detail(f) + ". Partners here won't hear from it after this."
                 comp == "partner" && state == "shot_auto_sent" ->
                     "A screenshot was flagged and sent to you blurred" + detail(f) + ". Open the report to see it."
                 comp == "partner" && state == "shot_shared" ->

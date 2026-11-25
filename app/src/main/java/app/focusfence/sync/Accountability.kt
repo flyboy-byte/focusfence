@@ -171,6 +171,31 @@ object Accountability {
 
     private const val PENDING_MS = 25 * 3_600_000L
 
+    /**
+     * Leaves the server (journey 3): partners are told first, while the phone can still reach them, then the enrollment
+     * is dropped. Callers put this behind the LEAVE_SERVER guard. [movingTo] names the new server, if any.
+     */
+    fun leaveServer(ctx: Context, movingTo: String? = null) {
+        if (SyncStore.deviceId(ctx) != null) {
+            EventLog.init(ctx)
+            EventLog.activity(app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), "partner", "server_left",
+                movingTo?.let { "moving to another server" }), urgent = true)
+            runCatching { SyncWorker.pushAlertsNow(ctx) } // best effort: without it, they still get "went silent"
+        }
+        SyncStore.clearEnrollment(ctx)
+        SyncStore.setServerUrl(ctx, "")
+        SyncStore.setEnrollCode(ctx, "")
+    }
+
+    /** The first time this phone connects to [server]: what its operator can and can't see. Once per server. */
+    fun operatorNoteDue(ctx: Context, server: String): Boolean {
+        val p = ctx.getSharedPreferences("focusfence_sync", Context.MODE_PRIVATE)
+        val key = "operator_note:" + server.trimEnd('/')
+        if (p.getBoolean(key, false)) return false
+        p.edit().putBoolean(key, true).apply()
+        return true
+    }
+
     /** What to tell a person when talking to the server failed: plain words, not an exception's text. */
     fun friendly(e: Throwable): String = when (e) {
         is java.net.UnknownHostException -> "Couldn't find that server. Check the address and your internet connection."
