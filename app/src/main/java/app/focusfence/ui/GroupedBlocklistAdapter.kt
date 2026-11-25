@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import app.focusfence.R
+import app.focusfence.databinding.ItemActionBinding
 import app.focusfence.databinding.ItemDomainCompactBinding
 import app.focusfence.databinding.ItemGroupHeaderBinding
 import app.focusfence.databinding.ItemHintBinding
@@ -16,11 +17,14 @@ import app.focusfence.databinding.ItemSectionBinding
 import app.focusfence.dns.BlockRule
 
 sealed class Row {
-    /** A top-level section ("Your sites"); [canAdd] shows its Add button. */
-    data class Section(val key: String, val title: String, val canAdd: Boolean) : Row()
+    /** A top-level section ("Your sites"); [addLabel] shows its Add button ("Add site"). */
+    data class Section(val key: String, val title: String, val addLabel: String?) : Row()
 
     /** A row that opens another screen (Categories). */
     data class Link(val key: String, val title: String, val value: String) : Row()
+
+    /** A full-width button (Block history). */
+    data class Action(val key: String, val label: String) : Row()
 
     /** A collapsible group inside a section ("Always blocked (3)"). */
     data class Header(val key: String, val title: String, val expanded: Boolean) : Row()
@@ -50,6 +54,7 @@ class GroupedBlocklistAdapter(
         private const val TYPE_HINT = 3
         private const val TYPE_SECTION = 4
         private const val TYPE_LINK = 5
+        private const val TYPE_ACTION = 6
 
         private val DIFF = object : DiffUtil.ItemCallback<Row>() {
             override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = when {
@@ -60,6 +65,7 @@ class GroupedBlocklistAdapter(
                 oldItem is Row.Hint && newItem is Row.Hint -> oldItem.key == newItem.key
                 oldItem is Row.Section && newItem is Row.Section -> oldItem.key == newItem.key
                 oldItem is Row.Link && newItem is Row.Link -> oldItem.key == newItem.key
+                oldItem is Row.Action && newItem is Row.Action -> oldItem.key == newItem.key
                 else -> false
             }
 
@@ -74,6 +80,7 @@ class GroupedBlocklistAdapter(
         is Row.Hint -> TYPE_HINT
         is Row.Section -> TYPE_SECTION
         is Row.Link -> TYPE_LINK
+        is Row.Action -> TYPE_ACTION
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -83,18 +90,35 @@ class GroupedBlocklistAdapter(
             TYPE_HINT -> HintHolder(ItemHintBinding.inflate(inflater, parent, false))
             TYPE_SECTION -> SectionHolder(ItemSectionBinding.inflate(inflater, parent, false))
             TYPE_LINK -> LinkHolder(ItemLinkBinding.inflate(inflater, parent, false))
+            TYPE_ACTION -> ActionHolder(ItemActionBinding.inflate(inflater, parent, false))
             else -> EntryHolder(ItemDomainCompactBinding.inflate(inflater, parent, false))
         }
     }
 
+    /** Rows between two headings form one rounded group (ui/Tiles). */
+    private fun isTile(r: Row?) = r is Row.Domain || r is Row.App || r is Row.Link || r is Row.Hint
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val row = getItem(position)) {
+        val row = getItem(position)
+        if (isTile(row)) {
+            val first = !isTile(if (position > 0) getItem(position - 1) else null)
+            val last = !isTile(if (position < itemCount - 1) getItem(position + 1) else null)
+            val pos = when {
+                first && last -> Tiles.Pos.SINGLE
+                first -> Tiles.Pos.TOP
+                last -> Tiles.Pos.BOTTOM
+                else -> Tiles.Pos.MIDDLE
+            }
+            Tiles.style(holder.itemView, pos, clickable = row !is Row.Hint)
+        }
+        when (row) {
             is Row.Header -> (holder as HeaderHolder).bind(row)
             is Row.Domain -> (holder as EntryHolder).bindDomain(row)
             is Row.App -> (holder as EntryHolder).bindApp(row)
             is Row.Hint -> (holder as HintHolder).bind(row)
             is Row.Section -> (holder as SectionHolder).bind(row)
             is Row.Link -> (holder as LinkHolder).bind(row)
+            is Row.Action -> (holder as ActionHolder).bind(row)
         }
     }
 
@@ -110,8 +134,16 @@ class GroupedBlocklistAdapter(
     inner class SectionHolder(private val binding: ItemSectionBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Section) {
             binding.sectionTitle.text = row.title
-            binding.sectionAction.visibility = if (row.canAdd) View.VISIBLE else View.GONE
+            binding.sectionAction.visibility = if (row.addLabel != null) View.VISIBLE else View.GONE
+            binding.sectionAction.text = row.addLabel
             binding.sectionAction.setOnClickListener { onSectionAdd(row.key) }
+        }
+    }
+
+    inner class ActionHolder(private val binding: ItemActionBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(row: Row.Action) {
+            binding.actionButton.text = row.label
+            binding.actionButton.setOnClickListener { onLinkClick(row.key) }
         }
     }
 

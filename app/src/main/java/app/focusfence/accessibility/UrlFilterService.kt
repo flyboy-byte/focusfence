@@ -376,14 +376,8 @@ class UrlFilterService : AccessibilityService() {
         if (now - lastBackAt >= BACK_DEBOUNCE_MS) {
             lastBackAt = now
             performGlobalAction(GLOBAL_ACTION_BACK)
-            val host = parts?.first
-            // Notification style keeps the toast here: the Back press already
-            // happened in front of the user, a notification would only repeat it.
-            if (blockStyle == BlockScreen.Style.SCREEN && host != null) {
-                openBlockedScreen(Blocklist.findRule(host, rules)?.domain ?: host)
-            } else {
-                Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
-            }
+            // A toast, not a notification: the Back press already happened in front of the user.
+            if (blockStyle != BlockScreen.Style.OFF) Toast.makeText(this, R.string.section_blocked_toast, Toast.LENGTH_SHORT).show()
             EventLog.activity(
                 LogEvents.enforce(
                     System.currentTimeMillis(), "section_back", eventPackage,
@@ -414,21 +408,14 @@ class UrlFilterService : AccessibilityService() {
             return
         }
         if (announce) {
-            val action = if (style == BlockScreen.Style.SCREEN) "block_screen" else "block_notify"
+            val action = "block_notify"
             Monitor.perf.count(action)
-            if (style == BlockScreen.Style.SCREEN) openBlockedScreen(domain, category) else BlockedNotice.show(this, domain, category)
+            BlockedNotice.show(this, domain, category)
             EventLog.activity(
                 LogEvents.enforce(System.currentTimeMillis(), action, pkg, parts.first, parts.second)
             )
         }
         if (tellPartner && category != null) BlockedNotice.onConfirmedHighRisk(this, domain, category)
-    }
-
-    private fun openBlockedScreen(domain: String, category: String? = null) {
-        // Allowed from the background: Android exempts apps whose accessibility
-        // service is bound by the system from background-activity-start limits.
-        runCatching { startActivity(BlockedActivity.intent(this, domain, category)) }
-            .onFailure { EventLog.diag(LogEvents.error(System.currentTimeMillis(), COMP, "block_screen_start")) }
     }
 
     /** Screenshot timing on window events (ScreenCapture also has its own timer). */

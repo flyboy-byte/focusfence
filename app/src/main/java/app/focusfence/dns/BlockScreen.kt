@@ -17,11 +17,13 @@ object BlockScreen {
 
     /**
      * How a block is announced. NOTIFY is the default: lightest touch, and it
-     * works without the accessibility service. SCREEN opens the full-screen
-     * page; OFF leaves only the browser's own error.
+     * works without the accessibility service. OFF is silent: the site just
+     * doesn't load. The full-screen option ("screen") was dropped 2026-11-25
+     * (Logan: notification or silent, plus a Block history page); a saved
+     * "screen" now reads as the default, a notification.
      */
     enum class Style(val id: String) {
-        NOTIFY("notify"), SCREEN("screen"), OFF("off");
+        NOTIFY("notify"), OFF("off");
 
         companion object {
             val DEFAULT = NOTIFY

@@ -550,3 +550,21 @@ From Logan's reactions to a mockup and to 2.14: "plain in a good way", not gener
   server never becomes a DNS resolver for phones, because it would then see every lookup (against D-023), add a round
   trip to every lookup and become a single point of failure for browsing. Retirement waits until the last person on it
   has moved to the app.
+
+## D-034 — Rounded groups, Settings reordered, block notices simplified, Block history
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted (from a canvas mock he approved)
+
+- Blocking and Settings use rounded groups like Android's own Settings (`ui/Tiles`: rows as tiles on the
+  surface-container colour, 24dp ends, 6dp joins), so they match the rounded cards elsewhere. D-032's rules stand.
+- Settings order: Protection (strict mode, uninstall protection, accessibility service), Blocking, Updates, About,
+  Advanced. Partners, Screen checks, Categories and Set up only show in the classic layout (they are tabs otherwise).
+- "When a site is blocked" is its own screen. A blocked site always fails silently (it just doesn't load); the one
+  choice is whether a notification comes too ("Notify me"). The full-screen option is gone; a saved "screen" choice
+  reads as notification.
+- New **Block history** page, behind an obvious full-width button on the Blocking tab and the notice screen. Two
+  tabs, the D-024 triage made visible: **Sites** (your rules and front doors of content/threat lists, by day, one
+  visit = one entry) and **Trackers and ads** (everything else, counted per company domain). From the phone's own
+  log (`dns/BlockHistory`); stays on the phone.
+- Uninstall protection copy made honest: Android offers "Deactivate & uninstall" in one step, so it is one extra
+  confirm, not a lock. What partners reliably get after an uninstall is the "phone went silent" alert.

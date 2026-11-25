@@ -10,7 +10,7 @@ class BlockScreenTest {
     @Test
     fun styleParsesAndDefaultsToNotification() {
         assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.DEFAULT)
-        assertEquals(BlockScreen.Style.SCREEN, BlockScreen.Style.parse("screen"))
+        assertEquals("the dropped full-screen choice becomes a notification", BlockScreen.Style.NOTIFY, BlockScreen.Style.parse("screen"))
         assertEquals(BlockScreen.Style.OFF, BlockScreen.Style.parse("off"))
         assertEquals(BlockScreen.Style.NOTIFY, BlockScreen.Style.parse("notify"))
         // Missing or unknown values fall back to the default.

@@ -13,16 +13,15 @@ import app.focusfence.UninstallProtectionActivity
 import app.focusfence.DiagnosticsActivity
 import app.focusfence.MonitoringActivity
 import app.focusfence.StrictModeActivity
-import app.focusfence.HelpActivity
 import app.focusfence.R
 import app.focusfence.UiUtil
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlockScreenSettings
 import app.focusfence.dns.BlockScreen
-import app.focusfence.data.BlockedAppsStore
-import app.focusfence.data.BlocklistStore
 import app.focusfence.data.ExcludedAppsStore
 import app.focusfence.databinding.FragmentSettingsBinding
+import app.focusfence.databinding.RowPrefBinding
+import app.focusfence.databinding.RowPrefSwitchBinding
 import java.io.IOException
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -41,105 +40,89 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.adSwitch.isChecked = AdListStore.isEnabled(requireContext())
-        binding.adSwitch.setOnCheckedChangeListener { _, checked ->
-            val context = requireContext()
-            AdListStore.setEnabled(context, checked)
-            if (checked && !AdListStore.file(context).exists()) {
-                updateAdList()
-            } else {
-                refreshAdStatus()
-            }
-        }
-        binding.adUpdateButton.setOnClickListener { updateAdList() }
+        val b = binding
+        val ctx = requireContext()
+        fun open(cls: Class<*>) = startActivity(Intent(requireContext(), cls))
 
-        // Not a loosening action (sites stay blocked either way), so no strict guard.
-        binding.blockStyleGroup.check(
-            when (BlockScreenSettings.style(requireContext())) {
-                BlockScreen.Style.NOTIFY -> R.id.blockStyleNotify
-                BlockScreen.Style.SCREEN -> R.id.blockStyleScreen
-                BlockScreen.Style.OFF -> R.id.blockStyleOff
-            }
-        )
-        binding.blockStyleGroup.setOnCheckedChangeListener { _, id ->
-            val style = when (id) {
-                R.id.blockStyleScreen -> BlockScreen.Style.SCREEN
-                R.id.blockStyleOff -> BlockScreen.Style.OFF
-                else -> BlockScreen.Style.NOTIFY
-            }
-            BlockScreenSettings.setStyle(requireContext(), style)
-        }
-        binding.blockHighRiskSwitch.isChecked = BlockScreenSettings.noticeHighRisk(requireContext())
-        binding.blockHighRiskSwitch.setOnCheckedChangeListener { _, on -> BlockScreenSettings.setNoticeHighRisk(requireContext(), on) }
-        // Turning partner alerts off is a loosening: behind the friction guard, like removing a partner.
-        binding.blockPartnerSwitch.isChecked = BlockScreenSettings.partnerRepeated(requireContext())
-        binding.blockPartnerSwitch.setOnClickListener {
-            val ctx = requireContext()
-            if (binding.blockPartnerSwitch.isChecked) {
-                BlockScreenSettings.setPartnerRepeated(ctx, true)
-                app.focusfence.data.StrictStore.noteComponent(ctx, "block", "partner_alerts_on")
-            } else {
-                binding.blockPartnerSwitch.isChecked = true // revert until the guard is satisfied
-                UiUtil.guard(ctx, app.focusfence.dns.GuardPolicy.Action.QUIET_BLOCK_ALERTS) {
-                    BlockScreenSettings.setPartnerRepeated(ctx, false)
-                    // A partner relies on this alert, so switching it off is itself something they hear about.
-                    app.focusfence.data.StrictStore.noteComponent(ctx, "block", "partner_alerts_off")
-                    _binding?.blockPartnerSwitch?.isChecked = false
-                }
-            }
-        }
-
-        binding.excludedAppsButton.setOnClickListener {
-            UiUtil.chooseExcludedApps(requireContext()) { refreshAll() }
-        }
-        binding.accessibilityButton.setOnClickListener {
+        // Protection
+        row(b.rowStrict, R.string.strict_title, R.string.settings_strict_summary) { open(StrictModeActivity::class.java) }
+        row(b.rowUninstall, R.string.admin_card_title, R.string.settings_uninstall_summary) { open(UninstallProtectionActivity::class.java) }
+        row(b.rowAccessibility, R.string.section_service_label, R.string.settings_accessibility_summary) {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        binding.dnsButton.setOnClickListener { chooseDnsServer() }
-        binding.cardCategories.setOnClickListener {
-            startActivity(Intent(requireContext(), CategoriesActivity::class.java))
+
+        // Things with a tab of their own in the five-tab layout; the classic layout reaches them from here.
+        row(b.rowPartners, R.string.acc_title, R.string.acc_settings_summary) { open(app.focusfence.AccountabilityActivity::class.java) }
+        row(b.rowChecks, R.string.monitor_title, R.string.monitor_settings_summary) { open(MonitoringActivity::class.java) }
+        row(b.rowSetup, R.string.setup_title, null) { open(app.focusfence.SetupActivity::class.java) }
+        val classic = app.focusfence.data.UiPrefs.classic(ctx)
+        b.labelAccountability.visibility = if (classic) View.VISIBLE else View.GONE
+        b.groupAccountability.visibility = if (classic) View.VISIBLE else View.GONE
+        b.rowCategories.root.visibility = if (classic) View.VISIBLE else View.GONE
+
+        // Blocking
+        row(b.rowBlockNotices, R.string.notices_title, R.string.settings_notices_summary) { open(app.focusfence.BlockNoticesActivity::class.java) }
+        row(b.rowCategories, R.string.categories_title, null) { open(CategoriesActivity::class.java) }
+        switchRow(b.rowAds, R.string.adblock_label)
+        b.rowAds.prefSwitch.isChecked = AdListStore.isEnabled(ctx)
+        b.rowAds.prefSwitch.setOnCheckedChangeListener { _, checked ->
+            val c = requireContext()
+            AdListStore.setEnabled(c, checked)
+            if (checked && !AdListStore.file(c).exists()) updateAdList() else refreshAdStatus()
         }
-        binding.setupButton.setOnClickListener {
-            startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
+        row(b.rowAdUpdate, R.string.settings_ad_update, null) { updateAdList() }
+        b.rowAdUpdate.prefChevron.visibility = View.GONE
+        row(b.rowExcluded, R.string.settings_excluded_title, R.string.settings_excluded_summary) {
+            UiUtil.chooseExcludedApps(requireContext()) { refreshAll() }
         }
-        binding.aboutButton.setOnClickListener { showAbout() }
-        binding.updateSwitch.isChecked = app.focusfence.update.Updates.isEnabled(requireContext())
-        binding.updateSwitch.setOnCheckedChangeListener { _, on -> app.focusfence.update.Updates.setEnabled(requireContext(), on) }
-        binding.updateCheckButton.setOnClickListener { checkForUpdate() }
-        binding.githubButton.setOnClickListener {
+
+        // Updates
+        switchRow(b.rowUpdates, R.string.update_check_switch)
+        b.rowUpdates.prefSummary.setText(R.string.settings_updates_summary)
+        b.rowUpdates.prefSummary.visibility = View.VISIBLE
+        b.rowUpdates.prefSwitch.isChecked = app.focusfence.update.Updates.isEnabled(ctx)
+        b.rowUpdates.prefSwitch.setOnCheckedChangeListener { _, on -> app.focusfence.update.Updates.setEnabled(requireContext(), on) }
+        row(b.rowCheckNow, R.string.update_check_now, null) { checkForUpdate() }
+        b.rowCheckNow.prefChevron.visibility = View.GONE
+        row(b.rowWhatsNew, R.string.whats_new_title, null) { open(app.focusfence.update.WhatsNewActivity::class.java) }
+
+        // About
+        row(b.rowGuide, R.string.settings_guide, null) { open(app.focusfence.SetupActivity::class.java) }
+        row(b.rowAbout, R.string.about_title, null) { showAbout() }
+        row(b.rowGithub, R.string.github_title, null) {
             runCatching {
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/" + app.focusfence.dns.UpdateCheck.REPO)))
             }
         }
-        binding.whatsNewButton.setOnClickListener { startActivity(Intent(requireContext(), app.focusfence.update.WhatsNewActivity::class.java)) }
-        // Partners and Monitoring are tabs of their own in the five-tab layout; these buttons are the classic way in.
-        val classic = app.focusfence.data.UiPrefs.classic(requireContext())
-        binding.cardPartners.visibility = if (classic) View.VISIBLE else View.GONE
-        binding.cardMonitoring.visibility = if (classic) View.VISIBLE else View.GONE
-        binding.cardCategories.visibility = if (classic) View.VISIBLE else View.GONE
-        binding.classicSwitch.isChecked = classic
-        binding.classicSwitch.setOnCheckedChangeListener { _, on ->
+        b.rowGithub.prefChevron.setImageResource(R.drawable.ic_open_external)
+
+        // Advanced
+        row(b.rowDns, R.string.dns_title, null) { chooseDnsServer() }
+        row(b.rowDiagnostics, R.string.diag_title, null) { open(DiagnosticsActivity::class.java) }
+        switchRow(b.rowClassic, R.string.classic_layout)
+        b.rowClassic.prefSummary.setText(R.string.classic_layout_summary)
+        b.rowClassic.prefSummary.visibility = View.VISIBLE
+        b.rowClassic.prefSwitch.isChecked = classic
+        b.rowClassic.prefSwitch.setOnCheckedChangeListener { _, on ->
             app.focusfence.data.UiPrefs.setClassic(requireContext(), on)
             requireActivity().recreate()
         }
-        binding.cardPartners.setOnClickListener {
-            startActivity(Intent(requireContext(), app.focusfence.AccountabilityActivity::class.java))
-        }
-        binding.cardMonitoring.setOnClickListener {
-            startActivity(Intent(requireContext(), MonitoringActivity::class.java))
-        }
-        binding.strictButton.setOnClickListener {
-            startActivity(Intent(requireContext(), StrictModeActivity::class.java))
-        }
-        binding.diagnosticsButton.setOnClickListener {
-            startActivity(Intent(requireContext(), DiagnosticsActivity::class.java))
-        }
-        binding.uninstallProtectionButton.setOnClickListener {
-            startActivity(Intent(requireContext(), UninstallProtectionActivity::class.java))
-        }
-        binding.guideButton.setOnClickListener {
-            startActivity(Intent(requireContext(), app.focusfence.SetupActivity::class.java))
-        }
+    }
+
+    private fun row(r: RowPrefBinding, title: Int, summary: Int?, onClick: () -> Unit) {
+        r.prefTitle.setText(title)
+        if (summary != null) { r.prefSummary.setText(summary); r.prefSummary.visibility = View.VISIBLE }
+        r.root.setOnClickListener { onClick() }
+    }
+
+    private fun switchRow(r: RowPrefSwitchBinding, title: Int) {
+        r.prefTitle.setText(title)
+        r.root.setOnClickListener { r.prefSwitch.toggle() }
+    }
+
+    private fun value(r: RowPrefBinding, text: CharSequence?) {
+        r.prefValue.text = text
+        r.prefValue.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
     }
 
     override fun onResume() {
@@ -153,14 +136,35 @@ class SettingsFragment : Fragment() {
     }
 
     private fun refreshAll() {
-        refreshAdStatus()
-        refreshAccessibility()
         val b = _binding ?: return
-        b.dnsSummary.text = app.focusfence.dns.Upstreams.describe(app.focusfence.data.DnsUpstreamStore.load(requireContext()))
-        b.excludedAppsTitle.text = getString(
-            R.string.excluded_apps_button,
-            ExcludedAppsStore.get(requireContext()).size,
+        val ctx = requireContext()
+        refreshAdStatus()
+        val on = getString(R.string.home_on)
+        val off = getString(R.string.home_off)
+        value(b.rowStrict, if (app.focusfence.data.StrictStore.isLocked(ctx)) getString(R.string.settings_locked) else off)
+        val admin = app.focusfence.admin.DeviceAdmin.isAdminActive(ctx)
+        value(b.rowUninstall, if (admin) on else off)
+        value(b.rowAccessibility, if (UiUtil.isUrlFilterEnabled(ctx)) on else off)
+        value(
+            b.rowBlockNotices,
+            getString(
+                when (BlockScreenSettings.style(ctx)) {
+                    BlockScreen.Style.NOTIFY -> R.string.notices_value_notify
+                    BlockScreen.Style.OFF -> R.string.notices_value_silent
+                }
+            ),
         )
+        val bundles = app.focusfence.dns.Categories.BUNDLES.count {
+            app.focusfence.data.CategoryStore.policy(ctx, it.id) != app.focusfence.dns.Categories.Policy.OFF
+        }
+        value(b.rowCategories, getString(R.string.blocking_lists_value, app.focusfence.data.CategoryStore.baseTier(ctx).label.substringBefore(" —"), bundles))
+        val excluded = ExcludedAppsStore.get(ctx).size
+        value(b.rowExcluded, if (excluded == 0) getString(R.string.settings_none) else excluded.toString())
+        value(b.rowDns, app.focusfence.dns.Upstreams.describe(app.focusfence.data.DnsUpstreamStore.load(ctx)))
+        b.rowCheckNow.prefSummary.text = getString(R.string.update_installed, app.focusfence.dns.UpdateCheck.shortVersion(app.focusfence.update.Updates.installedVersion(ctx)))
+        b.rowCheckNow.prefSummary.visibility = View.VISIBLE
+        b.rowAdUpdate.root.visibility = if (b.rowAds.prefSwitch.isChecked) View.VISIBLE else View.GONE
+        for (g in listOf(b.groupProtection, b.groupAccountability, b.groupBlocking, b.groupUpdates, b.groupAbout, b.groupAdvanced)) Tiles.group(g)
     }
 
     /**
@@ -223,23 +227,11 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    private fun refreshAccessibility() {
-        val b = _binding ?: return
-        val context = requireContext()
-        val configured = BlocklistStore.rules(context).any { it.hasPathExceptions } ||
-            BlockedAppsStore.get(context).isNotEmpty()
-        val enabled = UiUtil.isUrlFilterEnabled(context)
-        b.accessibilityStatusText.text = when {
-            enabled -> getString(R.string.section_enabled)
-            configured -> getString(R.string.section_disabled)
-            else -> getString(R.string.section_idle)
-        }
-    }
-
     private fun updateAdList() {
         val b = _binding ?: return
-        b.adUpdateButton.isEnabled = false
-        b.adStatusText.text = getString(R.string.adlist_downloading)
+        b.rowAdUpdate.root.isEnabled = false
+        b.rowAds.prefSummary.text = getString(R.string.adlist_downloading)
+        b.rowAds.prefSummary.visibility = View.VISIBLE
         val appContext = requireContext().applicationContext
         Thread {
             val error = try {
@@ -250,7 +242,7 @@ class SettingsFragment : Fragment() {
             }
             _binding?.root?.post {
                 val binding = _binding ?: return@post
-                binding.adUpdateButton.isEnabled = true
+                binding.rowAdUpdate.root.isEnabled = true
                 if (error != null && isAdded) {
                     Toast.makeText(requireContext(), R.string.adlist_error, Toast.LENGTH_LONG)
                         .show()
@@ -265,7 +257,8 @@ class SettingsFragment : Fragment() {
         val context = requireContext()
         val count = AdListStore.entryCount(context)
         val updatedAt = AdListStore.updatedAt(context)
-        b.adStatusText.text = if (count == 0 || updatedAt == 0L) {
+        b.rowAds.prefSummary.visibility = View.VISIBLE
+        b.rowAds.prefSummary.text = if (count == 0 || updatedAt == 0L) {
             getString(R.string.adlist_none)
         } else {
             getString(
@@ -279,14 +272,14 @@ class SettingsFragment : Fragment() {
     /** Short summary that works offline, then an optional hop to the site in the browser (no web view, no network from the app). */
     private fun checkForUpdate() {
         val ctx = requireContext().applicationContext
-        binding.updateCheckButton.isEnabled = false
-        binding.updateCheckButton.setText(R.string.update_checking)
+        binding.rowCheckNow.root.isEnabled = false
+        binding.rowCheckNow.prefTitle.setText(R.string.update_checking)
         Thread {
             val result = runCatching { app.focusfence.update.Updates.fetchOffer(ctx) }
             activity?.runOnUiThread {
                 if (_binding == null) return@runOnUiThread
-                binding.updateCheckButton.isEnabled = true
-                binding.updateCheckButton.setText(R.string.update_check_now)
+                binding.rowCheckNow.root.isEnabled = true
+                binding.rowCheckNow.prefTitle.setText(R.string.update_check_now)
                 val offer = result.getOrNull()
                 when {
                     offer != null -> startActivity(app.focusfence.update.UpdateActivity.intent(ctx, offer))
