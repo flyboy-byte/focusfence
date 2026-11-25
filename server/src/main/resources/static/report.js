@@ -83,21 +83,52 @@
     digests.sort(function (a, b) { return (a.from || 0) - (b.from || 0); }).forEach(function (d) {
       m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
       m.blocked += +d.blocked || 0; m.enforce += +d.enforce || 0; m.flagged += +d.flagged_shots || 0;
-      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push(e); });
+      // A change has no time of its own: it happened within its slice, so it is shown under that slice's day.
+      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, text: e }); });
       for (var k in m.lists) addInto(m.lists[k], d[k]);
       if (m.from == null || d.from < m.from) m.from = d.from;
       if (m.to == null || d.to > m.to) m.to = d.to;
     });
-    m.events = m.events.slice(-50);
+    m.events = m.events.slice(-200);
     return m;
   }
 
-  function table(title, acc) {
-    var rows = top(acc, 15);
-    if (!rows.length) return [];
-    var t = el('table');
-    rows.forEach(function (r) { var tr = el('tr'); tr.appendChild(el('td', r[0])); tr.appendChild(el('td', r[1])); t.appendChild(tr); });
-    return [el('h2', title), t];
+  // A table you can sort (tap a heading) and filter (type), instead of one long list.
+  function sortable(title, acc, unit) {
+    var rows = Object.keys(acc).map(function (k) { return [k, acc[k]]; });
+    var wrap = el('div');
+    if (!rows.length) { wrap.appendChild(el('p', 'Nothing in this period.', 'muted')); return wrap; }
+    var by = 1, desc = true, q = '';
+    var input = el('input', null, 'filter'); input.placeholder = 'Filter ' + title.toLowerCase();
+    var t = el('table', null, 'sort');
+    function draw() {
+      t.textContent = '';
+      var head = el('tr');
+      [[title, 0, ''], [unit, 1, 'n']].forEach(function (h) {
+        var th = el('th', h[0] + (by === h[1] ? (desc ? ' \u2193' : ' \u2191') : ''), h[2]);
+        th.addEventListener('click', function () { if (by === h[1]) desc = !desc; else { by = h[1]; desc = h[1] === 1; } draw(); });
+        head.appendChild(th);
+      });
+      t.appendChild(head);
+      rows.filter(function (r) { return !q || r[0].toLowerCase().indexOf(q) >= 0; })
+        .sort(function (a, b) { var c = by === 1 ? a[1] - b[1] : a[0].localeCompare(b[0]); return desc ? -c : c; })
+        .slice(0, 100).forEach(function (r) { var tr = el('tr'); tr.appendChild(el('td', r[0])); tr.appendChild(el('td', r[1], 'n')); t.appendChild(tr); });
+    }
+    input.addEventListener('input', function () { q = input.value.trim().toLowerCase(); draw(); });
+    draw();
+    if (rows.length > 8) wrap.appendChild(input);
+    wrap.appendChild(t);
+    return wrap;
+  }
+
+  function seg(labels, on, pick) {
+    var bar = el('div', null, 'seg');
+    labels.forEach(function (l, i) {
+      var b = el('button', l, i === on ? 'on' : ''); b.type = 'button';
+      b.addEventListener('click', function () { pick(i); });
+      bar.appendChild(b);
+    });
+    return bar;
   }
 
   // Phase 2 level B: a shot the owner chose to share, already blurred to at most 48 px on the phone. Painted as
@@ -124,32 +155,56 @@
     return box;
   }
 
-  function render(m, n, shots) {
-    var out = [];
+  var state = { range: 1, tab: 0 };
+  var RANGES = [['Today', 24 * 3600e3], ['7 days', 7 * 24 * 3600e3]];
+
+  function render(allDigests, allShots) {
+    var cut = Date.now() - RANGES[state.range][1];
+    var digests = allDigests.filter(function (d) { return (+d.to || 0) >= cut; });
+    var shots = allShots.filter(function (s) { return (+s.shot_t || +s.t || 0) >= cut; });
+    var m = merge(digests);
+    var NET = /^Filter problem: (degraded|upstream_down)$/;
+    m.net += m.events.filter(function (e) { return NET.test(e.text); }).length;
+    m.events = m.events.filter(function (e) { return !NET.test(e.text); });
+
+    var out = [seg(RANGES.map(function (r) { return r[0]; }), state.range, function (i) { state.range = i; render(allDigests, allShots); })];
+    if (!digests.length) { out.push(el('p', 'No report slices in this period.', 'muted')); return show(out); }
+
+    // Summary first: the answer to "is it on, and did anything happen".
     out.push(m.off === 0 ? el('p', 'Protection was on the whole time.', 'ok') : el('p', 'Protection was OFF for ' + m.off + ' minutes.', 'bad'));
     if (m.missing > 0) out.push(el('p', m.missing + ' records are missing from the log (deleted or lost).', 'bad'));
-    // Network blips used to be one line each (and 2.13 phones still send them that way): count them instead.
-    var NET = /^Filter problem: (degraded|upstream_down)$/;
-    m.net += m.events.filter(function (e) { return NET.test(e); }).length;
-    m.events = m.events.filter(function (e) { return !NET.test(e); });
+    var stats = el('div', null, 'stats');
+    [['Changes', m.events.length], ['Blocked', m.blocked], ['Lookups', m.lookups], ['Flagged screenshots', m.flagged]].forEach(function (s) {
+      var c = el('div', null, 'stat'); c.appendChild(el('b', s[1])); c.appendChild(el('span', s[0], 'muted')); stats.appendChild(c);
+    });
+    out.push(stats);
     if (m.net > 0) out.push(el('p', 'Bad network ' + m.net + (m.net === 1 ? ' time' : ' times') + '. That is the phone\u2019s connection, not the filter being off.', 'muted'));
-    if (m.events.length) {
-      out.push(el('p', 'Changes:'));
-      var ul = el('ul');
-      m.events.forEach(function (e) { ul.appendChild(el('li', e)); });
-      out.push(ul);
+    if (m.from && m.to) out.push(el('p', 'Covers ' + new Date(m.from).toLocaleString() + ' to ' + new Date(m.to).toLocaleString() + ' (' + digests.length + ' slices).', 'muted'));
+
+    var tabs = ['Changes (' + m.events.length + ')', 'Screenshots (' + shots.length + ')', 'Apps & sites', 'Blocked'];
+    out.push(seg(tabs, state.tab, function (i) { state.tab = i; render(allDigests, allShots); }));
+    var body = el('div', null, 'card');
+    if (state.tab === 0) {
+      if (!m.events.length) body.appendChild(el('p', 'No changes in this period.', 'muted'));
+      var lastDay = '';
+      m.events.slice().reverse().forEach(function (e) {
+        var day = new Date(e.t).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        if (day !== lastDay) { body.appendChild(el('p', day, 'day')); lastDay = day; }
+        body.appendChild(el('p', e.text));
+      });
+    } else if (state.tab === 1) {
+      if (!shots.length) body.appendChild(el('p', 'No screenshots shared in this period.', 'muted'));
+      else body.appendChild(el('p', 'The owner chose to send these. They are blurred on the phone on purpose; the clear image never leaves it.', 'muted'));
+      shots.sort(function (a, b) { return (+b.t || 0) - (+a.t || 0); }).slice(0, 50).forEach(function (s) { var nd = shotNode(s); if (nd) body.appendChild(nd); });
+    } else if (state.tab === 2) {
+      body.appendChild(el('h2', 'App time')); body.appendChild(sortable('App', m.lists.apps_min, 'Minutes'));
+      body.appendChild(el('h2', 'Browser sites')); body.appendChild(sortable('Site', m.lists.sites, 'Visits'));
+    } else {
+      body.appendChild(el('h2', 'By category')); body.appendChild(sortable('Category', m.lists.cats, 'Blocked'));
+      body.appendChild(el('h2', 'Category sites')); body.appendChild(sortable('Site', m.lists.cat_hosts, 'Blocked'));
+      body.appendChild(el('h2', 'Most blocked')); body.appendChild(sortable('Address', m.lists.top_blocked, 'Blocked'));
     }
-    var line = m.lookups + ' lookups · ' + m.blocked + ' blocked';
-    if (m.flagged > 0) line += ' · ' + m.flagged + ' flagged screenshots (kept on the phone)';
-    out.push(el('p', line, 'muted'));
-    if (m.from && m.to) out.push(el('p', 'Covers ' + new Date(m.from).toLocaleString() + ' to ' + new Date(m.to).toLocaleString() + ' (' + n + ' slices).', 'muted'));
-    if (shots && shots.length) {
-      out.push(el('h2', 'Screenshots shared with you'));
-      out.push(el('p', 'The owner chose to send these. They are blurred on the phone on purpose; the clear image never leaves it.', 'muted'));
-      shots.sort(function (a, b) { return (+b.t || 0) - (+a.t || 0); }).slice(0, 20).forEach(function (s) { var nd = shotNode(s); if (nd) out.push(nd); });
-    }
-    out = out.concat(table('Categories', m.lists.cats), table('Category sites', m.lists.cat_hosts),
-      table('App time (minutes)', m.lists.apps_min), table('Browser sites', m.lists.sites), table('Top blocked', m.lists.top_blocked));
+    out.push(body);
     show(out);
   }
 
@@ -196,8 +251,7 @@
         return;
       }
       var shots = digests.filter(function (d) { return d.kind === 'shot'; });
-      digests = digests.filter(function (d) { return d.kind !== 'shot'; });
-      render(merge(digests), digests.length, shots);
+      render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots);
     })
     .catch(function () { show([el('p', 'Could not load the report. Try again later.', 'bad')]); });
 })();

@@ -68,7 +68,14 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
 
     /** D-035: an enrolled phone that watches this one through the app. Reports stay sealed in their pairing mailbox. */
     @Serializable
-    data class AppPartner(val id: String, val deviceId: String, val name: String, val linkedMs: Long, val inviteId: String = "")
+    data class AppPartner(
+        val id: String, val deviceId: String, val name: String, val linkedMs: Long, val inviteId: String = "",
+        /** Their private report link (/p/{token}), the same page and data an email partner gets (2026-11-25). */
+        val token: String = "",
+    ) {
+        /** As the partner pages see them: no email, no texts, always confirmed. */
+        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true)
+    }
 
     @Serializable
     data class Device(
@@ -174,11 +181,10 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     /** The device and partner a report-link token belongs to. */
     fun partnerByToken(token: String): Pair<Device, Partner>? {
         if (token.length < 20) return null
+        fun same(t: String) = t.isNotEmpty() && java.security.MessageDigest.isEqual(t.toByteArray(), token.toByteArray())
         for (d in allDevices()) {
-            val p = d.partners.firstOrNull {
-                java.security.MessageDigest.isEqual(it.token.toByteArray(), token.toByteArray())
-            } ?: continue
-            return d to p
+            d.partners.firstOrNull { same(it.token) }?.let { return d to it }
+            d.appPartners.firstOrNull { same(it.token) }?.let { return d to it.asPartner() }
         }
         return null
     }

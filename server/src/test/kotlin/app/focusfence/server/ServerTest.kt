@@ -347,7 +347,14 @@ class ServerTest {
         val body = """{"deviceId":"$partner","t":$clock,"signature":"${psign("accept", Integrity.sha256(secret))}","secret":"$secret","name":"Sam"}"""
         val acc = http.postJson("/v1/invites/accept", body)
         assertEquals(HttpStatusCode.OK, acc.status)
-        assertEquals("Logan", json.decodeFromString(AcceptResponse.serializer(), acc.bodyAsText()).ownerName)
+        val accepted = json.decodeFromString(AcceptResponse.serializer(), acc.bodyAsText())
+        assertEquals("Logan", accepted.ownerName)
+        // Same report as an email partner: the same page and the same sealed data, under their own link.
+        val path = accepted.reportUrl.removePrefix("https://ff.test")
+        assertTrue(path.startsWith("/p/"))
+        assertEquals(HttpStatusCode.OK, http.get(path).status)
+        assertTrue(!http.get(path).bodyAsText().contains("Text alerts"), "no texts for an app partner")
+        assertEquals(HttpStatusCode.OK, http.get("$path/data").status)
         assertEquals(HttpStatusCode.NotFound, http.postJson("/v1/invites/accept", body).status, "single use")
 
         // The owner's phone sees which invite became an app partner, and can remove it.

@@ -54,6 +54,32 @@ class PartnerReportActivity : AppCompatActivity() {
                 .show()
         }
         Sync.kick(this)
+        SyncStore.watch(this, mailbox)?.reportUrl?.takeIf { it.isNotEmpty() }?.let(::openReport)
+    }
+
+    /**
+     * The server's report page, the one an email partner opens: same sealed data, same screenshots. The key is after
+     * '#', so the server never gets it; the page's own script opens the report here. Only this server's pages load in
+     * the view; any other link goes to the browser.
+     */
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun openReport(url: String) {
+        val origin = android.net.Uri.parse(url).let { "${it.scheme}://${it.authority}" }
+        binding.reportWeb.visibility = android.view.View.VISIBLE
+        binding.reportStatus.visibility = android.view.View.GONE
+        (binding.reportBody.parent.parent as? android.view.View)?.visibility = android.view.View.GONE
+        binding.reportWeb.settings.javaScriptEnabled = true // the page's own report.js opens the sealed report
+        binding.reportWeb.settings.domStorageEnabled = true // where it keeps the key
+        binding.reportWeb.settings.allowFileAccess = false
+        binding.reportWeb.webViewClient = object : android.webkit.WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: android.webkit.WebView, req: android.webkit.WebResourceRequest): Boolean {
+                val u = req.url
+                if ("${u.scheme}://${u.authority}" == origin) return false
+                runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, u)) }
+                return true
+            }
+        }
+        binding.reportWeb.loadUrl(url)
     }
 
     override fun onResume() {
@@ -70,6 +96,7 @@ class PartnerReportActivity : AppCompatActivity() {
     private fun bind() {
         val w = SyncStore.watch(this, mailbox) ?: return finish()
         binding.toolbar.title = w.name
+        if (w.reportUrl.isNotEmpty()) { bindCode(); return } // the server page shows status and report
         val now = System.currentTimeMillis()
         binding.reportStatus.text = when {
             w.lastMsgMs == 0L -> getString(R.string.acc_watch_status_waiting)

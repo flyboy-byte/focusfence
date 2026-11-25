@@ -718,4 +718,5 @@
     <string name="acc_join_paste">Paste the invite</string>
     <string name="acc_joined">You now see %1$s\'s reports here.</string>
     <string name="acc_connected">This phone is connected to the server.</string>
+    <string name="acc_watch_status_server">Full report, the same one email partners see</string>
 </resources>

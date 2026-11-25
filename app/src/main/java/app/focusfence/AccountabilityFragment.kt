@@ -214,7 +214,8 @@ class AccountabilityFragment : Fragment() {
             return
         }
         for (w in watches) {
-            val sub = if (w.lastMsgMs == 0L) getString(R.string.acc_watch_status_waiting)
+            val sub = if (w.reportUrl.isNotEmpty()) getString(R.string.acc_watch_status_server)
+            else if (w.lastMsgMs == 0L) getString(R.string.acc_watch_status_waiting)
             else getString(R.string.acc_watch_status, DateUtils.getRelativeTimeSpanString(w.lastMsgMs))
             c.addView(row(w.name, sub, getString(R.string.acc_open_report)) {
                 startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_MAILBOX, w.keys.mailboxId))

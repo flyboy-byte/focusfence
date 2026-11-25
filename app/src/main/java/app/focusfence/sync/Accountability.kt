@@ -118,7 +118,10 @@ object Accountability {
                 check(r.code != 409) { r.body?.optString("error").orEmpty().ifEmpty { "That invite can't be used here." } }
                 check(r.code == 200) { "Couldn't join (HTTP ${r.code})." }
                 val owner = r.body?.optString("ownerName").orEmpty().ifEmpty { "Partner" }
-                check(addWatch(ctx, owner, key)) { "The invite's pairing key doesn't check out." }
+                // Same report as an email partner: their server page, opened with the key from the invite.
+                val report = r.body?.optString("reportUrl").orEmpty().takeIf { it.isNotEmpty() && inv.reportKey != null }
+                    ?.let { "$it#k=${inv.reportKey}" }.orEmpty()
+                check(addWatch(ctx, owner, key, report)) { "The invite's pairing key doesn't check out." }
                 log("invite_joined", owner)
                 owner
             }
@@ -136,7 +139,10 @@ object Accountability {
         val now = System.currentTimeMillis()
         for (p in pending) {
             when {
-                all.app.any { it.inviteId == p.inviteId } -> SyncStore.saveOwn(ctx, p.copy(pending = false))
+                all.app.any { it.inviteId == p.inviteId } -> {
+                    SyncStore.saveOwn(ctx, p.copy(pending = false))
+                    Sync.kick(ctx) // their first alerts and digest go now, not at the next periodic sync
+                }
                 all.email.any { it.inviteId == p.inviteId } || now - p.createdMs > PENDING_MS -> SyncStore.removeOwn(ctx, p)
             }
         }
@@ -199,13 +205,13 @@ object Accountability {
     }
 
     /** Starts watching a phone by its pairing key; false if the key doesn't check out. */
-    fun addWatch(ctx: Context, name: String, key: String): Boolean {
+    fun addWatch(ctx: Context, name: String, key: String, reportUrl: String = ""): Boolean {
         val secret = Pairing.decode(key) ?: return false
         val code = Pairing.encode(secret)
         if (SyncStore.ownPairings(ctx).any { it.code == code }) return false // that's this phone's own key
         SyncStore.saveWatch(ctx, SyncStore.Watch(
             code = code, name = name.trim().take(40), addedMs = System.currentTimeMillis(),
-            after = 0, lastMsgMs = 0, digest = null, alerts = "", staleNotified = false,
+            after = 0, lastMsgMs = 0, digest = null, alerts = "", staleNotified = false, reportUrl = reportUrl,
         ))
         Sync.schedule(ctx)
         Sync.kick(ctx)
