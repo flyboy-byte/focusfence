@@ -54,8 +54,9 @@ docker run --rm -v focusfence_ff-data:/data -v "$PWD":/backup alpine tar czf /ba
 ```
 
 Tested: the image builds, passes its health check, runs read-only as non-root, and buckets rate limits by real
-client address behind a proxy on the Docker bridge. The compose file itself (and Caddy) has not been brought up
-end to end yet: say so in any bug report.
+client address behind a proxy on the Docker bridge. The compose file was brought up end to end from source, with
+and without the `https` profile: Caddy serves HTTPS with the security headers, plain HTTP redirects, and the data
+volume survives a restart. Caddy getting a real public certificate wasn't tested (it needs a public domain).
 
 ## Run with systemd (no Docker)
 
