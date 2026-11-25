@@ -473,7 +473,7 @@
     <string name="acc_invite_ready">Send this to %1$s within 24 hours. It works once. They can open it in a browser, or paste it into Focus Fence on their phone (Partners → Join with an invite).</string>
     <string name="acc_key_link">Resend key link</string>
     <string name="acc_key_link_share">Open this on the device where you read my Focus Fence report, so it can unlock it (the server can\'t read it): %1$s</string>
-    <string name="acc_invite_share">Would you be my accountability partner on Focus Fence? Open this link, or paste it into the Focus Fence app under Partners → Join with an invite. It works once, for 24 hours: %1$s</string>
+    <string name="acc_invite_share">Join me on Focus Fence: %1$s</string>
     <string name="acc_share">Share</string>
     <string name="acc_app_title">App-to-app partners</string>
     <string name="acc_app_hint">If your partner uses Focus Fence too, pair your apps with a key you send them. Reports are encrypted with that key; the server only passes them along. Their app also shows the unlock code for anything you\'ve set to need a partner PIN.</string>
