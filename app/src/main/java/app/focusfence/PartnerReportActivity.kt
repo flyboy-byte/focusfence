@@ -33,6 +33,27 @@ class PartnerReportActivity : AppCompatActivity() {
     }
 
     private val mailbox: String get() = intent.getStringExtra(EXTRA_MAILBOX).orEmpty()
+    private var webShown = false
+
+    // With the server report on screen, the unlock code (and Remove) are one tap away in the toolbar.
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        if (webShown) menu.add(0, MENU_CODE, 0, R.string.report_unlock_title)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.itemId != MENU_CODE) return super.onOptionsItemSelected(item)
+        val w = SyncStore.watch(this, mailbox) ?: return true
+        val now = System.currentTimeMillis()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.report_unlock_title)
+            .setMessage(Pairing.code(w.keys.otp, now).chunked(4).joinToString(" ") + "\n\n" +
+                getString(R.string.report_unlock_hint, (Pairing.codeRemainingMs(now) / 60_000 + 1).toInt()))
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(R.string.acc_remove) { _, _ -> binding.removeWatch.performClick() }
+            .show()
+        return true
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,8 +87,9 @@ class PartnerReportActivity : AppCompatActivity() {
     private fun openReport(url: String) {
         val origin = android.net.Uri.parse(url).let { "${it.scheme}://${it.authority}" }
         binding.reportWeb.visibility = android.view.View.VISIBLE
-        binding.reportStatus.visibility = android.view.View.GONE
-        (binding.reportBody.parent.parent as? android.view.View)?.visibility = android.view.View.GONE
+        binding.reportScroll.visibility = android.view.View.GONE
+        webShown = true
+        invalidateOptionsMenu()
         binding.reportWeb.settings.javaScriptEnabled = true // the page's own report.js opens the sealed report
         binding.reportWeb.settings.domStorageEnabled = true // where it keeps the key
         binding.reportWeb.settings.allowFileAccess = false
@@ -127,5 +149,6 @@ class PartnerReportActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_MAILBOX = "mailbox"
+        private const val MENU_CODE = 1
     }
 }
