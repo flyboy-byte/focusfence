@@ -59,9 +59,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 // or partners would get a false "phone went silent".
                 for (step in listOf<() -> Unit>(
                     { heartbeat = heartbeat(ctx, api, now) },
+                    // Shares before alerts: an automatic share logs its partner alert once uploaded, and that alert
+                    // should go in this same pass.
+                    { serverShares(ctx, api) },
                     { serverAlerts(ctx, api, now) },
                     { serverReport(ctx, api, now) },
-                    { serverShares(ctx, api) },
                 )) {
                     try { step() } catch (e: Exception) { error = error ?: "server: ${e.javaClass.simpleName}: ${e.message}" }
                 }
@@ -137,7 +139,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     /** Owner-chosen blurred screenshots (Phase 2 level B), each sealed like a report and sent as its own slice. */
     private fun serverShares(ctx: Context, api: Api) {
         val deviceId = SyncStore.deviceId(ctx) ?: return
-        for (f in ShareQueue.pending(ctx).take(5)) {
+        for (f in ShareQueue.due(ctx, System.currentTimeMillis()).take(5)) {
             val now = System.currentTimeMillis()
             val blob = app.focusfence.dns.ReportSeal.seal(SyncStore.reportKey(ctx), f.readBytes(), deviceId)
             val r = api.post("/v1/reports", JSONObject().apply {
@@ -145,7 +147,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 put("signature", DeviceKey.sign("report|$deviceId|$now|$now|$now|${sha256(blob)}".toByteArray()))
             })
             if (r.code != 200) throw IllegalStateException("share HTTP ${r.code}")
-            f.delete()
+            ShareQueue.sent(ctx, f)
         }
     }
 
@@ -397,6 +399,15 @@ object Sync {
         WorkManager.getInstance(context).enqueueUniqueWork(
             NOW, ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(constraints).build(),
+        )
+    }
+
+    /** A run at [delayMs] from now, for a queued automatic share (D-037); one per share so none waits for another. */
+    fun kickAfter(context: Context, id: String, delayMs: Long) {
+        if (!SyncStore.hasWork(context)) return
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "focusfence_share_$id", ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequestBuilder<SyncWorker>().setConstraints(constraints).setInitialDelay(delayMs, TimeUnit.MILLISECONDS).build(),
         )
     }
 

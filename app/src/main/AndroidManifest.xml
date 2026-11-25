@@ -141,6 +141,9 @@
         <receiver
             android:name=".UnlockReadyReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".monitor.AutoShareNoteReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".BlockHistoryActivity"

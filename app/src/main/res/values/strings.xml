@@ -547,6 +547,14 @@
     <string name="review_switch">Keep a private copy of risky screenshots</string>
     <string name="review_privacy">Only on this phone: not in backups, deleted after 7 days, and the clear image is never uploaded. Answering a card deletes it. You can choose to send a partner a heavily blurred version.</string>
     <string name="review_share">Send blurred to partners…</string>
+    <string name="auto_share_channel">Screenshots sent to partners</string>
+    <string name="auto_share_title">Flagged screenshot going to your partners</string>
+    <string name="auto_share_text">%1$s, %2$s %3$d%%. They get this blurred picture at %4$s. Add a note if it\'s a false alarm.</string>
+    <string name="auto_share_add_note">Add a note</string>
+    <string name="auto_share_note_hint">What was on screen?</string>
+    <string name="auto_share_noted">Note added. It goes with the picture at %1$s.</string>
+    <string name="auto_share_no_note">No note added. It goes at %1$s.</string>
+    <string name="auto_share_too_late">Already sent. Your note didn\'t go with it.</string>
     <string name="review_share_title">Send this, blurred</string>
     <string name="review_share_body">Your email and web partners get exactly this blurred picture, with the app, the AI\'s label and anything you add. It\'s end-to-end encrypted: the server can\'t see it. The clear screenshot never leaves the phone.</string>
     <string name="review_share_note">Add a note (optional)</string>

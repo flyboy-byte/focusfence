@@ -311,6 +311,20 @@ object ScreenCapture {
                 Monitor.perf.count("shot_review_fail")
             }
         }
+        // D-037: a partner-level flag goes to partners on its own, blurred, after the owner's note window.
+        if (flagged && verdict != null && app.focusfence.sync.SyncStore.deviceId(context) != null) {
+            try {
+                val thumb = app.focusfence.sync.ShareQueue.thumbnail(bitmap)
+                val appName = app.focusfence.UiUtil.appLabel(context, pkg)
+                val percent = (verdict.score * 100).toInt()
+                val id = app.focusfence.sync.ShareQueue.enqueue(context, thumb, now, appName, verdict.label, percent, "", auto = true)
+                AutoShareNotice.post(context, id, thumb, appName, verdict.label, percent, AutoShareNotice.sendAt(id.toLong()))
+                Monitor.perf.count("shot_auto_queued")
+            } catch (e: Exception) {
+                Log.w(TAG, "auto share", e)
+                Monitor.perf.count("shot_auto_fail")
+            }
+        }
         bitmap.recycle()
 
         EventLog.activity(

@@ -163,6 +163,7 @@
     ctx.putImageData(img, 0, 0);
     var box = el('div', null, 'card');
     box.appendChild(c);
+    if (s.auto) box.appendChild(el('p', 'Sent automatically', 'tag'));
     box.appendChild(el('p', String(s.app || 'An app') + ' · flagged ' + String(s.label || '') + ' ' + (+s.pct || 0) + '% · ' +
       new Date(+s.shot_t || +s.t || 0).toLocaleString(), 'muted'));
     if (s.note) box.appendChild(el('p', '“' + String(s.note).slice(0, 200) + '”'));
@@ -278,7 +279,7 @@
       body.appendChild(timeline(alerts, m.events));
     } else if (state.tab === 1) {
       if (!shots.length) body.appendChild(el('p', 'No screenshots shared in this period.', 'muted'));
-      else body.appendChild(el('p', 'The owner chose to send these. They are blurred on the phone on purpose; the clear image never leaves it.', 'muted'));
+      else body.appendChild(el('p', 'Flagged screenshots go to you automatically about 10 minutes after the AI flags them; the owner can add a note but can\u2019t stop them. They are blurred on the phone on purpose: the clear image never leaves it. The AI is often wrong, so read the note before assuming the worst.', 'muted'));
       shots.sort(function (a, b) { return (+b.t || 0) - (+a.t || 0); }).slice(0, 50).forEach(function (s) { var nd = shotNode(s); if (nd) body.appendChild(nd); });
     } else if (state.tab === 2) {
       body.appendChild(el('h2', 'App time')); body.appendChild(sortable('App', m.lists.apps_min, 'Minutes'));

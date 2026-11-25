@@ -624,7 +624,7 @@ everywhere.
 
 ## D-037 — Flagged screenshots go to partners automatically, after a delay, uncapped
 
-**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted, not built
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted, built on branch `silence-alerts` (not released)
 
 Level C of roadmap Phase 2, chosen by Logan: a flagged screenshot is sent to partners automatically after a short delay.
 The owner gets a notification when it's flagged and can add a note before it goes, but can't stop it. **No daily cap**
@@ -634,3 +634,12 @@ The owner gets a notification when it's flagged and can add a note before it goe
 Known risk, stated so it isn't rediscovered: the AI's flags are mostly wrong today (all 7 reviews in the 2026-11-25
 export were "wrong", the same pattern as 7 of 8 before), so most automatic sends will be innocent screens. The blur is
 what makes that acceptable. Order agreed: silence alerts first, then the report page, then this.
+
+How it works: a shot `FlagPolicy` flags (the partner-level bar, not the owner's lower review bar) is turned into the
+`ShotBlur` thumbnail at once and queued (`ShareQueue.enqueue(auto = true)`, `dns/AutoShare.DELAY_MS` = 10 min). The
+owner gets a notification with that exact picture and an inline "Add a note" reply (`monitor/AutoShareNotice`); there
+is no cancel. A one-off WorkManager run at the send time uploads it as a sealed report slice; only then is
+`svc partner shot_auto_sent` logged, so the partner's alert ("A screenshot was flagged and sent to you blurred") never
+arrives before the picture. The report labels it "Sent automatically". Needs a server connection (an enrolled phone);
+without one nothing is queued.
+
