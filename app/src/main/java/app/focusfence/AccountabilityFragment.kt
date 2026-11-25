@@ -229,6 +229,12 @@ class AccountabilityFragment : Fragment() {
         val name = view.findViewById<EditText>(R.id.field2)
         text.setHint(R.string.acc_join_paste)
         name.setHint(R.string.acc_join_name)
+        // The shared layout caps field 1 at 40 characters for names: an invite is ~150, so lift it, and let it wrap.
+        text.filters = arrayOf()
+        text.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        text.maxLines = 4
+        name.filters = arrayOf(android.text.InputFilter.LengthFilter(60))
+        name.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.acc_watch_add)
             .setView(view)
