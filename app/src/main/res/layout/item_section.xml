@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A section on Blocking: title, and an Add button when the section takes new entries. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingStart="20dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/sectionTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:accessibilityHeading="true"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <Button
+        android:id="@+id/sectionAction"
+        style="@style/Widget.Material3.Button.TextButton.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/blocking_add"
+        android:visibility="gone"
+        app:icon="@drawable/ic_add" />
+</LinearLayout>

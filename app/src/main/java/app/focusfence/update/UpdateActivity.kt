@@ -12,18 +12,12 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import app.focusfence.R
 import app.focusfence.data.EventLog
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.UpdateCheck
-import com.google.android.material.appbar.MaterialToolbar
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -37,69 +31,39 @@ import kotlin.concurrent.thread
  * into a clear message instead of a vague "App not installed".
  */
 class UpdateActivity : AppCompatActivity() {
-    private lateinit var status: TextView
-    private lateinit var progress: ProgressBar
-    private lateinit var install: Button
+    private lateinit var b: app.focusfence.databinding.ActivityUpdateBinding
     @Volatile private var busy = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val version = intent.getStringExtra(EXTRA_VERSION) ?: return finish()
-        val pad = (16 * resources.displayMetrics.density).toInt()
-        val toolbar = MaterialToolbar(this)
-        val body = TextView(this).apply {
-            text = getString(R.string.update_body, version, Updates.installedVersion(this@UpdateActivity))
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge)
-        }
-        val notesText = TextView(this).apply {
-            text = intent.getStringExtra(EXTRA_NOTES).orEmpty()
-            visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
-            setPadding(0, pad, 0, 0)
-            setLineSpacing(2 * resources.displayMetrics.density, 1f)
-        }
-        status = TextView(this).apply { setPadding(0, pad, 0, 0) }
-        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            visibility = View.GONE
-        }
-        install = Button(this).apply {
-            text = getString(R.string.update_install)
-            setOnClickListener { start() }
-        }
-        val notes = Button(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = getString(R.string.update_notes)
-            setOnClickListener {
-                intent.getStringExtra(EXTRA_PAGE)?.takeIf { it.isNotEmpty() }?.let {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
-                }
-            }
-        }
-        setContentView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            fitsSystemWindows = true
-            addView(toolbar, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(pad, pad, pad, pad)
-                addView(body)
-                addView(notesText)
-                addView(progress, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                addView(status)
-                addView(install)
-                addView(notes)
-            })
-        })
-        setSupportActionBar(toolbar)
+        b = app.focusfence.databinding.ActivityUpdateBinding.inflate(layoutInflater)
+        setContentView(b.root)
+        setSupportActionBar(b.toolbar)
         supportActionBar?.setTitle(R.string.update_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationOnClickListener { finish() }
+        b.toolbar.setNavigationOnClickListener { finish() }
+
+        b.updateVersion.text = getString(R.string.update_version, UpdateCheck.shortVersion(version))
+        b.updateInstalled.text = getString(R.string.update_installed, UpdateCheck.shortVersion(Updates.installedVersion(this)))
+        val notes = intent.getStringExtra(EXTRA_NOTES).orEmpty()
+        b.updateNotes.text = notes.ifEmpty { getString(R.string.update_no_notes) }
+        b.updateInstall.setOnClickListener { start() }
+        val page = intent.getStringExtra(EXTRA_PAGE).orEmpty()
+        b.updatePage.visibility = if (page.isEmpty()) View.GONE else View.VISIBLE
+        b.updatePage.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(page))) }
         Updates.cancelNotification(this)
+    }
+
+    private fun say(text: String) {
+        b.updateStatus.text = text
+        b.updateStatus.visibility = View.VISIBLE
     }
 
     private fun start() {
         if (busy) return
         if (!packageManager.canRequestPackageInstalls()) {
-            status.text = getString(R.string.update_allow_installs)
+            say(getString(R.string.update_allow_installs))
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
             return
         }
@@ -107,9 +71,9 @@ class UpdateActivity : AppCompatActivity() {
         // The worker already filtered this, but the intent is ours to re-check before fetching anything.
         if (!url.startsWith(UpdateCheck.DOWNLOAD_PREFIX)) return fail(getString(R.string.update_failed_source))
         busy = true
-        install.isEnabled = false
-        progress.visibility = View.VISIBLE
-        status.text = getString(R.string.update_downloading)
+        b.updateInstall.isEnabled = false
+        b.updateProgress.visibility = View.VISIBLE
+        say(getString(R.string.update_downloading))
         thread(name = "update-download") {
             val apk = File(cacheDir, "update.apk")
             val error = try {
@@ -123,7 +87,7 @@ class UpdateActivity : AppCompatActivity() {
                     apk.delete()
                     fail(error)
                 } else {
-                    status.text = getString(R.string.update_installing)
+                    say(getString(R.string.update_installing))
                     try {
                         installApk(apk)
                     } catch (e: Exception) {
@@ -151,7 +115,7 @@ class UpdateActivity : AppCompatActivity() {
                         if (n < 0) break
                         out.write(buf, 0, n)
                         done += n
-                        if (total > 0) runOnUiThread { progress.progress = (done * 100 / total).toInt() }
+                        if (total > 0) runOnUiThread { b.updateProgress.progress = (done * 100 / total).toInt() }
                     }
                 }
             }
@@ -206,9 +170,9 @@ class UpdateActivity : AppCompatActivity() {
 
     private fun fail(message: String) {
         busy = false
-        install.isEnabled = true
-        progress.visibility = View.GONE
-        status.text = message
+        b.updateInstall.isEnabled = true
+        b.updateProgress.visibility = View.GONE
+        say(message)
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), "update", "failed", message.take(80)))
     }
 

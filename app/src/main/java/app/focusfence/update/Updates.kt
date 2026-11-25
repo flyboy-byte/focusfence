@@ -156,7 +156,7 @@ object Updates {
             NOTIFICATION_ID,
             NotificationCompat.Builder(c, CHANNEL)
                 .setSmallIcon(R.drawable.ic_shield)
-                .setContentTitle(c.getString(R.string.update_available_title, offer.version))
+                .setContentTitle(c.getString(R.string.update_available_title, UpdateCheck.shortVersion(offer.version)))
                 .setContentText(c.getString(R.string.update_available_text))
                 .setContentIntent(open)
                 .setAutoCancel(true)

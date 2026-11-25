@@ -12,7 +12,6 @@ import app.focusfence.R
 import app.focusfence.UiUtil
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
-import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.databinding.FragmentBlocklistBinding
 import app.focusfence.dns.BlockRule
@@ -22,6 +21,9 @@ import java.util.Locale
 class BlocklistFragment : Fragment() {
 
     companion object {
+        private const val SECTION_SITES = "sites"
+        private const val SECTION_APPS = "apps"
+
         /** Collapse state survives tab switches for the life of the process. */
         private val collapsedGroups = mutableSetOf<String>()
     }
@@ -39,6 +41,11 @@ class BlocklistFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         adapter = GroupedBlocklistAdapter(
+            onSectionAdd = { key ->
+                if (key == SECTION_APPS) UiUtil.chooseBlockedApps(requireContext()) { refresh() }
+                else startActivity(Intent(requireContext(), DomainDetailActivity::class.java))
+            },
+            onLinkClick = { startActivity(Intent(requireContext(), app.focusfence.CategoriesActivity::class.java)) },
             onHeaderClick = { key ->
                 if (!collapsedGroups.remove(key)) collapsedGroups.add(key)
                 refresh()
@@ -52,7 +59,6 @@ class BlocklistFragment : Fragment() {
                     refresh()
                 }
             },
-            onAppsEdit = { UiUtil.chooseBlockedApps(requireContext()) { refresh() } },
             onAppClick = { pkg -> UiUtil.editAppRule(requireActivity(), pkg) { refresh() } },
             onAppRemove = { pkg ->
                 val context = requireContext()
@@ -61,37 +67,13 @@ class BlocklistFragment : Fragment() {
                     refresh()
                 }
             },
-            onHintClick = { key ->
-                when (key) {
-                    GroupedBlocklistAdapter.GROUP_APPS ->
-                        UiUtil.chooseBlockedApps(requireContext()) { refresh() }
-                    else -> startActivity(
-                        Intent(requireContext(), DomainDetailActivity::class.java)
-                    )
-                }
-            },
         )
         binding.blockList.adapter = adapter
-        binding.addFab.setOnClickListener {
-            startActivity(Intent(requireContext(), DomainDetailActivity::class.java))
-        }
     }
 
     override fun onResume() {
         super.onResume()
         refresh()
-        bindCategories()
-    }
-
-    /** Five-tab layout: the categories card leads into the full screen; the classic layout keeps it in Settings. */
-    private fun bindCategories() {
-        val b = _binding ?: return
-        val ctx = requireContext()
-        if (app.focusfence.data.UiPrefs.classic(ctx)) { b.categoriesCard.visibility = View.GONE; return }
-        b.categoriesCard.visibility = View.VISIBLE
-        val on = app.focusfence.dns.Categories.BUNDLES.count { app.focusfence.data.CategoryStore.policy(ctx, it.id) != app.focusfence.dns.Categories.Policy.OFF }
-        b.categoriesSummary.text = getString(R.string.categories_card_summary, app.focusfence.data.CategoryStore.baseTier(ctx).label, on)
-        b.categoriesCard.setOnClickListener { startActivity(android.content.Intent(ctx, app.focusfence.CategoriesActivity::class.java)) }
     }
 
     override fun onDestroyView() {
@@ -118,11 +100,33 @@ class BlocklistFragment : Fragment() {
         )
 
         val rows = mutableListOf<Row>()
-        if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocklist_empty), "domains"))
+
+        // Block lists first: they do most of the blocking. The classic layout keeps them in Settings instead.
+        if (!app.focusfence.data.UiPrefs.classic(context)) {
+            val on = app.focusfence.dns.Categories.BUNDLES.count {
+                app.focusfence.data.CategoryStore.policy(context, it.id) != app.focusfence.dns.Categories.Policy.OFF
+            }
+            rows.add(Row.Section("lists", getString(R.string.blocking_lists), canAdd = false))
+            rows.add(
+                Row.Link(
+                    "categories", getString(R.string.categories_title),
+                    getString(R.string.blocking_lists_value, app.focusfence.data.CategoryStore.baseTier(context).label.substringBefore(" —"), on),
+                )
+            )
+        }
+
+        rows.add(Row.Section(SECTION_SITES, getString(R.string.blocking_sites), canAdd = true))
+        if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocking_sites_empty), "sites_empty"))
+        // Group headings only help when there's more than one kind of rule.
+        val kinds = groups.count { (_, _, p) -> rules.any(p) }
 
         for ((key, titleRes, predicate) in groups) {
             val members = rules.filter(predicate)
             if (members.isEmpty()) continue
+            if (kinds == 1) {
+                members.forEach { rows.add(Row.Domain(it, summaryFor(it, dayKey))) }
+                continue
+            }
             val expanded = key !in collapsedGroups
             rows.add(
                 Row.Header(
@@ -137,23 +141,10 @@ class BlocklistFragment : Fragment() {
         }
 
         val apps = BlockedAppsStore.rules(context)
-        val appsExpanded = GroupedBlocklistAdapter.GROUP_APPS !in collapsedGroups
-        rows.add(
-            Row.Header(
-                GroupedBlocklistAdapter.GROUP_APPS,
-                getString(R.string.group_title_fmt, getString(R.string.group_apps), apps.size),
-                appsExpanded,
-                showAdd = true,
-            )
-        )
-        if (appsExpanded) {
+        rows.add(Row.Section(SECTION_APPS, getString(R.string.blocking_apps), canAdd = true))
+        run {
             if (apps.isEmpty()) {
-                rows.add(
-                    Row.Hint(
-                        getString(R.string.apps_empty_hint),
-                        GroupedBlocklistAdapter.GROUP_APPS,
-                    )
-                )
+                rows.add(Row.Hint(getString(R.string.blocking_apps_empty), "apps_empty"))
             } else {
                 apps.forEach {
                     rows.add(

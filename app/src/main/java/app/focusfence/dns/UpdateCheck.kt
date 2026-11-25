@@ -54,8 +54,13 @@ object UpdateCheck {
 
     private val HIDDEN_SECTIONS = setOf("docs", "maintenance", "tests", "ci")
     private val REF = Regex("""\s*\(`[0-9a-f]{7,}`(, \[#\d+]\([^)]*\))?\)\s*$""")
-    /** `**ui:** ` from a scoped title, or a bare `ui: ` / `server: ` prefix from an untyped one. */
-    private val SCOPE = Regex("""^(\*\*[\w-]+:\*\*|[a-z][\w-]{1,15}:)\s+""")
+    /** `**ui:** ` from a scoped title, or a bare `ui: ` / `Server: ` prefix from an untyped one (any case). */
+    private val SCOPE = Regex("""^(?:\*\*([\w-]+):\*\*|([a-zA-Z][\w-]{1,15}):)\s+""")
+    /** Lines about these parts aren't changes to the app on the phone, so the phone doesn't list them. */
+    private val HIDDEN_SCOPES = setOf("server", "ci", "docs", "build", "deps", "tools", "release")
+
+    /** "2.16.0-accountable" -> "2.16.0", for people. */
+    fun shortVersion(version: String): String = version.removePrefix("v").substringBefore('-')
 
     /**
      * The release body's "## What's new" section as plain text for the phone: section names kept ("Added",
@@ -78,8 +83,10 @@ object UpdateCheck {
                     if (keep) out += name
                 }
                 keep && line.startsWith("- ") -> {
-                    val text = line.removePrefix("- ").replace(REF, "").replace(SCOPE, "").trim()
-                    if (text.isNotEmpty()) out += "• " + text.replaceFirstChar { it.uppercase() }
+                    val noRef = line.removePrefix("- ").replace(REF, "")
+                    val scope = SCOPE.find(noRef)?.let { (it.groupValues[1] + it.groupValues[2]).lowercase() }
+                    val text = noRef.replace(SCOPE, "").trim()
+                    if (text.isNotEmpty() && scope !in HIDDEN_SCOPES) out += "• " + text.replaceFirstChar { it.uppercase() }
                 }
             }
         }

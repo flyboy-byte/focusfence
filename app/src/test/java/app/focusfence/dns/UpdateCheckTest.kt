@@ -108,6 +108,16 @@ class UpdateCheckTest {
     }
 
     @Test
+    fun serverAndToolingLinesStayOffThePhone() {
+        val b = "## What's new\n\n### Changed\n" +
+            "- Ui: follow the system colours (`3eb8bc8`, [#67](https://x/67))\n" +
+            "- server: systemd install with automatic rollback (`76efb4a`, [#66](https://x/66))\n" +
+            "- **ci:** release notes (`c6bf699`)\n"
+        assertEquals("Changed\n• Follow the system colours", UpdateCheck.userNotes(b))
+        assertEquals("2.16.0", UpdateCheck.shortVersion("2.16.0-accountable"))
+    }
+
+    @Test
     fun aBodyWithoutWhatsNewHasNoNotes() {
         assertEquals("", UpdateCheck.userNotes("**Focus Fence AC** — accountability build.\n\n- Signing key: stable"))
     }
