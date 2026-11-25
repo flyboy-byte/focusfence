@@ -171,6 +171,7 @@ PR and no agent gates one. The aim is a shared habit so each of us understands t
 | SMS alerts in production | needs a provider and a budget 👤 |
 | GitHub Pages for the site | private repo; the server serves `/about/` meanwhile |
 | Admin landing page (plan 06 phase 4) | not needed until others onboard themselves |
+| F-Droid ([plan 11](plans/11-fdroid.md), scoped 2026-11-25) | Logan: not anytime soon. Needs an `fdroid` flavour without the updater, store text, the app-ID question and reproducible signing |
 | "Your partner is trying to unlock X" message | extra server round trip; revisit after Phase 2 |
 | A "test my speed" button | uses data; the `net` records may answer the question first |
 | Weekly report / silence alert / SMS seen on a phone | will happen naturally in Phase 0–1; tick in `STATE.md` |
