@@ -56,10 +56,16 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
          * able to just hold the link"). Null for partners who joined by typing a code or before this existed.
          */
         var linkHash: String? = null,
+        /** The invite they joined with, so the inviting phone can tell which of its invites went to the web (D-035). */
+        val inviteId: String = "",
     )
 
     @Serializable
-    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "")
+    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "", val id: String = "")
+
+    /** D-035: an enrolled phone that watches this one through the app. Reports stay sealed in their pairing mailbox. */
+    @Serializable
+    data class AppPartner(val id: String, val deviceId: String, val name: String, val linkedMs: Long, val inviteId: String = "")
 
     @Serializable
     data class Device(
@@ -74,6 +80,7 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var missingRecords: Long = 0,
         var partners: List<Partner> = emptyList(),
         var invites: List<Invite> = emptyList(),
+        var appPartners: List<AppPartner> = emptyList(),
         /** Which enrollment code let this phone in (EnrollCodes id; empty for the bootstrap token). Admin page only. */
         var codeId: String = "",
         /** A name the operator gave the device on the admin page. */

@@ -87,9 +87,12 @@ class Config(
 @Serializable data class EnrollRequest(val publicKeySpki: String)
 @Serializable data class EnrollResponse(val deviceId: String)
 @Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null)
-@Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String)
-@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true)
-@Serializable data class PartnersResponse(val partners: List<PartnerInfo>)
+@Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
+@Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
+@Serializable data class AcceptResponse(val ownerId: String, val ownerName: String)
+@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long)
+@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "")
+@Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val app: List<AppPartnerInfo> = emptyList())
 @Serializable data class BatchRequest(
     val deviceId: String,
     val firstSeq: Long,
@@ -108,7 +111,7 @@ class Config(
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
 @Serializable data class OkResponse(val ok: Boolean = true)
-@Serializable data class CreateMailboxRequest(val tokenHash: String)
+@Serializable data class CreateMailboxRequest(val tokenHash: String, val deviceId: String = "", val t: Long = 0, val signature: String = "")
 @Serializable data class PostMailRequest(val c: String)
 @Serializable data class PostMailResponse(val id: Long)
 @Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
@@ -261,6 +264,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
     }
 
+    /** The enrolled phone whose live invite link has this secret, and that invite. */
+    fun inviteOwner(secret: String): Pair<Store.Device, Store.Invite>? {
+        val hash = Integrity.sha256(secret); val now = cfg.now()
+        for (d in store.allDevices()) d.invites.firstOrNull { it.linkHash == hash && it.expiresMs > now }?.let { return d to it }
+        return null
+    }
+
     fun signedOk(device: Store.Device, action: String, t: Long, extra: String, sig: String): Boolean {
         if (abs(cfg.now() - t) > cfg.clockSkewMs) return false
         val key = runCatching { Integrity.publicKeyFromBase64Spki(device.publicKeySpki) }.getOrNull() ?: return false
@@ -283,7 +293,10 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
             val codesOn = cfg.enrollToken != null || enrollCodes.any()
             var needsCode = codesOn
-            if (codesOn) {
+            // D-035: a live invite from an enrolled phone lets the phone it was sent to enroll, with no separate code.
+            val invited = call.request.headers["X-FF-Invite"]?.takeIf { it.length >= 20 }?.let { inviteOwner(it) } != null
+            if (invited) needsCode = false
+            else if (codesOn) {
                 val got = call.request.headers["X-FF-Enroll"].orEmpty()
                 val boot = cfg.enrollToken?.let { java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(it).toByteArray()) } ?: false
                 if (boot) needsCode = false
@@ -307,12 +320,31 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             // The link's own long secret: unlike the short code it stays valid once used, as that partner's report link.
             val secret = newToken()
             val expires = cfg.now() + cfg.inviteTtlMs
+            val inviteId = java.util.UUID.randomUUID().toString()
             store.updateDevice(device.id) { d ->
                 // At most 5 live invites; expired ones are dropped.
-                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret))).takeLast(5)
+                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret), inviteId)).takeLast(5)
             }
             val shown = code.chunked(4).joinToString("-")
-            call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/i/$secret"))
+            call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/i/$secret", inviteId))
+        }
+
+        // D-035: the invite opened in the app instead of a browser. The calling phone (enrolled, often just now with
+        // this same invite) becomes an app partner of the phone that made it. Single use, like the web join.
+        post("/v1/invites/accept") {
+            val req = call.receive<AcceptRequest>()
+            val me = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (!signedOk(me, "accept", req.t, Integrity.sha256(req.secret), req.signature)) return@post call.unauthorized()
+            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
+            val (owner, invite) = inviteOwner(req.secret) ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("invite not valid"))
+            if (owner.id == me.id) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("that's this phone's own invite"))
+            if (owner.partners.size + owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("partner limit"))
+            val name = req.name.filter { !it.isISOControl() }.trim().take(60).ifEmpty { me.label.ifEmpty { "Partner" } }
+            store.updateDevice(owner.id) { d ->
+                d.invites = d.invites.filter { it.linkHash != invite.linkHash }
+                d.appPartners = d.appPartners.filter { it.deviceId != me.id } + Store.AppPartner(java.util.UUID.randomUUID().toString(), me.id, name, cfg.now(), invite.id)
+            }
+            call.respond(AcceptResponse(owner.id, owner.label))
         }
 
         post("/v1/partners/list") {
@@ -320,8 +352,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "partners", req.t, "", req.signature)) return@post call.unauthorized()
             call.respond(PartnersResponse(device.partners.map {
-                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed)
-            }))
+                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed, it.inviteId)
+            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs) }))
         }
 
         // Unlinking is never silent: the removed partner is told.
@@ -330,6 +362,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val pid = req.partnerId ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("partnerId"))
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "unlink", req.t, pid, req.signature)) return@post call.unauthorized()
+            // An app partner is told through the pairing itself (the phone posts a last message); here it's only forgotten.
+            if (device.appPartners.any { it.id == pid }) {
+                store.updateDevice(device.id) { d -> d.appPartners = d.appPartners.filter { it.id != pid } }
+                return@post call.respond(OkResponse())
+            }
             val removed = device.partners.firstOrNull { it.id == pid }
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("unknown partner"))
             alerts.toPartners(device.copy(partners = listOf(removed)), "you were removed as a partner",
@@ -425,6 +462,9 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!MAILBOX_ID.matches(id)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
             val req = call.receive<CreateMailboxRequest>()
             if (store.mailbox(id) == null) { // an existing mailbox is just re-checked; only NEW ones are limited
+                // D-035: only an enrolled phone opens a new mailbox, so nobody can fill the server without an invite or code.
+                val dev = store.device(req.deviceId) ?: return@post call.unknownDevice()
+                if (!signedOk(dev, "mailbox", req.t, id, req.signature)) return@post call.unauthorized()
                 if (!mailboxLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
                 if (full() || store.mailboxCount() >= cfg.maxMailboxes) return@post call.serverFull()
             }
@@ -507,7 +547,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             // Double opt-in: the address is NOT trusted yet. Until its owner clicks the link below, the only thing
             // ever sent to it is that one email, so a stranger's address can't be signed up to receive alerts.
             val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now, confirmed = false,
-                linkHash = invite.linkHash.ifEmpty { null })
+                linkHash = invite.linkHash.ifEmpty { null }, inviteId = invite.id)
             store.updateDevice(device.id) { d ->
                 d.invites = d.invites.filter { it.codeHash != invite.codeHash } // single use: the code is spent, the link now belongs to this partner
                 d.partners = d.partners + partner
