@@ -33,6 +33,27 @@ class PartnerReportActivity : AppCompatActivity() {
     }
 
     private val mailbox: String get() = intent.getStringExtra(EXTRA_MAILBOX).orEmpty()
+    private var webShown = false
+
+    // With the server report on screen, the unlock code (and Remove) are one tap away in the toolbar.
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        if (webShown) menu.add(0, MENU_CODE, 0, R.string.report_unlock_title)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.itemId != MENU_CODE) return super.onOptionsItemSelected(item)
+        val w = SyncStore.watch(this, mailbox) ?: return true
+        val now = System.currentTimeMillis()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.report_unlock_title)
+            .setMessage(Pairing.code(w.keys.otp, now).chunked(4).joinToString(" ") + "\n\n" +
+                getString(R.string.report_unlock_hint, (Pairing.codeRemainingMs(now) / 60_000 + 1).toInt()))
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(R.string.acc_remove) { _, _ -> binding.removeWatch.performClick() }
+            .show()
+        return true
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +75,33 @@ class PartnerReportActivity : AppCompatActivity() {
                 .show()
         }
         Sync.kick(this)
+        SyncStore.watch(this, mailbox)?.reportUrl?.takeIf { it.isNotEmpty() }?.let(::openReport)
+    }
+
+    /**
+     * The server's report page, the one an email partner opens: same sealed data, same screenshots. The key is after
+     * '#', so the server never gets it; the page's own script opens the report here. Only this server's pages load in
+     * the view; any other link goes to the browser.
+     */
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun openReport(url: String) {
+        val origin = android.net.Uri.parse(url).let { "${it.scheme}://${it.authority}" }
+        binding.reportWeb.visibility = android.view.View.VISIBLE
+        binding.reportScroll.visibility = android.view.View.GONE
+        webShown = true
+        invalidateOptionsMenu()
+        binding.reportWeb.settings.javaScriptEnabled = true // the page's own report.js opens the sealed report
+        binding.reportWeb.settings.domStorageEnabled = true // where it keeps the key
+        binding.reportWeb.settings.allowFileAccess = false
+        binding.reportWeb.webViewClient = object : android.webkit.WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: android.webkit.WebView, req: android.webkit.WebResourceRequest): Boolean {
+                val u = req.url
+                if ("${u.scheme}://${u.authority}" == origin) return false
+                runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, u)) }
+                return true
+            }
+        }
+        binding.reportWeb.loadUrl(url)
     }
 
     override fun onResume() {
@@ -70,6 +118,7 @@ class PartnerReportActivity : AppCompatActivity() {
     private fun bind() {
         val w = SyncStore.watch(this, mailbox) ?: return finish()
         binding.toolbar.title = w.name
+        if (w.reportUrl.isNotEmpty()) { bindCode(); return } // the server page shows status and report
         val now = System.currentTimeMillis()
         binding.reportStatus.text = when {
             w.lastMsgMs == 0L -> getString(R.string.acc_watch_status_waiting)
@@ -100,5 +149,6 @@ class PartnerReportActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_MAILBOX = "mailbox"
+        private const val MENU_CODE = 1
     }
 }

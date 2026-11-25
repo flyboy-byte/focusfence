@@ -8,6 +8,13 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 _No changes._
 
+## v2.19.1-accountable
+
+### Fixed
+- Join with an invite paste box; release 2.19.1 (`96d4423`, [#85](https://github.com/flyboy-byte/focusfence/pull/85))
+
+_Undo any line with `git revert <commit>`._
+
 ## v2.19.0-accountable
 
 ### Changed

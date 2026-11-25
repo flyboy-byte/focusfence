@@ -15,7 +15,16 @@
             app:title="@string/acc_title" />
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- D-035: the same report page an email partner reads, from the server; fills the screen when there is one. -->
+    <WebView
+        android:id="@+id/reportWeb"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/reportScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -30,6 +39,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
+
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

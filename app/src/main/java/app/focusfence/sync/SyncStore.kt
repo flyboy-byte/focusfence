@@ -139,6 +139,8 @@ object SyncStore {
         /** Recent alerts, newest last: "t\ttext" per line. */
         val alerts: String,
         val staleNotified: Boolean,
+        /** D-035: this person's report on the server (/p/{token}#k=key), the same page an email partner reads. */
+        val reportUrl: String = "",
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -181,6 +183,7 @@ object SyncStore {
             digest = m["digest"] as? String,
             alerts = m["alerts"] as? String ?: "",
             staleNotified = m["stale"] == true,
+            reportUrl = m["report_url"] as? String ?: "",
         )
     }.sortedBy { it.addedMs }
 
@@ -190,6 +193,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
                 "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
+                "report_url" to w.reportUrl,
             )),
         ).commit()
     }

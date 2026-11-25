@@ -89,7 +89,7 @@ class Config(
 @Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null, val kind: String? = null)
 @Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
 @Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
-@Serializable data class AcceptResponse(val ownerId: String, val ownerName: String)
+@Serializable data class AcceptResponse(val ownerId: String, val ownerName: String, val reportUrl: String = "")
 @Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long)
 @Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "")
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val app: List<AppPartnerInfo> = emptyList())
@@ -340,11 +340,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (owner.id == me.id) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("that's this phone's own invite"))
             if (owner.partners.size + owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("partner limit"))
             val name = req.name.filter { !it.isISOControl() }.trim().take(60).ifEmpty { me.label.ifEmpty { "Partner" } }
+            val token = newToken()
             store.updateDevice(owner.id) { d ->
                 d.invites = d.invites.filter { it.linkHash != invite.linkHash }
-                d.appPartners = d.appPartners.filter { it.deviceId != me.id } + Store.AppPartner(java.util.UUID.randomUUID().toString(), me.id, name, cfg.now(), invite.id)
+                d.appPartners = d.appPartners.filter { it.deviceId != me.id } + Store.AppPartner(java.util.UUID.randomUUID().toString(), me.id, name, cfg.now(), invite.id, token)
             }
-            call.respond(AcceptResponse(owner.id, owner.label))
+            // The same report an email partner reads: same page, same sealed data, same screenshots. The key stays on the phone.
+            call.respond(AcceptResponse(owner.id, owner.label, "${cfg.publicUrl}/p/$token"))
         }
 
         post("/v1/partners/list") {
@@ -667,7 +669,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/p/{token}/leave") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@post call.respond(HttpStatusCode.NotFound)
-            store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != partner.id } }
+            store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != partner.id }; d.appPartners = d.appPartners.filter { it.id != partner.id } }
             call.respondText(Web.message("Done", "You're no longer their accountability partner."), ContentType.Text.Html)
         }
     }

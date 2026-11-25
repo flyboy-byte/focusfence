@@ -52,6 +52,15 @@ h1{font-size:1.4em}h2{font-size:1.1em;margin-top:1.6em}
 input,button{font:inherit;padding:8px;margin:4px 0;border-radius:8px;border:1px solid #bbb}
 button{background:#3f51b5;color:#fff;border:0;padding:8px 16px}
 label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px 12px 2px 0}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.seg button{background:transparent;color:inherit;border:1px solid #bbb;border-radius:999px;padding:6px 14px}
+.seg button.on{background:#3f51b5;border-color:#3f51b5;color:#fff}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0}
+.stat{border:1px solid #ddd;border-radius:12px;padding:10px 12px}.stat b{display:block;font-size:1.4em}
+table.sort{width:100%}table.sort th{text-align:left;cursor:pointer;padding:6px 12px 6px 0;border-bottom:1px solid #ddd;white-space:nowrap}
+table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:anywhere}table.sort td.n,table.sort th.n{text-align:right}
+.filter{width:100%;box-sizing:border-box}.day{margin:14px 0 4px;font-weight:600}
+@media (prefers-color-scheme:dark){body{background:#131316;color:#e4e1e6}.card,.stat{border-color:#3a3a40}table.sort th,table.sort td{border-color:#2e2e33}
+.muted{color:#a0a0a8}input{background:#1e1e22;color:inherit;border-color:#444}.ok{color:#6fd08c}.bad{color:#ffb4ab}}
 </style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
     fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null): String = page(
@@ -104,8 +113,9 @@ label{display:block;margin-top:8px}table{border-collapse:collapse}td{padding:2px
         append("<div id='report' class='card'><p class='muted'>Opening the encrypted report…</p></div>")
         append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
         append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
-        append("<h2>Text alerts</h2>")
-        when {
+        // An app partner (no email, D-035) gets alerts in their own app: no texts section.
+        if (partner.email.isNotEmpty()) append("<h2>Text alerts</h2>")
+        if (partner.email.isNotEmpty()) when {
             !smsAvailable -> append("<p class='muted'>Text alerts aren't set up on this server.</p>")
             partner.phoneVerified -> append(
                 "<p>Alerts are texted to ${esc(mask(partner.phone.orEmpty()))}.</p>" +
