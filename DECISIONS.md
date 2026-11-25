@@ -574,3 +574,28 @@ From Logan's reactions to a mockup and to 2.14: "plain in a good way", not gener
   (`SyncWorker.pushAlertsNow`, under goAsync) instead of waiting for the next sync: partners hear "Uninstall
   protection is being turned off. Focus Fence may be uninstalled next" within seconds. Offline, the "phone went
   silent" alert is still the backstop. No dead man's switch beyond that.
+
+## D-035 — One invite, every phone enrolled, the server knows who watches whom; admin sign-in is one factor
+
+**Date:** 2026-11-25. **Status:** built, 🧪 until seen on two phones.
+
+**Why.** Adding a second phone took five separate paths with their own rules (enrollment code, email invite, pairing
+key plus typing the server address, group invite, admin sign-in), and the watching phone left no trace on the server, so
+nobody could tell whether it had worked. Logan: "simplify the whole process of accounts on the server", keep all three
+partner kinds, "don't worry about breaking users, I'm the only user".
+
+**Decided.**
+- One partner invite. In a browser it's the email partner; pasted into the app it enrolls that phone (the invite is its
+  credential) and pairs it. The "Pair with a partner's app" button and typing a pairing key are gone.
+- Every phone on the server is enrolled. Only an enrolled phone opens a new mailbox, which closes the anonymous path.
+- The server records app partners (`Device.appPartners`) and the admin page shows them. Logan chose this over keeping
+  the pairing blind: he runs the server and is its only user. Report contents stay sealed (D-023).
+- Groups stay. A group invite carries an enroll-only server invite, so members enroll too.
+- *Join with an invite* takes any invite, including the admin page's People message. Server → Save connects at once
+  and says whether it worked.
+- Admin sign-in is an emailed code **or** an authenticator code, not both (Logan, same day). The authenticator is
+  optional and set up from Activity; recovery codes work in its place.
+
+**Not kept.** Pairings and invites made before this: old app versions can't open new mailboxes, and old pairing-key
+messages aren't accepted by Join.
+

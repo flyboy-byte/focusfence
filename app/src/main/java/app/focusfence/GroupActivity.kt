@@ -115,9 +115,12 @@ class GroupActivity : AppCompatActivity() {
         val createName = field(getString(R.string.group_name_hint)); c.addView(createName)
         val createRole = roleChoice(); c.addView(createRole)
         c.addView(button(getString(R.string.group_create)) {
-            when (val r = GroupManager.create(this, createName.value(), createRole.role())) {
-                is GroupManager.Result.Error -> toast(r.message)
-                is GroupManager.Result.Ok -> { render(); showInvite(r.invite.orEmpty()) }
+            val n = createName.value(); val role = createRole.role()
+            bg({ GroupManager.create(this, n, role) }) { r ->
+                when (r) {
+                    is GroupManager.Result.Error -> toast(r.message)
+                    is GroupManager.Result.Ok -> { render(); showInvite(r.invite.orEmpty()) }
+                }
             }
         })
 
@@ -126,11 +129,22 @@ class GroupActivity : AppCompatActivity() {
         val joinName = field(getString(R.string.group_name_hint)); c.addView(joinName)
         val joinRole = roleChoice(); c.addView(joinRole)
         c.addView(button(getString(R.string.group_join)) {
-            when (val r = GroupManager.join(this, invite.value(), joinName.value(), joinRole.role())) {
-                is GroupManager.Result.Error -> toast(r.message)
-                is GroupManager.Result.Ok -> render()
+            val text = invite.value(); val n = joinName.value(); val role = joinRole.role()
+            bg({ GroupManager.join(this, text, n, role) }) { r ->
+                when (r) {
+                    is GroupManager.Result.Error -> toast(r.message)
+                    is GroupManager.Result.Ok -> render()
+                }
             }
         })
+    }
+
+    /** Group calls that may talk to the server run off the main thread. */
+    private fun <T> bg(work: () -> T, done: (T) -> Unit) {
+        kotlin.concurrent.thread(name = "group") {
+            val r = work()
+            runOnUiThread { if (!isDestroyed) done(r) }
+        }
     }
 
     private fun showInvite(invite: String) {
@@ -185,7 +199,7 @@ class GroupActivity : AppCompatActivity() {
         if (mine.role == Group.Role.FILTERED && state.members.size > 1) {
             c.addView(button(getString(R.string.group_viewers)) { chooseViewers(state, me.memberId) })
         }
-        c.addView(button(getString(R.string.group_share_invite)) { GroupManager.inviteText(this)?.let { showInvite(it) } })
+        c.addView(button(getString(R.string.group_share_invite)) { bg({ GroupManager.inviteText(this) }) { it?.let(::showInvite) } })
         if (view.creatorId == me.memberId) {
             if (view.closed) c.addView(text(getString(R.string.group_closed)))
             else c.addView(button(getString(R.string.group_close)) { GroupManager.close(this); toastQueued(); render() })

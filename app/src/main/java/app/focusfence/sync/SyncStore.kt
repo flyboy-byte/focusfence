@@ -56,6 +56,11 @@ object SyncStore {
      * partner sees what happens after they're set up. The server doesn't count
      * the jump to the first batch's seq as a gap.
      */
+    /** A new server address means a new enrollment there: this phone's id belongs to the old server. */
+    fun clearEnrollment(context: Context) {
+        prefs(context).edit().remove(KEY_DEVICE).commit()
+    }
+
     fun setEnrolled(context: Context, deviceId: String?, startSeq: Long) {
         prefs(context).edit().putString(KEY_DEVICE, deviceId).putLong(KEY_SEQ, startSeq).putString(KEY_HASH, "GENESIS").commit()
     }
@@ -115,6 +120,9 @@ object SyncStore {
         val lastDigestMs: Long,
         val alertSeq: Long,
         val boxReady: Boolean,
+        /** D-035: the invite this pairing went out with; [pending] until a phone takes it. Nothing is sent while pending. */
+        val inviteId: String = "",
+        val pending: Boolean = false,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -143,6 +151,8 @@ object SyncStore {
             lastDigestMs = m["digest_at"] as? Long ?: 0,
             alertSeq = m["alert_seq"] as? Long ?: 0,
             boxReady = m["box"] == true,
+            inviteId = m["invite"] as? String ?: "",
+            pending = m["pending"] == true,
         )
     }.sortedBy { it.createdMs }
 
@@ -152,6 +162,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to p.code, "name" to p.name, "created" to p.createdMs,
                 "digest_at" to p.lastDigestMs, "alert_seq" to p.alertSeq, "box" to p.boxReady,
+                "invite" to p.inviteId, "pending" to p.pending,
             )),
         ).commit()
     }

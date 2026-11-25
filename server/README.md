@@ -99,7 +99,7 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_DATA_DIR` | `./data` | Flat-file store |
 | `FF_STALE_MINUTES` | `240` | Silence before "phone went silent". Long enough for overnight Doze. |
 | `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
-| `FF_ADMIN_EMAILS` | — | Comma list. Turns on the emailed-link admin page for these addresses; off when empty |
+| `FF_ADMIN_EMAILS` | — | Comma list. Turns on the admin page for these addresses; off when empty. Sign in with an emailed code, or with an authenticator code once one is set up (Activity tab): either one, not both |
 | `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
 | `FF_SMS_PROVIDER` | `none` | `twilio`, `telnyx`, or `dev` |
 | `FF_SMS_FROM` | — | Sending number |

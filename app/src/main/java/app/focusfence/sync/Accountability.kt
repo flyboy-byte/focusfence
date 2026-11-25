@@ -13,8 +13,10 @@ import org.json.JSONObject
  */
 object Accountability {
 
-    class Invite(val code: String, val joinUrl: String, val expiresMs: Long)
-    class Partner(val id: String, val name: String, val email: String, val sms: Boolean)
+    class Invite(val link: String, val expiresMs: Long)
+    class Partner(val id: String, val name: String, val email: String, val sms: Boolean, val inviteId: String = "")
+    class AppPartner(val id: String, val name: String, val inviteId: String)
+    class Partners(val email: List<Partner>, val app: List<AppPartner>)
 
     private fun api(ctx: Context): Api {
         val url = SyncStore.serverUrl(ctx)
@@ -23,13 +25,17 @@ object Accountability {
         return Api(url)
     }
 
-    /** Registers this phone's key with the server, once. */
-    fun ensureEnrolled(ctx: Context): String {
+    /** Registers this phone's key with the server, once: with the server's enrollment code, or with an [invite] (D-035). */
+    fun ensureEnrolled(ctx: Context, invite: String? = null): String {
         SyncStore.deviceId(ctx)?.let { return it }
         val code = SyncStore.enrollCode(ctx)
         val r = api(ctx).post(
             "/v1/enroll", JSONObject().put("publicKeySpki", DeviceKey.publicSpkiB64()),
-            if (code.isNotEmpty()) mapOf("X-FF-Enroll" to code) else emptyMap(),
+            when {
+                invite != null -> mapOf("X-FF-Invite" to invite)
+                code.isNotEmpty() -> mapOf("X-FF-Enroll" to code)
+                else -> emptyMap()
+            },
         )
         val id = r.body?.optString("deviceId").orEmpty()
         check(r.code != 401) { "This server needs an enrollment code. Ask whoever runs it, then enter it under Server." }
@@ -43,6 +49,10 @@ object Accountability {
         return id
     }
 
+    /** The body that opens a new mailbox: only an enrolled phone may (D-035). */
+    fun mailboxRequest(ctx: Context, mailboxId: String, tokenHash: String): JSONObject =
+        signed(ctx, "mailbox", mailboxId).put("tokenHash", tokenHash)
+
     private fun signed(ctx: Context, action: String, extra: String = "", partnerId: String? = null): JSONObject {
         val id = ensureEnrolled(ctx)
         val t = System.currentTimeMillis()
@@ -54,27 +64,105 @@ object Accountability {
         }
     }
 
-    fun createInvite(ctx: Context): Invite {
+    /**
+     * D-035: one invite for every kind of partner. Opened in a browser it's the email partner's join page; pasted into
+     * Focus Fence on another phone it enrolls that phone and pairs it ([join]). The pairing waits here, unused, until
+     * the server says which way the invite went ([resolvePending]).
+     */
+    fun createInvite(ctx: Context, name: String): Invite {
         val r = api(ctx).post("/v1/invites", signed(ctx, "invite"))
         val b = r.body
         check(r.code == 200 && b != null) { "Couldn't create an invite (HTTP ${r.code})." }
-        log("invite_created", null)
-        // The report key rides after '#', which browsers never send to the server (D-023): the partner's browser keeps it
-        // and opens the sealed report; the server only ever holds ciphertext.
-        return Invite(b.getString("code"), b.getString("joinUrl") + "#k=" + SyncStore.reportKey(ctx), b.getLong("expiresMs"))
+        val key = Pairing.encode(Pairing.generateSecret())
+        EventLog.init(ctx)
+        SyncStore.saveOwn(ctx, SyncStore.OwnPairing(
+            code = key, name = name.trim().take(40), createdMs = System.currentTimeMillis(),
+            lastDigestMs = 0, alertSeq = EventLog.currentSeq(EventLog.Channel.ACTIVITY), boxReady = false,
+            inviteId = b.optString("inviteId"), pending = true,
+        ))
+        log("invite_created", name)
+        // The report key and pairing key ride after '#', which browsers never send to the server (D-023).
+        return Invite(app.focusfence.dns.InviteLink.partnerLink(b.getString("joinUrl"), SyncStore.reportKey(ctx), key), b.getLong("expiresMs"))
     }
+
+    /** A group's way onto this server for its new members (D-035): enrolls a phone, never makes a partner. */
+    fun enrollLink(ctx: Context): String {
+        val r = api(ctx).post("/v1/invites", signed(ctx, "invite").put("kind", "enroll"))
+        check(r.code == 200 && r.body != null) { "Couldn't create an invite (HTTP ${r.code})." }
+        return r.body!!.getString("joinUrl")
+    }
+
+    /**
+     * D-035: the other end of an invite, on the partner's phone. Points this phone at the invite's server, enrolls it
+     * with the invite, tells the server it took the invite, and starts watching. Returns the watched person's name.
+     */
+    fun join(ctx: Context, text: String, myName: String): String {
+        val inv = app.focusfence.dns.InviteLink.parse(text) ?: error("That doesn't look like an invite. Paste the whole message.")
+        val current = SyncStore.serverUrl(ctx).trimEnd('/')
+        if (SyncStore.deviceId(ctx) != null && current != inv.server.trimEnd('/')) {
+            error("This phone is connected to $current, and the invite is for ${inv.server}.")
+        }
+        SyncStore.setServerUrl(ctx, inv.server)
+        return when (inv) {
+            is app.focusfence.dns.InviteLink.Parsed.Server -> {
+                SyncStore.setEnrollCode(ctx, inv.code)
+                ensureEnrolled(ctx)
+                ""
+            }
+            is app.focusfence.dns.InviteLink.Parsed.Partner -> {
+                val key = inv.pairingKey ?: error("This invite is from an older version of Focus Fence. Ask for a new one.")
+                ensureEnrolled(ctx, invite = inv.secret)
+                val body = signed(ctx, "accept", app.focusfence.dns.Pairing.tokenHash(inv.secret)).put("secret", inv.secret).put("name", myName.trim().take(60))
+                val r = api(ctx).post("/v1/invites/accept", body)
+                check(r.code != 404) { "That invite was already used or has expired. Ask for a new one." }
+                check(r.code != 409) { r.body?.optString("error").orEmpty().ifEmpty { "That invite can't be used here." } }
+                check(r.code == 200) { "Couldn't join (HTTP ${r.code})." }
+                val owner = r.body?.optString("ownerName").orEmpty().ifEmpty { "Partner" }
+                check(addWatch(ctx, owner, key)) { "The invite's pairing key doesn't check out." }
+                log("invite_joined", owner)
+                owner
+            }
+        }
+    }
+
+    /**
+     * Pending pairings (an invite not used yet) become real when the server says a phone took that invite, and go
+     * when it went to an email partner instead or expired. Run from [SyncWorker].
+     */
+    fun resolvePending(ctx: Context) {
+        val pending = SyncStore.ownPairings(ctx).filter { it.pending }
+        if (pending.isEmpty() || SyncStore.deviceId(ctx) == null) return
+        val all = partners(ctx)
+        val now = System.currentTimeMillis()
+        for (p in pending) {
+            when {
+                all.app.any { it.inviteId == p.inviteId } -> SyncStore.saveOwn(ctx, p.copy(pending = false))
+                all.email.any { it.inviteId == p.inviteId } || now - p.createdMs > PENDING_MS -> SyncStore.removeOwn(ctx, p)
+            }
+        }
+    }
+
+    private const val PENDING_MS = 25 * 3_600_000L
 
     /** A link that gives a partner's browser this phone's report key again (new device, cleared browser). */
     fun keyLink(ctx: Context): String = SyncStore.serverUrl(ctx) + "/key#k=" + SyncStore.reportKey(ctx)
 
-    fun partners(ctx: Context): List<Partner> {
-        if (SyncStore.deviceId(ctx) == null) return emptyList()
+    fun partners(ctx: Context): Partners {
+        if (SyncStore.deviceId(ctx) == null) return Partners(emptyList(), emptyList())
         val r = api(ctx).post("/v1/partners/list", signed(ctx, "partners"))
-        val arr = r.body?.optJSONArray("partners") ?: return emptyList()
-        return (0 until arr.length()).map { i ->
-            val p = arr.getJSONObject(i)
-            Partner(p.getString("id"), p.getString("name"), p.getString("email"), p.optBoolean("sms"))
-        }
+        check(r.code == 200) { "Couldn't load partners (HTTP ${r.code})." }
+        val arr = r.body?.optJSONArray("partners")
+        val app = r.body?.optJSONArray("app")
+        return Partners(
+            (0 until (arr?.length() ?: 0)).map { i ->
+                val p = arr!!.getJSONObject(i)
+                Partner(p.getString("id"), p.getString("name"), p.getString("email"), p.optBoolean("sms"), p.optString("inviteId"))
+            },
+            (0 until (app?.length() ?: 0)).map { i ->
+                val p = app!!.getJSONObject(i)
+                AppPartner(p.getString("id"), p.getString("name"), p.optString("inviteId"))
+            },
+        )
     }
 
     /** The server tells the removed partner; unlinking is never silent. */
@@ -82,20 +170,6 @@ object Accountability {
         val r = api(ctx).post("/v1/partners/unlink", signed(ctx, "unlink", partner.id, partner.id))
         check(r.code == 200) { "Couldn't remove the partner (HTTP ${r.code})." }
         log("partner_removed", partner.name)
-    }
-
-    /** A new app-to-app pairing; returns the key to send to the partner. */
-    fun newPairing(ctx: Context, name: String): String {
-        val code = Pairing.encode(Pairing.generateSecret())
-        EventLog.init(ctx)
-        SyncStore.saveOwn(ctx, SyncStore.OwnPairing(
-            code = code, name = name.trim().take(40), createdMs = System.currentTimeMillis(),
-            lastDigestMs = 0, alertSeq = EventLog.currentSeq(EventLog.Channel.ACTIVITY), boxReady = false,
-        ))
-        log("pairing_created", name)
-        Sync.schedule(ctx)
-        Sync.kick(ctx)
-        return code
     }
 
     /**
@@ -112,6 +186,12 @@ object Accountability {
         // Best effort: if this fails, their app still flags the silence (STALE_AFTER_MS).
         runCatching {
             api(ctx).post("/v1/mailbox/${k.mailboxId}/msgs", JSONObject().put("c", app.focusfence.dns.B64.encode(sealed)), mapOf("X-FF-Token" to k.token))
+        }
+        // The server forgets the link too (D-035), so the admin page stops showing them as a partner.
+        if (p.inviteId.isNotEmpty()) runCatching {
+            partners(ctx).app.firstOrNull { it.inviteId == p.inviteId }?.let { ap ->
+                api(ctx).post("/v1/partners/unlink", signed(ctx, "unlink", ap.id, ap.id))
+            }
         }
         log("pairing_removed", p.name)
         SyncStore.removeOwn(ctx, p)

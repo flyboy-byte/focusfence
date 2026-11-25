@@ -285,10 +285,17 @@ class ServerTest {
 
     @Test
     fun blindMailboxEndToEnd() = run { http ->
-        // Owner's phone side.
+        // Owner's phone side. D-035: only an enrolled phone opens a new mailbox.
         val secret = Pairing.generateSecret()
         val k = Pairing.derive(secret)
-        assertEquals(HttpStatusCode.OK, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"${Pairing.tokenHash(k.token)}"}""").status)
+        val th = Pairing.tokenHash(k.token)
+        assertEquals(HttpStatusCode.NotFound, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"$th"}""").status, "no device, no mailbox")
+        val id = http.enroll()
+        val sig = sign(Integrity.requestMessage("mailbox", id, clock, k.mailboxId))
+        assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"$th","deviceId":"$id","t":$clock,"signature":"${sign(Integrity.requestMessage("mailbox", id, clock, "other"))}"}""").status)
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"$th","deviceId":"$id","t":$clock,"signature":"$sig"}""").status)
+        // Once it exists, the other side re-checks it with the token hash alone.
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"$th"}""").status)
         val sealed = Pairing.seal(k.enc, """{"kind":"alert","text":"Filter turned off"}""".toByteArray(), k.mailboxId.toByteArray())
         val post = http.post("/v1/mailbox/${k.mailboxId}/msgs") {
             header("X-FF-Token", k.token)
@@ -314,6 +321,51 @@ class ServerTest {
         assertEquals(HttpStatusCode.Conflict, http.postJson("/v1/mailbox/${k.mailboxId}", """{"tokenHash":"${Pairing.tokenHash("someone else")}"}""").status)
         assertEquals(HttpStatusCode.BadRequest, http.postJson("/v1/mailbox/not-hex", """{"tokenHash":"x"}""").status)
         assertNull(Pairing.open(Pairing.derive(Pairing.generateSecret()).enc, Base64.getDecoder().decode(msgs.single().c), k.mailboxId.toByteArray()))
+    }
+
+    @Test
+    fun anInviteOpenedInTheAppEnrollsAndPairsThatPhone() = run(Config(publicUrl = "https://ff.test", enrollToken = "s3cret", now = { clock })) { http ->
+        // D-035. The owner enrolled with the server's code; the partner phone has only the invite.
+        val ownerSpki = Base64.getEncoder().encodeToString(keys.public.encoded)
+        val owner = json.decodeFromString(EnrollResponse.serializer(), http.post("/v1/enroll") { header("X-FF-Enroll", "s3cret"); contentType(ContentType.Application.Json); setBody("""{"publicKeySpki":"$ownerSpki"}""") }.bodyAsText()).deviceId
+        store.updateDevice(owner) { it.label = "Logan" }
+        val inv = http.invite(owner)
+        val secret = inv.joinUrl.substringAfter("/i/")
+        assertTrue(inv.inviteId.isNotEmpty())
+
+        val partnerKeys = java.security.KeyPairGenerator.getInstance("EC").apply { initialize(java.security.spec.ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+        val pSpki = Base64.getEncoder().encodeToString(partnerKeys.public.encoded)
+        suspend fun enrollWith(h: String, v: String) = http.post("/v1/enroll") { header(h, v); contentType(ContentType.Application.Json); setBody("""{"publicKeySpki":"$pSpki"}""") }
+        assertEquals(HttpStatusCode.Unauthorized, enrollWith("X-FF-Invite", "x".repeat(32)).status, "a made-up invite is no credential")
+        val r = enrollWith("X-FF-Invite", secret)
+        assertEquals(HttpStatusCode.OK, r.status)
+        val partner = json.decodeFromString(EnrollResponse.serializer(), r.bodyAsText()).deviceId
+
+        fun psign(action: String, extra: String): String = java.security.Signature.getInstance("SHA256withECDSA").run {
+            initSign(partnerKeys.private); update(Integrity.requestMessage(action, partner, clock, extra)); Base64.getEncoder().encodeToString(sign())
+        }
+        val body = """{"deviceId":"$partner","t":$clock,"signature":"${psign("accept", Integrity.sha256(secret))}","secret":"$secret","name":"Sam"}"""
+        val acc = http.postJson("/v1/invites/accept", body)
+        assertEquals(HttpStatusCode.OK, acc.status)
+        assertEquals("Logan", json.decodeFromString(AcceptResponse.serializer(), acc.bodyAsText()).ownerName)
+        assertEquals(HttpStatusCode.NotFound, http.postJson("/v1/invites/accept", body).status, "single use")
+
+        // The owner's phone sees which invite became an app partner, and can remove it.
+        val list = json.decodeFromString(PartnersResponse.serializer(), http.postJson("/v1/partners/list", signed("partners", owner)).bodyAsText())
+        val ap = list.app.single()
+        assertEquals("Sam" to inv.inviteId, ap.name to ap.inviteId)
+        assertEquals(partner, store.device(owner)!!.appPartners.single().deviceId, "the server knows who watches whom")
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/partners/unlink", signed("unlink", owner, ap.id, partnerId = ap.id)).status)
+        assertTrue(store.device(owner)!!.appPartners.isEmpty())
+
+        // A group's enroll-only invite lets a phone on, but isn't a partner invite in the app or in a browser.
+        val g = json.decodeFromString(InviteResponse.serializer(), http.postJson("/v1/invites", signed("invite", owner).dropLast(1) + ""","kind":"enroll"}""").bodyAsText())
+        val gs = g.joinUrl.substringAfter("/i/")
+        assertEquals(HttpStatusCode.NotFound, http.get("/i/$gs").status)
+        val gBody = """{"deviceId":"$partner","t":$clock,"signature":"${psign("accept", Integrity.sha256(gs))}","secret":"$gs","name":"Sam"}"""
+        assertEquals(HttpStatusCode.NotFound, http.postJson("/v1/invites/accept", gBody).status)
+        store.deleteDevice(partner)
+        assertEquals(HttpStatusCode.OK, enrollWith("X-FF-Invite", gs).status)
     }
 
     // ---- audit fixes (extraction session, 2026-11-23) ------------------------------------------------

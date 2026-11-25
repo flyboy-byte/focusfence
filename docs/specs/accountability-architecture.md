@@ -131,7 +131,8 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
 | Endpoint | Purpose |
 |---|---|
 | `POST /v1/enroll` | Enrollment code + device public key → device id |
-| `POST /v1/invites` | Device creates a partner invite → one-time code (see *Partner linking*) |
+| `POST /v1/invites` | Device creates a partner invite → one-time link (see *Partner linking*) |
+| `POST /v1/invites/accept` | An enrolled phone takes an invite and becomes that phone's app partner (D-035) |
 | `GET/POST /join` | Partner redeems the code on the web |
 | `POST/GET /v1/mailbox/{id}[/msgs]` | Blind mailbox for app-to-app pairing |
 | `POST /v1/batches` | Signed batch: `{device, first_seq, last_seq, prev_hash, records[]}` → ack `{last_seq}` |
@@ -147,27 +148,32 @@ Small and self-hostable. One process, PostgreSQL, filesystem/S3 for images. *A K
 - An optional LLM summary runs over *aggregated counts only* (handoff §15), never per-event or
   per-image.
 
-### Partner linking — two equal options (implemented, 🧪)
+### Partner linking — one invite (D-035, 🧪)
 
-**Email / web (default).** The owner taps *Invite a partner*; the phone (enrolled with a
-hardware-backed P-256 key) gets a one-time code from the server — 8 chars, 24 h, single use,
-max 5 live, join attempts rate-limited — and shares a join link. The partner enters the code,
-name and email at `/join` (and optionally a phone number for texts), and gets a private report
-page `/p/{token}`, alert emails, and a weekly report.
+The owner's phone (enrolled with a hardware-backed P-256 key) taps *Invite a partner* and names who it's for. The server
+makes a one-time invite (24 h, single use, max 5 live) and the phone shares one link:
+`https://server/i/SECRET#k=REPORT_KEY&p=PAIRING_KEY`. Browsers never send the part after `#`, so the server holds only
+SECRET's hash.
 
-**App to app (pairing key).** If both people use the app, the owner taps *Pair with a partner's
-app*. The phone makes a random 128-bit key and shows it as a 27-character code with a check
-character (`dns/Pairing`: typos and swapped neighbours are rejected at entry). The owner sends it,
-with the server address, over any message app; the partner types it into *I'm a partner for*.
-From the key both apps derive, independently:
-- a mailbox id (where they meet on the server),
-- an access token (the server stores only its SHA-256, so a server breach can't post),
-- an AES-256-GCM key (the server relays ciphertext it can't read), and
-- a seed for rotating 8-digit unlock codes (10-min steps, ±1 for skew). The partner's app shows
-  the current code; the owner's phone accepts it offline wherever a partner PIN is required.
+- **Opened in a browser:** the email/web partner. They enter name and email at the join page (optionally a phone number
+  for texts), confirm the address, and get a private report page, alert emails and a weekly report.
+- **Pasted into Focus Fence** (*Partners → Join with an invite*): the app sets the server from the link, enrolls with
+  SECRET as its credential (`X-FF-Invite`, no enrollment code needed), calls `/v1/invites/accept`, and starts watching
+  with the pairing key. The server records the pair (`Device.appPartners`), so the admin page shows who watches whom;
+  reports stay sealed in the pairing mailbox.
 
-The owner's phone posts instant alerts and a digest every 6 h; the partner's app polls every
-15 min, notifies on alerts, and flags 14 h of silence.
+The pairing key works as before (`dns/Pairing`): both apps derive a mailbox id, an access token (the server stores only
+its SHA-256), an AES-256-GCM key, and a seed for rotating 8-digit unlock codes. Until the server says which way the
+invite went, the owner's pairing is *pending* and sends nothing; it becomes active, or is dropped (used in a browser, or
+25 h old), on the next sync.
+
+Every phone on the server is enrolled. Opening a new mailbox needs a signed request from an enrolled phone; reading and
+writing an existing one needs only its token. A group invite carries an enroll-only server invite (`kind: enroll`), so a
+new member's phone can enroll; it never works as a partner invite. The admin page's *People* message (server address +
+enrollment code) is pasted into the same *Join with an invite* box.
+
+The owner's phone posts instant alerts and a digest every 6 h; the partner's app polls every 15 min, notifies on alerts,
+and flags 14 h of silence.
 
 **Removing a partner is never silent.** Both paths go through the `REMOVE_PARTNER` friction guard,
 log a `svc partner` record (which other partners are alerted about), and tell the removed partner:

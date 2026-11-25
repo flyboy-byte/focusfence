@@ -73,7 +73,12 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                     error = error ?: "group: ${e.javaClass.simpleName}: ${e.message}"
                 }
             }
-            for (p in SyncStore.ownPairings(ctx)) {
+            try {
+                Accountability.resolvePending(ctx)
+            } catch (e: Exception) {
+                error = error ?: "invites: ${e.javaClass.simpleName}: ${e.message}"
+            }
+            for (p in SyncStore.ownPairings(ctx).filter { !it.pending }) {
                 try {
                     sendToPartner(ctx, api, p, now)
                 } catch (e: Exception) {
@@ -163,7 +168,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         var p = start
         val k = p.keys
         if (!p.boxReady) {
-            val r = api.post("/v1/mailbox/${k.mailboxId}", JSONObject().put("tokenHash", Pairing.tokenHash(k.token)))
+            val r = api.post("/v1/mailbox/${k.mailboxId}", Accountability.mailboxRequest(ctx, k.mailboxId, Pairing.tokenHash(k.token)))
             if (r.code != 200) throw IllegalStateException("mailbox HTTP ${r.code}")
             p = p.copy(boxReady = true)
             SyncStore.saveOwn(ctx, p)
