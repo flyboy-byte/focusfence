@@ -65,7 +65,7 @@ class UpdateCheckTest {
     @Test
     fun checksEveryThreeHours() {
         val gap = UpdateCheck.CHECK_EVERY_MS
-        assertEquals(3 * 3_600_000L, gap)
+        assertEquals(20 * 60_000L, gap)
         assertTrue(UpdateCheck.isDue(0, 1_000))
         assertFalse(UpdateCheck.isDue(10 * gap, 10 * gap + gap - 1))
         assertTrue(UpdateCheck.isDue(10 * gap, 11 * gap))

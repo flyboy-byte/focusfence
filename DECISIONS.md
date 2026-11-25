@@ -496,6 +496,9 @@ Settings. Now it works like Tokalot's: a check when the app opens and when the s
 (30 minutes after a failure), with WorkManager every 6 hours as a backstop. Still one notification per version and
 the Home banner; nothing downloads without a tap.
 
+Amended 2026-11-25: every launch checks, then at most every 20 minutes (Logan's call). He opened 2.17 an hour after
+2.18 shipped and got nothing, because the last check was under 3 hours old.
+
 ## D-030 — No downgrades in the app; a bad release is fixed by rolling forward
 
 **Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted

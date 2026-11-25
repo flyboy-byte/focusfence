@@ -22,8 +22,8 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 /**
- * Self-update, notify-and-tap (decided 2026-11-24): ask GitHub for the latest release at most every 3 hours, when
- * the app is opened, when the screen comes on (the VPN service is always running), and from a WorkManager backstop.
+ * Self-update, notify-and-tap (decided 2026-11-24): ask GitHub for the latest release on every launch, and at
+ * most every 20 minutes otherwise: when the screen comes on (the VPN service is always running), and from a WorkManager backstop.
  * If it's newer, Home shows a banner and one notification goes out per version. Timing copied from Tokalot after
  * 2.16 sat unnoticed: a once-a-day background job alone wasn't enough. Nothing downloads until the owner taps it ([UpdateActivity]), and Android's own install
  * screen still asks. On by default with a Settings switch: it is the one request the app makes that the owner didn't
@@ -46,17 +46,28 @@ object Updates {
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var lastAttempt = 0L
+    @Volatile private var launchChecked = false
+
+    /**
+     * FocusFenceApp calls this each time the app comes to the foreground (cold start or back from another app, not
+     * a rotation or a move between our screens), so Home's next check always runs.
+     */
+    fun launched() { launchChecked = false }
 
     /**
      * Checks on a background thread if one is due, then calls [onDone] (on that thread) with the offer, if any.
-     * Cheap to call often: it returns at once unless the last successful check is 3 hours old, and a failed one
-     * (offline) waits 30 minutes before the next try.
+     * Cheap to call often: it returns at once unless the last successful check is 20 minutes old, and a failed one
+     * (offline) waits 30 minutes before the next try. [opened] from Home: the first call after a launch
+     * ([launched]) always checks.
      */
-    fun checkInBackground(c: Context, onDone: ((UpdateCheck.Offer?) -> Unit)? = null) {
+    fun checkInBackground(c: Context, opened: Boolean = false, onDone: ((UpdateCheck.Offer?) -> Unit)? = null) {
         val app = c.applicationContext
         val now = System.currentTimeMillis()
-        if (!isEnabled(app) || !isDue(app) || now - lastAttempt < RETRY_MS) return
+        if (!isEnabled(app)) return
+        val launch = opened && !launchChecked
+        if (!launch && (!isDue(app) || now - lastAttempt < RETRY_MS)) return
         if (!running.compareAndSet(false, true)) return
+        if (opened) launchChecked = true
         lastAttempt = now
         Thread {
             try {
@@ -95,7 +106,7 @@ object Updates {
             wm.cancelUniqueWork(WORK)
             return
         }
-        // A backstop for when the app is not opened: the 3-hour limit (UpdateCheck.isDue) still applies. UPDATE so phones that scheduled the old 12-hour period pick up the new one.
+        // A backstop for when the app is not opened: the 20-minute limit (UpdateCheck.isDue) still applies. UPDATE so phones that scheduled the old 12-hour period pick up the new one.
         wm.enqueueUniquePeriodicWork(
             WORK, ExistingPeriodicWorkPolicy.UPDATE,
             PeriodicWorkRequestBuilder<UpdateWorker>(6, TimeUnit.HOURS)
