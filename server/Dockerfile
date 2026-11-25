@@ -8,8 +8,10 @@ COPY server server
 COPY app/src/main/java/app/focusfence/dns app/src/main/java/app/focusfence/dns
 RUN ./gradlew -p server installDist --no-daemon -x test
 
-FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S ff && adduser -S -G ff -h /data ff && mkdir -p /data && chown ff:ff /data
+# Not the -alpine variant: that one has no arm64 build.
+FROM eclipse-temurin:17-jre
+RUN groupadd --system ff && useradd --system --gid ff --home-dir /data --shell /usr/sbin/nologin ff \
+    && mkdir -p /data && chown ff:ff /data
 COPY --from=build /src/server/build/install/focusfence-server /opt/focusfence-server
 USER ff
 # 0.0.0.0 INSIDE the container; publish it on 127.0.0.1 or behind a TLS proxy (docker-compose.yml does).
