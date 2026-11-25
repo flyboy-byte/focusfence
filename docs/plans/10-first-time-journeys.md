@@ -16,7 +16,7 @@ are written.
 | 1 | Fresh install, no server | A new person gets from install to "protected" without leaving the app or guessing; Logan confirms on the second phone after a clean install | built, waiting for the clean-install check |
 | 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | built; server-v1.1.0 released 2026-11-25 |
 | 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | built, not yet on a phone |
-| 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | — |
+| 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | built, not yet on a phone |
 | 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | — |
 
 ## 0. Bug hunt (2.21–2.24)
@@ -75,6 +75,18 @@ plain-words network errors (`Accountability.friendly`); a once-per-server note o
 "Leave this server" and moving servers both go through `GuardPolicy.Action.LEAVE_SERVER`, and partners get "This phone
 is leaving the server" (`svc partner server_left`, urgent, pushed before the enrollment is dropped).
 
-## 4–5
+## 4. Pairing partners
+
+Traced 2026-11-25 (the app-partner path was walked on Logan's two phones earlier the same day). Found: on a server
+that can't send email, an invite opened in a browser spent the invite and left the partner waiting for a confirmation
+that could never come; the post-confirm email said only "weekly report and alerts"; app partners were capped at five
+in total with email partners, while email partners alone had five. Logan: a new partner sees the last 7 days (kept);
+a welcome email, yes; five of each kind.
+
+Built: `Notifier.emailAvailable`; without email the invite page and `/join` point to the app and don't spend the
+invite; the welcome email says what alerts and reports to expect and how the key link works; app partners capped at
+five on their own, with a readable error.
+
+## 5
 
 Notes are added here as each section runs.
