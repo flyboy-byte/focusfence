@@ -63,12 +63,13 @@ class UpdateCheckTest {
     }
 
     @Test
-    fun checksOnceADay() {
-        val day = UpdateCheck.CHECK_EVERY_MS
+    fun checksEveryThreeHours() {
+        val gap = UpdateCheck.CHECK_EVERY_MS
+        assertEquals(3 * 3_600_000L, gap)
         assertTrue(UpdateCheck.isDue(0, 1_000))
-        assertFalse(UpdateCheck.isDue(10 * day, 10 * day + day - 1))
-        assertTrue(UpdateCheck.isDue(10 * day, 11 * day))
-        assertTrue("clock went backwards", UpdateCheck.isDue(10 * day, 9 * day))
+        assertFalse(UpdateCheck.isDue(10 * gap, 10 * gap + gap - 1))
+        assertTrue(UpdateCheck.isDue(10 * gap, 11 * gap))
+        assertTrue("clock went backwards", UpdateCheck.isDue(10 * gap, 9 * gap))
     }
 
     @Test

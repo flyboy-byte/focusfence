@@ -14,7 +14,8 @@ object UpdateCheck {
     const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases"
     const val DOWNLOAD_PREFIX = "https://github.com/$REPO/releases/download/"
 
-    const val CHECK_EVERY_MS = 24 * 3_600_000L
+    /** Same as Tokalot: at most every 3 hours, so a release reaches the phone the same day. */
+    const val CHECK_EVERY_MS = 3 * 3_600_000L
 
     data class Asset(val name: String, val url: String, val size: Long)
 
@@ -100,7 +101,7 @@ object UpdateCheck {
             a.name.contains("accountable") &&
             a.url.startsWith(DOWNLOAD_PREFIX + tag + "/")
 
-    /** True when a check is due: never checked, a day has passed, or the clock went backwards. */
+    /** True when a check is due: never checked, [CHECK_EVERY_MS] has passed, or the clock went backwards. */
     fun isDue(lastCheckMs: Long, nowMs: Long): Boolean =
         lastCheckMs <= 0 || nowMs - lastCheckMs >= CHECK_EVERY_MS || nowMs < lastCheckMs
 

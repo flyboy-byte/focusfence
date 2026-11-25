@@ -22,8 +22,10 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 /**
- * Self-update, notify-and-tap (decided 2026-11-24): once a day ask GitHub for the latest release; if it's newer,
- * show one notification. Nothing downloads until the owner taps it ([UpdateActivity]), and Android's own install
+ * Self-update, notify-and-tap (decided 2026-11-24): ask GitHub for the latest release at most every 3 hours, when
+ * the app is opened, when the screen comes on (the VPN service is always running), and from a WorkManager backstop.
+ * If it's newer, Home shows a banner and one notification goes out per version. Timing copied from Tokalot after
+ * 2.16 sat unnoticed: a once-a-day background job alone wasn't enough. Nothing downloads until the owner taps it ([UpdateActivity]), and Android's own install
  * screen still asks. On by default with a Settings switch: it is the one request the app makes that the owner didn't
  * set up, and GitHub sees the phone's IP.
  *
@@ -39,8 +41,46 @@ object Updates {
     private const val WORK = "focusfence_update_check"
     private const val CHANNEL = "app_updates"
     private const val NOTIFICATION_ID = 0x0FF0_0001
+    private const val RETRY_MS = 30 * 60_000L
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val running = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var lastAttempt = 0L
+
+    /**
+     * Checks on a background thread if one is due, then calls [onDone] (on that thread) with the offer, if any.
+     * Cheap to call often: it returns at once unless the last successful check is 3 hours old, and a failed one
+     * (offline) waits 30 minutes before the next try.
+     */
+    fun checkInBackground(c: Context, onDone: ((UpdateCheck.Offer?) -> Unit)? = null) {
+        val app = c.applicationContext
+        val now = System.currentTimeMillis()
+        if (!isEnabled(app) || !isDue(app) || now - lastAttempt < RETRY_MS) return
+        if (!running.compareAndSet(false, true)) return
+        lastAttempt = now
+        Thread {
+            try {
+                val offer = runCatching { fetchOffer(app) }.getOrNull()
+                offer?.let { notifyOnce(app, it) }
+                onDone?.invoke(offer)
+            } finally {
+                running.set(false)
+            }
+        }.start()
+    }
+
+    /** The same check, on the caller's thread (WorkManager's), so the process stays up until it's done. */
+    fun checkBlocking(c: Context) {
+        val app = c.applicationContext
+        if (!isEnabled(app) || !isDue(app)) return
+        if (!running.compareAndSet(false, true)) return
+        lastAttempt = System.currentTimeMillis()
+        try {
+            runCatching { fetchOffer(app) }.getOrNull()?.let { notifyOnce(app, it) }
+        } finally {
+            running.set(false)
+        }
+    }
 
     fun isEnabled(c: Context): Boolean = prefs(c).getBoolean(KEY_ENABLED, true)
 
@@ -55,10 +95,10 @@ object Updates {
             wm.cancelUniqueWork(WORK)
             return
         }
-        // The worker itself enforces once a day (UpdateCheck.isDue); the period is only how often it wakes to ask.
+        // A backstop for when the app is not opened: the 3-hour limit (UpdateCheck.isDue) still applies. UPDATE so phones that scheduled the old 12-hour period pick up the new one.
         wm.enqueueUniquePeriodicWork(
-            WORK, ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<UpdateWorker>(12, TimeUnit.HOURS)
+            WORK, ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<UpdateWorker>(6, TimeUnit.HOURS)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build(),
         )
@@ -171,13 +211,8 @@ object Updates {
 
 class UpdateWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
     override fun doWork(): Result {
-        val c = applicationContext
-        if (!Updates.isEnabled(c) || !Updates.isDue(c)) return Result.success()
-        try {
-            Updates.fetchOffer(c)?.let { Updates.notifyOnce(c, it) }
-        } catch (e: Exception) {
-            // Offline, rate-limited or GitHub down: try again at the next wake, no noise.
-        }
+        // Offline, rate-limited or GitHub down: try again at the next wake, no noise.
+        Updates.checkBlocking(applicationContext)
         return Result.success()
     }
 }

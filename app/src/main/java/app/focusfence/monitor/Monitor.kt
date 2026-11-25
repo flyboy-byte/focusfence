@@ -77,6 +77,7 @@ object Monitor {
                         app.focusfence.sync.Sync.kickIfDue(context)
                         ScreenCapture.onScreenOn()
                         app.focusfence.accessibility.UrlFilterService.onScreenOn()
+                        app.focusfence.update.Updates.checkInBackground(context)
                     }
                     worker.execute { onBattery(context, stickyBattery(context)) }
                 }

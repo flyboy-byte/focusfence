@@ -132,6 +132,10 @@ class HomeFragment : Fragment() {
         refreshAttention()
         refreshStatusRows()
         refreshUpdateBanner()
+        // Like Tokalot: opening the app looks for a new version (at most every 3 hours) and shows it right here.
+        app.focusfence.update.Updates.checkInBackground(requireContext()) {
+            activity?.runOnUiThread { refreshUpdateBanner() }
+        }
         binding.root.postDelayed(ticker, 1000)
     }
 
@@ -363,6 +367,10 @@ class HomeFragment : Fragment() {
         b.updateDismiss.setOnClickListener {
             app.focusfence.update.Updates.dismissBanner(context, offer.tag)
             refreshUpdateBanner()
+        // Like Tokalot: opening the app looks for a new version (at most every 3 hours) and shows it right here.
+        app.focusfence.update.Updates.checkInBackground(requireContext()) {
+            activity?.runOnUiThread { refreshUpdateBanner() }
+        }
         }
     }
 
