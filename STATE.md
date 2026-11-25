@@ -34,7 +34,7 @@ mode pass their tests but haven't been field-tested. The repo went public on 202
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR |
-| Latest release | `v2.18.2-accountable` (2026-11-25, code 41): test release, no changes. ✅ Verified on the phone 2026-11-25: 2.18.1 offered 2.18.2 (banner + notification) on switching back to the app, no Check now. 2.18.1 (code 40): update check on every return to the app, then every 20 minutes (was 3 hours). 2.18.0 (code 39): rounded Settings and Blocking (D-034), Block history, Notify me switch, honest uninstall protection + instant partner alert, quieter Home ticker and screenshot back-off. 2.13 to 2.18.1 all 🧪 until seen on the phone; 2.18.2 is planned only to test the new check. |
+| Latest release | `v2.19.0-accountable` (2026-11-25, code 42): one invite for every partner (browser = email partner, pasted into the app = enrolls and pairs that phone), Join with an invite, Save connects and reports back, groups enroll their members (D-035). Server main-4d179b7 deployed the same day: every phone enrolled, signed mailbox creation, admin sign-in = emailed code or authenticator. 🧪 until a second phone joins. 2.18.1 (code 40): update check on every return to the app (✅ seen on the phone with 2.18.2). |
 
 ## Verification levels
 
