@@ -80,7 +80,22 @@ object ShareQueue {
         }
     }
 
-    fun pending(ctx: Context): List<File> = dir(ctx).listFiles { f -> f.name.endsWith(".json") }.orEmpty().sortedBy { it.name }
+    /**
+     * Marks a due share as being uploaded, so a note arriving mid-upload is refused ("already sent") rather than
+     * accepted and lost. A file left `.sending` by a crash is picked up again by [due]; only one sync runs at a time.
+     */
+    fun claim(ctx: Context, f: File): File = synchronized(this) {
+        if (f.name.endsWith(".sending")) return f
+        val to = File(dir(ctx), f.name.removeSuffix(".json") + ".sending")
+        if (f.renameTo(to)) to else f
+    }
+
+    /** An upload failed: put it back so notes can still be added until the next try. */
+    fun release(ctx: Context, f: File) = synchronized(this) {
+        if (f.name.endsWith(".sending")) f.renameTo(File(dir(ctx), f.name.removeSuffix(".sending") + ".json"))
+    }
+
+    fun pending(ctx: Context): List<File> = dir(ctx).listFiles { f -> f.name.endsWith(".json") || f.name.endsWith(".sending") }.orEmpty().sortedBy { it.name }
 
     /** The queued shares whose time has come (manual ones at once, automatic ones after the delay). */
     fun due(ctx: Context, now: Long): List<File> = pending(ctx).filter { f ->

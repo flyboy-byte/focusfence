@@ -90,7 +90,7 @@
       m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
       m.blocked += +d.blocked || 0; m.enforce += +d.enforce || 0; m.flagged += +d.flagged_shots || 0;
       // A change has no time of its own: it happened within its slice, so it is shown under that slice's day.
-      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, text: e }); });
+      String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, from: +d.from || 0, text: e }); });
       for (var k in m.lists) addInto(m.lists[k], d[k]);
       if (m.from == null || d.from < m.from) m.from = d.from;
       if (m.to == null || d.to > m.to) m.to = d.to;
@@ -242,6 +242,10 @@
     var NET = /^Filter problem: (degraded|upstream_down)$/;
     m.net += m.events.filter(function (e) { return NET.test(e.text); }).length;
     m.events = m.events.filter(function (e) { return !NET.test(e.text); });
+    // A protection change is both a server alert (exact time) and a line in its report slice: show it once, as the alert.
+    m.events = m.events.filter(function (e) {
+      return !alerts.some(function (a) { return a.text === e.text && a.t >= e.from - 60e3 && a.t <= e.t + 60e3; });
+    });
 
     var out = [seg(RANGES.map(function (r) { return r[0]; }), state.range, function (i) { state.range = i; render(allDigests, allShots, allAlerts); })];
     if (!digests.length) {

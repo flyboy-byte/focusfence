@@ -141,14 +141,20 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     /** Owner-chosen blurred screenshots (Phase 2 level B), each sealed like a report and sent as its own slice. */
     private fun serverShares(ctx: Context, api: Api) {
         val deviceId = SyncStore.deviceId(ctx) ?: return
-        for (f in ShareQueue.due(ctx, System.currentTimeMillis()).take(5)) {
+        for (due in ShareQueue.due(ctx, System.currentTimeMillis()).take(5)) {
+            val f = ShareQueue.claim(ctx, due)
             val now = System.currentTimeMillis()
-            val blob = app.focusfence.dns.ReportSeal.seal(SyncStore.reportKey(ctx), f.readBytes(), deviceId)
-            val r = api.post("/v1/reports", JSONObject().apply {
-                put("deviceId", deviceId); put("t", now); put("from", now); put("to", now); put("blob", blob)
-                put("signature", DeviceKey.sign("report|$deviceId|$now|$now|$now|${sha256(blob)}".toByteArray()))
-            })
-            if (r.code != 200) throw IllegalStateException("share HTTP ${r.code}")
+            val r = try {
+                val blob = app.focusfence.dns.ReportSeal.seal(SyncStore.reportKey(ctx), f.readBytes(), deviceId)
+                api.post("/v1/reports", JSONObject().apply {
+                    put("deviceId", deviceId); put("t", now); put("from", now); put("to", now); put("blob", blob)
+                    put("signature", DeviceKey.sign("report|$deviceId|$now|$now|$now|${sha256(blob)}".toByteArray()))
+                })
+            } catch (e: Exception) {
+                ShareQueue.release(ctx, f)
+                throw e
+            }
+            if (r.code != 200) { ShareQueue.release(ctx, f); throw IllegalStateException("share HTTP ${r.code}") }
             ShareQueue.sent(ctx, f)
         }
     }
@@ -178,18 +184,17 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         val from = SyncStore.lastHeartbeat(ctx)
         if (from <= 0 || now - from < app.focusfence.dns.GapAccount.MIN_GAP_MS) return null
         return runCatching {
-            val activity = ArrayList<Map<String, Any?>>()
+            val g = app.focusfence.dns.GapAccount(from)
             EventLog.scan(EventLog.Channel.ACTIVITY, sinceT = from) { line ->
-                if (line.contains("\"type\":\"svc\"") || line.contains("\"type\":\"integ\"")) LogJson.decode(line)?.let { activity += it }
-                else activity += mapOf("t" to LogJson.peekT(line), "seq" to EventLog.seqOf(line)) // sequence only, no decode
+                if (line.contains("\"type\":\"svc\"") || line.contains("\"type\":\"integ\"")) LogJson.decode(line)?.let(g::addActivity)
+                else g.addActivity(mapOf("t" to LogJson.peekT(line), "seq" to EventLog.seqOf(line))) // sequence only, no decode
                 true
             }
-            val net = ArrayList<Map<String, Any?>>()
             EventLog.scan(EventLog.Channel.DIAG, sinceT = from) { line ->
-                if (line.contains("\"type\":\"net\"")) LogJson.decode(line)?.let { net += it }
+                if (line.contains("\"type\":\"net\"")) LogJson.decode(line)?.let(g::addNet)
                 true
             }
-            app.focusfence.dns.GapAccount.describe(activity, net, from, now)
+            g.describe(now)
         }.getOrNull()
     }
 
