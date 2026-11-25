@@ -19,11 +19,9 @@ class BundlesTest {
     }
 
     @Test fun contentBundlesDefaults() {
-        // Accountability default: the two core categories are detected and reported,
-        // never blocked unless the owner chooses; the rest stay off.
-        for (id in listOf("adult", "gambling")) {
-            assertEquals("$id should default to REPORT", Categories.Policy.REPORT, Categories.bundle(id)!!.defaultPolicy)
-        }
+        // Adult is blocked by default: it's the app's purpose (2026-11-25). Gambling is reported; the rest stay off.
+        assertEquals(Categories.Policy.BLOCK, Categories.bundle("adult")!!.defaultPolicy)
+        assertEquals(Categories.Policy.REPORT, Categories.bundle("gambling")!!.defaultPolicy)
         for (id in listOf("social", "piracy", "scam")) {
             assertEquals("$id should default to OFF", Categories.Policy.OFF, Categories.bundle(id)!!.defaultPolicy)
         }

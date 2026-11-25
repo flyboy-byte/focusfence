@@ -59,14 +59,16 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.selectedItemId = R.id.nav_home
         }
 
-        if (Build.VERSION.SDK_INT >= 33 &&
+        // A first launch asks in onboarding, once the filter is on and there's a reason to; otherwise ask here.
+        val onboarded = BlocklistStore.prefs(this).getBoolean(OnboardingActivity.KEY_ONBOARDED, false)
+        if (onboarded && Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        if (!BlocklistStore.prefs(this).getBoolean(OnboardingActivity.KEY_ONBOARDED, false)) {
+        if (!onboarded) {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
     }

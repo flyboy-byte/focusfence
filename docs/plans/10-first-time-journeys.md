@@ -12,8 +12,8 @@ are written.
 
 | # | Section | Exit condition | Status |
 |---|---|---|---|
-| 0 | Bug hunt of 2.21–2.24 | Every finding fixed or recorded here with a reason; tests green | in progress |
-| 1 | Fresh install, no server | A new person gets from install to "protected" without leaving the app or guessing; Logan confirms on the second phone after a clean install | — |
+| 0 | Bug hunt of 2.21–2.24 | Every finding fixed or recorded here with a reason; tests green | done 2026-11-25 |
+| 1 | Fresh install, no server | A new person gets from install to "protected" without leaving the app or guessing; Logan confirms on the second phone after a clean install | built, waiting for the clean-install check |
 | 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | — |
 | 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | — |
 | 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | — |
@@ -34,6 +34,22 @@ open report slice replaced, not piled up; a note can't be lost mid-upload.
 Recorded, not changed: automatic sends are uncapped by Logan's choice (D-037), so scrolling through explicit images
 sends one blurred thumbnail per changed capture.
 
-## 1–5
+## 1. Fresh install, no server
+
+What a new person met (traced 2026-11-25): seven pages of reading, mostly time limits and section rules, never saying
+the app is for porn accountability; stale lines (public DNS resolver, "Blocklist tab", "Block ads & trackers on
+Settings", presets "on the Blocking tab"); the notification prompt popping over the first page; then an 8-card
+checklist plus the whole guide again, whose first card sent them back to Home to find the switch; and on a fresh
+install adult sites were only reported, with screen checks off.
+
+Logan's answers: first user is mostly someone holding themselves accountable, but it must fit both; adult **Block** by
+default; 3 or 4 short steps; offer screen checks as a step.
+
+Built: `OnboardingActivity` is four steps: what it's for → Turn on (VPN prompt, then the notification permission) →
+screen checks (screenshots + AI, then the accessibility permission, cost shown) → "Add a partner" or "Just me for now",
+ending on Home or Partners. Adult defaults to Block (also for anyone who never changed it). The long guide stays under
+Help with its stale lines fixed. Still to check on a phone: a clean install on the second phone, start to finish.
+
+## 2–5
 
 Notes are added here as each section runs.

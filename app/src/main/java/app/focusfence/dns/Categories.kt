@@ -99,9 +99,9 @@ object Categories {
         Bundle(
             "adult", "Adult",
             "Porn and other adult sites.",
-            // REPORT by default: detected and reported, not blocked — the
-            // accountability default; blocking stays a choice.
-            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt", core = true,
+            // BLOCK by default since 2.25 (Logan, 2026-11-25): blocking adult sites is the app's purpose. Report stays
+            // one tap away, behind the strict-mode guard.
+            Kind.CONTENT, Policy.BLOCK, url = "$RAW/nsfw-onlydomains.txt", core = true,
         ),
         Bundle(
             "gambling", "Gambling",
