@@ -33,6 +33,17 @@ object InviteLink {
         return Parsed.Server(server, code)
     }
 
+    /**
+     * Where an app partner polls for alerts, from their report link (`https://server/p/TOKEN#k=…`): the server origin
+     * and the path `/p/TOKEN/alerts`. Null for anything else, so a bad stored link just means no server alerts.
+     */
+    fun alertsTarget(reportUrl: String): Pair<String, String>? {
+        val m = REPORT.matchEntire(reportUrl.substringBefore('#')) ?: return null
+        return m.groupValues[1] to "/p/${m.groupValues[2]}/alerts"
+    }
+
+    private val REPORT = Regex("""(https://[A-Za-z0-9.-]+(?::\d+)?)/p/([A-Za-z0-9_-]{20,})/?""")
+
     /** The partner invite as the inviting phone shares it. */
     fun partnerLink(joinUrl: String, reportKey: String, pairingKey: String): String = "$joinUrl#k=$reportKey&p=$pairingKey"
 }

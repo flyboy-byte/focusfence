@@ -39,4 +39,14 @@ class InviteLinkTest {
         assertNull(InviteLink.parse("http://ff.example.com/i/$secret")) // cleartext: the app can't use it anyway
         assertNull(InviteLink.parse("Server: https://ff.example.com")) // no code
     }
+
+    @Test
+    fun alertsComeFromTheReportLinksServer() {
+        assertEquals("https://ff.example.com" to "/p/$secret/alerts", InviteLink.alertsTarget("https://ff.example.com/p/$secret#k=rk_1"))
+        assertEquals("https://ff.example.com:8443" to "/p/$secret/alerts", InviteLink.alertsTarget("https://ff.example.com:8443/p/$secret"))
+        assertNull(InviteLink.alertsTarget(""))
+        assertNull(InviteLink.alertsTarget("http://ff.example.com/p/$secret"))
+        assertNull(InviteLink.alertsTarget("https://ff.example.com/p/short"))
+        assertNull(InviteLink.alertsTarget("https://ff.example.com/p/$secret/../../admin"))
+    }
 }

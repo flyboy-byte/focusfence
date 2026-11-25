@@ -94,7 +94,7 @@ anything that could involve a minor), and a false flag never sends an innocent p
   add context afterwards.
 
 - [x] 👤 ~~Choose whether D is ever allowed~~: no, never a clear explicit image (2026-11-23).
-- [ ] 👤 **Choose B, C or both.**
+- [x] 👤 ~~Choose B, C or both~~: both; C sends after a delay with a notification, uncapped (D-037, 2026-11-25).
 - [ ] **Measure first:** the false-alarm rate from `rev` answers over two weeks; retune `FlagPolicy` with the reason
   recorded in `docs/research/ai-detection.md`.
 - [ ] **Build (whatever level is chosen), under these rules:** sealed with the report key (server never sees an image);

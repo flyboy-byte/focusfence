@@ -35,6 +35,8 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
     suspend fun toPartners(device: Store.Device, subject: String, lines: List<String>) {
         if (lines.isEmpty()) return
         val now = cfg.now()
+        // App partners poll this (/p/{token}/alerts); email and text go out below.
+        store.addAlerts(device.id, lines, now)
         for (p in device.partners) {
             if (!p.confirmed) continue
             val html = "<p>${Web.esc(subject)}</p><ul>" +
@@ -59,6 +61,13 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             .mapNotNull { LogJson.decode(it)?.let(Digest::alertText) }
             .toList()
 
+    /** The phone checked in after partners were told it was silent: say so, so the silence isn't left hanging. */
+    suspend fun checkedIn(deviceId: String) {
+        val silentSince = store.markSeen(deviceId, cfg.now()) ?: return
+        val device = store.device(deviceId) ?: return
+        toPartners(device, "phone is back", listOf("The phone is checking in again after ${minutes(cfg.now() - silentSince)} without a check-in."))
+    }
+
     /** One pass of the background checks: silent devices and weekly reports. */
     suspend fun sweep() {
         val now = cfg.now()
@@ -66,12 +75,14 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             if (d.partners.any { !it.confirmed && now - it.linkedMs > cfg.unconfirmedTtlMs }) {
                 store.updateDevice(d.id) { dev -> dev.partners = dev.partners.filter { it.confirmed || now - it.linkedMs <= cfg.unconfirmedTtlMs } }
             }
-            if (d.partners.none { it.confirmed }) continue
+            if (d.partners.none { it.confirmed } && d.appPartners.isEmpty()) continue
+            // The dead man's switch: the phone checks in about every 15 minutes (measured 2026-11-25), so silence past
+            // cfg.staleMs means several missed check-ins, not one slow one.
             if (!d.staleAlerted && now - d.lastSeenMs > cfg.staleMs) {
                 store.updateDevice(d.id) { it.staleAlerted = true }
                 toPartners(
                     d, "phone went silent",
-                    listOf("The phone hasn't checked in for ${(now - d.lastSeenMs) / 60_000} minutes. Protection may be off, the phone may be off, or the app may have been removed."),
+                    listOf("The phone hasn't checked in for ${minutes(now - d.lastSeenMs)}. Protection may be off, the phone may be off or out of signal, or the app may have been removed."),
                 )
             }
             if (now - d.lastReportMs >= cfg.reportEveryMs) {
@@ -85,6 +96,14 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
                     )
                 }
             }
+        }
+    }
+
+    companion object {
+        /** "50 minutes", "3 h 5 min". */
+        fun minutes(ms: Long): String {
+            val m = ms / 60_000
+            return if (m < 90) "$m minutes" else "${m / 60} h ${m % 60} min"
         }
     }
 }

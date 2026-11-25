@@ -95,7 +95,15 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var codeId: String = "",
         /** A name the operator gave the device on the admin page. */
         var label: String = "",
+        /**
+         * What partners were told, newest last (2026-11-25): app partners read it from /p/{token}/alerts, so they hear
+         * the same things as email partners, as fast. Alert lines only, the text emails already carry (D-023).
+         */
+        var alerts: List<AlertEntry> = emptyList(),
     )
+
+    @Serializable
+    data class AlertEntry(val t: Long, val text: String)
 
     @Serializable
     data class Mailbox(val tokenHash: String, val createdMs: Long, var lastWriteMs: Long = 0, var nextId: Long = 1)
@@ -221,11 +229,28 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
             val d = device(id) ?: return@synchronized
             d.expectedNextSeq = lastSeq + 1
             d.lastHash = newHash
-            d.lastSeenMs = now
-            d.staleAlerted = false
             d.missingRecords += gap
             saveDevice(d)
         }
+
+    /**
+     * The phone checked in. Returns when it went quiet if partners had been told it was silent, so the caller can tell
+     * them it is back; null otherwise.
+     */
+    fun markSeen(id: String, now: Long): Long? = updateDevice(id) { d ->
+        val silentSince = d.lastSeenMs.takeIf { d.staleAlerted }
+        d.lastSeenMs = now
+        d.staleAlerted = false
+        silentSince
+    }
+
+    /** Keeps the newest [ALERTS_KEEP] within [ALERTS_MAX_AGE_MS]. */
+    fun addAlerts(id: String, lines: List<String>, now: Long) {
+        if (lines.isEmpty()) return
+        updateDevice(id) { d ->
+            d.alerts = (d.alerts + lines.map { AlertEntry(now, it) }).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
+        }
+    }
 
     @Serializable
     data class SealedReport(val t: Long, val from: Long, val to: Long, val blob: String)
@@ -312,6 +337,8 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
 
     companion object {
         const val REPORTS_KEEP = 240
+        const val ALERTS_KEEP = 100
+        const val ALERTS_MAX_AGE_MS = 14L * 24 * 3_600_000
         const val REPORTS_MAX_AGE_MS = 9L * 24 * 3_600_000
         const val REPORT_MAX_CHARS = 64 * 1024
         val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,80}$")

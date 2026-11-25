@@ -46,13 +46,16 @@ import kotlin.math.abs
  *     it stores ciphertext under an id it can't link to anyone.
  *
  * Env: FF_DATA_DIR (./data), FF_PORT (8080), FF_PUBLIC_URL (http://localhost:8080),
- * FF_STALE_MINUTES (240), RESEND_API_KEY, FF_MAIL_FROM, FF_SMS_PROVIDER, FF_SMS_FROM,
+ * FF_STALE_MINUTES (60), RESEND_API_KEY, FF_MAIL_FROM, FF_SMS_PROVIDER, FF_SMS_FROM,
  * TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TELNYX_API_KEY.
  */
 class Config(
     val publicUrl: String,
-    /** Long enough to ride out Doze, which can hold background work for hours overnight. */
-    val staleMs: Long = 240 * 60_000L,
+    /**
+     * Silence before partners hear "phone went silent". Phones check in about every 15 minutes, day and night
+     * (2026-11-25 export: no gap over 21 minutes), so 60 minutes is four missed check-ins.
+     */
+    val staleMs: Long = 60 * 60_000L,
     val reportEveryMs: Long = 7L * 24 * 3_600_000,
     val inviteTtlMs: Long = 24 * 3_600_000L,
     val smsMinIntervalMs: Long = 10 * 60_000L,
@@ -106,6 +109,7 @@ class Config(
 @Serializable data class CursorResponse(val error: String, val expectedNextSeq: Long, val lastHash: String)
 @Serializable data class ReportRequest(val deviceId: String, val t: Long, val from: Long, val to: Long, val blob: String, val signature: String)
 @Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
+@Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(val deviceId: String, val t: Long, val lastSeq: Long, val signature: String)
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
@@ -122,7 +126,7 @@ fun main(args: Array<String>) {
     val trusted = TrustedProxies.parse(env("FF_TRUSTED_PROXIES"))
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
-        staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
+        staleMs = (env("FF_STALE_MINUTES") ?: "60").toLong() * 60_000,
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
         appUrl = env("FF_APP_URL")?.takeIf { it.startsWith("https://") } ?: "https://github.com/flyboy-byte/focusfence/releases/latest",
@@ -400,6 +404,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     val gap = if (device.expectedNextSeq > 1) r.gap else 0
                     // D-023: an older app's records are read for alerts here, in memory, and never stored.
                     store.advanceCursor(device.id, req.lastSeq, r.newHash, gap, cfg.now())
+                    alerts.checkedIn(device.id)
                     val lines = alerts.alertLines(req.recordsRaw).toMutableList()
                     if (gap > 0) lines += "$gap activity records never arrived (deleted, or lost on the phone)"
                     if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines)
@@ -412,10 +417,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val req = call.receive<HeartbeatRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "heartbeat", req.t, req.lastSeq.toString(), req.signature)) return@post call.unauthorized()
-            store.updateDevice(device.id) { d ->
-                d.lastSeenMs = cfg.now()
-                d.staleAlerted = false
-            }
+            alerts.checkedIn(device.id)
             call.respond(OkResponse())
         }
 
@@ -428,7 +430,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (req.to < req.from || req.to > cfg.now() + cfg.clockSkewMs) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad range"))
             if (full()) return@post call.serverFull()
             store.saveReport(device.id, Store.SealedReport(req.t, req.from, req.to, req.blob), cfg.now())
-            store.updateDevice(device.id) { d -> d.lastSeenMs = cfg.now(); d.staleAlerted = false }
+            alerts.checkedIn(device.id)
             call.respond(OkResponse())
         }
 
@@ -615,6 +617,16 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.response.headers.append("Cache-Control", "no-store")
             call.respond(ReportData(device.id, partner.name, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs,
                 store.readReports(device.id).filter { cfg.now() - it.to <= cfg.reportEveryMs + 3_600_000L }))
+        }
+
+        // What this partner has been told, for app partners to notify on (2026-11-25). The same lines alert emails carry.
+        get("/p/{token}/alerts") {
+            val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
+            call.response.headers.append("Cache-Control", "no-store")
+            call.respond(AlertFeed(cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, cfg.staleMs,
+                if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList()))
         }
 
         // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.

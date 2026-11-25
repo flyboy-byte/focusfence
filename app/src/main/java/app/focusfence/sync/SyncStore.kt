@@ -141,6 +141,8 @@ object SyncStore {
         val staleNotified: Boolean,
         /** D-035: this person's report on the server (/p/{token}#k=key), the same page an email partner reads. */
         val reportUrl: String = "",
+        /** Server time of the newest alert already shown from the server feed (/p/{token}/alerts). */
+        val serverAlertT: Long = 0,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -184,6 +186,7 @@ object SyncStore {
             alerts = m["alerts"] as? String ?: "",
             staleNotified = m["stale"] == true,
             reportUrl = m["report_url"] as? String ?: "",
+            serverAlertT = m["server_alert_t"] as? Long ?: 0,
         )
     }.sortedBy { it.addedMs }
 
@@ -193,7 +196,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
                 "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
-                "report_url" to w.reportUrl,
+                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT,
             )),
         ).commit()
     }

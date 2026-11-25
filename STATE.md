@@ -119,9 +119,10 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
    against the live server; app-partner alerts, unlock codes and groups have never run on two phones.
 2. **Most features are 🧪, not 📱.** The relay looked fine in tests twice and failed on the phone
    twice. Assume any 🧪 item can fail the same way.
-3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
-   check-in; the partner app after 14 h without a message. Doze can delay background work for
-   hours overnight, so these may need tuning against real behaviour (false alarms vs slow alarms).
+3. **Silence detection is measured on the charger only.** The 2026-11-25 export: check-ins every 15 min all night,
+   longest gap 21 min, but the phone was charging overnight and the longest unplugged screen-off stretch was 42 min, so
+   deep Doze is untested. The server window is now 60 min (branch `silence-alerts`, not yet deployed). Next: an
+   unplugged-night export; if gaps grow, a longer window at night.
 4. **The AI's accuracy is unmeasured.** The model author claims ~92% on their own data; our only real flag so far was a false positive (a photo with no nudity → `porn` 0.82). It only flags, never blocks. Before a partner receives AI flags, add persistence/combined-signal rules (`docs/research/ai-detection.md`).
 5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switch switched Always-on off (2026-11-20 export). The integrity trail records it. **Since 2026-11-23 (unreleased, 🧪)** the app also reminds the owner when the VPN starts with Always-on off: one notification per 12 h that opens VPN settings (`dns/AlwaysOnNudge`, diag counter `always_on_nudge`).
 

@@ -599,3 +599,38 @@ partner kinds, "don't worry about breaking users, I'm the only user".
 **Not kept.** Pairings and invites made before this: old app versions can't open new mailboxes, and old pairing-key
 messages aren't accepted by Join.
 
+
+## D-036 — The dead man's switch: one hour of silence, every partner told, and told when it's back
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted
+
+The phone already checks in with every sync (WorkManager, about 15 min). The 2026-11-25 export measured it: no gap over
+21 minutes in any state, all night (on the charger; 115 screen-off gaps, median 15 min). So the server's silence window
+drops from 4 h to 60 min (`FF_STALE_MINUTES`, four missed check-ins). Uninstall protection keeps its instant alert at
+"Deactivate" (#76); the silence alert covers what that can't see: a wipe, a USB uninstall, a force-stopped app, a
+phone switched off.
+
+Three changes with it:
+- **App partners hear it too.** Before, only email partners got "phone went silent"; an app partner's phone noticed
+  after 14 h of mailbox silence. The server now keeps what partners were told (alert lines, 100 / 14 days) and app
+  partners read it from `/p/{token}/alerts` each sync, so they get the same alerts as email partners within about
+  15 min. Their mailbox alerts are skipped when the feed answers, so nothing arrives twice.
+- **"Checking in again."** When a silent phone checks in, partners are told, so a dead battery doesn't leave an alarm
+  hanging.
+- Alert text is the same as email already carries (D-023): no sites, no activity.
+
+**Not yet known:** an unplugged night. If deep Doze stretches check-ins, the window gets longer at night rather than
+everywhere.
+
+## D-037 — Flagged screenshots go to partners automatically, after a delay, uncapped
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted, not built
+
+Level C of roadmap Phase 2, chosen by Logan: a flagged screenshot is sent to partners automatically after a short delay.
+The owner gets a notification when it's flagged and can add a note before it goes, but can't stop it. **No daily cap**
+(Logan: "do not cap"), which overrides gate (3) in the roadmap. Unchanged: it is always the 48 px blurred thumbnail
+(D-025), never a clear image; sealed with the report key; labelled "sent automatically" for the partner.
+
+Known risk, stated so it isn't rediscovered: the AI's flags are mostly wrong today (all 7 reviews in the 2026-11-25
+export were "wrong", the same pattern as 7 of 8 before), so most automatic sends will be innocent screens. The blur is
+what makes that acceptable. Order agreed: silence alerts first, then the report page, then this.

@@ -18,6 +18,7 @@ import androidx.work.WorkerParameters
 import app.focusfence.PartnerReportActivity
 import app.focusfence.R
 import app.focusfence.data.EventLog
+import app.focusfence.dns.InviteLink
 import app.focusfence.dns.B64
 import app.focusfence.dns.Digest
 import app.focusfence.dns.LogJson
@@ -220,14 +221,21 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
     private fun receive(ctx: Context, api: Api, start: SyncStore.Watch, now: Long) {
         var w = start
+        // D-035 partners read alerts from the server, like email partners: the same lines, and silence is decided
+        // there (FF_STALE_MINUTES, about an hour) instead of here after 14 h. The mailbox still carries unlock codes.
+        val feed = serverFeed(w, now)
+        if (feed != null) {
+            w = feed.first
+            if (feed.second.isNotEmpty()) notify(ctx, w, feed.second.joinToString("\n"))
+        }
         val k = w.keys
         val r = api.get("/v1/mailbox/${k.mailboxId}/msgs?after=${w.after}", mapOf("X-FF-Token" to k.token))
         when (r.code) {
             200 -> Unit
-            404 -> return // their phone hasn't created the mailbox yet
-            else -> throw IllegalStateException("mailbox read HTTP ${r.code}")
+            404 -> { SyncStore.saveWatch(ctx, w); return } // their phone hasn't created the mailbox yet
+            else -> { SyncStore.saveWatch(ctx, w); throw IllegalStateException("mailbox read HTTP ${r.code}") }
         }
-        val msgs = r.body?.optJSONArray("msgs") ?: return
+        val msgs = r.body?.optJSONArray("msgs") ?: return SyncStore.saveWatch(ctx, w)
         val newAlerts = ArrayList<String>()
         for (i in 0 until msgs.length()) {
             val m = msgs.getJSONObject(i)
@@ -238,6 +246,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             when (fields?.get("kind")) {
                 Digest.KIND_DIGEST -> w = w.copy(digest = text)
                 Digest.KIND_ALERT -> {
+                    if (feed != null) continue // the server feed already carried it
                     val text = fields["text"] as? String ?: continue
                     newAlerts += text
                     val line = "${fields["t"] ?: m.optLong("t")}\t${text.replace('\n', ' ').replace('\t', ' ')}"
@@ -248,11 +257,35 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         if (newAlerts.isNotEmpty()) notify(ctx, w, newAlerts.joinToString("\n"))
         // Their phone sends a digest every few hours; long silence is itself news.
         val quietFor = now - maxOf(w.lastMsgMs, w.addedMs)
-        if (!w.staleNotified && w.lastMsgMs > 0 && quietFor > STALE_AFTER_MS) {
+        if (feed == null && !w.staleNotified && w.lastMsgMs > 0 && quietFor > STALE_AFTER_MS) {
             notify(ctx, w, ctx.getString(R.string.partner_stale_alert, quietFor / 3_600_000))
             w = w.copy(staleNotified = true)
         }
         SyncStore.saveWatch(ctx, w)
+    }
+
+    /**
+     * New lines from this partner's server alert feed, and the watch with its cursor moved on. Null when there is no
+     * report link or the server doesn't answer (an older server, or offline): the mailbox path then alerts as before.
+     */
+    private fun serverFeed(start: SyncStore.Watch, now: Long): Pair<SyncStore.Watch, List<String>>? {
+        val (origin, path) = InviteLink.alertsTarget(start.reportUrl) ?: return null
+        val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull() ?: return null
+        val arr = r.body?.optJSONArray("alerts")
+        if (r.code != 200 || arr == null) return null
+        var w = start
+        val lines = ArrayList<String>()
+        for (i in 0 until arr.length()) {
+            val a = arr.optJSONObject(i) ?: continue
+            val t = a.optLong("t")
+            val text = a.optString("text").takeIf { it.isNotBlank() } ?: continue
+            if (t <= w.serverAlertT) continue
+            // The first read after an update can return two weeks of history: keep it, but only notify what's recent.
+            if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) lines += text
+            val line = "$t\t${text.replace('\n', ' ').replace('\t', ' ')}"
+            w = w.copy(serverAlertT = t, alerts = (w.alerts.lines().filter { it.isNotBlank() } + line).takeLast(50).joinToString("\n"))
+        }
+        return w to lines
     }
 
     private fun notify(ctx: Context, w: SyncStore.Watch, text: String) {
@@ -335,6 +368,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         const val DIGEST_EVERY_MS = 6 * 3_600_000L
         /** Two missed digests plus slack: Doze can hold work for a few hours. */
         const val STALE_AFTER_MS = 14 * 3_600_000L
+        private const val FIRST_FEED_NOTIFY_MS = 2 * 3_600_000L
     }
 }
 

@@ -284,6 +284,40 @@ class ServerTest {
     }
 
     @Test
+    fun silenceAndReturnReachEmailAndAppPartners() = run { http ->
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        val token = "t".repeat(32)
+        store.updateDevice(id) { it.appPartners = listOf(Store.AppPartner("ap1", "other-phone", "Sam", clock, token = token)) }
+        notifier.emails.clear()
+        val sweeper = Alerts(store, notifier, cfg)
+        suspend fun feed(after: Long = 0) = json.decodeFromString(AlertFeed.serializer(), http.get("/p/$token/alerts?after=$after").bodyAsText())
+        assertTrue(feed().online)
+        assertTrue(feed().alerts.isEmpty())
+
+        clock += cfg.staleMs - 60_000
+        sweeper.sweep()
+        assertTrue(feed().alerts.isEmpty(), "not silent yet")
+        clock += 2 * 60_000
+        sweeper.sweep()
+        val silent = feed()
+        assertTrue(!silent.online)
+        assertTrue(silent.alerts.single().text.contains("hasn't checked in for 61 minutes"), silent.alerts.toString())
+        assertEquals(1, notifier.emails.count { it.second.contains("silent") })
+
+        // A check-in tells everyone it's back, once.
+        clock += 60_000
+        val hb = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}"}"""
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", hb).status)
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", hb).status)
+        val back = feed(after = silent.alerts.single().t)
+        assertTrue(back.online)
+        assertTrue(back.alerts.single().text.contains("checking in again after 62 minutes"), back.alerts.toString())
+        assertEquals(1, notifier.emails.count { it.second.contains("phone is back") })
+        assertEquals(HttpStatusCode.NotFound, http.get("/p/${"x".repeat(32)}/alerts").status)
+    }
+
+    @Test
     fun blindMailboxEndToEnd() = run { http ->
         // Owner's phone side. D-035: only an enrolled phone opens a new mailbox.
         val secret = Pairing.generateSecret()

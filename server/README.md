@@ -102,7 +102,7 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_TRUSTED_PROXIES` | loopback | Comma list of IPs / IPv4 CIDRs allowed to set `X-Forwarded-For` |
 | `FF_MAX_DEVICES`, `FF_MAX_MAILBOXES`, `FF_MAX_DATA_MB` | `100`, `500`, `2048` | Hard bounds on what unauthenticated enrol/mailbox creation can use |
 | `FF_DATA_DIR` | `./data` | Flat-file store |
-| `FF_STALE_MINUTES` | `240` | Silence before "phone went silent". Long enough for overnight Doze. |
+| `FF_STALE_MINUTES` | `60` | Silence before "phone went silent" (phones check in about every 15 min). Email, text and app partners all get it, and a "checking in again" message when the phone is back. |
 | `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
 | `FF_ADMIN_EMAILS` | — | Comma list. Turns on the admin page for these addresses; off when empty. Sign in with an emailed code, or with an authenticator code once one is set up (Activity tab): either one, not both |
 | `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
@@ -134,6 +134,8 @@ of server time.
 | GET | `/i/{secret}` | The invite link: join form, later the partner's report |
 | GET/POST | `/join` | Partner joins with an invite |
 | GET | `/p/{token}` | Partner's private report page |
+| GET | `/p/{token}/data` | The sealed report slices (ciphertext) the page opens |
+| GET | `/p/{token}/alerts?after=T` | What this partner has been told (alert lines, silence, back online) plus `online`; app partners poll it |
 | POST | `/p/{token}/sms`, `/sms/verify`, `/sms/stop`, `/leave` | Partner settings |
 
 ## Not done
