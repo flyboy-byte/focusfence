@@ -6,8 +6,14 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+_No changes._
+
+## v2.18.1-accountable
+
 ### Fixed
 - check for updates every time the app comes to the foreground, then every 20 minutes (`1b8bae5`, [#79](https://github.com/flyboy-byte/focusfence/pull/79))
+### Maintenance
+- release 2.18.1 (`2951a93`, [#80](https://github.com/flyboy-byte/focusfence/pull/80))
 
 _Undo any line with `git revert <commit>`._
 

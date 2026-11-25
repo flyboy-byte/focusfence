@@ -34,7 +34,7 @@ mode pass their tests but haven't been field-tested. The repo went public on 202
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR |
-| Latest release | `v2.18.1-accountable` (2026-11-25, code 40): update check on every return to the app, then every 20 minutes (was 3 hours). 2.18.0 (code 39): rounded Settings and Blocking (D-034), Block history, Notify me switch, honest uninstall protection + instant partner alert, quieter Home ticker and screenshot back-off. 2.13 to 2.18.1 all 🧪 until seen on the phone; 2.18.2 is planned only to test the new check. |
+| Latest release | `v2.18.2-accountable` (2026-11-25, code 41): test release, no changes, to check that 2.18.1 offers an update when the app is opened. 2.18.1 (code 40): update check on every return to the app, then every 20 minutes (was 3 hours). 2.18.0 (code 39): rounded Settings and Blocking (D-034), Block history, Notify me switch, honest uninstall protection + instant partner alert, quieter Home ticker and screenshot back-off. 2.13 to 2.18.1 all 🧪 until seen on the phone; 2.18.2 is planned only to test the new check. |
 
 ## Verification levels
 
