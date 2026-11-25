@@ -34,6 +34,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: App and server releases are compatible (D-041)
+        run: python3 tools/check_protocol.py
+
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 

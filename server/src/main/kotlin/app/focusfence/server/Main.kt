@@ -109,6 +109,13 @@ class Config(
 @Serializable data class CursorResponse(val error: String, val expectedNextSeq: Long, val lastHash: String)
 @Serializable data class ReportRequest(val deviceId: String, val t: Long, val from: Long, val to: Long, val blob: String, val signature: String)
 @Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
+@Serializable data class VersionResponse(val protocol: Int, val oldestApp: Int, val server: String)
+/** The release this server was built from (the tarball's VERSION file), or "dev". */
+val serverVersion: String by lazy {
+    runCatching { java.io.File(System.getProperty("user.dir"), "VERSION").takeIf { it.isFile }?.readText()?.trim() }.getOrNull()
+        ?: runCatching { java.io.File("/opt/" + (System.getenv("FF_SERVICE") ?: "focusfence-server") + "/VERSION").readText().trim() }.getOrNull()
+        ?: "dev"
+}
 @Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(
@@ -231,6 +238,12 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.response.headers.append("Referrer-Policy", "no-referrer")
         }
     })
+    // D-041: every response says which protocol levels this server speaks, so an app can tell its owner which side
+    // needs updating instead of failing in odd ways.
+    intercept(io.ktor.server.application.ApplicationCallPipeline.Plugins) {
+        call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER, app.focusfence.dns.Protocol.LEVEL.toString())
+        call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER_OLDEST, app.focusfence.dns.Protocol.OLDEST.toString())
+    }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             // Never echo the exception text: it can carry class names or file paths. Keep it in our log only.
@@ -293,6 +306,9 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }
+        get("/v1/version") {
+            call.respond(VersionResponse(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, serverVersion))
+        }
 
         // ---- device API -------------------------------------------------------
 
@@ -346,7 +362,9 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
             val (owner, invite) = inviteOwner(req.secret)?.takeIf { !it.second.enrollOnly } ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("invite not valid"))
             if (owner.id == me.id) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("that's this phone's own invite"))
-            if (owner.partners.size + owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("partner limit"))
+            // Five of each kind (Logan, 2026-11-25), like email partners at /join.
+            if (owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict,
+                ErrorResponse("This phone already has ${cfg.maxPartnersPerDevice} app partners, the most it can have."))
             val name = req.name.filter { !it.isISOControl() }.trim().take(60).ifEmpty { me.label.ifEmpty { "Partner" } }
             val token = newToken()
             store.updateDevice(owner.id) { d ->
@@ -521,17 +539,21 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now && !it.enrollOnly } }) {
                 return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
             }
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret), ContentType.Text.Html)
         }
 
         get("/join") {
             val code = call.request.queryParameters["code"].orEmpty()
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             call.respondText(Web.joinForm(code, null, notifier.smsAvailable), ContentType.Text.Html)
         }
 
         post("/join") {
             val form = call.receiveParameters()
             val rawCode = form["code"].orEmpty()
+            // Without email the confirmation can never arrive: refuse before the invite is spent.
+            if (!notifier.emailAvailable) return@post call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             if (!joinLimiter.allow(call.client())) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
@@ -590,10 +612,18 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 ?: return@post call.respondText(Web.message("Not found", "This link isn't valid or has already been used."), ContentType.Text.Html, HttpStatusCode.NotFound)
             run {
                 store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.apply { confirmed = true; confirmHash = null } }
+                // Journey 4 (2026-11-25): say what's coming, so the first alert isn't a surprise and silence isn't a worry.
                 notifier.email(
                     partner.email, "Focus Fence: you're now an accountability partner",
-                    "<p>Hi ${Web.esc(partner.name)}, you'll get a weekly report and alerts by email.</p>" +
-                        "<p>Your private report page (keep this link to yourself): <a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>",
+                    "<p>Hi ${Web.esc(partner.name)}, you're set up. Here's what you'll get:</p><ul>" +
+                        "<li><b>Alerts by email, within minutes,</b> when their protection changes (the filter turned off, " +
+                        "uninstall protection removed) or the phone stops checking in for about an hour. You'll also hear when it's back.</li>" +
+                        "<li><b>Flagged screenshots,</b> heavily blurred, if they turned on screen checks and the phone finds nudity on screen. They may add a note.</li>" +
+                        "<li><b>A weekly email</b> pointing to the report. The report itself updates about every 15 minutes.</li></ul>" +
+                        "<p>The report is end-to-end encrypted. Open it from the Focus Fence link they sent you: that link carries the " +
+                        "key and works in any browser. This one works too in a browser that has opened that link before: " +
+                        "<a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>" +
+                        "<p>You can stop being their partner any time from the bottom of the report page.</p>",
                 )
             }
             // Only now does the confirmed owner of the address get their report link (here, and in the email).

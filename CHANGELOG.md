@@ -6,7 +6,17 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
-_No changes._
+### Added
+- first-time journeys 0–2: bug fix, 4-step onboarding, adult blocked by default, self-host path, SMTP (`0a20a5a`, [#94](https://github.com/flyboy-byte/focusfence/pull/94))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.24.0-accountable
+
+### Added
+- **ui:** Block lists rework and updates in the Home banner; release 2.24.0 (`7db81fa`, [#93](https://github.com/flyboy-byte/focusfence/pull/93))
+
+_Undo any line with `git revert <commit>`._
 
 ## v2.23.0-accountable
 

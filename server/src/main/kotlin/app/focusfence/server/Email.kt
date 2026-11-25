@@ -25,6 +25,8 @@ interface Notifier {
     suspend fun email(to: String, subject: String, html: String): Boolean
     suspend fun sms(to: String, text: String): Boolean
     val smsAvailable: Boolean
+    /** False when nothing can deliver email (no Resend key, no SMTP): email partners can't confirm, so they can't join. */
+    val emailAvailable: Boolean get() = true
 }
 
 /**
@@ -52,6 +54,9 @@ class LiveNotifier(
 
     @Serializable
     private data class TelnyxRequest(val from: String, val to: String, val text: String)
+
+    override val emailAvailable: Boolean
+        get() = !resendKey.isNullOrBlank() || !env("FF_SMTP_HOST").isNullOrBlank()
 
     override val smsAvailable: Boolean
         get() = smsProvider in setOf("twilio", "telnyx", "dev") && (smsProvider == "dev" || !smsFrom.isNullOrBlank())

@@ -50,6 +50,7 @@ object CategoryStore {
             .putString(KEY_POLICY_PREFIX + id, policy.name)
             .putLong(KEY_VERSION, System.currentTimeMillis()) // reload signal, written last
             .apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(context) // a core list loosened: partners hear now
     }
 
     fun baseTier(context: Context): Categories.BaseTier =

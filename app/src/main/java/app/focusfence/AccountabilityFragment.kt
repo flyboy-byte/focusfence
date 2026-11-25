@@ -59,19 +59,25 @@ class AccountabilityFragment : Fragment() {
             val code = binding.enrollInput.text?.toString().orEmpty().trim()
             val ctx = requireContext().applicationContext
             // Save connects at once and says how it went, instead of leaving it to the next background sync.
-            binding.serverSave.isEnabled = false
-            background({
-                if (url != SyncStore.serverUrl(ctx).trimEnd('/')) SyncStore.clearEnrollment(ctx)
-                SyncStore.setServerUrl(ctx, url)
-                SyncStore.setEnrollCode(ctx, code)
-                Accountability.ensureEnrolled(ctx)
-            }, always = { binding.serverSave.isEnabled = true; bind() }) {
-                editingServer = false
-                Toast.makeText(requireContext(), R.string.acc_connected, Toast.LENGTH_LONG).show()
-                bind()
-                refreshPartners()
+            fun connect() {
+                binding.serverSave.isEnabled = false
+                background({
+                    if (url != SyncStore.serverUrl(ctx).trimEnd('/')) Accountability.leaveServer(ctx, movingTo = url)
+                    SyncStore.setServerUrl(ctx, url)
+                    SyncStore.setEnrollCode(ctx, code)
+                    Accountability.ensureEnrolled(ctx)
+                }, always = { binding.serverSave.isEnabled = true; bind() }) {
+                    editingServer = false
+                    connected(url)
+                    bind()
+                    refreshPartners()
+                }
             }
+            // Moving an enrolled phone to another server cuts off its partners there: same guard as leaving.
+            val moving = SyncStore.deviceId(ctx) != null && url != SyncStore.serverUrl(ctx).trimEnd('/')
+            if (moving) UiUtil.guard(requireContext(), GuardPolicy.Action.LEAVE_SERVER) { connect() } else connect()
         }
+        binding.serverLeave.setOnClickListener { leaveServer() }
         binding.groupButton.setOnClickListener { startActivity(Intent(requireContext(), GroupActivity::class.java)) }
         binding.inviteButton.setOnClickListener { invite() }
         binding.watchButton.setOnClickListener { join() }
@@ -102,7 +108,7 @@ class AccountabilityFragment : Fragment() {
                 if (!isAdded || view == null) return@runOnUiThread
                 always()
                 r.onSuccess(done).onFailure {
-                    Toast.makeText(requireContext(), getString(R.string.acc_failed, it.message ?: it.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.acc_failed, Accountability.friendly(it)), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -129,6 +135,7 @@ class AccountabilityFragment : Fragment() {
         (binding.serverInput.parent.parent as View).visibility = v
         (binding.enrollInput.parent.parent as View).visibility = v
         binding.serverSave.setText(if (open) R.string.acc_save else R.string.acc_change_server)
+        binding.serverLeave.visibility = if (!open && SyncStore.deviceId(requireContext()) != null) View.VISIBLE else View.GONE
     }
 
     private fun bind() {
@@ -141,7 +148,12 @@ class AccountabilityFragment : Fragment() {
                 R.string.acc_status,
                 if (ok == 0L) getString(R.string.acc_status_never) else DateUtils.getRelativeTimeSpanString(ok).toString(),
                 SyncStore.lastError(requireContext())?.let { getString(R.string.acc_status_error, it) } ?: "",
-            )
+            ) + when (SyncStore.protocolStatus(requireContext())) {
+                // D-041: say which side is behind, instead of leaving odd failures to guess at. Syncing keeps trying.
+                app.focusfence.dns.Protocol.Status.SERVER_TOO_OLD -> "\n" + getString(R.string.acc_protocol_server_old)
+                app.focusfence.dns.Protocol.Status.APP_TOO_OLD -> "\n" + getString(R.string.acc_protocol_app_old)
+                else -> ""
+            }
         }
         bindServer()
         renderPartners()
@@ -244,12 +256,44 @@ class AccountabilityFragment : Fragment() {
                 val pasted = text.text.toString()
                 val me = name.text.toString()
                 background({ Accountability.join(ctx, pasted, me) }) { owner ->
-                    val msg = if (owner.isEmpty()) getString(R.string.acc_connected) else getString(R.string.acc_joined, owner)
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    if (owner.isEmpty()) connected(SyncStore.serverUrl(requireContext()))
+                    else Toast.makeText(requireContext(), getString(R.string.acc_joined, owner), Toast.LENGTH_LONG).show()
                     binding.serverInput.setText(SyncStore.serverUrl(requireContext()))
                     binding.enrollInput.setText(SyncStore.enrollCode(requireContext()))
                     bind()
                     refreshPartners()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Connected: say so, and the first time on this server, what its operator can see (journey 3). */
+    private fun connected(server: String) {
+        val ctx = requireContext()
+        if (Accountability.operatorNoteDue(ctx, server)) {
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle(R.string.acc_connected)
+                .setMessage(getString(R.string.acc_operator_note, server.removePrefix("https://")))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        } else Toast.makeText(ctx, R.string.acc_connected, Toast.LENGTH_LONG).show()
+    }
+
+    private fun leaveServer() {
+        val ctx = requireContext().applicationContext
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.acc_leave_server)
+            .setMessage(R.string.acc_leave_confirm)
+            .setPositiveButton(R.string.acc_leave_server) { _, _ ->
+                UiUtil.guard(requireContext(), GuardPolicy.Action.LEAVE_SERVER) {
+                    background({ Accountability.leaveServer(ctx) }) {
+                        Toast.makeText(requireContext(), R.string.acc_left_server, Toast.LENGTH_LONG).show()
+                        binding.serverInput.setText("")
+                        binding.enrollInput.setText("")
+                        bind()
+                        refreshPartners()
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

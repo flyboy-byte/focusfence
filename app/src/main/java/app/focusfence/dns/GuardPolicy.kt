@@ -32,7 +32,9 @@ object GuardPolicy {
         REMOVE_PARTNER("guard_remove_partner", "Remove an accountability partner", Level.DELAY),
         QUIET_BLOCK_ALERTS("guard_quiet_block_alerts", "Stop telling partners about repeated blocked tries", Level.DELAY),
         /** Leave a group, stop filtering inside it, narrow who sees my report, or remove a member. */
-        LEAVE_GROUP("guard_leave_group", "Leave or loosen a group", Level.DELAY);
+        LEAVE_GROUP("guard_leave_group", "Leave or loosen a group", Level.DELAY),
+        /** Leave the server or move to another one: partners there stop hearing from this phone (journey 3). */
+        LEAVE_SERVER("guard_leave_server", "Leave or change the server", Level.DELAY);
 
         companion object {
             fun fromKey(key: String): Action? = values().firstOrNull { it.key == key }

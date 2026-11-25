@@ -38,7 +38,13 @@ object Accountability {
             },
         )
         val id = r.body?.optString("deviceId").orEmpty()
-        check(r.code != 401) { "This server needs an enrollment code. Ask whoever runs it, then enter it under Server." }
+        check(r.code != 401) {
+            when {
+                invite != null -> "That invite was already used or has expired. Ask for a new one."
+                code.isNotEmpty() -> "That enrollment code wasn't accepted: it may be mistyped, used up or expired. Ask whoever runs the server for a new one."
+                else -> "This server needs an enrollment code. Ask whoever runs it, then paste their message under Join with an invite."
+            }
+        }
         check(r.code != 507) { "The server is full. Ask whoever runs it." }
         check(r.code == 200 && id.isNotEmpty()) { "Server refused enrollment (HTTP ${r.code})." }
         EventLog.init(ctx)
@@ -100,9 +106,24 @@ object Accountability {
         val inv = app.focusfence.dns.InviteLink.parse(text) ?: error("That doesn't look like an invite. Paste the whole message.")
         val current = SyncStore.serverUrl(ctx).trimEnd('/')
         if (SyncStore.deviceId(ctx) != null && current != inv.server.trimEnd('/')) {
-            error("This phone is connected to $current, and the invite is for ${inv.server}.")
+            error("This phone is on $current and the invite is for ${inv.server}. To move, change the address under Server first; partners on the old server stop hearing from this phone.")
         }
+        // Until this phone is on the new server, a failure puts the old address and code back (journey 3, 2026-11-25).
+        val wasEnrolled = SyncStore.deviceId(ctx) != null
+        val oldCode = SyncStore.enrollCode(ctx)
         SyncStore.setServerUrl(ctx, inv.server)
+        try {
+            return joinParsed(ctx, inv, myName)
+        } catch (e: Exception) {
+            if (!wasEnrolled && SyncStore.deviceId(ctx) == null) {
+                SyncStore.setServerUrl(ctx, current)
+                SyncStore.setEnrollCode(ctx, oldCode)
+            }
+            throw e
+        }
+    }
+
+    private fun joinParsed(ctx: Context, inv: app.focusfence.dns.InviteLink.Parsed, myName: String): String {
         return when (inv) {
             is app.focusfence.dns.InviteLink.Parsed.Server -> {
                 SyncStore.setEnrollCode(ctx, inv.code)
@@ -149,6 +170,41 @@ object Accountability {
     }
 
     private const val PENDING_MS = 25 * 3_600_000L
+
+    /**
+     * Leaves the server (journey 3): partners are told first, while the phone can still reach them, then the enrollment
+     * is dropped. Callers put this behind the LEAVE_SERVER guard. [movingTo] names the new server, if any.
+     */
+    fun leaveServer(ctx: Context, movingTo: String? = null) {
+        if (SyncStore.deviceId(ctx) != null) {
+            EventLog.init(ctx)
+            EventLog.activity(app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), "partner", "server_left",
+                movingTo?.let { "moving to another server" }), urgent = true)
+            runCatching { SyncWorker.pushAlertsNow(ctx) } // best effort: without it, they still get "went silent"
+        }
+        SyncStore.clearEnrollment(ctx)
+        SyncStore.setServerUrl(ctx, "")
+        SyncStore.setEnrollCode(ctx, "")
+    }
+
+    /** The first time this phone connects to [server]: what its operator can and can't see. Once per server. */
+    fun operatorNoteDue(ctx: Context, server: String): Boolean {
+        val p = ctx.getSharedPreferences("focusfence_sync", Context.MODE_PRIVATE)
+        val key = "operator_note:" + server.trimEnd('/')
+        if (p.getBoolean(key, false)) return false
+        p.edit().putBoolean(key, true).apply()
+        return true
+    }
+
+    /** What to tell a person when talking to the server failed: plain words, not an exception's text. */
+    fun friendly(e: Throwable): String = when (e) {
+        is java.net.UnknownHostException -> "Couldn't find that server. Check the address and your internet connection."
+        is java.net.ConnectException, is java.net.SocketTimeoutException, is java.net.NoRouteToHostException ->
+            "The server didn't answer. It may be down; try again in a minute."
+        is javax.net.ssl.SSLException -> "The server's HTTPS certificate isn't valid, so Focus Fence won't talk to it."
+        is java.io.IOException -> "Couldn't reach the server (${e.javaClass.simpleName})."
+        else -> e.message ?: e.javaClass.simpleName
+    }
 
     /** A link that gives a partner's browser this phone's report key again (new device, cleared browser). */
     fun keyLink(ctx: Context): String = SyncStore.serverUrl(ctx) + "/key#k=" + SyncStore.reportKey(ctx)

@@ -14,10 +14,10 @@ are written.
 |---|---|---|---|
 | 0 | Bug hunt of 2.21–2.24 | Every finding fixed or recorded here with a reason; tests green | done 2026-11-25 |
 | 1 | Fresh install, no server | A new person gets from install to "protected" without leaving the app or guessing; Logan confirms on the second phone after a clean install | built, waiting for the clean-install check |
-| 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | built; server-v1.1.0 to tag after merge |
-| 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | — |
-| 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | — |
-| 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | — |
+| 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | built; server-v1.1.0 released 2026-11-25 |
+| 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | built, not yet on a phone |
+| 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | built, not yet on a phone |
+| 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | built, not yet on a phone; groups only field-test pending |
 
 ## 0. Bug hunt (2.21–2.24)
 
@@ -62,6 +62,42 @@ Built: README "Start to finish" (five steps, VPS to partner); installer's last s
 two lines to paste into *Join with an invite*; env template current; SMTP (`FF_SMTP_*`, tested against a local fake
 server); server-v1.1.0 after merge.
 
-## 3–5
+## 3. Joining someone else's server
+
+Traced 2026-11-25. Found: a wrong, used or expired code was answered with "This server needs an enrollment code"; a
+failed join left the phone pointed at the new server anyway; network failures showed Java exception text; and,
+worst, typing a new address under Server and saving moved an enrolled phone off its server with **no strict-mode guard
+and no word to its partners**. Logan: tell people what the operator sees, "especially first time connecting" (though
+people won't add a server whose operator they don't know); add a guarded "Leave this server".
+
+Built: specific enrollment errors (bad code / used invite / no code); a failed join restores the old address and code;
+plain-words network errors (`Accountability.friendly`); a once-per-server note on what the operator can see;
+"Leave this server" and moving servers both go through `GuardPolicy.Action.LEAVE_SERVER`, and partners get "This phone
+is leaving the server" (`svc partner server_left`, urgent, pushed before the enrollment is dropped).
+
+## 4. Pairing partners
+
+Traced 2026-11-25 (the app-partner path was walked on Logan's two phones earlier the same day). Found: on a server
+that can't send email, an invite opened in a browser spent the invite and left the partner waiting for a confirmation
+that could never come; the post-confirm email said only "weekly report and alerts"; app partners were capped at five
+in total with email partners, while email partners alone had five. Logan: a new partner sees the last 7 days (kept);
+a welcome email, yes; five of each kind.
+
+Built: `Notifier.emailAvailable`; without email the invite page and `/join` point to the app and don't spend the
+invite; the welcome email says what alerts and reports to expect and how the key link works; app partners capped at
+five on their own, with a readable error.
+
+## 5. Config after setup
+
+Traced 2026-11-25. Found: strict mode is off on a fresh install, so every guard is a no-op until someone finds
+Settings → Strict mode; lowering the adult or bypass list from Block to Report, or turning off the screen-check AI,
+never reached partners (the integrity trail watched the screenshot switch only, and those settings weren't in it);
+integrity alerts read like "capture_screenshots changed: true → false". Logan: offer strict mode in onboarding; the
+review bar stays at 50%.
+
+Built: onboarding's fourth step offers strict mode ("Make loosening wait", recommended); the integrity trail now
+holds `capture_ai`, `list_adult` and `list_bypass`, checked right after those settings change, and partners read
+"Adult sites list: Block → Report", "Screen-check AI: on → off". Groups were not changed; they still need the
+two-phone field test listed in `docs/HANDOFF.md`.
 
 Notes are added here as each section runs.

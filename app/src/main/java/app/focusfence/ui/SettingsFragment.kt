@@ -89,6 +89,7 @@ class SettingsFragment : Fragment() {
         // About
         row(b.rowGuide, R.string.settings_guide, null) { open(app.focusfence.SetupActivity::class.java) }
         row(b.rowAbout, R.string.about_title, null) { showAbout() }
+        row(b.rowBug, R.string.feedback_title, R.string.feedback_summary) { chooseFeedback() }
         row(b.rowGithub, R.string.github_title, null) {
             runCatching {
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/" + app.focusfence.dns.UpdateCheck.REPO)))
@@ -307,5 +308,100 @@ class SettingsFragment : Fragment() {
             }
         }
         b.show()
+    }
+
+    /**
+     * Report a bug (2026-11-25): opens GitHub's issue form filled with versions, and, if ticked, a numbers-only summary
+     * shown here first (dns/BugReport). The repo is public, so the dialog says not to paste logs or screenshots.
+     */
+    /** Bug, feature request or feedback: each opens its own GitHub issue form, with versions filled in. */
+    private fun chooseFeedback() {
+        val kinds = app.focusfence.dns.BugReport.Kind.values()
+        val names = arrayOf(getString(R.string.bug_title), getString(R.string.feature_title), getString(R.string.feedback_general))
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.feedback_title)
+            .setItems(names) { _, i -> reportBug(kinds[i]) }
+            .show()
+    }
+
+    private fun reportBug(kind: app.focusfence.dns.BugReport.Kind = app.focusfence.dns.BugReport.Kind.BUG) {
+        val ctx = requireContext()
+        val bug = kind == app.focusfence.dns.BugReport.Kind.BUG
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0) }
+        box.addView(android.widget.TextView(ctx).apply { setText(R.string.bug_body) })
+        val check = com.google.android.material.checkbox.MaterialCheckBox(ctx).apply {
+            setText(R.string.bug_add_summary)
+            visibility = if (bug) View.VISIBLE else View.GONE
+        }
+        box.addView(check)
+        val preview = android.widget.TextView(ctx).apply {
+            typeface = android.graphics.Typeface.MONOSPACE
+            textSize = 12f
+            visibility = View.GONE
+            setTextIsSelectable(true)
+        }
+        box.addView(android.widget.ScrollView(ctx).apply { addView(preview) })
+        var summary: String? = null
+        check.setOnCheckedChangeListener { _, on ->
+            preview.visibility = if (on) View.VISIBLE else View.GONE
+            if (on && summary == null) {
+                preview.setText(R.string.bug_summary_loading)
+                Thread {
+                    val s = runCatching { bugNumbers(ctx.applicationContext) }.getOrElse { "summary unavailable: ${it.javaClass.simpleName}" }
+                    activity?.runOnUiThread { summary = s; preview.text = s }
+                }.start()
+            }
+        }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle(when (kind) {
+                app.focusfence.dns.BugReport.Kind.BUG -> R.string.bug_title
+                app.focusfence.dns.BugReport.Kind.FEATURE -> R.string.feature_title
+                app.focusfence.dns.BugReport.Kind.FEEDBACK -> R.string.feedback_general
+            })
+            .setView(box)
+            .setPositiveButton(R.string.bug_open) { _, _ ->
+                val sync = app.focusfence.sync.SyncStore
+                val status = sync.protocolStatus(ctx).name.lowercase()
+                val info = app.focusfence.dns.BugReport.Info(
+                    app.focusfence.update.Updates.installedVersion(ctx), app.focusfence.dns.Protocol.LEVEL,
+                    if (sync.deviceId(ctx) == null) "none" else status,
+                    "${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})",
+                    "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+                )
+                val url = app.focusfence.dns.BugReport.url(app.focusfence.dns.UpdateCheck.REPO, info, summary.takeIf { bug && check.isChecked }, kind)
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Numbers only, from the last 3 days of the diagnostics log: no sites, apps, people or addresses. */
+    private fun bugNumbers(ctx: android.content.Context): String {
+        val days = 3
+        val since = System.currentTimeMillis() - days * 86_400_000L
+        val s = app.focusfence.dns.LogSummary(since)
+        app.focusfence.data.EventLog.init(ctx)
+        runCatching { app.focusfence.data.EventLog.flushBlocking() }
+        app.focusfence.data.EventLog.scan(app.focusfence.data.EventLog.Channel.DIAG, sinceT = since) { line ->
+            app.focusfence.dns.LogJson.decode(line)?.let(s::add); true
+        }
+        val bat = s.battery()
+        return app.focusfence.dns.BugReport.summary(app.focusfence.dns.BugReport.Numbers(
+            filterOn = app.focusfence.vpn.DnsVpnService.isRunning,
+            alwaysOn = app.focusfence.vpn.DnsVpnService.alwaysOnState,
+            accessibility = app.focusfence.UiUtil.isUrlFilterEnabled(ctx),
+            strict = app.focusfence.data.StrictStore.isEnabled(ctx),
+            screenChecks = app.focusfence.data.MonitorSettings.screenshotsEnabled(ctx),
+            ai = app.focusfence.data.MonitorSettings.aiEnabled(ctx),
+            onServer = app.focusfence.sync.SyncStore.deviceId(ctx) != null,
+            screenOnPctPerHour = bat.screenOn.pctPerHour.takeIf { bat.screenOn.hours > 0 },
+            screenOffPctPerHour = bat.screenOff.pctPerHour.takeIf { bat.screenOff.hours > 0 },
+            cpuMsPerHourOn = bat.screenOn.cpuMsPerHour.takeIf { bat.screenOn.hours > 0 },
+            forwardFailurePct = s.forwardFailureRate()?.let { it * 100 },
+            latencyP95Ms = s.latencyP95()?.first,
+            errors = s.errors,
+            days = days,
+        ))
     }
 }

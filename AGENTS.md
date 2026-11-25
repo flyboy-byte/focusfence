@@ -12,6 +12,9 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
+- **2.25.0 / server 1.2.0 (2026-11-25):** plan 10 first-time journeys (5-step onboarding, adult blocked by default,
+  self-host path, SMTP, guarded Leave this server, no-email invites, loosening alerts); protocol window D-041;
+  Settings → Feedback & bug reports (three GitHub issue forms).
 - **2.24.0 (2026-11-25):** Block lists rework (`CategoriesActivity`: three-way buttons, plain names, strength row,
   Always allow group, weekly `data/ListRefresh` instead of an "Update list" button per list). Updates happen in Home's
   banner (`update/Installer`; size, progress, retry); the notification opens Home.
@@ -162,6 +165,10 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
   patch release that reverts the change.
 - The server deploys separately (private runbook, not in this repo). When a change touches both, deploy the server
   first if the app depends on it.
+- **Protocol window (D-041):** changing the shape of anything the app sends or reads (path, JSON field, signature format)
+  means raising `dns/Protocol.LEVEL` and adding `server/src/test/.../compat/CompatLevel<N>Test` for the new level. Never
+  edit an old level's suite to match a new server; delete it only once it falls out of the window. `release.yml` runs
+  `tools/check_protocol.py` against the newest `server-v*` tag.
 - **Keep the server release current** (Logan, 2026-11-25): self-hosters install the newest `server-vX.Y.Z` tag, not
   `main`. When server code changes in a way the current app needs, tag a new `server-v` release (`server-release.yml`
   builds the tarball and the Docker image) and update the version in `server/README.md`. Minor bump for features,

@@ -34,7 +34,9 @@ class FakeNotifier : Notifier {
     val texts = ArrayList<Pair<String, String>>()
     /** Simulates the provider refusing (an unverified sender, an outage). */
     var failEmails = false
+    var noEmail = false
     override val smsAvailable = true
+    override val emailAvailable get() = !noEmail
     override suspend fun email(to: String, subject: String, html: String): Boolean {
         if (failEmails) return false
         emails += Triple(to, subject, html); return true
@@ -337,6 +339,18 @@ class ServerTest {
         s.saveReport("d1", Store.SealedReport(10 * h + 2, 10 * h + 20 * 60_000, 10 * h + 20 * 60_000, "shot"), 10 * h)
         s.saveReport("d1", Store.SealedReport(10 * h + 3, 10 * h, 10 * h + 30 * 60_000, "open-2"), 10 * h)
         assertEquals(listOf("closed", "shot", "open-2"), s.readReports("d1").map { it.blob })
+    }
+
+    @Test
+    fun withoutEmailTheInvitePointsToTheAppAndIsNotUsedUp() = run { http ->
+        val id = http.enroll()
+        val inv = http.invite(id)
+        notifier.noEmail = true
+        val secret = inv.joinUrl.substringAfter("/i/")
+        assertTrue(http.get("/i/$secret").bodyAsText().contains("Join in the Focus Fence app"))
+        http.post("/join") { contentType(ContentType.Application.FormUrlEncoded); setBody("link=$secret&name=Sam&email=sam%40example.com") }
+        assertTrue(store.device(id)!!.partners.isEmpty(), "no half-joined email partner")
+        assertTrue(store.device(id)!!.invites.isNotEmpty(), "the invite still works in the app")
     }
 
     @Test
