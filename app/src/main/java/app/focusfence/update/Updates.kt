@@ -84,7 +84,7 @@ object Updates {
     fun recentReleases(count: Int = 6): List<Pair<String, String>> {
         val arr = org.json.JSONArray(get(UpdateCheck.RELEASES_URL + "?per_page=$count"))
         return (0 until arr.length()).map { parse(arr.getJSONObject(it).toString()) }
-            .filter { !it.draft && !it.prerelease }
+            .filter { !it.draft && !it.prerelease && UpdateCheck.isAppTag(it.tag) }
             .map { UpdateCheck.versionOf(it.tag) to UpdateCheck.userNotes(it.body) }
     }
 
