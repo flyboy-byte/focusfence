@@ -62,11 +62,22 @@ class HomeFragment : Fragment() {
         }
     }
 
+    /**
+     * Battery (2026-11-25 log): every tick re-sets Home's texts and colours, which redraws the screen, and drawing
+     * the app's own screens was ~40% of its screen-on CPU. So a second-by-second tick only while a strict-mode
+     * countdown is on screen; otherwise every 15 s (blocked count, "synced N min ago"). State changes still arrive
+     * at once as broadcasts.
+     */
     private val ticker = object : Runnable {
         override fun run() {
             refreshStrict()
             refreshState()
-            _binding?.root?.postDelayed(this, 1000)
+            val ctx = context ?: return
+            val counting = when (StrictStore.state(ctx)) {
+                is StrictLock.State.Pending, is StrictLock.State.Unlocked -> true
+                else -> false
+            }
+            _binding?.root?.postDelayed(this, if (counting) 1_000L else 15_000L)
         }
     }
 
@@ -98,7 +109,9 @@ class HomeFragment : Fragment() {
                 is StrictLock.State.Pending -> StrictStore.cancelUnlock(context)
                 is StrictLock.State.Unlocked -> StrictStore.cancelUnlock(context) // relock early; logs "relocked"
             }
-            refreshStrict()
+            // Restart the ticker so a countdown that just began updates every second straight away.
+            binding.root.removeCallbacks(ticker)
+            ticker.run()
         }
         binding.updateNotesToggle.setOnClickListener {
             val open = binding.updateNotes.visibility != View.VISIBLE

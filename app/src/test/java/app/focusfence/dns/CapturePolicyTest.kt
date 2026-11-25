@@ -28,4 +28,14 @@ class CapturePolicyTest {
         assertFalse(CapturePolicy.shouldCapture(false, true, 2000, due)) // not watched
         assertFalse(CapturePolicy.shouldCapture(true, false, 2000, due)) // screen off
     }
+
+    @org.junit.Test
+    fun unchangedScreensAreCapturedLessOftenUpToFourTimesTheGap() {
+        val l = CapturePolicy.Level.STANDARD
+        val base = CapturePolicy.nextDueAt(0, l, 0.5)
+        org.junit.Assert.assertEquals(base, CapturePolicy.nextDueAt(0, l, 0.5, sameStreak = 0))
+        org.junit.Assert.assertEquals(2 * base, CapturePolicy.nextDueAt(0, l, 0.5, sameStreak = 1))
+        org.junit.Assert.assertEquals(4 * base, CapturePolicy.nextDueAt(0, l, 0.5, sameStreak = 2))
+        org.junit.Assert.assertEquals("capped", 4 * base, CapturePolicy.nextDueAt(0, l, 0.5, sameStreak = 9))
+    }
 }
