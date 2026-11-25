@@ -1,0 +1,52 @@
+# Focus Fence accountability server under systemd, for hosts without Docker.
+# install.sh fills in @NAME@ (default focusfence-server) and installs this as /etc/systemd/system/@NAME@.service.
+# Settings live in /etc/@NAME@/env (root, 600); data in /var/lib/@NAME@ (created by systemd, owned by @NAME@).
+# Bind to loopback and put a TLS proxy in front (nginx.conf.example): the app only talks to https:// servers.
+[Unit]
+Description=Focus Fence accountability server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=@NAME@
+Group=@NAME@
+Environment=FF_HOST=127.0.0.1
+Environment=FF_PORT=8080
+Environment=FF_DATA_DIR=/var/lib/@NAME@
+Environment=HOME=/var/lib/@NAME@
+Environment="JAVA_OPTS=-Xmx256m -Xss512k"
+# Values in the env file win over the defaults above.
+EnvironmentFile=/etc/@NAME@/env
+WorkingDirectory=/var/lib/@NAME@
+StateDirectory=@NAME@
+StateDirectoryMode=0700
+ExecStart=/opt/@NAME@/bin/focusfence-server
+Restart=on-failure
+RestartSec=5
+MemoryMax=600M
+UMask=0077
+
+# Sandbox. The server only needs its own data directory and outgoing HTTPS (email/SMS providers).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target

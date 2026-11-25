@@ -36,7 +36,10 @@ jobs:
           # the shipped compose file pulls the published image; its `build:` block only makes sense inside the repo
           awk '/^    # `docker compose up --build`/{skip=1} skip && /dockerfile:/{skip=0; next} !skip' \
             server/deploy/docker-compose.yml > "dist/$out/docker-compose.yml"
-          cp server/deploy/Caddyfile server/deploy/.env.example server/README.md "dist/$out/"
+          cp server/deploy/Caddyfile server/deploy/.env.example server/deploy/install.sh \
+            server/deploy/ff-admin.sh server/deploy/nginx.conf.example server/README.md "dist/$out/"
+          cp -r server/deploy/systemd "dist/$out/"
+          echo "$version" > "dist/$out/VERSION"
           tar -C dist -czf "dist/${out}.tar.gz" "$out"
           (cd dist && sha256sum "${out}.tar.gz" > "${out}.tar.gz.sha256")
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -67,7 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           v="${{ steps.pkg.outputs.version }}"
-          gh release create "$GITHUB_REF_NAME" \
+          # --latest=false: the app's self-update reads releases/latest, which must stay the newest APP release.
+          gh release create "$GITHUB_REF_NAME" --latest=false \
             --title "Focus Fence server ${v}" \
             --notes "Accountability server ${v}. Container: \`${{ steps.image.outputs.image }}:${v}\` (linux/amd64, linux/arm64). Docker Compose: unpack the tarball, copy \`.env.example\` to \`.env\`, edit it, run \`docker compose up -d\` (add \`--profile https\` for automatic HTTPS). See server/README.md." \
             dist/focusfence-server-${v}.tar.gz dist/focusfence-server-${v}.tar.gz.sha256

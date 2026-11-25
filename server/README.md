@@ -57,6 +57,28 @@ Tested: the image builds, passes its health check, runs read-only as non-root, a
 client address behind a proxy on the Docker bridge. The compose file itself (and Caddy) has not been brought up
 end to end yet: say so in any bug report.
 
+## Run with systemd (no Docker)
+
+Each `server-vX.Y.Z` release also has a tarball with an installer. It needs a JRE 17 or newer on the host.
+
+```sh
+v=1.0.0; f=focusfence-server-$v.tar.gz
+base=https://github.com/flyboy-byte/focusfence/releases/download/server-v$v
+curl -fLO $base/$f && curl -fLO $base/$f.sha256
+sha256sum -c $f.sha256 && tar xzf $f && cd focusfence-server-$v
+sudo ./install.sh        # first run: creates the user, unit and /etc/focusfence-server/env
+sudo nano /etc/focusfence-server/env
+sudo systemctl start focusfence-server
+```
+
+For a later version, unpack it and run `sudo ./install.sh` again. It keeps the old copy, restarts, checks
+`/healthz`, and puts the old copy back by itself if the new one doesn't come up. `sudo ./install.sh --rollback`
+goes back by hand. The server listens on `127.0.0.1:8080`; `nginx.conf.example` in the tarball is a working
+front end (TLS, rate limits, no access log). Admin commands: `sudo ./ff-admin.sh admin codes list`.
+
+Tested in a Debian 12 container: first install, upgrade, a broken upgrade rolled back automatically, and a manual
+rollback.
+
 ## Run from source
 
 ```sh
@@ -75,6 +97,8 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_MAX_DEVICES`, `FF_MAX_MAILBOXES`, `FF_MAX_DATA_MB` | `100`, `500`, `2048` | Hard bounds on what unauthenticated enrol/mailbox creation can use |
 | `FF_DATA_DIR` | `./data` | Flat-file store |
 | `FF_STALE_MINUTES` | `240` | Silence before "phone went silent". Long enough for overnight Doze. |
+| `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
+| `FF_ADMIN_EMAILS` | — | Comma list. Turns on the emailed-link admin page for these addresses; off when empty |
 | `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
 | `FF_SMS_PROVIDER` | `none` | `twilio`, `telnyx`, or `dev` |
 | `FF_SMS_FROM` | — | Sending number |
@@ -106,7 +130,7 @@ of server time.
 
 ## Not done
 
-- No deployment, backups, or admin tooling. Flat files.
+- Flat files; backups are yours (copy the data directory or volume).
 - Join rate-limiting is per client IP, in memory; behind a reverse proxy it needs the real IP.
 - Screenshots: the endpoint exists, but the phone doesn't upload them yet.
 - Report tokens are kept in the clear (so alert emails can link to the report).

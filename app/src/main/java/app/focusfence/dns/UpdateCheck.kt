@@ -37,11 +37,14 @@ object UpdateCheck {
         val notes: String = "",
     )
 
+    /** App releases are tagged `vX.Y.Z-...`; the server's own releases (`server-vX.Y.Z`) share the repo and never count. */
+    fun isAppTag(tag: String): Boolean = tag.startsWith("v") && tag.getOrNull(1)?.isDigit() == true
+
     /** "v2.13.0-accountable" -> "2.13.0-accountable". */
     fun versionOf(tag: String): String = tag.removePrefix("v")
 
     fun offer(release: Release, installedVersion: String): Offer? {
-        if (release.draft || release.prerelease) return null
+        if (release.draft || release.prerelease || !isAppTag(release.tag)) return null
         val version = versionOf(release.tag)
         if (Digest.compareVersions(version, installedVersion) <= 0) return null
         // compareVersions treats unparseable as equal, so a garbage tag already stopped above.

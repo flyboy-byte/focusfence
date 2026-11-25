@@ -33,6 +33,14 @@ class UpdateCheckTest {
     }
 
     @Test
+    fun ignoresTheServersOwnReleases() {
+        val tag = "server-v3.0.0"
+        assertNull(UpdateCheck.offer(release(tag, apk(tag)), "2.13.0-accountable"))
+        assertFalse(UpdateCheck.isAppTag(tag))
+        assertTrue(UpdateCheck.isAppTag("v2.16.0-accountable"))
+    }
+
+    @Test
     fun ignoresDraftsAndPrereleases() {
         val tag = "v2.14.0-rc1-accountable"
         assertNull(UpdateCheck.offer(release(tag, apk(tag), pre = true), "2.13.0-accountable"))
