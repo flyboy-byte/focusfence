@@ -18,6 +18,8 @@ dependencies {
     implementation("io.ktor:ktor-client-cio-jvm:$ktor")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("ch.qos.logback:logback-classic:1.5.38")
+    // QR code for the admin's authenticator setup (drawn as inline SVG; no images, no scripts).
+    implementation("com.google.zxing:core:3.5.3")
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
     testImplementation("io.ktor:ktor-client-core-jvm:$ktor")

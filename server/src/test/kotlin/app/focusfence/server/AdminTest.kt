@@ -68,12 +68,13 @@ class AdminTest {
         assertEquals(HttpStatusCode.OK, verified.status)
         val setupSession = assertNotNull(cookieOf(verified, "__Host-ffa"))
         val body = verified.bodyAsText()
-        val secret = Regex("<code>([A-Z2-7]{32})</code>").find(body)!!.groupValues[1]
+        assertTrue(body.contains("<svg class='qr'"), "setup shows a QR code")
+        val secret = Regex("<code class='key' id='totpKey'>([A-Z2-7]{32})</code>").find(body)!!.groupValues[1]
         val setupCsrf = Regex("name='csrf' value='([^']+)'").find(body)!!.groupValues[1]
         assertEquals(HttpStatusCode.Forbidden, http.form("/admin/setup", setupSession, "csrf" to "bad", "totp" to "123456").status)
         val done = http.form("/admin/setup", setupSession, "csrf" to setupCsrf, "totp" to Totp.code(secret, clock / 30_000))
         assertEquals(HttpStatusCode.OK, done.status)
-        val recovery = Regex("<code>(.*?)</code>", RegexOption.DOT_MATCHES_ALL).find(done.bodyAsText())!!.groupValues[1].split("<br>")
+        val recovery = Regex("<pre class='codes' id='recovery'>(.*?)</pre>", RegexOption.DOT_MATCHES_ALL).find(done.bodyAsText())!!.groupValues[1].split("\n")
         assertEquals(8, recovery.size)
         assertFalse(store.dir.resolve("admin.json").readText().contains(recovery[0].replace("-", "")), "recovery codes stored hashed")
 
@@ -85,7 +86,9 @@ class AdminTest {
         assertTrue(http.get("/admin/codes") { header(HttpHeaders.Cookie, session) }.bodyAsText().contains("Enrollment codes"))
         assertEquals(HttpStatusCode.Forbidden, http.form("/admin/codes/add", session, "csrf" to "nope", "label" to "x").status)
         val made = http.form("/admin/codes/add", session, "csrf" to csrf, "label" to "Sam", "uses" to "1").bodyAsText()
-        assertTrue(made.contains("Shown once"))
+        assertTrue(made.contains("shown once"))
+        assertTrue(made.contains("Hi Sam, here&#39;s how to join") && made.contains("https://ff.test"), "invite message names the person and the server")
+        assertTrue(made.contains("works once"))
         val dev = store.createDevice("spki", clock)
         assertTrue(http.form("/admin/devices/label", session, "csrf" to csrf, "id" to dev.id, "label" to "Sam's phone").bodyAsText().contains("Saved"))
         assertEquals("Sam's phone", store.device(dev.id)!!.label)
@@ -157,7 +160,7 @@ class AdminTest {
         val setup = http.form("/admin/verify", cookieOf(first, "__Host-ffap")!!, "second" to "")
         val partial = cookieOf(setup, "__Host-ffa")!!
         val body = setup.bodyAsText()
-        val secret = Regex("<code>([A-Z2-7]{32})</code>").find(body)!!.groupValues[1]
+        val secret = Regex("<code class='key' id='totpKey'>([A-Z2-7]{32})</code>").find(body)!!.groupValues[1]
         val csrf = Regex("name='csrf' value='([^']+)'").find(body)!!.groupValues[1]
         val done = http.form("/admin/setup", partial, "csrf" to csrf, "totp" to Totp.code(secret, clock / 30_000))
         val full = cookieOf(done, "__Host-ffa")!!
