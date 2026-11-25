@@ -179,6 +179,19 @@ class Digest(private val fromT: Long) {
 
         private val NETWORK_HEALTH = setOf("degraded", "upstream_down")
 
+        /** Plain names for integrity keys partners read most (journey 5); others keep "key changed: a → b". */
+        private val INTEGRITY_WORDS = mapOf(
+            "capture_screenshots" to "Screen checks",
+            "capture_ai" to "Screen-check AI",
+            "capture_text" to "On-screen text capture",
+            "list_adult" to "Adult sites list",
+            "list_bypass" to "Ways-around-the-filter list",
+        )
+
+        private fun word(v: String?): String = when (v) {
+            "true" -> "on"; "false" -> "off"; "block" -> "Block"; "report" -> "Report"; "off" -> "Off"; null -> "?"; else -> v
+        }
+
         private fun healthNow(f: Map<String, Any?>): String = (f["detail"] as? String).orEmpty().substringBefore(',')
 
         /** Compares "2.11.0-accountable"-style versions by their numeric parts; unparseable counts as equal. */
@@ -205,6 +218,7 @@ class Digest(private val fromT: Long) {
                 // update (the tunnel is down while the package is replaced) and mailed partners "Filter
                 // turned off" for a routine update. Real outages are still the vpn svc records above.
                 if (key == "vpn_metered") return null
+                INTEGRITY_WORDS[key]?.let { name -> return "$name: ${word(was)} → ${word(f["value"] as? String)}" }
                 return "$key changed: $was → ${f["value"]}"
             }
             if (type != LogEvents.TYPE_SERVICE) return null

@@ -34,7 +34,10 @@ object MonitorSettings {
     fun textEnabled(c: Context) = prefs(c).getBoolean(KEY_TEXT, false)
     fun anyCaptureEnabled(c: Context) = screenshotsEnabled(c) || textEnabled(c)
 
-    fun setScreenshots(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_SCREENSHOTS, on).apply()
+    fun setScreenshots(c: Context, on: Boolean) {
+        prefs(c).edit().putBoolean(KEY_SCREENSHOTS, on).apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(c)
+    }
     fun setText(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_TEXT, on).apply()
 
     /**
@@ -44,7 +47,10 @@ object MonitorSettings {
      * `clf`, `clf_ms`, `clf_load_ms`). Off = screenshots are scored nothing.
      */
     fun aiEnabled(c: Context) = prefs(c).getBoolean(KEY_AI, false)
-    fun setAi(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_AI, on).apply()
+    fun setAi(c: Context, on: Boolean) {
+        prefs(c).edit().putBoolean(KEY_AI, on).apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(c)
+    }
 
     fun level(c: Context): CapturePolicy.Level =
         runCatching { CapturePolicy.Level.valueOf(prefs(c).getString(KEY_LEVEL, null) ?: "") }
