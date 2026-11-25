@@ -130,7 +130,7 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 ## Open decisions
 
 Settled since this table was first written: hosting (Logan's VPS, live), domain + HTTPS (`ff.flyboybyte.com`), privacy
-tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main` (D-017/D-022), going public (D-027), about/privacy pages on GitHub Pages (2026-11-24).
+tier (end-to-end sealed reports, D-023), licence (AGPL-3.0 since 2026-11-25, D-038; MIT before, D-015), landing on `main` (D-017/D-022), going public (D-027), about/privacy pages on GitHub Pages (2026-11-24).
 
 | Decision | Options / recommendation |
 |---|---|

@@ -194,7 +194,7 @@ extend. But abstractions have to prove their value in the app first.
 around a general policy language. Guards the source-model work (B6) from becoming a matcher
 rewrite — audit 03 found the existing `HashSet` adequate at ~100k entries.
 
-## D-015 — MIT license
+## D-015 — MIT license (superseded by D-038, 2026-11-25)
 
 *Decided: 2026-08-15 by @flyboy-byte.*
 
@@ -652,4 +652,20 @@ is no cancel. A one-off WorkManager run at the send time uploads it as a sealed 
 `svc partner shot_auto_sent` logged, so the partner's alert ("A screenshot was flagged and sent to you blurred") never
 arrives before the picture. The report labels it "Sent automatically". Needs a server connection (an enrolled phone);
 without one nothing is queued.
+
+## D-038 — AGPL-3.0, so the app can ship NudeNet as the screenshot check
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte, with @sidewinderzz's agreement · **Status:** accepted
+
+The GantMan model calls close-up faces, skin and wood grain "porn": video-call frames at 65–83%, a family photo, a
+hand holding a chip at 71% (Logan's review screen, 2026-11-25), and of the partner-level flags with an answer, 2 of 3
+were wrong. NudeNet detects exposed body parts instead of judging the whole picture, and on those five screenshots it
+found none (Marqo, Apache-2.0, also cleared them, at up to 27%). Logan asked which is better, licences aside:
+NudeNet. NudeNet's repo and the YOLOv8 it builds on are AGPL-3.0 (its PyPI page says MIT; treated as AGPL), so the
+project moves from MIT to AGPL-3.0. Copyright holders Logan and sidewinderzz agreed (2026-11-25).
+
+What changes: anyone distributing the app, modified or not, must offer its source under AGPL; nobody can ship a
+closed-source version with NudeNet inside. The server doesn't run the model and is unaffected in practice. Releases
+up to 2.21.0 stay MIT. Not tested: either model on real explicit content (we don't fetch any to test with); the
+measure is the owner's review answers after release.
 

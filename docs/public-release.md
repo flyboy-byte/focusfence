@@ -18,7 +18,7 @@ Box-specific details are deliberately not in this file._
 | **Workflows for a public repo** | ✅ PR builds get no secrets (`pull_request`, no `pull_request_target`); signing secrets only on tag pushes | Optional: require approval for first-time contributors' workflow runs (default for public repos). |
 | **Past workflow runs and artifacts** | ⚠️ become public too. Logs show masked secrets only. One artifact from the one-off keystore recovery is encrypted to an offline key and **expires 2026-11-25** | Don't switch before it has expired. |
 | **Pull request refs** | ⚠️ GitHub keeps every PR's commits (`refs/pull/N/head`) for good; a force-push can't remove them | This is why the history fix means a **new repo**, not an in-place rewrite. |
-| **Licences** | ✅ MIT (`LICENSE`); the bundled model's licence in `app/src/main/assets/classifier/MODEL_LICENSE.txt` | — |
+| **Licences** | ✅ AGPL-3.0 since 2026-11-25 (`LICENSE`, D-038; MIT before, D-015); bundled models' licences in `app/src/main/assets/classifier/` | — |
 | **Large files** | ✅ one 12 MB model; repo pack ~12 MB | — |
 | **Hard-coded repo URLs in the app** | ✅ none, so a repo move breaks nothing on phones | — |
 | **README and About** | ❌ README described only the original blocker; About and topics empty | README rewritten (#41); About text below. |
