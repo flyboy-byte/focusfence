@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The label over a rounded group, for groups built in code. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/FF.GroupLabel" />

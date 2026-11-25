@@ -16,8 +16,8 @@ import app.focusfence.databinding.ItemSectionBinding
 import app.focusfence.dns.BlockRule
 
 sealed class Row {
-    /** A top-level section ("Your sites"); [canAdd] shows its Add button. */
-    data class Section(val key: String, val title: String, val canAdd: Boolean) : Row()
+    /** A top-level section ("Your sites"); [addLabel] shows its Add button ("Add site"). */
+    data class Section(val key: String, val title: String, val addLabel: String?) : Row()
 
     /** A row that opens another screen (Categories). */
     data class Link(val key: String, val title: String, val value: String) : Row()
@@ -87,8 +87,23 @@ class GroupedBlocklistAdapter(
         }
     }
 
+    /** Rows between two headings form one rounded group (ui/Tiles). */
+    private fun isTile(r: Row?) = r is Row.Domain || r is Row.App || r is Row.Link || r is Row.Hint
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val row = getItem(position)) {
+        val row = getItem(position)
+        if (isTile(row)) {
+            val first = !isTile(if (position > 0) getItem(position - 1) else null)
+            val last = !isTile(if (position < itemCount - 1) getItem(position + 1) else null)
+            val pos = when {
+                first && last -> Tiles.Pos.SINGLE
+                first -> Tiles.Pos.TOP
+                last -> Tiles.Pos.BOTTOM
+                else -> Tiles.Pos.MIDDLE
+            }
+            Tiles.style(holder.itemView, pos, clickable = row !is Row.Hint)
+        }
+        when (row) {
             is Row.Header -> (holder as HeaderHolder).bind(row)
             is Row.Domain -> (holder as EntryHolder).bindDomain(row)
             is Row.App -> (holder as EntryHolder).bindApp(row)
@@ -110,7 +125,8 @@ class GroupedBlocklistAdapter(
     inner class SectionHolder(private val binding: ItemSectionBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Section) {
             binding.sectionTitle.text = row.title
-            binding.sectionAction.visibility = if (row.canAdd) View.VISIBLE else View.GONE
+            binding.sectionAction.visibility = if (row.addLabel != null) View.VISIBLE else View.GONE
+            binding.sectionAction.text = row.addLabel
             binding.sectionAction.setOnClickListener { onSectionAdd(row.key) }
         }
     }

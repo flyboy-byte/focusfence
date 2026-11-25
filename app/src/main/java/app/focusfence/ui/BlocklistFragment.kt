@@ -45,7 +45,10 @@ class BlocklistFragment : Fragment() {
                 if (key == SECTION_APPS) UiUtil.chooseBlockedApps(requireContext()) { refresh() }
                 else startActivity(Intent(requireContext(), DomainDetailActivity::class.java))
             },
-            onLinkClick = { startActivity(Intent(requireContext(), app.focusfence.CategoriesActivity::class.java)) },
+            onLinkClick = { key ->
+                val target = if (key == "history") app.focusfence.BlockHistoryActivity::class.java else app.focusfence.CategoriesActivity::class.java
+                startActivity(Intent(requireContext(), target))
+            },
             onHeaderClick = { key ->
                 if (!collapsedGroups.remove(key)) collapsedGroups.add(key)
                 refresh()
@@ -82,7 +85,8 @@ class BlocklistFragment : Fragment() {
     }
 
     private fun refresh() {
-        adapter.submitList(buildRows())
+        // A row's corners depend on its neighbours, so reshape every row once the list has changed.
+        adapter.submitList(buildRows()) { adapter.notifyItemRangeChanged(0, adapter.itemCount) }
     }
 
     private fun buildRows(): List<Row> {
@@ -106,7 +110,7 @@ class BlocklistFragment : Fragment() {
             val on = app.focusfence.dns.Categories.BUNDLES.count {
                 app.focusfence.data.CategoryStore.policy(context, it.id) != app.focusfence.dns.Categories.Policy.OFF
             }
-            rows.add(Row.Section("lists", getString(R.string.blocking_lists), canAdd = false))
+            rows.add(Row.Section("lists", getString(R.string.blocking_lists), addLabel = null))
             rows.add(
                 Row.Link(
                     "categories", getString(R.string.categories_title),
@@ -115,7 +119,9 @@ class BlocklistFragment : Fragment() {
             )
         }
 
-        rows.add(Row.Section(SECTION_SITES, getString(R.string.blocking_sites), canAdd = true))
+        rows.add(Row.Link("history", getString(R.string.history_title), ""))
+
+        rows.add(Row.Section(SECTION_SITES, getString(R.string.blocking_sites), getString(R.string.blocking_add_site)))
         if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocking_sites_empty), "sites_empty"))
         // Group headings only help when there's more than one kind of rule.
         val kinds = groups.count { (_, _, p) -> rules.any(p) }
@@ -141,7 +147,7 @@ class BlocklistFragment : Fragment() {
         }
 
         val apps = BlockedAppsStore.rules(context)
-        rows.add(Row.Section(SECTION_APPS, getString(R.string.blocking_apps), canAdd = true))
+        rows.add(Row.Section(SECTION_APPS, getString(R.string.blocking_apps), getString(R.string.blocking_add_app)))
         run {
             if (apps.isEmpty()) {
                 rows.add(Row.Hint(getString(R.string.blocking_apps_empty), "apps_empty"))

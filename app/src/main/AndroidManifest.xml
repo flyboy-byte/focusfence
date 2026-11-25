@@ -143,6 +143,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".BlockHistoryActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".BlockNoticesActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".update.UpdateActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />

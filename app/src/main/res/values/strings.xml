@@ -112,6 +112,8 @@
     <string name="group_apps">Blocked apps</string>
     <string name="group_title_fmt">%1$s (%2$d)</string>
     <string name="blocking_add">Add</string>
+    <string name="blocking_add_site">Add site</string>
+    <string name="blocking_add_app">Add app</string>
     <string name="blocking_lists">Block lists</string>
     <string name="blocking_lists_value">%1$s · %2$d on</string>
     <string name="blocking_sites">Your sites</string>
@@ -300,13 +302,13 @@
     <string name="guard_level_partner_pin">Partner PIN</string>
 
     <!-- Uninstall protection (device admin) -->
-    <string name="owner_settings_summary">One tap, like Ever Accountable: uninstalling Focus Fence then needs a deliberate extra step, and it\'s recorded.</string>
+    <string name="owner_settings_summary">Uninstalling takes an extra confirm</string>
     <string name="admin_card_title">Uninstall protection</string>
-    <string name="admin_card_body">The same protection Ever Accountable uses. While it\'s on, Focus Fence can\'t be uninstalled until you turn this off first. That extra step is recorded, and partners are told. It never locks you out.</string>
+    <string name="admin_card_body">While it\'s on, Android asks you to deactivate it before Focus Fence can be uninstalled (in App info it shows as \"Deactivate &amp; uninstall\"). It\'s one extra confirm, not a lock: the app can always be removed.\n\nTurning it off is recorded. If the app is uninstalled, it stops checking in, and partners get a \"phone went silent\" alert within a few hours.</string>
     <string name="admin_activate">Turn on</string>
-    <string name="admin_add_explanation">Makes uninstalling Focus Fence a two-step action that is recorded for your accountability partner. It does not lock you out: you can turn this off at any time.</string>
+    <string name="admin_add_explanation">Adds one confirm before Focus Fence can be uninstalled. It does not lock you out: you can turn this off at any time, and the app can always be removed.</string>
     <string name="owner_remove">Leave managed mode (from an older version)</string>
-    <string name="admin_disable_warning">Removing Focus Fence protection will be recorded. Your accountability partner can see that protection was turned off.</string>
+    <string name="admin_disable_warning">Turning off Focus Fence protection is recorded. If the app is then uninstalled, your partners are told the phone went silent.</string>
 
     <!-- Home status card + settings groups -->
     <string name="home_status_title">Status</string>
@@ -582,9 +584,9 @@
     <string name="blocked_reason_section">Only some parts of this site are allowed.</string>
     <string name="block_screen_label">When a site is blocked</string>
     <string name="block_screen_summary">Ads and trackers are blocked quietly. When you open a site you blocked, Focus Fence lets you know, so it doesn\'t look like your internet is broken.</string>
-    <string name="block_style_notify">Show a notification</string>
+    <string name="block_style_notify">A notification</string>
     <string name="block_style_screen">Show a full \"Blocked by Focus Fence\" screen</string>
-    <string name="block_style_off">Don\'t tell me</string>
+    <string name="block_style_off">Nothing. The site just doesn\'t load</string>
     <string name="block_screen_channel">Blocked sites</string>
     <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
     <string name="block_screen_notify_text">Tap to see why.</string>
@@ -592,7 +594,7 @@
     <string name="admin_status_on">Uninstall protection is on</string>
     <string name="admin_status_off">Uninstall protection is off</string>
     <string name="block_notice_high_risk">Also adult, gambling and scam sites</string>
-    <string name="block_notice_high_risk_summary">Only for the lists you turned on under Categories.</string>
+    <string name="block_notice_high_risk_summary">Only for lists you turned on</string>
     <string name="block_partner_repeated">Tell partners if I keep trying</string>
     <string name="block_partner_repeated_summary">Three tries at an adult, gambling or scam site within 10 minutes. Partners see the category, not the site. Needs the accessibility service, so a browser loading in the background never counts.</string>
     <string name="block_notify_category_title">Blocked: %1$s</string>
@@ -675,4 +677,31 @@
     <string name="whats_new_installed">(installed)</string>
     <string name="github_title">Source code on GitHub</string>
     <string name="github_summary">Code, every release, and where to report a problem</string>
+    <!-- Settings, rounded groups (2026-11-25) -->
+    <string name="settings_group_updates">Updates</string>
+    <string name="settings_strict_summary">Loosening anything takes a wait or a PIN</string>
+    <string name="settings_uninstall_summary">One extra confirm before uninstalling</string>
+    <string name="settings_accessibility_summary">Needed for app blocking, section rules and screen checks</string>
+    <string name="settings_notices_summary">What you see, and when partners hear</string>
+    <string name="settings_ad_update">Update the ad list now</string>
+    <string name="settings_excluded_title">Apps that skip the filter</string>
+    <string name="settings_excluded_summary">For games or maps that break behind it</string>
+    <string name="settings_updates_summary">Every few hours and when you open the app</string>
+    <string name="settings_locked">Locked</string>
+    <string name="settings_none">None</string>
+    <string name="notices_title">When a site is blocked</string>
+    <string name="notices_intro">Ads and trackers are always blocked quietly. This is for sites you or your lists block.</string>
+    <string name="notices_group_style">When a site is blocked, show</string>
+    <string name="notices_group_high_risk">Adult, gambling and scam lists</string>
+    <string name="notices_high_risk_title">Tell me about these too</string>
+    <string name="notices_partner_summary">3 tries in 10 minutes. Partners see the category, not the site. Needs the accessibility service.</string>
+    <string name="notices_value_notify">Notification</string>
+    <string name="notices_value_silent">Silent</string>
+    <string name="history_title">Block history</string>
+    <string name="history_intro">Sites the filter stopped, from this phone\'s log. Ads, trackers and background lookups aren\'t listed. Stays on this phone.</string>
+    <string name="history_empty">Nothing blocked yet.</string>
+    <string name="history_yesterday">Yesterday</string>
+    <string name="history_why_rule">Your rule</string>
+    <string name="history_why_list">%1$s list</string>
+    <string name="history_row_summary">Sites the filter stopped, by day</string>
 </resources>
