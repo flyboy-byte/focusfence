@@ -7,6 +7,8 @@ Humans are welcome to read it too.
 1. [`STATE.md`](STATE.md) — what's built, what's verified, what's next.
 2. [`CLAUDE.md`](CLAUDE.md) — architecture and invariants (despite the name, it applies to every agent).
 3. The spec for whatever you're touching in [`docs/specs/`](docs/specs/).
+4. [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next for work in progress, and [`docs/plans/10-first-time-journeys.md`](docs/plans/10-first-time-journeys.md)
+   for the first-time-user pass.
 
 ## What changed lately (for agents; the full list is [`CHANGELOG.md`](CHANGELOG.md))
 
@@ -23,7 +25,6 @@ Read these before touching partners, the server, updates or block notices. Newes
 - **2.22.0 (2026-11-25): licence MIT → AGPL-3.0 (D-038)** so the app can bundle NudeNet. A partner flag (and an automatic
   send) now needs NudeNet to find an exposed body part; the GantMan model alone flagged faces on video calls. Review
   cards show "body check: …". Releases up to 2.21.0 stay MIT.
-
 - **2.21.0 / server 7edb093 (2026-11-25, PR #89):** D-036 dead man's switch: server silence
   window 60 min, "checking in again" notice, and the server keeps what partners were told (`Device.alerts`) for app
   partners to poll at `/p/{token}/alerts` (mailbox alerts are skipped when that answers). D-037: flagged screenshots go

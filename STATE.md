@@ -2,17 +2,16 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
-> **Where it stands (2026-11-25, 2.20.0 + server main-dcadeb4):** the filter is in daily use and in good shape. Accounts
-> were simplified (D-035): **one partner invite** (a browser makes an email partner; pasted into the app under *Join with
-> an invite* it enrolls and pairs that phone), every phone enrolled, the server knows who watches whom, and an app partner
-> opens **the same server report** as an email partner. 📱 2026-11-25: a second phone joined by invite and shows the main
-> phone's reports. Update checks run every time the app comes to the foreground (📱 2.18.1 → 2.18.2 offered with no tap).
-> Admin sign-in is an emailed code or an authenticator code. **Shipped 2026-11-25 (2.21–2.23, server 7edb093; not yet seen on the phones):** licence now AGPL-3.0 (D-038); a NudeNet body check before any partner flag, with lingerie/swimwear captured as "suggestive" (report-only); 60 min silence
-> alerts for every partner, reports ~15 min fresh, a reworked report page, automatic blurred screenshots (D-036, D-037).
-> **Next (with Logan): accountability networking and mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
+> **Where it stands (2026-11-25 late, app 2.25.0 + server 1.2.0, live main-4b27613):** the filter is in daily use and
+> in good shape. Today shipped (most not yet seen on a phone): accounts simplified to one partner invite (D-035, 📱 two
+> phones); 60 min silence alerts with a reconnect explanation (D-036); automatic blurred screenshots (D-037) gated by a
+> NudeNet body check, with lingerie/swimwear "suggestive" report-only (D-038, licence now **AGPL-3.0**); Block lists with
+> adult and bypass as core lists (D-039); first-time journeys: 5-step onboarding, adult blocked by default, self-host
+> path, SMTP, guarded Leave this server (plan 10, D-040); app/server protocol window held by CI (D-041); Feedback & bug
+> reports in Settings. **Next:** Logan's clean-install test on the second phone, then [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
 
-> Screenshots: automatic capture never sends an image. The owner can choose to send a **blurred** (≤ 48 px) thumbnail of
-> a flagged shot to partners (D-025, Phase 2 level B); a clear image never leaves the phone.
+> Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
+> as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
 
 _Last updated: 2026-11-25 (2.20.0). Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
