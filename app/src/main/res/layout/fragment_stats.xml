@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- This week: screen time first (the number people open this for), then which apps, then what was blocked. Plain
+     sections with dividers, no nested cards (D-032). -->
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,85 +11,161 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="24dp">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/periodToggle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:checkedButton="@+id/periodToday"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/periodToday"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/stats_period_today" />
+
+            <Button
+                android:id="@+id/periodWeek"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/stats_period_week" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Screen time -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/stats_screen_time"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
-            android:id="@+id/todaySummary"
-            android:layout_width="match_parent"
+            android:id="@+id/screenTime"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleLarge" />
+            android:textAppearance="?attr/textAppearanceDisplaySmall" />
 
-        <com.google.android.material.card.MaterialCardView
+        <TextView
+            android:id="@+id/screenTimeSub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <LinearLayout
+            android:id="@+id/usageMissing"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="20dp"
-            app:contentPadding="16dp">
-            <LinearLayout
-                android:layout_width="match_parent"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_week_header"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-                <app.focusfence.ui.WeekChartView
-                    android:id="@+id/weekChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" />
-                <LinearLayout
-                    android:id="@+id/weekStats"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView
+                android:layout_weight="1"
+                android:text="@string/stats_usage_missing"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <Button
+                android:id="@+id/usageGrant"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="@string/stats_usage_grant" />
+        </LinearLayout>
+
+        <app.focusfence.ui.WeekChartView
+            android:id="@+id/screenChart"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="20dp"
-            app:contentPadding="16dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_domains_header"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-                <LinearLayout
-                    android:id="@+id/domainStats"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView
+            android:layout_marginTop="16dp" />
+
+        <!-- Apps -->
+        <TextView
+            android:id="@+id/appsHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/stats_apps_header"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <LinearLayout
+            android:id="@+id/appStats"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="20dp"
-            app:contentPadding="16dp">
-            <LinearLayout
+            android:orientation="vertical" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" />
+
+        <!-- Blocked -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/stats_blocked_header"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <TextView
+            android:id="@+id/blockSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <LinearLayout
+            android:id="@+id/domainStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <app.focusfence.ui.WeekChartView
+            android:id="@+id/weekChart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" />
+
+        <!-- Budgets: only when there are any -->
+        <LinearLayout
+            android:id="@+id/budgetSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stats_budgets_header"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-                <LinearLayout
-                    android:id="@+id/budgetStats"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                android:layout_marginTop="24dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/stats_budgets_header"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <LinearLayout
+                android:id="@+id/budgetStats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

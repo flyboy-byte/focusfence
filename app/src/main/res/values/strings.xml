@@ -61,14 +61,25 @@
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
     <string name="excluded_guarded_suffix">%1$s  ·  needs delay in strict mode</string>
 
-    <string name="stats_title">Stats</string>
-    <string name="stats_today_summary">%1$d blocked today (%2$d ads &amp; trackers)</string>
-    <string name="stats_domains_header">Top blocked sites today</string>
-    <string name="stats_none_yet">Nothing blocked yet today</string>
+    <string name="stats_title">This week</string>
+    <string name="stats_period_today">Today</string>
+    <string name="stats_period_week">Last 7 days</string>
+    <string name="stats_screen_time">Screen time</string>
+    <string name="stats_week_average">About %1$s a day</string>
+    <plurals name="stats_apps_used">
+        <item quantity="one">%d app used</item>
+        <item quantity="other">%d apps used</item>
+    </plurals>
+    <string name="stats_usage_missing">App time needs Usage access.</string>
+    <string name="stats_usage_grant">Turn on</string>
+    <string name="stats_apps_header">Apps</string>
+    <string name="stats_apps_none">No app used for a minute or more</string>
+    <string name="stats_blocked_header">Blocked</string>
+    <string name="stats_blocked_today">%1$d today, %2$d of them ads and trackers</string>
+    <string name="stats_blocked_week">%1$d in 7 days, %2$d of them ads and trackers</string>
+    <string name="stats_none_yet">Nothing blocked</string>
     <string name="stats_budgets_header">Time budgets today</string>
-    <string name="stats_no_budgets">No daily time limits set</string>
     <string name="stats_budget_value">%1$d of %2$d min</string>
-    <string name="stats_week_header">Blocked lookups, last 7 days</string>
     <string name="stats_today_label">Today</string>
 
     <string name="section_service_label">Accessibility service</string>
