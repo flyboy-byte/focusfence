@@ -7,7 +7,14 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Fixed
+- This week shows screen time and the apps it went to (`6fb2f34`, [#65](https://github.com/flyboy-byte/focusfence/pull/65))
+- review findings: old managed-mode leftovers, quiet alert switch, tab revisits, front doors (`f4b70e5`, [#64](https://github.com/flyboy-byte/focusfence/pull/64))
 - What's new drops bare 'ui:' / 'server:' prefixes too (`f6d303c`, [#62](https://github.com/flyboy-byte/focusfence/pull/62))
+### Changed
+- ui: follow the system colours; drop the stats icon from Home's header (`3eb8bc8`, [#67](https://github.com/flyboy-byte/focusfence/pull/67))
+- server: systemd install with automatic rollback; server releases never become the app's Latest (`76efb4a`, [#66](https://github.com/flyboy-byte/focusfence/pull/66))
+### Docs
+- decisions D-029 to D-032, CONTRIBUTING, agent and contributor guides for 2.15 (`ce0ba77`, [#63](https://github.com/flyboy-byte/focusfence/pull/63))
 
 _Undo any line with `git revert <commit>`._
 
