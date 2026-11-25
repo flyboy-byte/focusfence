@@ -12,6 +12,8 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
+- **2.23.0 (2026-11-25):** "suggestive" tier: NudeNet's covered-part classes on a risky picture are logged and shown
+  in the partner report, report-only (no alert, no picture). `BodyCheck.classify`.
 - **2.22.0 (2026-11-25): licence MIT → AGPL-3.0 (D-038)** so the app can bundle NudeNet. A partner flag (and an automatic
   send) now needs NudeNet to find an exposed body part; the GantMan model alone flagged faces on video calls. Review
   cards show "body check: …". Releases up to 2.21.0 stay MIT.

@@ -283,7 +283,13 @@ object ScreenCapture {
                 Monitor.perf.count("body_ms", android.os.SystemClock.elapsedRealtime() - b0)
             }
         } else null
-        val confirmed = body?.let(app.focusfence.dns.BodyCheck::confirm)
+        val bodyResult = body?.let(app.focusfence.dns.BodyCheck::classify)
+        val confirmed = bodyResult?.takeIf { it.kind == app.focusfence.dns.BodyCheck.Kind.NUDITY }?.let { it.part!! to it.score }
+        // Suggestive (lingerie, swimwear): captured, report-only for now. A line in the partner report, no alert, no picture.
+        if (bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE) {
+            Monitor.perf.count("body_suggestive")
+            EventLog.activity(LogEvents.service(now, "monitor", "suggestive", app.focusfence.UiUtil.appLabel(context, pkg)))
+        }
         val why: String? = when {
             body != null -> if (confirmed != null) "body" else null
             verdict?.flagged == true -> flagPolicy.onRawHit(pkg, verdict.score, now)?.name?.lowercase()

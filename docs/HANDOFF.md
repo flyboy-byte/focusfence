@@ -85,7 +85,12 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 
 ## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
 "Networking" here means **accountability networking**: how phones, partners and the server reach each other.
-0. **Shipped 2026-11-25: app 2.21.0, server 7edb093 (`FF_STALE_MINUTES=60` set live). Not yet seen on the phones.**
+0. **Shipped 2026-11-25: app 2.21.0 → 2.23.0, server 7edb093 (`FF_STALE_MINUTES=60` set live). Not yet seen on the phones.**
+   2.22: licence MIT → AGPL-3.0 and NudeNet body check before any partner flag (D-038; Logan's review screen showed
+   video-call faces at 65–83% "porn"). 2.23: covered parts on a risky picture = "suggestive", report-only for a week,
+   then decide (alert / send / stay). **Next build, agreed in principle:** explicit-text detection, report-only, with a
+   per-app "read text" switch (off for AI apps), skipping unchanged screens to cut text CPU (~17% of app CPU now), and
+   a scored phrase list instead of 13 brand words; sexual scenes without nudity (Marqo, Apache-2.0) also report-only.
    Phone checks: airplane mode for 70 min (second phone gets silent, then back with the reconnect explanation); the
    next real flag (notification, note, "Sent automatically" in the report); the report page. Was PR #89: items 1 and 2 below
    (open slice re-sent each sync; app partners read server alerts; 60 min silence; back-online notice), the report page

@@ -46,4 +46,27 @@ class BodyCheckTest {
         val name = ReviewPolicy.fileName(ReviewPolicy.Entry(1, "com.x", "porn", 90, "porn=0.9," + BodyCheck.compact(hit)))
         assertEquals("porn=0.9,body.BUTTOCKS_EXPOSED=0.660", ReviewPolicy.parse(name)?.scores)
     }
+
+    @Test
+    fun lingerieIsSuggestiveNudityStillWinsAndFacesAreNeither() {
+        val bra = BodyCheck.best(output(Triple("FEMALE_BREAST_COVERED", 1, 0.62f), Triple("FACE_FEMALE", 0, 0.9f)), anchors)
+        assertEquals(BodyCheck.Kind.SUGGESTIVE, BodyCheck.classify(bra).kind)
+        assertNull(BodyCheck.confirm(bra)) // never a partner flag or an automatic send
+        assertEquals("suggestive: FEMALE_BREAST_COVERED 62%", BodyCheck.summary(bra))
+        assertEquals("sexy 70%\nbody check: suggestive (female breast covered 62%)", ReviewPolicy.breakdown("sexy=0.7," + BodyCheck.compact(bra)))
+
+        val both = BodyCheck.best(output(Triple("BUTTOCKS_COVERED", 1, 0.9f), Triple("FEMALE_BREAST_EXPOSED", 2, 0.5f)), anchors)
+        assertEquals(BodyCheck.Kind.NUDITY, BodyCheck.classify(both).kind)
+
+        // Logan's video-call false alarm: covered-part scores around 0.01.
+        val face = BodyCheck.best(output(Triple("FACE_FEMALE", 0, 0.78f), Triple("FEMALE_BREAST_COVERED", 3, 0.01f)), anchors)
+        assertEquals(BodyCheck.Kind.NONE, BodyCheck.classify(face).kind)
+    }
+
+    @Test
+    fun suggestiveGoesInTheReportNotAsAnAlert() {
+        val f = LogEvents.service(1, "monitor", "suggestive", "Instagram")
+        assertEquals("Suggestive image (lingerie or swimwear) in Instagram", Digest.alertText(f))
+        assertNull(Digest.urgentText(f))
+    }
 }

@@ -23,6 +23,31 @@ object BodyCheck {
     )
 
     /**
+     * Covered intimate parts: the shapes of a bra, a bikini or lingerie. Not nudity, but what the owner wants captured
+     * as "suggestive" (2026-11-25). On their own they also fire on ordinary tops, so they count only when the first
+     * model already found the picture risky (the body check runs only then).
+     */
+    val SUGGESTIVE = setOf("FEMALE_BREAST_COVERED", "BUTTOCKS_COVERED", "FEMALE_GENITALIA_COVERED")
+
+    /** A covered part this sure makes a risky picture "suggestive". Untuned: on the five false alarms it was ≤ 0.01. */
+    const val SUGGEST_AT = 0.45
+
+    enum class Kind { NUDITY, SUGGESTIVE, NONE }
+
+    data class Result(val kind: Kind, val part: String? = null, val score: Double = 0.0)
+
+    /** Nudity beats suggestive; either needs its part at or over its bar. */
+    fun classify(best: Map<String, Double>): Result {
+        confirm(best)?.let { return Result(Kind.NUDITY, it.first, it.second) }
+        best.filterKeys { it in SUGGESTIVE }.maxByOrNull { it.value }?.takeIf { it.value >= SUGGEST_AT }
+            ?.let { return Result(Kind.SUGGESTIVE, it.key, it.value) }
+        return Result(Kind.NONE)
+    }
+
+    /** "female breast covered" for people. */
+    fun words(part: String): String = part.lowercase().replace('_', ' ')
+
+    /**
      * A detection this sure confirms. NudeNet's own default keeps boxes from 0.2; 0.4 is stricter because a false
      * confirm now sends a picture. Untuned: on Logan's five false alarms the highest explicit score was 0.11.
      */
@@ -50,10 +75,18 @@ object BodyCheck {
      * For the review card's stored scores (they live in a file name, `key=value` joined by commas): `body.none=0` or
      * `body.FEMALE_BREAST_EXPOSED=0.820`. [ReviewPolicy.breakdown] turns it back into words.
      */
-    fun compact(best: Map<String, Double>): String =
-        confirm(best)?.let { "body.${it.first}=${"%.3f".format(java.util.Locale.ROOT, it.second)}" } ?: "body.none=0"
+    fun compact(best: Map<String, Double>): String {
+        val r = classify(best)
+        return if (r.part == null) "body.none=0" else "body.${r.part}=${"%.3f".format(java.util.Locale.ROOT, r.score)}"
+    }
 
     /** For logs: "none found" or "FEMALE_BREAST_EXPOSED 82%". */
-    fun summary(best: Map<String, Double>): String =
-        confirm(best)?.let { "${it.first} ${Math.round(it.second * 100)}%" } ?: "none found"
+    fun summary(best: Map<String, Double>): String {
+        val r = classify(best)
+        return when (r.kind) {
+            Kind.NUDITY -> "${r.part} ${Math.round(r.score * 100)}%"
+            Kind.SUGGESTIVE -> "suggestive: ${r.part} ${Math.round(r.score * 100)}%"
+            Kind.NONE -> "none found"
+        }
+    }
 }
