@@ -12,7 +12,7 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
-- **Branch `silence-alerts` (2026-11-25, PR #89, not released or deployed):** D-036 dead man's switch: server silence
+- **2.21.0 / server 7edb093 (2026-11-25, PR #89):** D-036 dead man's switch: server silence
   window 60 min, "checking in again" notice, and the server keeps what partners were told (`Device.alerts`) for app
   partners to poll at `/p/{token}/alerts` (mailbox alerts are skipped when that answers). D-037: flagged screenshots go
   to partners automatically, blurred, 10 min after the flag, with an owner notification and inline note

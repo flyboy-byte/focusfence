@@ -7,7 +7,7 @@
 > an invite* it enrolls and pairs that phone), every phone enrolled, the server knows who watches whom, and an app partner
 > opens **the same server report** as an email partner. 📱 2026-11-25: a second phone joined by invite and shows the main
 > phone's reports. Update checks run every time the app comes to the foreground (📱 2.18.1 → 2.18.2 offered with no tap).
-> Admin sign-in is an emailed code or an authenticator code. **In progress (PR #89, not shipped):** 60 min silence
+> Admin sign-in is an emailed code or an authenticator code. **Shipped 2026-11-25 in 2.21.0 + server 7edb093 (not yet seen on the phones):** 60 min silence
 > alerts for every partner, reports ~15 min fresh, a reworked report page, automatic blurred screenshots (D-036, D-037).
 > **Next (with Logan): accountability networking and mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
 
@@ -37,7 +37,7 @@ real phones; groups and strict mode pass their tests but haven't been field-test
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.21.0-accountable` (2026-11-25, code 45). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at dcadeb4, installed with the release `install.sh`. |
+| Latest release | `v2.21.0-accountable` (2026-11-25, code 45). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
 
 ## Verification levels
 
