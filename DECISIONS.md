@@ -622,7 +622,7 @@ Three changes with it:
 **Not yet known:** an unplugged night. If deep Doze stretches check-ins, the window gets longer at night rather than
 everywhere.
 
-**Amended 2026-11-25 by @flyboy-byte: no internet is explained, not excused.** A dead zone still sets off the silence
+**Amended 2026-11-25 by @flyboy-byte, as an experiment (Logan: "not necessarily locking this one in"): no internet is explained, not excused.** A dead zone still sets off the silence
 alert after 60 minutes (the server can't tell it from protection being off), and the alert now says partners will be
 told what happened if the phone reconnects. On the first check-in after a gap of 30+ minutes the phone sends its own
 account of the gap (`dns/GapAccount`, signed separately as `gap|…`): whether it had internet (diag `net` samples),
@@ -630,6 +630,7 @@ whether it restarted, whether the filter was off and for how long, and missing l
 message carries it: "…after 2 h 3 min without a check-in. While it was quiet: the phone had no internet; protection
 stayed on the whole time." A bad signature drops the account, never the check-in. A "heads-up before going offline"
 that would hold the alert was offered and declined: it would give anyone a way to buy quiet time.
+To drop the experiment: stop sending `gap` in `SyncWorker.heartbeat`; the server already treats it as optional.
 
 ## D-037 — Flagged screenshots go to partners automatically, after a delay, uncapped
 
