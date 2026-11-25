@@ -112,9 +112,11 @@ class Config(
 @Serializable data class VersionResponse(val protocol: Int, val oldestApp: Int, val server: String)
 /** The release this server was built from (the tarball's VERSION file), or "dev". */
 val serverVersion: String by lazy {
-    runCatching { java.io.File(System.getProperty("user.dir"), "VERSION").takeIf { it.isFile }?.readText()?.trim() }.getOrNull()
-        ?: runCatching { java.io.File("/opt/" + (System.getenv("FF_SERVICE") ?: "focusfence-server") + "/VERSION").readText().trim() }.getOrNull()
-        ?: "dev"
+    // The install is <root>/lib/*.jar with VERSION in <root> (install.sh and the Docker image both lay it out so).
+    runCatching {
+        val jar = java.io.File(VersionResponse::class.java.protectionDomain.codeSource.location.toURI())
+        java.io.File(jar.parentFile.parentFile, "VERSION").takeIf { it.isFile }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+    }.getOrNull() ?: "dev"
 }
 @Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
