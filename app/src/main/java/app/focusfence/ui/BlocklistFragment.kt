@@ -119,7 +119,8 @@ class BlocklistFragment : Fragment() {
             )
         }
 
-        rows.add(Row.Link("history", getString(R.string.history_title), ""))
+        // Obvious on purpose (Logan, 2026-11-25): what got blocked, sites and trackers.
+        rows.add(Row.Action("history", getString(R.string.history_open)))
 
         rows.add(Row.Section(SECTION_SITES, getString(R.string.blocking_sites), getString(R.string.blocking_add_site)))
         if (rules.isEmpty()) rows.add(Row.Hint(getString(R.string.blocking_sites_empty), "sites_empty"))

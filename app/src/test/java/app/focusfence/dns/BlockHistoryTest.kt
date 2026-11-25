@@ -50,4 +50,16 @@ class BlockHistoryTest {
         val e = BlockHistory.entries(sequenceOf(dns(0, "www.casino.example", "cat", cat = "security,gambling")))
         assertEquals(listOf(BlockHistory.Entry("casino.example", 0, 0, 1, "gambling")), e)
     }
+
+    @Test
+    fun trackersAreEverythingElseByCompany() {
+        val t = BlockHistory.trackers(sequenceOf(
+            dns(0, "sdk.iad-02.braze.com", "cat", cat = "security"),
+            dns(5, "sdk.fra-01.braze.com", "cat", cat = "security"),
+            dns(9, "doubleclick.net", "ads"),
+            dns(9, "reddit.com", "rule", rule = "reddit.com"),
+        ))
+        assertEquals(listOf(BlockHistory.Tracker("braze.com", 2, 5), BlockHistory.Tracker("doubleclick.net", 1, 9)), t)
+        assertEquals("example.co.uk", BlockTriage.registrable("a.b.example.co.uk"))
+    }
 }

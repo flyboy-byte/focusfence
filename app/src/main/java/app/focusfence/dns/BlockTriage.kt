@@ -36,6 +36,17 @@ object BlockTriage {
         return if (isRegistrable(bare)) bare else null
     }
 
+    /** The registrable name a host belongs to: sdk.iad-02.braze.com -> braze.com. Null for a bare label. */
+    fun registrable(qname: String): String? {
+        val labels = qname.trimEnd('.').lowercase().split('.')
+        for (n in 3 downTo 2) { // example.co.uk before co.uk
+            if (labels.size < n) continue
+            val name = labels.takeLast(n).joinToString(".")
+            if (isRegistrable(name)) return name
+        }
+        return null
+    }
+
     private fun isRegistrable(name: String): Boolean {
         val labels = name.split('.')
         if (labels.any { it.isEmpty() }) return false

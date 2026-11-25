@@ -38,6 +38,28 @@ object BlockHistory {
         }
     }
 
+    /** Trackers and ads blocked in the background, by company domain: [blocked] lookups, the [last] one at. */
+    data class Tracker(val domain: String, val blocked: Int, val last: Long)
+
+    /**
+     * The other side of the triage: everything [entries] leaves out because nobody opened it (ads, trackers, the
+     * security and bypass lists, page parts), counted per registrable domain, most blocked first.
+     */
+    fun trackers(records: Sequence<Map<String, Any?>>): List<Tracker> {
+        val count = HashMap<String, Int>()
+        val last = HashMap<String, Long>()
+        for (r in records) {
+            if (r["type"] != LogEvents.TYPE_DNS || r["decision"] != LogEvents.DECISION_BLOCKED) continue
+            if (hit(r) != null) continue
+            val t = (r["t"] as? Number)?.toLong() ?: continue
+            val host = r["host"] as? String ?: continue
+            val d = BlockTriage.registrable(host) ?: host.trimEnd('.').lowercase()
+            count[d] = (count[d] ?: 0) + 1
+            last[d] = maxOf(last[d] ?: 0L, t)
+        }
+        return count.map { (d, n) -> Tracker(d, n, last.getValue(d)) }.sortedWith(compareByDescending<Tracker> { it.blocked }.thenBy { it.domain })
+    }
+
     /** Newest first. [records] are decoded log lines in any order. */
     fun entries(records: Sequence<Map<String, Any?>>): List<Entry> {
         val hits = records.mapNotNull(::hit).sortedBy { it.t }.toList()

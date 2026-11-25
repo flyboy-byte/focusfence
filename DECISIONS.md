@@ -559,10 +559,12 @@ From Logan's reactions to a mockup and to 2.14: "plain in a good way", not gener
   surface-container colour, 24dp ends, 6dp joins), so they match the rounded cards elsewhere. D-032's rules stand.
 - Settings order: Protection (strict mode, uninstall protection, accessibility service), Blocking, Updates, About,
   Advanced. Partners, Screen checks, Categories and Set up only show in the classic layout (they are tabs otherwise).
-- "When a site is blocked" is its own screen. Two choices only: a notification, or silent (the site just doesn't
-  load). The full-screen option is gone; a saved "screen" choice reads as notification.
-- New **Block history** page (Blocking tab, and the block-notice screen): the sites the filter stopped, by day, from
-  the phone's own log (`dns/BlockHistory`). Ads, trackers, the security and bypass lists and deeper hosts are left
-  out; one visit's lookups within 5 minutes are one entry. Stays on the phone.
+- "When a site is blocked" is its own screen. A blocked site always fails silently (it just doesn't load); the one
+  choice is whether a notification comes too ("Notify me"). The full-screen option is gone; a saved "screen" choice
+  reads as notification.
+- New **Block history** page, behind an obvious full-width button on the Blocking tab and the notice screen. Two
+  tabs, the D-024 triage made visible: **Sites** (your rules and front doors of content/threat lists, by day, one
+  visit = one entry) and **Trackers and ads** (everything else, counted per company domain). From the phone's own
+  log (`dns/BlockHistory`); stays on the phone.
 - Uninstall protection copy made honest: Android offers "Deactivate & uninstall" in one step, so it is one extra
   confirm, not a lock. What partners reliably get after an uninstall is the "phone went silent" alert.

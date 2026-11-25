@@ -24,25 +24,15 @@ class BlockNoticesActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         b.toolbar.setNavigationOnClickListener { finish() }
 
+        // Blocked sites always fail silently (DNS answers 0.0.0.0); this only says whether a notification comes too.
         // Not a loosening action (sites stay blocked either way), so no strict guard.
-        b.styleGroup.check(
-            when (BlockScreenSettings.style(this)) {
-                BlockScreen.Style.NOTIFY -> R.id.styleNotify
-                BlockScreen.Style.OFF -> R.id.styleOff
-            }
-        )
-        b.styleGroup.setOnCheckedChangeListener { _, id ->
-            BlockScreenSettings.setStyle(
-                this,
-                when (id) {
-                    R.id.styleOff -> BlockScreen.Style.OFF
-                    else -> BlockScreen.Style.NOTIFY
-                },
-            )
+        switchRow(b.rowNotify, R.string.notices_notify_title, R.string.notices_notify_summary)
+        b.rowNotify.prefSwitch.isChecked = BlockScreenSettings.style(this) == BlockScreen.Style.NOTIFY
+        b.rowNotify.prefSwitch.setOnCheckedChangeListener { _, on ->
+            BlockScreenSettings.setStyle(this, if (on) BlockScreen.Style.NOTIFY else BlockScreen.Style.OFF)
         }
-        for (i in 0 until b.styleGroup.childCount) {
-            b.styleGroup.getChildAt(i).let { Tiles.style(it, Tiles.pos(i, b.styleGroup.childCount), clickable = true) }
-        }
+        Tiles.group(b.notifyGroup)
+        b.historyButton.setOnClickListener { startActivity(android.content.Intent(this, BlockHistoryActivity::class.java)) }
 
         switchRow(b.rowHighRisk, R.string.notices_high_risk_title, R.string.block_notice_high_risk_summary)
         b.rowHighRisk.prefSwitch.isChecked = BlockScreenSettings.noticeHighRisk(this)
@@ -69,11 +59,6 @@ class BlockNoticesActivity : AppCompatActivity() {
         b.rowPartner.root.setOnClickListener { partner.performClick() }
         Tiles.group(b.riskGroup)
 
-        b.rowHistory.prefTitle.setText(R.string.history_title)
-        b.rowHistory.prefSummary.setText(R.string.history_row_summary)
-        b.rowHistory.prefSummary.visibility = View.VISIBLE
-        b.rowHistory.root.setOnClickListener { startActivity(android.content.Intent(this, BlockHistoryActivity::class.java)) }
-        Tiles.group(b.historyGroup)
     }
 
     private fun switchRow(r: RowPrefSwitchBinding, title: Int, summary: Int) {

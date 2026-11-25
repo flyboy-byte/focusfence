@@ -25,6 +25,8 @@ import kotlin.concurrent.thread
  */
 class BlockHistoryActivity : AppCompatActivity() {
     private lateinit var b: ActivityBlockHistoryBinding
+    private var sites: List<BlockHistory.Entry>? = null
+    private var trackers: List<BlockHistory.Tracker> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +36,7 @@ class BlockHistoryActivity : AppCompatActivity() {
         supportActionBar?.setTitle(R.string.history_title)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         b.toolbar.setNavigationOnClickListener { finish() }
+        b.tabs.addOnButtonCheckedListener { _, _, checked -> if (checked) render() }
     }
 
     override fun onResume() {
@@ -45,13 +48,22 @@ class BlockHistoryActivity : AppCompatActivity() {
             val records = ArrayList<Map<String, Any?>>()
             EventLog.forEachLine(EventLog.Channel.ACTIVITY, "\"blocked\"") { line -> LogJson.decode(line)?.let(records::add) }
             val entries = BlockHistory.entries(records.asSequence()).take(MAX)
-            runOnUiThread { if (!isDestroyed) show(entries) }
+            val byCompany = BlockHistory.trackers(records.asSequence()).take(MAX)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                sites = entries; trackers = byCompany
+                render()
+            }
         }
     }
 
-    private fun show(entries: List<BlockHistory.Entry>) {
+    private fun render() {
+        val entries = sites ?: return
         b.loading.visibility = View.GONE
         b.list.removeAllViews()
+        if (b.tabs.checkedButtonId == R.id.tabTrackers) return showTrackers()
+        b.intro.setText(R.string.history_intro)
+        b.empty.setText(R.string.history_empty)
         b.empty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now(zone)
@@ -77,6 +89,27 @@ class BlockHistoryActivity : AppCompatActivity() {
             b.list.addView(group)
             Tiles.group(group)
         }
+    }
+
+    private fun showTrackers() {
+        b.intro.setText(R.string.history_trackers_intro)
+        b.empty.setText(R.string.history_trackers_empty)
+        b.empty.visibility = if (trackers.isEmpty()) View.VISIBLE else View.GONE
+        if (trackers.isEmpty()) return
+        val group = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        for (t in trackers) {
+            val r = RowPrefBinding.inflate(layoutInflater, group, false)
+            r.prefTitle.text = t.domain
+            r.prefSummary.text = DateUtils.getRelativeTimeSpanString(t.last, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+            r.prefSummary.visibility = View.VISIBLE
+            r.prefValue.text = getString(R.string.history_blocked_n, t.blocked)
+            r.prefValue.visibility = View.VISIBLE
+            r.prefChevron.visibility = View.GONE
+            group.addView(r.root)
+        }
+        b.list.addView(group)
+        (group.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.topMargin = (16 * resources.displayMetrics.density).toInt()
+        Tiles.group(group)
     }
 
     private fun why(id: String): String =

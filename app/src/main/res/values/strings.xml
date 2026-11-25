@@ -698,10 +698,17 @@
     <string name="notices_value_notify">Notification</string>
     <string name="notices_value_silent">Silent</string>
     <string name="history_title">Block history</string>
-    <string name="history_intro">Sites the filter stopped, from this phone\'s log. Ads, trackers and background lookups aren\'t listed. Stays on this phone.</string>
+    <string name="history_intro">Sites you or an app tried to open that the filter stopped. From this phone\'s log; it stays on this phone.</string>
     <string name="history_empty">Nothing blocked yet.</string>
     <string name="history_yesterday">Yesterday</string>
     <string name="history_why_rule">Your rule</string>
     <string name="history_why_list">%1$s list</string>
-    <string name="history_row_summary">Sites the filter stopped, by day</string>
+    <string name="history_open">See block history</string>
+    <string name="history_tab_sites">Sites</string>
+    <string name="history_tab_trackers">Trackers and ads</string>
+    <string name="history_trackers_intro">Blocked in the background by your lists, so apps and pages couldn\'t reach them. Counted from this phone\'s log.</string>
+    <string name="history_trackers_empty">No trackers blocked yet.</string>
+    <string name="history_blocked_n">%1$d blocked</string>
+    <string name="notices_notify_title">Notify me</string>
+    <string name="notices_notify_summary">Blocked sites never load either way. Off means they just fail silently.</string>
 </resources>
