@@ -162,7 +162,8 @@ class MonitoringFragment : Fragment() {
         binding.captureStatus.text = status.text
         val ctx = requireContext()
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(binding.statusCard, a)
-        fun res(id: Int) = app.focusfence.ui.StatusColors.get(ctx, id)
+        val sc = app.focusfence.ui.StatusColors
+        val v = binding.statusCard
         val level = status.level
         binding.statusHeadline.setText(
             when (level) {
@@ -173,22 +174,22 @@ class MonitoringFragment : Fragment() {
                 app.focusfence.dns.CaptureStatus.Level.BLOCKED -> R.string.monitor_head_blocked
             }
         )
-        // Green while working or ready; amber when it needs you; plain surface when off.
+        // Theme primary while working or ready; error when it needs you; plain surface when off.
         val good = level == app.focusfence.dns.CaptureStatus.Level.WORKING || level == app.focusfence.dns.CaptureStatus.Level.WAITING
         val bad = level == app.focusfence.dns.CaptureStatus.Level.WARNING || level == app.focusfence.dns.CaptureStatus.Level.BLOCKED
         val container = when {
-            good -> res(R.color.good_container)
+            good -> sc.goodContainer(v)
             bad -> attr(com.google.android.material.R.attr.colorErrorContainer)
             else -> attr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
         }
         val fg = when {
-            good -> res(R.color.on_good_container)
+            good -> sc.onGoodContainer(v)
             bad -> attr(com.google.android.material.R.attr.colorOnErrorContainer)
             else -> attr(com.google.android.material.R.attr.colorOnSurface)
         }
-        val muted = if (good) res(R.color.good_container_muted) else fg
+        val muted = if (good) sc.goodContainerMuted(v) else fg
         binding.statusCard.setCardBackgroundColor(container)
-        binding.statusHeadline.setTextColor(if (good) res(R.color.good) else fg)
+        binding.statusHeadline.setTextColor(if (good) sc.onGoodContainer(v) else fg)
         binding.captureStatus.setTextColor(fg)
         binding.reviewHint.setTextColor(muted)
         val nf = java.text.NumberFormat.getIntegerInstance()

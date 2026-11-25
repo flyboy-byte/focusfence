@@ -253,7 +253,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/attention_title"
                     android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="@color/warn" />
+                    android:textColor="?attr/colorTertiary" />
 
                 <LinearLayout
                     android:id="@+id/accessibilityRow"

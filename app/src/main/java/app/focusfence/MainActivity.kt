@@ -76,16 +76,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
-        // No Stats tab in the five-tab layout: Home's toolbar opens it instead.
-        menu.findItem(R.id.action_stats)?.isVisible = !classic && currentTab == R.id.nav_home
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_stats) {
-            startActivity(Intent(this, StatsActivity::class.java))
-            return true
-        }
         if (item.itemId == R.id.action_help) {
             startActivity(Intent(this, SetupActivity::class.java))
             return true
