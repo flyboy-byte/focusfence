@@ -76,6 +76,16 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
 .muted{color:#a0a0a8}input{background:#1e1e22;color:inherit;border-color:#444}.ok{color:#6fd08c}.bad{color:#ffb4ab}}
 </style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
+    /** The invite opened in a browser on a server that can't send email (journey 4): point to the app instead. */
+    fun joinNeedsApp(): String = page(
+        "Join in the Focus Fence app",
+        "<h1>Join in the Focus Fence app</h1><p>This server can't send email, so you can't join as an email partner. " +
+            "Install Focus Fence AC on your phone, open <b>Partners → Join with an invite</b>, and paste the whole message " +
+            "you were sent. You'll see the same report there, and alerts arrive as notifications.</p>" +
+            "<p><a href=\"https://github.com/flyboy-byte/focusfence/releases/latest\">Get Focus Fence AC</a></p>" +
+            "<p class='muted'>The invite still works: nothing was used up by opening this page.</p>",
+    )
+
     fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null): String = page(
         "Become an accountability partner",
         buildString {

@@ -521,17 +521,21 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now && !it.enrollOnly } }) {
                 return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
             }
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret), ContentType.Text.Html)
         }
 
         get("/join") {
             val code = call.request.queryParameters["code"].orEmpty()
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             call.respondText(Web.joinForm(code, null, notifier.smsAvailable), ContentType.Text.Html)
         }
 
         post("/join") {
             val form = call.receiveParameters()
             val rawCode = form["code"].orEmpty()
+            // Without email the confirmation can never arrive: refuse before the invite is spent.
+            if (!notifier.emailAvailable) return@post call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
             if (!joinLimiter.allow(call.client())) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
