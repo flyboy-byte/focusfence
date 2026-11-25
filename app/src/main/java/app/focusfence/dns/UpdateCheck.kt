@@ -14,8 +14,11 @@ object UpdateCheck {
     const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases"
     const val DOWNLOAD_PREFIX = "https://github.com/$REPO/releases/download/"
 
-    /** Same as Tokalot: at most every 3 hours, so a release reaches the phone the same day. */
-    const val CHECK_EVERY_MS = 3 * 3_600_000L
+    /**
+     * Every launch checks (Updates.launched), then at most every 20 minutes (Home again, screen on, the backstop).
+     * 3 hours was too slow: 2.18 came out an hour after a check and opening the app didn't find it (2026-11-25).
+     */
+    const val CHECK_EVERY_MS = 20 * 60_000L
 
     data class Asset(val name: String, val url: String, val size: Long)
 

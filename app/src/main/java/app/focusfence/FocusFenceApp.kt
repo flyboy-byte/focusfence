@@ -1,6 +1,8 @@
 package app.focusfence
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import android.provider.Settings
 import app.focusfence.data.EventLog
 import app.focusfence.dns.LogEvents
@@ -19,8 +21,36 @@ class FocusFenceApp : Application() {
         Monitor.checkIntegrityAsync(this)
         app.focusfence.sync.Sync.schedule(this)
         app.focusfence.update.Updates.schedule(this)
+        watchForeground()
         // Managed mode was removed (D-028): undo anything an older version set on a device-owner phone.
         app.focusfence.admin.DeviceAdmin.clearLegacyPoliciesOnce(this)
+    }
+
+    /**
+     * "Launching" the app, for the update check. The VPN service keeps this process alive, so a cold start is rare
+     * and MainActivity usually survives a trip to another app: neither one means "the owner opened the app". What
+     * does is the first of our screens becoming visible after none were, so count started activities. A rotation
+     * stops and restarts a screen without leaving the app, so it doesn't count; neither does moving between our
+     * own screens.
+     */
+    private fun watchForeground() {
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var started = 0
+            private var rotating = false
+            override fun onActivityStarted(a: Activity) {
+                if (started++ == 0 && !rotating) app.focusfence.update.Updates.launched()
+                rotating = false
+            }
+            override fun onActivityStopped(a: Activity) {
+                started--
+                rotating = a.isChangingConfigurations
+            }
+            override fun onActivityCreated(a: Activity, b: Bundle?) {}
+            override fun onActivityResumed(a: Activity) {}
+            override fun onActivityPaused(a: Activity) {}
+            override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
+            override fun onActivityDestroyed(a: Activity) {}
+        })
     }
 
     /**
