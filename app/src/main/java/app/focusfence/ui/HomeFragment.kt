@@ -316,7 +316,8 @@ class HomeFragment : Fragment() {
         row(
             R.string.home_row_timeline, if (timeline) Layer.ON else Layer.OFF,
             getString(if (timeline) R.string.home_on else R.string.home_off),
-            DiagnosticsActivity::class.java,
+            // On: the screen that shows the app time; off: Diagnostics, which has the Usage access switch.
+            if (timeline) app.focusfence.StatsActivity::class.java else DiagnosticsActivity::class.java,
         )
 
         // Battery optimization: the most common reason protection silently stops. Not optional, so "needs you".

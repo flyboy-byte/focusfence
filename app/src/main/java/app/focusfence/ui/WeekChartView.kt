@@ -17,6 +17,7 @@ class WeekChartView @JvmOverloads constructor(context: Context, attrs: Attribute
 
     private var labels: List<String> = emptyList()
     private var values: List<Int> = emptyList()
+    private var format: (Int) -> String = { it.toString() }
     private val density = resources.displayMetrics.density
 
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -26,10 +27,12 @@ class WeekChartView @JvmOverloads constructor(context: Context, attrs: Attribute
     }
     private val rect = RectF()
 
-    fun setData(labels: List<String>, values: List<Int>) {
+    /** [format] turns a bar's value into its label (counts by default; the stats screen passes minutes as "2 h"). */
+    fun setData(labels: List<String>, values: List<Int>, format: (Int) -> String = { it.toString() }) {
         this.labels = labels
         this.values = values
-        contentDescription = labels.zip(values).joinToString { "${it.first} ${it.second}" }
+        this.format = format
+        contentDescription = labels.zip(values).joinToString { "${it.first} ${format(it.second)}" }
         invalidate()
     }
 
@@ -62,7 +65,7 @@ class WeekChartView @JvmOverloads constructor(context: Context, attrs: Attribute
             barPaint.color = if (i == n - 1) primary else soft
             rect.set(cx - barW / 2, barTop, cx + barW / 2, bottom)
             canvas.drawRoundRect(rect, radius, radius, barPaint)
-            canvas.drawText(values[i].toString(), cx, barTop - 5 * density, textPaint)
+            canvas.drawText(format(values[i]), cx, barTop - 5 * density, textPaint)
             canvas.drawText(labels.getOrElse(i) { "" }, cx, height - 4 * density, textPaint)
         }
     }
