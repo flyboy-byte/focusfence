@@ -84,13 +84,17 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | The ubuntu sudo window (`vps-sudo`) needs Logan's password; check `sudo -n true` before asking | deploys this session used an open window |
 
 ## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
-1. **Networking first** (felt every day). The 2026-11-24 export: 8.9% of forwarded lookups failed, 673 failovers, worst
-   p95 window 9.9 s, `vpn_metered` flapping. Ask for a normal day's export on 2.20 as the new baseline.
-2. **Report freshness:** slices upload about hourly ("last report 18 minutes ago" looked odd to Logan). Measure the battery
-   cost before going shorter or syncing on change.
-3. **Alerts to app partners** poll every 15 min; staleness is flagged after 14 h. Consider server push and a shorter
-   silence window. Alerts and unlock codes still use the pairing mailbox; the report no longer does.
-4. Still unseen on the phone: the 2.16–2.18 screens (rounded Settings/Blocking, Block history, Notify me, uninstall copy).
+"Networking" here means **accountability networking**: how phones, partners and the server reach each other.
+1. **Report freshness:** slices upload about hourly ("last report 18 minutes ago" looked odd to Logan). Measure the
+   battery cost before going shorter or syncing on change.
+2. **Alerts to app partners** poll every 15 min; silence is flagged after 14 h. Consider server push and a shorter
+   silence window. Alerts and unlock codes still use the pairing mailbox; the report no longer does. Moving them onto
+   the server route (the server already knows the pair) would leave one path.
+3. **Internet DNS** is solid in daily use (Logan). The 2026-11-24 export still showed 8.9% forward failures, 673
+   failovers, a 9.9 s worst p95 window and `vpn_metered` flapping. Gaming and latency-sensitive apps are untested. Ask for
+   a normal day's export on 2.20.
+4. Still unseen on the phone: the 2.16–2.18 screens (rounded Settings/Blocking, Block history, Notify me, uninstall
+   copy) and groups on two phones.
 
 ## Open questions only a person can answer
 ## Open questions only a person can answer

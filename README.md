@@ -54,13 +54,14 @@ one does and costs.
 | ✅ | A log of lookups, apps and protection changes, kept on the phone |
 | ✅ | Screenshot checks with an on-device model (optional; images never leave the phone) |
 | ✅ | Email partners with instant alerts |
-| 🧪 | Encrypted partner reports in the browser |
+| ✅ | One invite for any partner: opened in a browser they get email reports, pasted into Focus Fence on their phone they see the same report in the app |
+| 🧪 | Encrypted partner reports: summary, today or 7 days, changes by day, screenshots, sortable app and site tables |
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
-| 🧪 | App-to-app partners and groups of up to four |
+| 🧪 | Groups of up to four, and partner unlock codes in the partner's app |
 | 🧪 | Sending a partner a heavily blurred screenshot (48 px at most) |
 | 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
-| 🧪 | A notice when you open a blocked adult, gambling or scam site; partners hear if you keep trying |
-| 🧪 | Updates itself: checks GitHub daily, shows what's new, installs when you tap |
+| 🧪 | A notice (or nothing) when you open a blocked adult, gambling or scam site; partners hear if you keep trying; a Block history page |
+| ✅ | Updates itself: checks GitHub whenever you open the app, shows what's new, installs when you tap |
 | ❌ | Automatic screenshot sending, hiding apps from reports, partner logins |
 
 What's next is in [`docs/roadmap.md`](docs/roadmap.md).
@@ -94,9 +95,10 @@ site, and blocking apps, uses an accessibility service, because DNS only sees th
 | Partner report | Encrypted on the phone. The server stores it but can't open it |
 | Alerts ("filter turned off") | Go through the server so it can email partners. No site names |
 | Screenshots | Only if you send one, and only blurred |
-| App-to-app partners | End-to-end encrypted; the server just passes messages along |
+| App partners | Read the same sealed report as email partners; alerts and unlock codes are end-to-end encrypted between the two apps |
 
-The server does see partners' email addresses, the alert text, and when your phone checks in. Someone
+The server does see partners' email addresses, which phone is whose partner, the alert text, and when your phone checks
+in. Someone
 who runs a server and changes its code could serve a page that steals the key; the reasoning is in
 D-023 in [`DECISIONS.md`](DECISIONS.md).
 The full privacy page is at https://flyboy-byte.github.io/focusfence/privacy.html.
@@ -117,7 +119,8 @@ The full privacy page is at https://flyboy-byte.github.io/focusfence/privacy.htm
 
 You only need a server for partners. It's a small Kotlin app that stores everything in files and
 sends email through Resend (SMS through Twilio or Telnyx is optional). Each person on a server is
-separate unless they link up.
+separate unless they link up. Every phone on a server joins by invite: the admin page makes one for the person being
+filtered, and their phone makes one for each partner.
 
 Setup: [`server/README.md`](server/README.md) and [`docs/plans/04-backend-deploy.md`](docs/plans/04-backend-deploy.md).
 

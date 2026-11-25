@@ -8,6 +8,26 @@ Humans are welcome to read it too.
 2. [`CLAUDE.md`](CLAUDE.md) — architecture and invariants (despite the name, it applies to every agent).
 3. The spec for whatever you're touching in [`docs/specs/`](docs/specs/).
 
+## What changed lately (for agents; the full list is [`CHANGELOG.md`](CHANGELOG.md))
+
+Read these before touching partners, the server, updates or block notices. Newest first.
+
+- **2.20.0 / server dcadeb4 (2026-11-25):** an app partner gets its own `/p/{token}` report link and the app opens that
+  server page in a WebView: one report for every partner. The report page has a range switch, a summary and tabs with
+  sortable tables (`server/src/main/resources/static/report.js`).
+- **2.19.x / D-035 (2026-11-25):** one partner invite (`dns/InviteLink`); every phone enrolled (an invite is an
+  enrollment credential); only enrolled phones open new mailboxes; the server records app partners; *Join with an
+  invite* replaced typing a pairing key; Server → Save connects and reports back. Admin sign-in is an emailed code **or**
+  an authenticator. Old pairing-key flows are gone on purpose (Logan is the only user).
+- **2.18.x (2026-11-25):** update check every time the app comes to the foreground (`FocusFenceApp` counts started
+  activities, because the VPN keeps the process alive), then every 20 min. Partners hear within seconds when uninstall
+  protection is turned off (`SyncWorker.pushAlertsNow`).
+- **2.16–2.18 (D-034):** rounded groups (`ui/Tiles`), colour only from the system theme, block notices are a
+  notification or nothing (no full-screen page), Block history.
+- **Server delivery (D-033):** Docker Compose, or the release tarball's `install.sh` (systemd, health check, rollback).
+  When a change touches both ends, **deploy the server before releasing the app**.
+- **Release builds** can fail in `lintVitalAnalyzeRelease` on Maven Central 429s: re-run the failed job on the same tag.
+
 ## Who you're working for
 
 The person directing the work (GitHub `flyboy-byte`, the repo owner since 2026-11-24) is

@@ -1,5 +1,11 @@
 # Roadmap
 
+> **2026-11-25:** 2.16 to 2.20 shipped the redesign, Block history, launch-time updates and the simpler accounts (D-035,
+> one report for every partner). The next work, agreed with Logan, is **accountability networking and mechanics** (how
+> phones, partners and the server reach each other: report freshness, alerts to app partners, push, one server route),
+> then internet DNS from a fresh export. Near-term list: `docs/HANDOFF.md` → Next. The phases below are the longer
+> view.
+
 _Written 2026-11-23 by @flyboy-byte (with Claude). This is the **active** plan for the accountability direction; older
 orderings (`docs/approach.md` B1–B8, `docs/plans/00-roadmap.md`) are history. `STATE.md` says where things stand;
 this says what comes next and in what order._

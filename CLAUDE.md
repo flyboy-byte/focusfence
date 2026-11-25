@@ -63,7 +63,7 @@ Three enforcement layers, each covering what the others cannot:
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
 logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`, `BlockTriage`, `UpdateCheck`, `AppTime`,
-`CaptureStatus`) so it can be
+`CaptureStatus`, `BlockHistory`, `InviteLink`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -132,15 +132,27 @@ instead — content events cost ~75% of screen-on CPU in the 2026-11-19 export);
 ### Block notices and triage (D-024)
 
 `dns/BlockTriage` decides who hears about a block. Ads, trackers, guards and deeper hosts stay silent. A user rule, or the
-front door of an adult/gambling/scam list site, is a notice in the owner's chosen style (`BlockScreen.Style`,
-`BlockedNotice`), after the accessibility service confirms the browser's address bar shows that site. Three confirmed
+front door of an adult/gambling/scam list site, is a notification or nothing (`BlockScreen.Style` NOTIFY/OFF; the
+full-screen page is gone, D-034), after the accessibility service confirms the browser's address bar shows that site. Three confirmed
 high-risk notices in one category within 10 minutes write an urgent `svc block repeated` record, which partners get by
 category, never by site name. Without the accessibility service partners are never told (prefetch would cause false
-alerts).
+alerts). `dns/BlockHistory` builds the owner's Block history page (sites vs trackers) from the activity log.
+
+### Accounts and partners (D-035)
+
+Every phone on a server is enrolled (`sync/Accountability.ensureEnrolled`, a P-256 `DeviceKey`): with the server's
+enrollment code, or with a partner invite as the credential (`X-FF-Invite`). One partner invite serves every kind of
+partner: `/i/SECRET#k=REPORT_KEY&p=PAIRING_KEY` (built by `dns/InviteLink`, which also parses whatever is pasted into
+*Join with an invite*, including the admin page's People message). In a browser it's an email partner; in the app,
+`Accountability.join` enrolls, calls `/v1/invites/accept`, and stores the partner's own `/p/{token}` report link, which
+`PartnerReportActivity` opens in a WebView: the same page and sealed data an email partner reads. The owner's pairing
+stays `pending` until `resolvePending` sees which way its invite went. Alerts and unlock codes still use the pairing
+mailbox (`dns/Pairing`); only enrolled phones may open a new mailbox (signed request). Groups (`GroupSync`, up to 4)
+carry an enroll-only server invite so members enroll too.
 
 ### Self-update (D-029, D-031)
 
-`update/Updates` checks `releases/latest` on every launch and otherwise at most every 20 minutes (Home, screen on, WorkManager backstop), remembers a newer offer for Home's banner and posts
+`update/Updates` checks `releases/latest` every time the app comes to the foreground (`FocusFenceApp` counts started activities; the VPN keeps the process alive, so neither process start nor `MainActivity.onCreate` means "opened") and otherwise at most every 20 minutes (Home, screen on, WorkManager backstop), remembers a newer offer for Home's banner and posts
 one notification per version; `update/UpdateActivity` downloads only on tap, checks source URL, package, version code
 and signing certificate, then hands the APK to `PackageInstaller`. Release notes come from the release body's
 `## What's new` section (written by `release.yml`), cleaned by `UpdateCheck.userNotes`. The repo slug is
