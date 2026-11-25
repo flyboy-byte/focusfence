@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="good_container">#1A2A22</color>
-    <color name="good_tile">#22362B</color>
-    <color name="on_good_container">#F1F5F2</color>
-    <color name="good_container_muted">#A9C7B6</color>
-    <color name="good">#8FE3AE</color>
-    <color name="warn">#F2B86B</color>
-</resources>

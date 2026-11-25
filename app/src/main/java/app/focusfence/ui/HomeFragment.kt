@@ -169,12 +169,12 @@ class HomeFragment : Fragment() {
             else -> getString(R.string.home_hero_on_strict_sub)
         }
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.heroCard, a)
-        fun res(id: Int) = StatusColors.get(context, id)
-        val container = if (good) res(R.color.good_container) else attr(com.google.android.material.R.attr.colorErrorContainer)
-        val onContainer = if (good) res(R.color.on_good_container) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
-        val muted = if (good) res(R.color.good_container_muted) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
-        val accent = if (good) res(R.color.good_tile) else attr(com.google.android.material.R.attr.colorError)
-        val onAccent = if (good) res(R.color.good) else attr(com.google.android.material.R.attr.colorOnError)
+        val v = b.heroCard
+        val container = if (good) StatusColors.goodContainer(v) else attr(com.google.android.material.R.attr.colorErrorContainer)
+        val onContainer = if (good) StatusColors.onGoodContainer(v) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
+        val muted = if (good) StatusColors.goodContainerMuted(v) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
+        val accent = if (good) attr(com.google.android.material.R.attr.colorPrimary) else attr(com.google.android.material.R.attr.colorError)
+        val onAccent = if (good) attr(com.google.android.material.R.attr.colorOnPrimary) else attr(com.google.android.material.R.attr.colorOnError)
         b.heroCard.setCardBackgroundColor(container)
         b.heroTitle.setTextColor(onContainer)
         b.statusText.setTextColor(muted)
@@ -248,8 +248,8 @@ class HomeFragment : Fragment() {
         fun row(labelRes: Int, state: Layer, value: String, target: Class<*>?, onClick: (() -> Unit)? = null) {
             val r = RowStatusBinding.inflate(layoutInflater, b.statusContainer, true)
             val (icon, color) = when (state) {
-                Layer.ON -> R.drawable.ic_check_circle to StatusColors.get(context, R.color.good)
-                Layer.ATTENTION -> R.drawable.ic_alert_circle to StatusColors.get(context, R.color.warn)
+                Layer.ON -> R.drawable.ic_check_circle to StatusColors.good(r.root)
+                Layer.ATTENTION -> R.drawable.ic_alert_circle to StatusColors.warn(r.root)
                 Layer.OFF -> R.drawable.ic_circle_outline to
                     com.google.android.material.color.MaterialColors.getColor(r.root, com.google.android.material.R.attr.colorOutline)
             }
@@ -378,7 +378,7 @@ class HomeFragment : Fragment() {
         val needsAdList = AdListStore.isEnabled(context) && AdListStore.entryCount(context) == 0
         b.adlistRow.visibility = if (needsAdList) View.VISIBLE else View.GONE
 
-        b.attentionTitle.setTextColor(StatusColors.get(context, R.color.warn))
+        b.attentionTitle.setTextColor(StatusColors.warn(b.attentionTitle))
         b.attentionCard.visibility =
             if (needsAccessibility || needsAdList) View.VISIBLE else View.GONE
     }

@@ -517,10 +517,10 @@ Privacy, Limits and self-hosting pages (`docs/site`) publish to https://flyboy-b
 **Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted
 
 From Logan's reactions to a mockup and to 2.14: "plain in a good way", not generic AI. Rules for every screen:
-- Colour carries state only: green = working, amber = needs you, error colours = off or broken. The fixed greens and
-  ambers (`values/colors.xml`, `values-night`) always go through `ui/StatusColors` (Material's
-  `harmonizeWithPrimary`), so they sit inside the Material You palette instead of fighting it; everything else is the
-  dynamic theme.
+- Colour carries state only, and it comes from the theme: primary = working, tertiary = needs you, error = off or
+  broken (`ui/StatusColors`). Revised 2026-11-24: the first version used fixed greens and ambers harmonized with the
+  palette, but Logan wants the system theming followed ("enforcing green don't work for all themes"). Green stays as
+  the fallback theme where Material You isn't available. The icon shape carries the meaning in every palette.
 - One strong element per screen (Home's status card, Screen checks' Review button); the rest is plain lists with
   dividers, sentence-case headings, short copy. No dashboard tiles, icon circles or uppercase micro-labels.
 - Each screen is ordered by rank: what matters and gets used most first, rare and technical last or folded under
@@ -528,3 +528,20 @@ From Logan's reactions to a mockup and to 2.14: "plain in a good way", not gener
   set up (first until then).
 - Never show the AI's label unless something was flagged.
 
+
+## D-033 — Server delivery: Docker for others, a systemd tarball for hosts without Docker; dns-filter retired
+
+**Date:** 2026-11-24 · **By:** @flyboy-byte (asked Claude to decide) · **Status:** accepted
+
+- Each `server-vX.Y.Z` tag publishes two things from one build: a container image (Docker Compose, with optional Caddy
+  for HTTPS) and a tarball with `install.sh` (systemd, health check, automatic rollback). Compose is the default in
+  the README; the tarball is for hosts that don't run Docker.
+- Logan's VPS runs the tarball path (`FF_SERVICE=ffbackend sudo ./install.sh`), not Docker: the box hosts several
+  other apps under systemd and nginx, and running the released tarball tests the same path self-hosters get. It
+  replaces the old "rsync a local build" deploy.
+- Server releases are never GitHub's "Latest" (`--latest=false`), and the app ignores non-app tags, because the app's
+  self-update reads `releases/latest`.
+- The separate `dns-filter` stack (AdGuard Home over DNS-over-TLS, invite page) is retired rather than merged: the FF
+  server never becomes a DNS resolver for phones, because it would then see every lookup (against D-023), add a round
+  trip to every lookup and become a single point of failure for browsing. Retirement waits until the last person on it
+  has moved to the app.

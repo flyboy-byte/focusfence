@@ -158,7 +158,7 @@ notifications and links still open them alone. `UninstallProtectionActivity` tur
 dialogs, permission prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the
 `ACTION_STATE_CHANGED` package-scoped broadcast plus a 1s ticker for counters/countdowns.
 
-Visual rules: colour only for state, through `ui/StatusColors` (green/amber harmonized with the Material You palette);
+Visual rules: colour only for state, taken from the theme through `ui/StatusColors` (primary, tertiary, error; never fixed colours);
 plain lists with dividers rather than nested cards; each screen ordered by rank (D-032).
 
 ## Conventions

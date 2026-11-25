@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- The fallback theme colour when Material You isn't available (Android 11 and older). State colours come from
+         the theme (ui/StatusColors), never fixed values, so they work with any wallpaper palette. -->
     <color name="brand_primary">#2E7D32</color>
     <color name="ic_launcher_background">#1B5E20</color>
-    <!-- Status colours (2026-11-24 redesign): green means working, amber means it needs you. They stay fixed while
-         the rest follows the wallpaper (Material You), so "protected" always reads the same. Light values here,
-         dark in values-night. -->
-    <color name="good_container">#DDF3E4</color>
-    <color name="good_tile">#C8EAD3</color>
-    <color name="on_good_container">#0F2A1B</color>
-    <color name="good_container_muted">#2F5A40</color>
-    <color name="good">#1E7A45</color>
-    <color name="warn">#8A5A00</color>
 </resources>
