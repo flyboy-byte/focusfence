@@ -62,6 +62,8 @@ object ScreenCapture {
 
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
     @Volatile private var foregroundWatched = false
+    /** Unchanged captures in a row in this app (CapturePolicy.backoff); written on main and the capture worker. */
+    @Volatile private var sameStreak = 0
     private var service: AccessibilityService? = null
 
     /**
@@ -94,6 +96,7 @@ object ScreenCapture {
             return
         }
         if (changed) {
+            sameStreak = 0
             // Arm from now, so entering an app doesn't instantly snapshot it.
             nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random())
         }
@@ -105,6 +108,11 @@ object ScreenCapture {
     fun onWatchedWindow(service: AccessibilityService, pkg: String) {
         if (pkg != lastForeground || !foregroundWatched) return
         if (!MonitorSettings.screenshotsEnabled(service)) return
+        // A new window in the watched app is a new screen: drop any back-off and come back to the normal pace.
+        if (sameStreak > 0) {
+            sameStreak = 0
+            nextDueAt = minOf(nextDueAt, System.currentTimeMillis() + MonitorSettings.level(service).minMs)
+        }
         if (!CapturePolicy.shouldCapture(true, true, System.currentTimeMillis(), nextDueAt)) return
         capture(service, pkg, "event")
     }
@@ -143,7 +151,7 @@ object ScreenCapture {
             Monitor.perf.count("shot_busy")
             return
         }
-        nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random())
+        nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random(), sameStreak)
         Monitor.perf.count("shot_req")
         requestScreenshot(service, pkg, trigger)
     }
@@ -229,6 +237,9 @@ object ScreenCapture {
         val now = System.currentTimeMillis()
         if (hash != null && app.focusfence.dns.ImageHash.unchanged(lastHash, lastHashPkg, lastHashAt, hash, pkg, now)) {
             Monitor.perf.count("shot_same")
+            // Same screen again: wait longer before the next one (up to 4x), until something changes.
+            sameStreak++
+            nextDueAt = CapturePolicy.nextDueAt(now, MonitorSettings.level(context), Math.random(), sameStreak)
             EventLog.activity(
                 LogEvents.shot(now, pkg, lastScore, lastLabel, kept = false, shotId = null, model = classifier.modelName, trigger = trigger, same = true)
             )
@@ -244,6 +255,7 @@ object ScreenCapture {
         val scores = classifier.classify(bitmap)
         val clfMs = android.os.SystemClock.elapsedRealtime() - clfStart
         val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
+        sameStreak = 0
         if (scores != null && hash != null) {
             lastHash = hash
             lastHashPkg = pkg

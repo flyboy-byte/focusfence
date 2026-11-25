@@ -26,11 +26,18 @@ object CapturePolicy {
      * random draw. The gap is uniform in [minMs, 2*targetMs - minMs], so its
      * mean is exactly targetMs and it never dips below the floor.
      */
-    fun nextDueAt(lastAt: Long, level: Level, rnd: Double): Long {
+    fun nextDueAt(lastAt: Long, level: Level, rnd: Double, sameStreak: Int = 0): Long {
         val span = 2 * (level.targetMs - level.minMs)
         val interval = level.minMs + (rnd.coerceIn(0.0, 1.0) * span).toLong()
-        return lastAt + interval
+        return lastAt + interval * backoff(sameStreak)
     }
+
+    /**
+     * Battery (2026-11-25): each capture copies a full-screen bitmap, and about a quarter of them showed the same
+     * screen as the one before. After [sameStreak] unchanged captures in a row the gap doubles, up to 4x; a changed
+     * screen, a new window or another app resets it. Video and scrolling change the picture, so they never back off.
+     */
+    fun backoff(sameStreak: Int): Int = 1 shl sameStreak.coerceIn(0, 2)
 
     fun shouldCapture(watchedForeground: Boolean, screenOn: Boolean, now: Long, nextDueAt: Long): Boolean =
         watchedForeground && screenOn && now >= nextDueAt
