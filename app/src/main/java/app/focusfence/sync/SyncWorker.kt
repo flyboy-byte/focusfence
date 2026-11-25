@@ -100,38 +100,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     // ---- server path ---------------------------------------------------------
 
     /**
-     * D-023: the server never receives activity records. Protection changes go up as their alert text only (the same
-     * [Digest.alertText] lines app partners get: "Filter turned off", never a site), and the server emails them.
-     */
-    private fun serverAlerts(ctx: Context, api: Api, now: Long) {
-        val deviceId = SyncStore.deviceId(ctx) ?: return
-        val after = SyncStore.uploadedSeq(ctx)
-        val lines = ArrayList<String>()
-        var maxSeq = after
-        EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = after) { line ->
-            val seq = EventLog.seqOf(line) ?: return@scan true
-            if (seq <= after) return@scan true
-            if (seq > maxSeq) maxSeq = seq
-            if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
-                LogJson.decode(line)?.let(Digest::urgentText)?.let { lines += it }
-            }
-            true
-        }
-        if (lines.isNotEmpty()) {
-            val sent = lines.takeLast(20)
-            val joined = sent.joinToString("\n")
-            val r = api.post("/v1/alerts", JSONObject().apply {
-                put("deviceId", deviceId)
-                put("t", now)
-                put("lines", org.json.JSONArray(sent))
-                put("signature", DeviceKey.sign("alerts|$deviceId|$now|${sha256(joined)}".toByteArray()))
-            })
-            if (r.code != 200) throw IllegalStateException("alerts HTTP ${r.code} ${r.body?.optString("error")}")
-        }
-        if (maxSeq != after) SyncStore.setCursor(ctx, maxSeq, SyncStore.lastHash(ctx))
-    }
-
-    /**
      * D-023: the partner's report is a [Digest] sealed with this phone's report key ([ReportSeal]); the server stores
      * ciphertext and the partner's browser opens it. Hourly slices, merged by the report page, so each run reads at
      * most an hour of log (the first one reads up to a week).
@@ -176,9 +144,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     }
 
     /** Same encoding as the server's `Integrity.sha256`: base64url, no padding. */
-    private fun sha256(s: String): String =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
-
     private fun heartbeat(ctx: Context, api: Api, now: Long): Boolean {
         val deviceId = SyncStore.deviceId(ctx) ?: return false
         val seq = SyncStore.uploadedSeq(ctx)
@@ -310,6 +275,55 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
     companion object {
         private val LOCK = Any()
+
+        /**
+         * Pushes pending alert lines to the server now, on the caller's thread. For uninstall protection: Android's
+         * "Deactivate & uninstall" removes the app seconds after admin is turned off, so waiting for the next sync
+         * would mean partners only ever learn from the "phone went silent" alert hours later.
+         */
+        fun pushAlertsNow(ctx: Context) {
+            if (SyncStore.deviceId(ctx) == null) return
+            synchronized(LOCK) {
+                EventLog.init(ctx)
+                runCatching { EventLog.flushBlocking() }
+                runCatching { serverAlerts(ctx, Api(SyncStore.serverUrl(ctx)), System.currentTimeMillis()) }
+            }
+        }
+
+        /**
+         * D-023: the server never receives activity records. Protection changes go up as their alert text only (the same
+         * [Digest.alertText] lines app partners get: "Filter turned off", never a site), and the server emails them.
+         */
+        internal fun serverAlerts(ctx: Context, api: Api, now: Long) {
+            val deviceId = SyncStore.deviceId(ctx) ?: return
+            val after = SyncStore.uploadedSeq(ctx)
+            val lines = ArrayList<String>()
+            var maxSeq = after
+            EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = after) { line ->
+                val seq = EventLog.seqOf(line) ?: return@scan true
+                if (seq <= after) return@scan true
+                if (seq > maxSeq) maxSeq = seq
+                if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
+                    LogJson.decode(line)?.let(Digest::urgentText)?.let { lines += it }
+                }
+                true
+            }
+            if (lines.isNotEmpty()) {
+                val sent = lines.takeLast(20)
+                val joined = sent.joinToString("\n")
+                val r = api.post("/v1/alerts", JSONObject().apply {
+                    put("deviceId", deviceId)
+                    put("t", now)
+                    put("lines", org.json.JSONArray(sent))
+                    put("signature", DeviceKey.sign("alerts|$deviceId|$now|${sha256(joined)}".toByteArray()))
+                })
+                if (r.code != 200) throw IllegalStateException("alerts HTTP ${r.code} ${r.body?.optString("error")}")
+            }
+            if (maxSeq != after) SyncStore.setCursor(ctx, maxSeq, SyncStore.lastHash(ctx))
+        }
+
+        internal fun sha256(s: String): String =
+            java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
         private const val CHANNEL = "partner_alerts"
         /** How often the sealed web/email report slice goes up (D-023). */
         const val REPORT_EVERY_MS = 3_600_000L

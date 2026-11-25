@@ -164,4 +164,11 @@ class DigestTest {
         assertEquals("Turned off partner alerts for repeated blocked tries", Digest.urgentText(off))
         assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "admin", "state" to "legacy_cleared")))
     }
+
+    @org.junit.Test
+    fun uninstallProtectionOffIsUrgentAndSaysWhatMayFollow() {
+        val requested = mapOf("type" to "svc", "comp" to "admin", "state" to "admin_disable_requested")
+        assertEquals("Uninstall protection is being turned off. Focus Fence may be uninstalled next", Digest.urgentText(requested))
+        assertEquals("Uninstall protection turned off", Digest.urgentText(mapOf("type" to "svc", "comp" to "admin", "state" to "admin_disabled")))
+    }
 }
