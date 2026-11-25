@@ -46,4 +46,13 @@ class BundlesTest {
         assertNotNull(Categories.bundle("bypass"))
         assertEquals(null, Categories.bundle("nope"))
     }
+
+    @org.junit.Test
+    fun adultAndBypassAreCoreAndNeverOff() {
+        val core = Categories.BUNDLES.filter { it.core }.map { it.id }.toSet()
+        org.junit.Assert.assertEquals(setOf("adult", "bypass"), core)
+        org.junit.Assert.assertEquals(Categories.Policy.REPORT, Categories.effectivePolicy(Categories.bundle("adult"), Categories.Policy.OFF))
+        org.junit.Assert.assertEquals(Categories.Policy.BLOCK, Categories.effectivePolicy(Categories.bundle("adult"), Categories.Policy.BLOCK))
+        org.junit.Assert.assertEquals(Categories.Policy.OFF, Categories.effectivePolicy(Categories.bundle("social"), Categories.Policy.OFF))
+    }
 }

@@ -178,7 +178,8 @@ downloads only on tap, checks source URL, package, version code and signing cert
 as "Screen checks" / tab "Checks") and `SettingsFragment`. Settings → Classic layout (`data/UiPrefs`, own prefs file)
 restores the old four tabs. `AccountabilityActivity`/`MonitoringActivity` are thin hosts for their fragments so
 notifications and links still open them alone. `UninstallProtectionActivity` turns device admin on and off,
-`CategoriesActivity` is "Block lists" (Protection and Content groups, Off/Report/Block buttons, strength row, Always
+`CategoriesActivity` is "Block lists": the core lists (`Bundle.core`: adult and bypass, Report or Block only, never Off)
+under "Accountability · always on", then "Extra blocking" (Off/Report/Block, the base list's strength row), Always
 allow; `data/ListRefresh` refreshes lists weekly on Wi-Fi), `StatsActivity` is "This week", `DomainDetailActivity` the per-domain rule editor, `DiagnosticsActivity` the logs,
 `SetupActivity` the one Guide (`HelpActivity` forwards to it), `update/WhatsNewActivity` the release notes. Shared
 dialogs, permission prompts and app pickers live in `UiUtil`. The VPN service signals the UI with the

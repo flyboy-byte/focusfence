@@ -42,10 +42,10 @@ class CategoriesActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        for (bundle in Categories.BUNDLES) {
-            val group = if (bundle.kind == Categories.Kind.CONTENT) binding.groupContent else binding.groupProtection
-            addRow(bundle, group)
-        }
+        // The app's purpose first (porn accountability and what protects it), then general blocking on top.
+        for (bundle in Categories.BUNDLES.filter { it.core }.sortedBy { if (it.id == "adult") 0 else 1 }) addRow(bundle, binding.groupProtection)
+        for (id in EXTRA_ORDER) Categories.bundle(id)?.let { addRow(it, binding.groupContent) }
+        for (bundle in Categories.BUNDLES.filter { !it.core && it.id !in EXTRA_ORDER }) addRow(bundle, binding.groupContent)
         Tiles.group(binding.groupProtection)
         Tiles.group(binding.groupContent)
 
@@ -71,6 +71,8 @@ class CategoriesActivity : AppCompatActivity() {
         row.categoryLabel.text = bundle.label
         row.categoryLicense.text = bundle.description
         val buttons = listOf(row.policyOff, row.policyReport, row.policyBlock)
+        // A core list is Report or Block, never Off.
+        if (bundle.core) row.policyOff.visibility = View.GONE
         var showing = CategoryStore.policy(this, bundle.id)
         fun show(p: Categories.Policy) {
             showing = p
@@ -194,5 +196,10 @@ class CategoriesActivity : AppCompatActivity() {
             group.addView(row)
         }
         Tiles.group(group)
+    }
+
+    companion object {
+        /** Extra blocking, most useful first. */
+        private val EXTRA_ORDER = listOf("security", "threat", "scam", "gambling", "social", "piracy")
     }
 }

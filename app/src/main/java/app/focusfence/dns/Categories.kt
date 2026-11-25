@@ -47,7 +47,17 @@ object Categories {
         val fullUrl: String? = null,
         val license: String = "GPL-3.0 (HaGeZi)",
         val tiered: Boolean = false,
+        /**
+         * Part of the app's purpose, porn accountability, rather than extra blocking on top of it (Logan, 2026-11-25:
+         * the lists exist "to add general blocking on top of nudity and porn accountability filtering"). A core list
+         * is Report or Block, never Off: [effectivePolicy].
+         */
+        val core: Boolean = false,
     )
+
+    /** What a stored policy means: a core list stored as Off (older versions allowed it) counts as Report. */
+    fun effectivePolicy(bundle: Bundle?, stored: Policy): Policy =
+        if (bundle?.core == true && stored == Policy.OFF) Policy.REPORT else stored
 
     /** Strictness of the base Security bundle. Mini variants on device by default. */
     /** HaGeZi's tiers under plain names (2.24): Light, Standard, Strong, Strongest. */
@@ -84,14 +94,14 @@ object Categories {
         Bundle(
             "bypass", "Ways around the filter",
             "Private DNS, VPNs, proxies and Tor. Keep this on Block for accountability.",
-            Kind.BYPASS, Policy.BLOCK, url = "$RAW/doh-vpn-proxy-bypass-onlydomains.txt",
+            Kind.BYPASS, Policy.BLOCK, url = "$RAW/doh-vpn-proxy-bypass-onlydomains.txt", core = true,
         ),
         Bundle(
             "adult", "Adult",
             "Porn and other adult sites.",
             // REPORT by default: detected and reported, not blocked — the
             // accountability default; blocking stays a choice.
-            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt",
+            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt", core = true,
         ),
         Bundle(
             "gambling", "Gambling",

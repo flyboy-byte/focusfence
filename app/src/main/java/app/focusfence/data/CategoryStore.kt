@@ -39,9 +39,10 @@ object CategoryStore {
 
     /** Stored policy, or the bundle's [Bundle.defaultPolicy] if the owner hasn't set one. */
     fun policy(context: Context, id: String): Categories.Policy {
+        val bundle = Categories.bundle(id)
         val stored = BlocklistStore.prefs(context).getString(KEY_POLICY_PREFIX + id, null)
-            ?: return Categories.bundle(id)?.defaultPolicy ?: Categories.Policy.OFF
-        return Categories.Policy.parse(stored)
+            ?: return bundle?.defaultPolicy ?: Categories.Policy.OFF
+        return Categories.effectivePolicy(bundle, Categories.Policy.parse(stored))
     }
 
     fun setPolicy(context: Context, id: String, policy: Categories.Policy) {

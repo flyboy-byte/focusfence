@@ -697,3 +697,10 @@ never refreshed unless the owner pressed "Update list" on each card; `data/ListR
 shows the size and does the download, checks and hand-off itself (`update/Installer`); the notification and Check now
 open Home. The strict-mode guard on loosening a list or removing an allowed site is unchanged. Not yet seen on a phone.
 
+**Amended 2026-11-25 by @flyboy-byte: the lists are extra blocking on top of the app's purpose.** Logan: their purpose
+"is to add general blocking on top of nudity and porn accountability filtering… we should treat it like that." So the
+screen has two groups: "Accountability · always on" (Adult, and Ways around the filter, which protects it) and "Extra
+blocking" (ads/trackers/malware with its strength, malware & phishing, scams, gambling, social, piracy). A core list
+(`Bundle.core`) offers Report or Block only; one stored as Off by an older version counts as Report
+(`Categories.effectivePolicy`), so the adult list is never silently off. Moving it from Block to Report is still guarded.
+
