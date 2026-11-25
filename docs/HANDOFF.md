@@ -85,8 +85,12 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 
 ## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
 "Networking" here means **accountability networking**: how phones, partners and the server reach each other.
-1. **Report freshness:** slices upload about hourly ("last report 18 minutes ago" looked odd to Logan). Measure the
-   battery cost before going shorter or syncing on change.
+0. **2026-11-25, branch `silence-alerts` (PR #89), built and tested, not deployed or released:** items 1 and 2 below
+   (open slice re-sent each sync; app partners read server alerts; 60 min silence; back-online notice), the report page
+   rework and automatic blurred screenshots (D-037). To ship: merge, deploy the server (set `FF_STALE_MINUTES=60` in
+   `/etc/ffbackend/env`, it says 240), then release the app. Still to measure: an unplugged night; sync CPU after the
+   15 min report uploads.
+1. ~~**Report freshness**~~ — built on the branch: the open slice is re-sent every sync (~15 min).
 2. **Alerts to app partners** poll every 15 min; silence is flagged after 14 h. Consider server push and a shorter
    silence window. Alerts and unlock codes still use the pairing mailbox; the report no longer does. Moving them onto
    the server route (the server already knows the pair) would leave one path.

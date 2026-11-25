@@ -269,7 +269,7 @@
     });
     out.push(stats);
     if (m.net > 0) out.push(el('p', 'Bad network ' + m.net + (m.net === 1 ? ' time' : ' times') + '. That is the phone\u2019s connection, not the filter being off.', 'muted'));
-    if (m.to) out.push(el('p', 'Latest data ' + ago(m.to) + ' (' + hm(m.to) + '). The phone sends new data about every hour; alerts come at once.', 'muted'));
+    if (m.to) out.push(el('p', 'Latest data ' + ago(m.to) + ' (' + hm(m.to) + '). New data arrives about every 15 minutes; alerts come at once.', 'muted'));
     if (state.range === 1 && digests.length) { out.push(el('h2', 'Day by day')); out.push(dayBars(digests)); }
 
     var tabs = ['Timeline (' + (m.events.length + alerts.length) + ')', 'Screenshots (' + shots.length + ')', 'Apps & sites', 'Blocked'];

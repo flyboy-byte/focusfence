@@ -318,6 +318,17 @@ class ServerTest {
     }
 
     @Test
+    fun theOpenReportSliceIsReplacedNotPiledUp() {
+        val s = Store(Files.createTempDirectory("ff-slices").toFile())
+        val h = 3_600_000L
+        s.saveReport("d1", Store.SealedReport(10 * h, 9 * h, 10 * h, "closed"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 1, 10 * h, 10 * h + 15 * 60_000, "open-1"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 2, 10 * h + 20 * 60_000, 10 * h + 20 * 60_000, "shot"), 10 * h)
+        s.saveReport("d1", Store.SealedReport(10 * h + 3, 10 * h, 10 * h + 30 * 60_000, "open-2"), 10 * h)
+        assertEquals(listOf("closed", "shot", "open-2"), s.readReports("d1").map { it.blob })
+    }
+
+    @Test
     fun blindMailboxEndToEnd() = run { http ->
         // Owner's phone side. D-035: only an enrolled phone opens a new mailbox.
         val secret = Pairing.generateSecret()

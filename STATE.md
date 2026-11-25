@@ -7,8 +7,9 @@
 > an invite* it enrolls and pairs that phone), every phone enrolled, the server knows who watches whom, and an app partner
 > opens **the same server report** as an email partner. 📱 2026-11-25: a second phone joined by invite and shows the main
 > phone's reports. Update checks run every time the app comes to the foreground (📱 2.18.1 → 2.18.2 offered with no tap).
-> Admin sign-in is an emailed code or an authenticator code. **Next (with Logan): accountability networking and
-> mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
+> Admin sign-in is an emailed code or an authenticator code. **In progress (PR #89, not shipped):** 60 min silence
+> alerts for every partner, reports ~15 min fresh, a reworked report page, automatic blurred screenshots (D-036, D-037).
+> **Next (with Logan): accountability networking and mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
 
 > Screenshots: automatic capture never sends an image. The owner can choose to send a **blurred** (≤ 48 px) thumbnail of
 > a flagged shot to partners (D-025, Phase 2 level B); a clear image never leaves the phone.

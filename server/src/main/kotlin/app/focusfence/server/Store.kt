@@ -259,7 +259,10 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
 
     /** Stores one sealed report slice (ciphertext only, D-023), keeping the newest [REPORTS_KEEP] within [REPORTS_MAX_AGE_MS]. */
     fun saveReport(id: String, r: SealedReport, now: Long) = synchronized(lock(id)) {
-        val kept = (readReports(id) + r).filter { now - it.to <= REPORTS_MAX_AGE_MS }.sortedBy { it.to }.takeLast(REPORTS_KEEP)
+        // The phone re-sends the slice it's still filling (same `from`, later `to`) at every sync: replace, don't add.
+        // A shared screenshot is a zero-length slice (from == to) and is never replaced.
+        val open = r.to > r.from
+        val kept = (readReports(id).filterNot { open && it.from == r.from && it.to > it.from } + r).filter { now - it.to <= REPORTS_MAX_AGE_MS }.sortedBy { it.to }.takeLast(REPORTS_KEEP)
         writeAtomic(reportsFile(id), kept.joinToString("") { json.encodeToString(SealedReport.serializer(), it) + "\n" })
     }
 

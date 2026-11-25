@@ -114,8 +114,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
      */
     private fun serverReport(ctx: Context, api: Api, now: Long) {
         val deviceId = SyncStore.deviceId(ctx) ?: return
+        // Delivery (2026-11-25): the open slice (from the last closed one to now) goes up at every sync, about every
+        // 15 min, and the server replaces the previous upload of it (same `from`). It closes after REPORT_EVERY_MS, so
+        // partners see data minutes old while the server still keeps one slice an hour.
         val last = SyncStore.lastReportMs(ctx)
-        if (last > 0 && now - last < REPORT_EVERY_MS) return
         val from = if (last > 0) last else now - 7 * 24 * 3_600_000L
         val d = Digest(from)
         EventLog.scan(EventLog.Channel.ACTIVITY, sinceT = from) { line ->
@@ -133,7 +135,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             put("signature", DeviceKey.sign("report|$deviceId|$now|$from|$now|${sha256(blob)}".toByteArray()))
         })
         if (r.code != 200) throw IllegalStateException("report HTTP ${r.code} ${r.body?.optString("error")}")
-        SyncStore.setLastReportMs(ctx, now)
+        if (last <= 0 || now - last >= REPORT_EVERY_MS) SyncStore.setLastReportMs(ctx, now)
     }
 
     /** Owner-chosen blurred screenshots (Phase 2 level B), each sealed like a report and sent as its own slice. */
@@ -365,7 +367,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         internal fun sha256(s: String): String =
             java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
         private const val CHANNEL = "partner_alerts"
-        /** How often the sealed web/email report slice goes up (D-023). */
+        /** How long a sealed report slice stays open (D-023); it is re-sent at every sync until then. */
         const val REPORT_EVERY_MS = 3_600_000L
         const val DIGEST_EVERY_MS = 6 * 3_600_000L
         /** Two missed digests plus slack: Doze can hold work for a few hours. */
