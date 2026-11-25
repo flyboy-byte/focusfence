@@ -37,7 +37,7 @@ real phones; groups and strict mode pass their tests but haven't been field-test
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.21.0-accountable` (2026-11-25, code 45). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
+| Latest release | `v2.22.0-accountable` (2026-11-25, code 46). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
 
 ## Verification levels
 
@@ -77,7 +77,7 @@ without evidence.
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
 | AI flag policy (`dns/FlagPolicy`): a raw hit is reported/kept for a partner only if score ≥ 0.90, or a 2nd hit in the same app within 3 min, or ≥ 0.75 with adult words on screen in that app | 🧪 | Added 2026-11-23, 7 JVM tests, not on a phone. Untuned guesses; owner review screen unaffected. Diag counters `flag_strong/persistent/corroborated/held`. Don't retune without recording why (`docs/research/ai-detection.md`). |
-| On-device AI flagging (optional, off by default) | 📱 | **First real flag 2026-11-20 was a false positive:** a photo with no nudity scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
+| On-device AI flagging (optional, off by default) | 📱 | **2026-11-25 (2.22.0, 🧪): a partner flag needs NudeNet to find an exposed body part (D-038).** The GantMan model alone flagged video-call faces at 65–83%, a family photo and a hand with a chip; NudeNet found nothing exposed on all five. Not tested on real explicit content or on a phone yet; watch `body_runs`/`body_ms` and the review cards' "body check" line. **First real flag 2026-11-20 was a false positive:** a photo with no nudity scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
 ### Battery (Pixel 9, Focus Fence's own CPU; whole-phone %/h is too noisy to compare)
 | Version | Screen on | Screen off | Notes |
@@ -130,7 +130,7 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 ## Open decisions
 
 Settled since this table was first written: hosting (Logan's VPS, live), domain + HTTPS (`ff.flyboybyte.com`), privacy
-tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main` (D-017/D-022), going public (D-027), about/privacy pages on GitHub Pages (2026-11-24).
+tier (end-to-end sealed reports, D-023), licence (AGPL-3.0 since 2026-11-25, D-038; MIT before, D-015), landing on `main` (D-017/D-022), going public (D-027), about/privacy pages on GitHub Pages (2026-11-24).
 
 | Decision | Options / recommendation |
 |---|---|

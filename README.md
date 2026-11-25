@@ -3,7 +3,7 @@
 An Android app that blocks sites you don't want to see, and optionally lets people you trust know
 when you turn it off.
 
-![license](https://img.shields.io/badge/license-MIT-blue)
+![license](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
 ![root](https://img.shields.io/badge/root-not%20needed-lightgrey)
 
@@ -141,6 +141,8 @@ To report a security problem, see [`SECURITY.md`](SECURITY.md). Contributing: [`
 
 Focus Fence started as a plain website blocker by [@sidewinderzz](https://github.com/sidewinderzz).
 [@flyboy-byte](https://github.com/flyboy-byte) built the accountability side and maintains it now.
-The screenshot model is [GantMan/nsfw_model](https://github.com/GantMan/nsfw_model).
+The screenshot models are [GantMan/nsfw_model](https://github.com/GantMan/nsfw_model) (MIT) and
+[NudeNet](https://github.com/notAI-tech/NudeNet) (AGPL-3.0).
 
-MIT licensed.
+Copyright (c) 2026 sidewinderzz and Focus Fence contributors. Licensed under the
+[GNU Affero General Public License v3.0](LICENSE). Releases up to 2.21.0 were published under MIT and stay MIT.

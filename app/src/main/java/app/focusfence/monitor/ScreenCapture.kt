@@ -272,14 +272,29 @@ object ScreenCapture {
             verdict?.let { Monitor.perf.count("clf_risk_b${app.focusfence.dns.Signals.bucket(it.score)}") }
         }
         val mode = MonitorSettings.retention(context)
-        // A raw hit (risky label over the owner's threshold) is only reported to a partner, and its image kept
-        // for them, when FlagPolicy corroborates it. The owner's review copy below is not affected.
-        val why = if (verdict?.flagged == true) flagPolicy.onRawHit(pkg, verdict.score, now) else null
+        // D-038: a risky screenshot gets a second look from NudeNet, which finds exposed body parts instead of judging
+        // the whole picture (faces and skin fooled the first model). A partner flag, and so an automatic send, needs it
+        // to find one. Only if it can't run do the old FlagPolicy rules decide. The owner's review copy is not affected.
+        val needBody = scores != null && (verdict?.flagged == true || (verdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM)
+        val body = if (needBody) {
+            val b0 = android.os.SystemClock.elapsedRealtime()
+            NudeDetector.detect(context, bitmap).also {
+                Monitor.perf.count("body_runs")
+                Monitor.perf.count("body_ms", android.os.SystemClock.elapsedRealtime() - b0)
+            }
+        } else null
+        val confirmed = body?.let(app.focusfence.dns.BodyCheck::confirm)
+        val why: String? = when {
+            body != null -> if (confirmed != null) "body" else null
+            verdict?.flagged == true -> flagPolicy.onRawHit(pkg, verdict.score, now)?.name?.lowercase()
+            else -> null
+        }
         val flagged = why != null
         when {
-            why != null -> Monitor.perf.count("flag_${why.name.lowercase()}")
+            why != null -> Monitor.perf.count("flag_$why")
             verdict?.flagged == true -> Monitor.perf.count("flag_held")
         }
+        val bodySummary = body?.let(app.focusfence.dns.BodyCheck::summary)
         val keep = Classification.retainImage(mode, flagged)
 
         var shotId: String? = null
@@ -304,7 +319,8 @@ object ScreenCapture {
                 MonitorSettings.reviewEnabled(context), verdict.score, MonitorSettings.reviewPercent(context))
         ) {
             try {
-                app.focusfence.data.ReviewStore.save(context, bitmap, now, pkg, verdict.label, verdict.score, app.focusfence.dns.Signals.scoresCompact(scores!!))
+                app.focusfence.data.ReviewStore.save(context, bitmap, now, pkg, verdict.label, verdict.score,
+                    app.focusfence.dns.Signals.scoresCompact(scores!!) + (body?.let { "," + app.focusfence.dns.BodyCheck.compact(it) } ?: ""))
                 Monitor.perf.count("shot_review_kept")
             } catch (e: Exception) {
                 Log.w(TAG, "save review shot", e)
@@ -313,12 +329,15 @@ object ScreenCapture {
         }
         // D-037: a partner-level flag goes to partners on its own, blurred, after the owner's note window.
         if (flagged && verdict != null && app.focusfence.sync.SyncStore.deviceId(context) != null) {
+            // The label partners see is what was found, when the body check found it.
             try {
                 val thumb = app.focusfence.sync.ShareQueue.thumbnail(bitmap)
                 val appName = app.focusfence.UiUtil.appLabel(context, pkg)
                 val percent = (verdict.score * 100).toInt()
-                val id = app.focusfence.sync.ShareQueue.enqueue(context, thumb, now, appName, verdict.label, percent, "", auto = true)
-                AutoShareNotice.post(context, id, thumb, appName, verdict.label, percent, AutoShareNotice.sendAt(id.toLong()))
+                val label = confirmed?.first?.lowercase()?.replace('_', ' ') ?: verdict.label
+                val pct = confirmed?.let { Math.round(it.second * 100).toInt() } ?: percent
+                val id = app.focusfence.sync.ShareQueue.enqueue(context, thumb, now, appName, label, pct, "", auto = true)
+                AutoShareNotice.post(context, id, thumb, appName, label, pct, AutoShareNotice.sendAt(id.toLong()))
                 Monitor.perf.count("shot_auto_queued")
             } catch (e: Exception) {
                 Log.w(TAG, "auto share", e)
@@ -335,6 +354,7 @@ object ScreenCapture {
                 flagged = flagged,
                 ms = if (scores != null) clfMs else null,
                 trigger = trigger,
+                body = bodySummary,
             )
         )
         if (flagged) Monitor.perf.count("shot_flagged")

@@ -1,0 +1,9 @@
+nudenet_320n_f16.tflite is derived from NudeNet's 320n detector (320n.onnx, shipped in the
+nudenet 3.4.2 Python package; https://github.com/notAI-tech/NudeNet), converted to TensorFlow Lite
+with float16 weights by tools/convert_nudenet_model.py. Input: 320x320 RGB, values 0..1, NHWC.
+Output: [1, 22, 2100]: 4 box values then 18 class scores per anchor (labels in dns/BodyCheck.kt).
+
+NudeNet is distributed under the GNU Affero General Public License v3.0 (its repository's LICENSE;
+the PyPI metadata says MIT, and the model is a YOLOv8 detector, so it is treated as AGPL-3.0 here).
+Focus Fence is licensed under AGPL-3.0 as well (D-038); the full licence text is in LICENSE at the
+root of the source repository, https://github.com/flyboy-byte/focusfence.

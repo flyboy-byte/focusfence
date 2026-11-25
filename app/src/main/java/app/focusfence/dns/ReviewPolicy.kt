@@ -43,12 +43,22 @@ object ReviewPolicy {
         return Entry(t, p[1], p[2], pct, p.getOrElse(4) { "" })
     }
 
-    /** `neutral 94% · hentai 3% · …`, highest first. */
-    fun breakdown(scores: String): String = scores.split(',').mapNotNull { kv ->
-        val p = kv.split('=')
-        val v = p.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
-        p[0] to v
-    }.sortedByDescending { it.second }.joinToString(" · ") { "${it.first} ${Math.round(it.second * 100)}%" }
+    /** `neutral 94% · hentai 3% · …`, highest first, then the body check (D-038) when it ran. */
+    fun breakdown(scores: String): String {
+        val all = scores.split(',').mapNotNull { kv ->
+            val p = kv.split('=')
+            val v = p.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
+            p[0] to v
+        }
+        val (body, labels) = all.partition { it.first.startsWith("body.") }
+        val main = labels.sortedByDescending { it.second }.joinToString(" · ") { "${it.first} ${Math.round(it.second * 100)}%" }
+        val check = body.firstOrNull()?.let { (k, v) ->
+            val part = k.removePrefix("body.")
+            if (part == "none") "body check: nothing exposed"
+            else "body check: ${part.lowercase().replace('_', ' ')} ${Math.round(v * 100)}%"
+        }
+        return listOfNotNull(main.ifEmpty { null }, check).joinToString("\n")
+    }
 
     /** Names to delete: anything past [maxAgeMs], then the oldest beyond [maxCount]. Unparseable names are removed too. */
     fun toPrune(names: List<String>, now: Long, maxAgeMs: Long = MAX_AGE_MS, maxCount: Int = MAX_COUNT): List<String> {
