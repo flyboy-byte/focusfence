@@ -34,6 +34,22 @@ invite so new members' phones can enroll. Only enrolled phones open new mailboxe
 Tabs: Overview, People (add a person: code + message), Devices (who watches whom), Activity (admin log, sessions,
 your sign-in). On the box, `focusfence-server admin login-link <email>` prints a one-time sign-in link.
 
+## Start to finish
+
+What you need: a Linux server you can reach from the internet, a domain name pointing at it, and for email partners
+either a [Resend](https://resend.com) account with that domain verified (easiest) or any SMTP account. App partners
+work without email.
+
+1. **Install** with Docker Compose or the systemd tarball (below). Set `FF_PUBLIC_URL` to your `https://` address.
+2. **HTTPS:** the `https` compose profile (Caddy) or `nginx.conf.example`. The app only talks to `https://`.
+3. **Check it:** `https://your.domain/healthz` answers `ok`.
+4. **Connect your own phone:** create an enrollment code and paste what it prints into the app (Partners → *Join with an
+   invite*). systemd: `sudo ./ff-admin.sh admin codes add me --uses 1`. Docker:
+   `docker compose exec server /opt/focusfence-server/bin/focusfence-server admin codes add me --uses 1`.
+   Or turn on the admin page (`FF_ADMIN_EMAILS`) and use its People tab.
+5. **Add a partner** from the app (Partners → *Invite a partner*). Share the link: opened in a browser it's an email
+   partner, pasted into their Focus Fence it's an app partner.
+
 ## Run with Docker Compose (recommended)
 
 ```sh
@@ -68,7 +84,8 @@ volume survives a restart. Caddy getting a real public certificate wasn't tested
 Each `server-vX.Y.Z` release also has a tarball with an installer. It needs a JRE 17 or newer on the host.
 
 ```sh
-v=1.0.0; f=focusfence-server-$v.tar.gz
+v=1.1.0   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
+f=focusfence-server-$v.tar.gz
 base=https://github.com/flyboy-byte/focusfence/releases/download/server-v$v
 curl -fLO $base/$f && curl -fLO $base/$f.sha256
 sha256sum -c $f.sha256 && tar xzf $f && cd focusfence-server-$v
@@ -105,7 +122,8 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_STALE_MINUTES` | `60` | Silence before "phone went silent" (phones check in about every 15 min). Email, text and app partners all get it, and a "checking in again" message when the phone is back. |
 | `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
 | `FF_ADMIN_EMAILS` | — | Comma list. Turns on the admin page for these addresses; off when empty. Sign in with an emailed code, or with an authenticator code once one is set up (Activity tab): either one, not both |
-| `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
+| `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend (preferred) |
+| `FF_SMTP_HOST`, `FF_SMTP_PORT`, `FF_SMTP_USER`, `FF_SMTP_PASSWORD`, `FF_SMTP_TLS` | —, `587`, —, —, `starttls` | Email over plain SMTP instead (Gmail app password, Fastmail, your own server), used only when no Resend key is set. `FF_SMTP_TLS`: `starttls`, `ssl` (port 465) or `none` (a local relay only) |
 | `FF_SMS_PROVIDER` | `none` | `twilio`, `telnyx`, or `dev` |
 | `FF_SMS_FROM` | — | Sending number |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | — | For `twilio` |

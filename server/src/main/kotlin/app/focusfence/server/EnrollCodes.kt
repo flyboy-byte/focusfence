@@ -87,7 +87,7 @@ fun runAdmin(args: Array<String>, dataDir: File, now: Long, out: (String) -> Uni
         }
         val base = System.getenv("FF_PUBLIC_URL")?.trimEnd('/')
             ?: return true.also { out("refusing: FF_PUBLIC_URL is not set, so the link would point nowhere. Run this with the service's environment (server/deploy/ff-admin.sh).") }
-        out("one-time sign-in link for $email (15 minutes; the authenticator is still asked):\n  $base/admin/link/${AdminLinks.create(dataDir, email, now)}")
+        out("one-time sign-in link for $email (15 minutes, signs you straight in):\n  $base/admin/link/${AdminLinks.create(dataDir, email, now)}")
         return true
     }
     if (args.size < 2 || args[0] != "admin" || args[1] != "codes") return false
@@ -99,6 +99,10 @@ fun runAdmin(args: Array<String>, dataDir: File, now: Long, out: (String) -> Uni
             val exp = opt("--days")?.let { now + it * 86_400_000 } ?: 0
             val (plain, c) = codes.create(label, now, exp, (opt("--uses") ?: 0).toInt())
             out("code for \"${c.label}\" (id ${c.id}), shown once:\n  $plain")
+            // The same message the admin page's People tab gives: pasted whole into the app's "Join with an invite".
+            System.getenv("FF_PUBLIC_URL")?.trimEnd('/')?.takeIf { it.startsWith("https://") }?.let { base ->
+                out("\nOn the phone: Focus Fence → Partners → Join with an invite, and paste these two lines:\n  Server: $base\n  Enrollment code: $plain")
+            }
         }
         "list" -> codes.list().forEach { out("${it.id}  ${it.label}  uses ${it.uses}/${if (it.maxUses == 0) "∞" else it.maxUses}  ${if (it.revoked) "REVOKED" else if (it.expiresMs != 0L && now > it.expiresMs) "expired" else "live"}") }
         "revoke" -> out(if (codes.revoke(args.getOrNull(3) ?: "")) "revoked" else "no such id")
