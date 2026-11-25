@@ -7,6 +7,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Docs
+- full state after 2.20 (README, server README, AGENTS, CLAUDE, STATE, roadmap, handoff, changelog) (`60f3ea3`, [#88](https://github.com/flyboy-byte/focusfence/pull/88))
 - handoff after 2.20 and D-035; next is networking and accountability mechanics (`95e69f1`, [#87](https://github.com/flyboy-byte/focusfence/pull/87))
 
 _Undo any line with `git revert <commit>`._
