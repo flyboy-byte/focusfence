@@ -67,9 +67,9 @@ class Admin(
     @kotlinx.serialization.Serializable
     data class Rec(var totpSecret: String = "", var totpOn: Boolean = false, var recovery: List<String> = emptyList(), var lastStep: Long = 0)
 
-    /** [emailOk]: the first factor was a one-time sign-in link from the server CLI (audit A1), so only the second remains. */
-    private class Pending(val email: String, val codeHash: String, val expires: Long, val real: Boolean, var attempts: Int = 0, val emailOk: Boolean = false)
-    private class Session(val email: String, val csrf: String, val created: Long, var seen: Long, var full: Boolean, var setupSecret: String = "")
+    /** An emailed code waiting to be typed in. */
+    private class Pending(val email: String, val codeHash: String, val expires: Long, val real: Boolean, var attempts: Int = 0)
+    private class Session(val email: String, val csrf: String, val created: Long, var seen: Long, var setupSecret: String = "")
 
     private val rnd = SecureRandom()
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -156,16 +156,19 @@ class Admin(
             "<form method='post' action='/admin/login'><label for='email'>Admin email</label>" +
             "<input id='email' name='email' type='email' required maxlength='120' autocomplete='username' autofocus>" +
             "<button class='wide'>Email me a code</button></form>" +
+            "<h2 class='or'>Or use your authenticator</h2>" +
+            "<form method='post' action='/admin/totp' autocomplete='off'><label for='temail'>Admin email</label>" +
+            "<input id='temail' name='email' type='email' required maxlength='120' autocomplete='username'>" +
+            "<label for='tcode'>Authenticator code</label><input id='tcode' name='code' required maxlength='24' inputmode='numeric' autocomplete='one-time-code'>" +
+            "<p class='mut'>Only if you set one up under Activity. Lost that phone? A recovery code works here too.</p>" +
+            "<button class='wide ghost'>Sign in</button></form>" +
             "<p class='mut'>No email on this server? On the server run <code>focusfence-server admin login-link you@example.com</code> for a one-time link.</p>")
 
-    private fun verifyForm(note: String? = null, linkUsed: Boolean = false): String = authPage("Sign in", if (linkUsed) "Step 2 of 2" else null,
-        (if (linkUsed) "<h1>Authenticator code</h1><p class='mut'>Signed in with a link from the server. One more code.</p>"
-        else "<h1>Check your email</h1><p class='mut'>If that address is an admin, a 6-digit code is on its way. It works for 10 minutes.</p>") +
+    private fun verifyForm(note: String? = null): String = authPage("Sign in", null,
+        "<h1>Check your email</h1><p class='mut'>If that address is an admin, a 6-digit code is on its way. It works for 10 minutes.</p>" +
             bad(note) +
             "<form method='post' action='/admin/verify' autocomplete='off'>" +
-            (if (linkUsed) "" else "<label for='ec'>Code from the email</label><input id='ec' name='email_code' required maxlength='12' inputmode='numeric' autocomplete='one-time-code' autofocus>") +
-            "<label for='second'>Authenticator code</label><input id='second' name='second' maxlength='24' inputmode='numeric'${if (linkUsed) " autofocus" else ""}>" +
-            "<p class='mut'>Lost your phone? A recovery code works here too. First time signing in? Leave this empty and you'll set up the authenticator next.</p>" +
+            "<label for='ec'>Code from the email</label><input id='ec' name='email_code' required maxlength='12' inputmode='numeric' autocomplete='one-time-code' autofocus>" +
             "<button class='wide'>Sign in</button></form>")
 
     /** Recovery codes, shown once, with copy and save buttons. */
@@ -204,7 +207,7 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
 .note{border-left:4px solid var(--acc)}.code{font:600 1.25em ui-monospace,monospace;letter-spacing:.04em;word-break:break-all}
 .row{display:flex;flex-wrap:wrap;gap:12px}.row>div{flex:1;min-width:140px}
 .auth{max-width:440px;padding-top:8vh}.brand{font-weight:600;margin:0 0 12px 4px}.auth .card{padding:22px 22px 18px}
-.auth input{max-width:none}.step{margin:0 0 4px;color:var(--mut);font-size:.85em}.wide{width:100%;margin-top:14px;padding:10px 14px}
+.auth input{max-width:none}.auth h2.or{margin:22px 0 4px;padding-top:16px;border-top:1px solid var(--line)}.step{margin:0 0 4px;color:var(--mut);font-size:.85em}.wide{width:100%;margin-top:14px;padding:10px 14px}
 a.button{display:inline-block;text-align:center;text-decoration:none;padding:10px 14px;border-radius:8px;background:var(--acc);color:#fff;box-sizing:border-box}
 @media(prefers-color-scheme:dark){a.button{color:#111}}
 pre.msg{font:inherit;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -287,13 +290,17 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
                     }
             }
             "activity" -> {
-                val mine = sessions.values.filter { it.full }.sortedByDescending { it.seen }
+                val mine = sessions.values.sortedByDescending { it.seen }
                 flash(newCode, note) + "<h1>Activity</h1><div class='card'><h2>Admin log</h2><div class='tw'><table><tr><th>When</th><th>Who</th><th>What</th><th>From</th></tr>" +
                     auditTail(100).joinToString("") { a -> "<tr><td>${Web.time(a["t"]?.toLongOrNull() ?: 0)}</td><td>${Web.esc(a["who"].orEmpty())}</td><td>${Web.esc(a["action"].orEmpty())} <span class='mut'>${Web.esc(a["detail"].orEmpty())}</span></td><td class='mut'>${Web.esc(a["ip"].orEmpty())}</td></tr>" } +
                     "</table></div></div><div class='card'><h2>Signed-in sessions</h2><p class='mut'>${mine.size} active. Sessions end after 30 minutes idle or 8 hours, and when the server restarts.</p>" +
                     "<form class='inline' method='post' action='/admin/sessions/others'>${hidden(s)}<button class='ghost'>Sign out all other sessions</button></form></div>" +
-                    "<div class='card'><h2>Your sign-in</h2><p class='mut'>Recovery codes left: ${recs()[s.email]?.recovery?.size ?: 0}</p>" +
-                    "<form class='inline' method='post' action='/admin/recovery/new'>${hidden(s)}<button class='ghost'>Make new recovery codes</button></form> " +
+                    (if (recs()[s.email]?.totpOn == true)
+                        "<div class='card'><h2>Your sign-in</h2><p class='mut'>Emailed code or authenticator, either one. Recovery codes left: ${recs()[s.email]?.recovery?.size ?: 0}</p>" +
+                            "<form class='inline' method='post' action='/admin/recovery/new'>${hidden(s)}<button class='ghost'>Make new recovery codes</button></form> " +
+                            "<form class='inline' method='post' action='/admin/setup/start'>${hidden(s)}<button class='ghost'>Replace authenticator</button></form> "
+                    else "<div class='card'><h2>Your sign-in</h2><p class='mut'>Emailed code. Add an authenticator to sign in with it instead when email is slow.</p>" +
+                            "<form class='inline' method='post' action='/admin/setup/start'>${hidden(s)}<button class='ghost'>Set up authenticator</button></form> ") +
                     "<form class='inline' method='post' action='/admin/test-email'>${hidden(s)}<button class='ghost'>Send me a test email</button></form></div>"
             }
             else -> {
@@ -313,33 +320,25 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
         return shell(s, tab, body)
     }
 
-    private fun newSession(c: ApplicationCall, email: String, full: Boolean): Session {
-        val id = token(); val s = Session(email, token(16), cfg.now(), cfg.now(), full)
+    private fun newSession(c: ApplicationCall, email: String): Session {
+        val id = token(); val s = Session(email, token(16), cfg.now(), cfg.now())
         sessions[id] = s; setCookie(c, COOKIE, id, 8 * 3600); return s
     }
 
     private suspend fun fail(c: ApplicationCall, ip: String, why: String) {
         audit("-", ip, "login_failed", why)
-        html(c, "Sign in", verifyForm("Those codes did not work."), HttpStatusCode.Unauthorized)
+        html(c, "Sign in", verifyForm("That code did not work."), HttpStatusCode.Unauthorized)
     }
 
     fun routes(r: Route) {
         if (allowed.isEmpty()) return
         r.get("/admin") {
             val s = session(call)
-            when {
-                s == null -> html(call, "Admin", loginForm())
-                !s.full -> html(call, "Set up", setupPage(s))
-                else -> html(call, "Admin", dashboard(s))
-            }
+            if (s == null) html(call, "Admin", loginForm()) else html(call, "Admin", dashboard(s))
         }
         for (tab in listOf("codes", "devices", "activity")) r.get("/admin/$tab") {
             val s = session(call)
-            when {
-                s == null -> html(call, "Admin", loginForm())
-                !s.full -> html(call, "Set up", setupPage(s))
-                else -> html(call, "Admin", dashboard(s, tab))
-            }
+            if (s == null) html(call, "Admin", loginForm()) else html(call, "Admin", dashboard(s, tab))
         }
         r.post("/admin/login") {
             val ip = clientOf(call)
@@ -363,19 +362,18 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
             html(call, "Sign in", verifyForm())
         }
         // Audit A1: the operator's own way in, which no one on the internet can use up. `admin login-link <email>` on the
-        // server writes a one-time, 15-minute link; it stands in for the emailed code, and the authenticator is still asked.
+        // server writes a one-time, 15-minute link that signs in on its own, like the emailed code (2026-11-25: one way in, not two).
         // Audit S2: GET only shows a button, so a chat app's link preview can't use the link up; the POST spends it.
         r.get("/admin/link/{token}") {
             val tok = call.parameters["token"].orEmpty().filter { it.isLetterOrDigit() || it == '-' || it == '_' }
-            html(call, "Sign in", authPage("Sign in", "Step 1 of 2", "<h1>Sign in</h1><p>Continue with this one-time link. The authenticator code is asked next.</p>" +
+            html(call, "Sign in", authPage("Sign in", null, "<h1>Sign in</h1><p>Continue with this one-time link.</p>" +
                 "<form method='post' action='/admin/link/${Web.esc(tok)}'><button class='wide'>Continue</button></form>"))
         }
         r.post("/admin/link/{token}") {
             val email = consumeLink(call.parameters["token"].orEmpty())?.takeIf { it in allowed }
                 ?: return@post html(call, "Admin", loginForm("That sign-in link is invalid, used or expired."), HttpStatusCode.Unauthorized)
-            pendings[token().also { setCookie(call, PCOOKIE, it, 600) }] = Pending(email, "", cfg.now() + 600_000, true, emailOk = true)
             audit(email, clientOf(call), "login_link_used")
-            html(call, "Sign in", verifyForm(linkUsed = true))
+            html(call, "Admin", dashboard(newSession(call, email)))
         }
         r.post("/admin/verify") {
             val ip = clientOf(call)
@@ -385,51 +383,60 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
             val pend = pendings[pid] ?: return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Unauthorized)
             pend.attempts++
             if (cfg.now() > pend.expires || pend.attempts > 5) { pendings.remove(pid); return@post html(call, "Admin", loginForm("Code expired. Start again."), HttpStatusCode.Unauthorized) }
-            val codeOk = pend.real && (pend.emailOk || eq(Integrity.sha256(p["email_code"].orEmpty().filter { it.isDigit() }), pend.codeHash))
+            val codeOk = pend.real && eq(Integrity.sha256(p["email_code"].orEmpty().filter { it.isDigit() }), pend.codeHash)
             if (!codeOk) return@post fail(call, ip, "email_code")
-            val rec0 = recs()[pend.email]
-            if (rec0 == null || !rec0.totpOn) {
-                pendings.remove(pid)
-                val s = newSession(call, pend.email, false); s.setupSecret = Totp.newSecret(rnd)
-                audit(pend.email, ip, "login_email_ok_setup_needed")
-                return@post html(call, "Set up", setupPage(s))
-            }
-            val second = p["second"].orEmpty().trim()
-            val recoveryHash = Integrity.sha256(normalizeCode(second))
-            val outcome = updateRecs { all ->
-                val rec = all[pend.email] ?: return@updateRecs null
-                val step = Totp.verify(rec.totpSecret, second, cfg.now())
+            recs() // audit A2: an unreadable admin.json refuses every sign-in, not only the authenticator
+            pendings.remove(pid)
+            audit(pend.email, ip, "login_ok_email")
+            html(call, "Admin", dashboard(newSession(call, pend.email)))
+        }
+        // The other way in (2026-11-25): an authenticator code (or a recovery code) alone, for an admin who set one up.
+        r.post("/admin/totp") {
+            val ip = clientOf(call)
+            val p = call.receiveParameters()
+            if (!ipFail.allow(ip)) return@post html(call, "Admin", loginForm("Too many attempts. Try later."), HttpStatusCode.TooManyRequests)
+            val email = p["email"].orEmpty().trim().lowercase().take(120)
+            val given = p["code"].orEmpty().trim()
+            val recoveryHash = Integrity.sha256(normalizeCode(given))
+            val outcome = if (email !in allowed) null else updateRecs { all ->
+                val rec = all[email]?.takeIf { it.totpOn } ?: return@updateRecs null
+                val step = Totp.verify(rec.totpSecret, given, cfg.now())
                 val viaRecovery = step == null && rec.recovery.any { eq(it, recoveryHash) }
                 if ((step == null || step <= rec.lastStep) && !viaRecovery) return@updateRecs null
                 if (viaRecovery) rec.recovery = rec.recovery.filter { !eq(it, recoveryHash) } else rec.lastStep = step!!
                 viaRecovery to rec.recovery.size
-            } ?: return@post fail(call, ip, "second_factor")
+            }
+            if (outcome == null) {
+                audit("-", ip, "login_failed", "authenticator")
+                return@post html(call, "Admin", loginForm("That didn't work. Check the email and code."), HttpStatusCode.Unauthorized)
+            }
             val (viaRecovery, left) = outcome
-            pendings.remove(pid)
-            val s = newSession(call, pend.email, true)
-            audit(pend.email, ip, if (viaRecovery) "login_ok_recovery_code" else "login_ok")
-            html(call, "Admin", dashboard(s, note = if (viaRecovery) "You used a recovery code ($left left)." else null))
+            audit(email, ip, if (viaRecovery) "login_ok_recovery_code" else "login_ok_totp")
+            html(call, "Admin", dashboard(newSession(call, email), note = if (viaRecovery) "You used a recovery code ($left left)." else null))
         }
         r.post("/admin/setup") {
-            val s = session(call)?.takeIf { !it.full } ?: return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Unauthorized)
+            val s = session(call)?.takeIf { it.setupSecret.isNotEmpty() } ?: return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Unauthorized)
             val p = call.receiveParameters()
             if (!eq(p["csrf"].orEmpty(), s.csrf)) return@post html(call, "Admin", loginForm("Start again."), HttpStatusCode.Forbidden)
             val step = Totp.verify(s.setupSecret, p["totp"].orEmpty(), cfg.now())
                 ?: return@post html(call, "Set up", setupPage(s, "That code did not match. Check the secret and your phone's clock."), HttpStatusCode.Unauthorized)
             val plain = List(8) { newInviteCode() + newInviteCode() }
             updateRecs { all -> all[s.email] = Rec(s.setupSecret, true, plain.map { Integrity.sha256(normalizeCode(it)) }, step) }
-            // Audit A5: the partial session is retired; the full one gets a fresh id and CSRF token.
-            call.request.cookies[COOKIE]?.let { sessions.remove(it) }
-            newSession(call, s.email, true)
+            s.setupSecret = ""
             audit(s.email, clientOf(call), "totp_enrolled")
-            html(call, "Recovery codes", recoveryPage("Save your recovery codes", "Your authenticator is set up. Keep these somewhere safe in case you lose that phone.", plain, "/admin", "I saved them, continue"))
+            html(call, "Recovery codes", recoveryPage("Save your recovery codes", "Your authenticator is set up: from now on you can sign in with it instead of an emailed code. Keep these somewhere safe in case you lose that phone.", plain, "/admin", "I saved them, continue"))
         }
         suspend fun ApplicationCall.authed(block: suspend (Session, io.ktor.http.Parameters) -> Unit) {
-            val s = session(this)?.takeIf { it.full } ?: return html(this, "Admin", loginForm("Sign in again."), HttpStatusCode.Unauthorized)
+            val s = session(this) ?: return html(this, "Admin", loginForm("Sign in again."), HttpStatusCode.Unauthorized)
             val p = receiveParameters()
             if (!eq(p["csrf"].orEmpty(), s.csrf)) return html(this, "Admin", loginForm("Sign in again."), HttpStatusCode.Forbidden)
             block(s, p)
         }
+        // Optional, from Activity → Your sign-in: an authenticator becomes a second way to sign in, never a second step.
+        r.post("/admin/setup/start") { call.authed { s, _ ->
+            s.setupSecret = Totp.newSecret(rnd)
+            html(call, "Set up", setupPage(s))
+        } }
         r.post("/admin/codes/add") { call.authed { s, p ->
             val days = p["days"]?.trim()?.toLongOrNull()?.coerceIn(1, 3650)
             val uses = p["uses"]?.trim()?.toIntOrNull()?.coerceIn(1, 1000) ?: 0
@@ -482,7 +489,7 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
 
     private fun setupPage(s: Session, note: String? = null): String {
         val uri = "otpauth://totp/Focus%20Fence:${java.net.URLEncoder.encode(s.email, "UTF-8")}?secret=${s.setupSecret}&issuer=Focus%20Fence"
-        return authPage("Set up", "Last step",
+        return authPage("Set up", null,
             "<h1>Add an authenticator</h1>" + bad(note) +
                 "<p>Scan this with an authenticator app (Aegis, Google Authenticator, 1Password, any TOTP app).</p>" +
                 Qr.svg(uri, "QR code for your authenticator app") +
