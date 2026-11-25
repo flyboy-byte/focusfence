@@ -6,6 +6,18 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Added
+- partners hear within seconds when uninstall protection is turned off (`e6e4d15`, [#76](https://github.com/flyboy-byte/focusfence/pull/76))
+### Faster or lighter
+- Home ticks every 15 s unless a countdown shows; unchanged screens captured less often (`587470d`, [#77](https://github.com/flyboy-byte/focusfence/pull/77))
+### Changed
+- Rounded Settings and Blocking, simpler block notices, Block history (`3b0ddbf`, [#75](https://github.com/flyboy-byte/focusfence/pull/75))
+- server: admin sign-in pages, authenticator QR code, People tab with a ready-to-send invite (`6dc0089`, [#74](https://github.com/flyboy-byte/focusfence/pull/74))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.17.0-accountable
+
 ### Fixed
 - server image builds for arm64 (the Alpine Java image has no arm64 variant) (`ee58e09`, [#69](https://github.com/flyboy-byte/focusfence/pull/69))
 ### Changed
@@ -13,6 +25,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ### Docs
 - handoff after 2.16 and the first server release (`b8e2e42`, [#70](https://github.com/flyboy-byte/focusfence/pull/70))
 ### Maintenance
+- release 2.17.0 (`5d5a636`, [#73](https://github.com/flyboy-byte/focusfence/pull/73))
 - server releases carry install steps for Docker and systemd (`c6bf699`, [#71](https://github.com/flyboy-byte/focusfence/pull/71))
 
 _Undo any line with `git revert <commit>`._
