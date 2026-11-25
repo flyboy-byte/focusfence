@@ -34,6 +34,21 @@ invite so new members' phones can enroll. Only enrolled phones open new mailboxe
 Tabs: Overview, People (add a person: code + message), Devices (who watches whom), Activity (admin log, sessions,
 your sign-in). On the box, `focusfence-server admin login-link <email>` prints a one-time sign-in link.
 
+## Start to finish
+
+What you need: a Linux server you can reach from the internet, a domain name pointing at it, and (for email
+partners) a [Resend](https://resend.com) account with that domain verified. App partners work without email.
+
+1. **Install** with Docker Compose or the systemd tarball (below). Set `FF_PUBLIC_URL` to your `https://` address.
+2. **HTTPS:** the `https` compose profile (Caddy) or `nginx.conf.example`. The app only talks to `https://`.
+3. **Check it:** `https://your.domain/healthz` answers `ok`.
+4. **Connect your own phone:** create an enrollment code and paste what it prints into the app (Partners → *Join with an
+   invite*). systemd: `sudo ./ff-admin.sh admin codes add me --uses 1`. Docker:
+   `docker compose exec server /opt/focusfence-server/bin/focusfence-server admin codes add me --uses 1`.
+   Or turn on the admin page (`FF_ADMIN_EMAILS`) and use its People tab.
+5. **Add a partner** from the app (Partners → *Invite a partner*). Share the link: opened in a browser it's an email
+   partner, pasted into their Focus Fence it's an app partner.
+
 ## Run with Docker Compose (recommended)
 
 ```sh
@@ -68,7 +83,8 @@ volume survives a restart. Caddy getting a real public certificate wasn't tested
 Each `server-vX.Y.Z` release also has a tarball with an installer. It needs a JRE 17 or newer on the host.
 
 ```sh
-v=1.0.0; f=focusfence-server-$v.tar.gz
+v=1.0.1   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
+f=focusfence-server-$v.tar.gz
 base=https://github.com/flyboy-byte/focusfence/releases/download/server-v$v
 curl -fLO $base/$f && curl -fLO $base/$f.sha256
 sha256sum -c $f.sha256 && tar xzf $f && cd focusfence-server-$v

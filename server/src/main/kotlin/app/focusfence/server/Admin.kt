@@ -52,8 +52,8 @@ object Totp {
 }
 
 /**
- * The operator page: per-person enrollment codes, devices, usage and an audit log, behind two factors
- * (a one-time code emailed to an allow-listed address, then an authenticator code or a recovery code).
+ * The operator page: per-person enrollment codes, devices, usage and an audit log. Sign-in is one factor
+ * (D-035): a one-time code emailed to an allow-listed address, or an authenticator code once one is set up.
  * Off unless FF_ADMIN_EMAILS is set. No passwords exist anywhere. It can never show a report token, invite
  * code, mailbox id, activity record or screenshot: none of those are read here.
  */

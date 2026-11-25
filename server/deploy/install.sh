@@ -98,9 +98,13 @@ mv "$PREFIX.new" "$PREFIX"
 if [ $first = yes ]; then
     systemctl enable "$NAME" >/dev/null 2>&1
     say "Installed $NAME."
-    say "Next: edit $CONF/env (at least FF_PUBLIC_URL, RESEND_API_KEY, FF_MAIL_FROM), then"
-    say "  sudo systemctl start $NAME && curl http://127.0.0.1:$(port)/healthz"
-    say "and put HTTPS in front (nginx.conf.example in this folder)."
+    say "Next:"
+    say "  1. Edit $CONF/env: at least FF_PUBLIC_URL (your https:// address). Email (RESEND_API_KEY,"
+    say "     FF_MAIL_FROM) is needed for email partners; FF_ADMIN_EMAILS turns on the admin page."
+    say "  2. sudo systemctl start $NAME && curl http://127.0.0.1:$(port)/healthz"
+    say "  3. Put HTTPS in front (nginx.conf.example in this folder)."
+    say "  4. Connect your phone: sudo ./ff-admin.sh admin codes add me --uses 1"
+    say "     and paste the two lines it prints into Focus Fence → Partners → Join with an invite."
     exit 0
 fi
 
