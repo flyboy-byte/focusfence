@@ -157,14 +157,40 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     private fun heartbeat(ctx: Context, api: Api, now: Long): Boolean {
         val deviceId = SyncStore.deviceId(ctx) ?: return false
         val seq = SyncStore.uploadedSeq(ctx)
+        val gap = gapAccount(ctx, now)
         val r = api.post("/v1/heartbeat", JSONObject().apply {
             put("deviceId", deviceId)
             put("t", now)
             put("lastSeq", seq)
             put("signature", DeviceKey.sign("heartbeat|$deviceId|$now|$seq".toByteArray()))
+            // After a long gap, the phone's own account of it for partners ("no internet; protection stayed on").
+            if (gap != null) {
+                put("gap", gap)
+                put("gapSignature", DeviceKey.sign("gap|$deviceId|$now|${sha256(gap)}".toByteArray()))
+            }
         })
         if (r.code != 200) throw IllegalStateException("heartbeat HTTP ${r.code}")
         return true
+    }
+
+    /** [GapAccount] for the time since the last check-in that got through, if that was long ago. */
+    private fun gapAccount(ctx: Context, now: Long): String? {
+        val from = SyncStore.lastHeartbeat(ctx)
+        if (from <= 0 || now - from < app.focusfence.dns.GapAccount.MIN_GAP_MS) return null
+        return runCatching {
+            val activity = ArrayList<Map<String, Any?>>()
+            EventLog.scan(EventLog.Channel.ACTIVITY, sinceT = from) { line ->
+                if (line.contains("\"type\":\"svc\"") || line.contains("\"type\":\"integ\"")) LogJson.decode(line)?.let { activity += it }
+                else activity += mapOf("t" to LogJson.peekT(line), "seq" to EventLog.seqOf(line)) // sequence only, no decode
+                true
+            }
+            val net = ArrayList<Map<String, Any?>>()
+            EventLog.scan(EventLog.Channel.DIAG, sinceT = from) { line ->
+                if (line.contains("\"type\":\"net\"")) LogJson.decode(line)?.let { net += it }
+                true
+            }
+            app.focusfence.dns.GapAccount.describe(activity, net, from, now)
+        }.getOrNull()
     }
 
     // ---- app-to-app: this phone → its partners -------------------------------

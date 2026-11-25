@@ -62,10 +62,11 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             .toList()
 
     /** The phone checked in after partners were told it was silent: say so, so the silence isn't left hanging. */
-    suspend fun checkedIn(deviceId: String) {
+    suspend fun checkedIn(deviceId: String, account: String? = null) {
         val silentSince = store.markSeen(deviceId, cfg.now()) ?: return
         val device = store.device(deviceId) ?: return
-        toPartners(device, "phone is back", listOf("The phone is checking in again after ${minutes(cfg.now() - silentSince)} without a check-in."))
+        val back = "The phone is checking in again after ${minutes(cfg.now() - silentSince)} without a check-in."
+        toPartners(device, "phone is back", listOf(if (account != null) "$back $account" else back))
     }
 
     /** One pass of the background checks: silent devices and weekly reports. */
@@ -82,7 +83,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
                 store.updateDevice(d.id) { it.staleAlerted = true }
                 toPartners(
                     d, "phone went silent",
-                    listOf("The phone hasn't checked in for ${minutes(now - d.lastSeenMs)}. Protection may be off, the phone may be off or out of signal, or the app may have been removed."),
+                    listOf("The phone hasn't checked in for ${minutes(now - d.lastSeenMs)}. Protection may be off, the phone may be off or out of signal, or the app may have been removed. If it reconnects, you'll be told what happened meanwhile."),
                 )
             }
             if (now - d.lastReportMs >= cfg.reportEveryMs) {

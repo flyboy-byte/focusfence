@@ -307,13 +307,24 @@ class ServerTest {
 
         // A check-in tells everyone it's back, once.
         clock += 60_000
-        val hb = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}"}"""
-        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", hb).status)
-        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", hb).status)
-        val back = feed(after = silent.alerts.single().t)
+        val gap = "While it was quiet: the phone had no internet; protection stayed on the whole time."
+        val forged = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"Nothing happened.","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        val hb = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"$gap","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        // A gap account whose signature doesn't match is dropped; the phone is still back.
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", forged).status)
+        var back = feed(after = silent.alerts.single().t)
+        assertEquals("The phone is checking in again after 62 minutes without a check-in.", back.alerts.single().text)
+        // Silence again, and this time the phone explains it.
+        clock += cfg.staleMs + 60_000
+        sweeper.sweep()
+        val again = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","gap":"$gap","gapSignature":"${sign(Integrity.requestMessage("gap", id, clock, Integrity.sha256(gap)))}"}"""
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", again).status)
+        assertEquals(HttpStatusCode.OK, http.postJson("/v1/heartbeat", again).status)
+        back = feed(after = back.alerts.single().t)
         assertTrue(back.online)
-        assertTrue(back.alerts.single().text.contains("checking in again after 62 minutes"), back.alerts.toString())
-        assertEquals(1, notifier.emails.count { it.second.contains("phone is back") })
+        assertEquals(2, back.alerts.size, back.alerts.toString()) // silent, then back
+        assertEquals("The phone is checking in again after 61 minutes without a check-in. $gap", back.alerts.last().text)
+        assertEquals(2, notifier.emails.count { it.second.contains("phone is back") })
         assertEquals(HttpStatusCode.NotFound, http.get("/p/${"x".repeat(32)}/alerts").status)
     }
 

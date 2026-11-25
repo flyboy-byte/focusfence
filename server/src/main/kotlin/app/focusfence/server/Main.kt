@@ -111,7 +111,11 @@ class Config(
 @Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
 @Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
-@Serializable data class HeartbeatRequest(val deviceId: String, val t: Long, val lastSeq: Long, val signature: String)
+@Serializable data class HeartbeatRequest(
+    val deviceId: String, val t: Long, val lastSeq: Long, val signature: String,
+    /** After a long gap: the phone's account of it ("no internet; protection stayed on"), signed on its own. */
+    val gap: String? = null, val gapSignature: String? = null,
+)
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
 @Serializable data class OkResponse(val ok: Boolean = true)
@@ -417,7 +421,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val req = call.receive<HeartbeatRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "heartbeat", req.t, req.lastSeq.toString(), req.signature)) return@post call.unauthorized()
-            alerts.checkedIn(device.id)
+            val gap = req.gap?.takeIf { g -> req.gapSignature != null && signedOk(device, "gap", req.t, Integrity.sha256(g), req.gapSignature) }
+            alerts.checkedIn(device.id, gap?.filter { !it.isISOControl() }?.take(300))
             call.respond(OkResponse())
         }
 
