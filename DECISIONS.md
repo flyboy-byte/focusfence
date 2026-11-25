@@ -567,4 +567,7 @@ From Logan's reactions to a mockup and to 2.14: "plain in a good way", not gener
   visit = one entry) and **Trackers and ads** (everything else, counted per company domain). From the phone's own
   log (`dns/BlockHistory`); stays on the phone.
 - Uninstall protection copy made honest: Android offers "Deactivate & uninstall" in one step, so it is one extra
-  confirm, not a lock. What partners reliably get after an uninstall is the "phone went silent" alert.
+  confirm, not a lock. So the moment Android asks to turn it off, the phone pushes that alert to the server at once
+  (`SyncWorker.pushAlertsNow`, under goAsync) instead of waiting for the next sync: partners hear "Uninstall
+  protection is being turned off. Focus Fence may be uninstalled next" within seconds. Offline, the "phone went
+  silent" alert is still the backstop. No dead man's switch beyond that.

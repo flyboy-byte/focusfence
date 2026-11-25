@@ -28,6 +28,12 @@ class FocusFenceAdminReceiver : DeviceAdminReceiver() {
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence {
         // The removal is still allowed; we record the attempt and warn.
         log(context, "admin_disable_requested")
+        // "Deactivate & uninstall" can remove the app seconds from now, before any scheduled sync. Send the alert
+        // straight away (goAsync keeps the process up for this; offline, the "phone went silent" alert still follows).
+        val pending = goAsync()
+        Thread {
+            try { app.focusfence.sync.SyncWorker.pushAlertsNow(context.applicationContext) } finally { pending.finish() }
+        }.start()
         return context.getString(app.focusfence.R.string.admin_disable_warning)
     }
 

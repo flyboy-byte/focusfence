@@ -217,7 +217,8 @@ class Digest(private val fromT: Long) {
                     val now = d.substringBefore(',')
                     if (now in PROBLEM_HEALTH) "Filter problem: $now" else null
                 }
-                comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection being removed"
+                comp == "admin" && state == "admin_disable_requested" -> "Uninstall protection is being turned off. Focus Fence may be uninstalled next"
+                comp == "admin" && state.startsWith("admin_disable") -> "Uninstall protection turned off"
                 comp == "admin" && state == "admin_enabled" -> "Uninstall protection turned on"
                 comp == "admin" && state == "legacy_cleared" -> null // housekeeping after D-028, not a change
                 comp == "admin" -> "Managed mode: $state" + detail(f)
