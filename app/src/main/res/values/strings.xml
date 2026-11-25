@@ -521,6 +521,14 @@
     <string name="acc_none">None yet</string>
     <string name="acc_sms_on">text alerts on</string>
     <string name="acc_need_server">Set the server address first.</string>
+    <string name="bug_title">Report a bug</string>
+    <string name="bug_summary">Opens a GitHub issue with your app and phone versions</string>
+    <string name="bug_body">This opens a new issue on GitHub, where Focus Fence is developed in public. You\'ll need a GitHub account.\n\nAnyone can read it, so don\'t paste logs, screenshots or anything that shows what you browse.</string>
+    <string name="bug_add_summary">Add a numbers-only summary (battery, DNS, error counts; no sites or apps)</string>
+    <string name="bug_summary_loading">Working it out…</string>
+    <string name="bug_open">Open GitHub</string>
+    <string name="acc_protocol_server_old">This server is too old for this version of Focus Fence. Some things may not work until whoever runs it updates it.</string>
+    <string name="acc_protocol_app_old">This version of Focus Fence is too old for the server. Update the app (Home shows the update when there is one).</string>
     <string name="acc_leave_server">Leave this server</string>
     <string name="acc_leave_confirm">Your partners on this server get one last alert saying this phone is leaving, then stop hearing from it. Blocking on the phone keeps working.</string>
     <string name="acc_left_server">Left the server. Your partners were told.</string>

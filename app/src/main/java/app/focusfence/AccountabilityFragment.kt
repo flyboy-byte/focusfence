@@ -148,7 +148,12 @@ class AccountabilityFragment : Fragment() {
                 R.string.acc_status,
                 if (ok == 0L) getString(R.string.acc_status_never) else DateUtils.getRelativeTimeSpanString(ok).toString(),
                 SyncStore.lastError(requireContext())?.let { getString(R.string.acc_status_error, it) } ?: "",
-            )
+            ) + when (SyncStore.protocolStatus(requireContext())) {
+                // D-041: say which side is behind, instead of leaving odd failures to guess at. Syncing keeps trying.
+                app.focusfence.dns.Protocol.Status.SERVER_TOO_OLD -> "\n" + getString(R.string.acc_protocol_server_old)
+                app.focusfence.dns.Protocol.Status.APP_TOO_OLD -> "\n" + getString(R.string.acc_protocol_app_old)
+                else -> ""
+            }
         }
         bindServer()
         renderPartners()

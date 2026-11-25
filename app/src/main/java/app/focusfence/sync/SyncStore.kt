@@ -57,6 +57,21 @@ object SyncStore {
      * the jump to the first batch's seq as a gap.
      */
     /** A new server address means a new enrollment there: this phone's id belongs to the old server. */
+    /** D-041: the protocol levels our own server last reported. */
+    fun setServerProtocol(context: Context, level: Int, oldest: Int) {
+        val p = prefs(context)
+        if (p.getInt("server_protocol", -1) != level || p.getInt("server_protocol_oldest", -1) != oldest) {
+            p.edit().putInt("server_protocol", level).putInt("server_protocol_oldest", oldest).apply()
+        }
+    }
+
+    fun protocolStatus(context: Context): app.focusfence.dns.Protocol.Status {
+        val p = prefs(context)
+        val level = p.getInt("server_protocol", -1).takeIf { it > 0 }
+        val oldest = p.getInt("server_protocol_oldest", -1).takeIf { it > 0 }
+        return app.focusfence.dns.Protocol.check(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, level, oldest)
+    }
+
     fun clearEnrollment(context: Context) {
         prefs(context).edit().remove(KEY_DEVICE).commit()
     }

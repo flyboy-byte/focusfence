@@ -109,6 +109,13 @@ class Config(
 @Serializable data class CursorResponse(val error: String, val expectedNextSeq: Long, val lastHash: String)
 @Serializable data class ReportRequest(val deviceId: String, val t: Long, val from: Long, val to: Long, val blob: String, val signature: String)
 @Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
+@Serializable data class VersionResponse(val protocol: Int, val oldestApp: Int, val server: String)
+/** The release this server was built from (the tarball's VERSION file), or "dev". */
+val serverVersion: String by lazy {
+    runCatching { java.io.File(System.getProperty("user.dir"), "VERSION").takeIf { it.isFile }?.readText()?.trim() }.getOrNull()
+        ?: runCatching { java.io.File("/opt/" + (System.getenv("FF_SERVICE") ?: "focusfence-server") + "/VERSION").readText().trim() }.getOrNull()
+        ?: "dev"
+}
 @Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(
@@ -231,6 +238,12 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.response.headers.append("Referrer-Policy", "no-referrer")
         }
     })
+    // D-041: every response says which protocol levels this server speaks, so an app can tell its owner which side
+    // needs updating instead of failing in odd ways.
+    intercept(io.ktor.server.application.ApplicationCallPipeline.Plugins) {
+        call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER, app.focusfence.dns.Protocol.LEVEL.toString())
+        call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER_OLDEST, app.focusfence.dns.Protocol.OLDEST.toString())
+    }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             // Never echo the exception text: it can carry class names or file paths. Keep it in our log only.
@@ -293,6 +306,9 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }
+        get("/v1/version") {
+            call.respond(VersionResponse(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, serverVersion))
+        }
 
         // ---- device API -------------------------------------------------------
 

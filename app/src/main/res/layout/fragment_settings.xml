@@ -91,6 +91,7 @@
             <include android:id="@+id/rowGuide" layout="@layout/row_pref" />
             <include android:id="@+id/rowAbout" layout="@layout/row_pref" />
             <include android:id="@+id/rowGithub" layout="@layout/row_pref" />
+            <include android:id="@+id/rowBug" layout="@layout/row_pref" />
         </LinearLayout>
 
         <TextView

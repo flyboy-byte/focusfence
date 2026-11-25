@@ -716,3 +716,23 @@ server releases are now kept current with the app (AGENTS.md → Releases), star
 path now ends with the phone connected: the installer's last step and `admin codes add` print the two lines to paste
 into the app.
 
+## D-041 — App and server support each other two protocol levels back, held by CI
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted
+
+Logan: "a multiple version support variance between different server and app versions to a degree of maybe 2 or 3,
+enforced maybe by CI". `dns/Protocol` (compiled by both) holds `LEVEL`, raised only when a request or response one side
+depends on changes shape, and `WINDOW` = 2: each side keeps working with the other's last two levels. The server sends
+its level and oldest supported app level on every response (`X-FF-Server-Protocol`, `X-FF-Server-Oldest`) and at
+`/v1/version`; the app sends `X-FF-Protocol`, remembers its own server's levels, and the Partners screen says which side
+to update when they're out of range. Out of range warns and keeps trying (Logan's choice); the filter is never affected.
+
+CI: `server/src/test/.../compat/CompatLevel<N>Test` replays every call level N's app makes, with literal JSON and
+signature formats, against the current server; `CompatWindowTest` fails if a level in the window has no suite. App
+releases run `tools/check_protocol.py`, which fails if the newest `server-v*` release can't serve the app. A server
+release from before this speaks level 1.
+
+Also 2026-11-25: Settings → Report a bug opens GitHub's issue form (`.github/ISSUE_TEMPLATE/bug_report.yml`) filled with
+versions and, if ticked, a numbers-only summary the owner sees first (`dns/BugReport`). The repo is public, so the app
+and the form both say not to paste logs or screenshots, and the app sends nothing itself.
+

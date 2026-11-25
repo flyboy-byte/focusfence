@@ -161,6 +161,13 @@ decides as before. A flag queues the 48 px blurred thumbnail for partners after 
 (`ShareQueue.enqueue(auto = true)`, `monitor/AutoShareNotice`). NudeNet is AGPL-3.0, which is why the project is
 AGPL-3.0 (D-038); `tools/convert_nudenet_model.py` rebuilds the model.
 
+### Protocol versions (D-041)
+
+`dns/Protocol` (compiled by app and server) holds `LEVEL` and `WINDOW` (2). The app sends `X-FF-Protocol` on every
+request (`sync/Api`) and records its own server's `X-FF-Server-Protocol`/`X-FF-Server-Oldest`
+(`SyncStore.protocolStatus`); Partners says which side to update when out of range. Server compat suites live in
+`server/src/test/.../compat/`; see AGENTS.md → Releases.
+
 ### Self-update (D-029, D-031)
 
 `update/Updates` checks `releases/latest` every time the app comes to the foreground (`FocusFenceApp` counts started activities; the VPN keeps the process alive, so neither process start nor `MainActivity.onCreate` means "opened") and otherwise at most every 20 minutes (Home, screen on, WorkManager backstop), remembers a newer offer for Home's banner and posts
