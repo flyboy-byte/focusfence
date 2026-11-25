@@ -14,7 +14,7 @@ are written.
 |---|---|---|---|
 | 0 | Bug hunt of 2.21–2.24 | Every finding fixed or recorded here with a reason; tests green | done 2026-11-25 |
 | 1 | Fresh install, no server | A new person gets from install to "protected" without leaving the app or guessing; Logan confirms on the second phone after a clean install | built, waiting for the clean-install check |
-| 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | — |
+| 2 | First-time server setup (self-hoster) | From a fresh VPS to their own phone enrolled, following only `server/README.md` and the admin page | built; server-v1.1.0 to tag after merge |
 | 3 | Joining someone else's server | From a pasted People message or enrollment code to "connected", with a clear answer when it fails | — |
 | 4 | Pairing partners | Invite → partner joins (email and app) → first report and first alert seen by the partner; second-phone case included | — |
 | 5 | Config after setup | Strict mode, screen checks, block lists and groups: defaults make sense together and nothing contradicts | — |
@@ -50,6 +50,18 @@ screen checks (screenshots + AI, then the accessibility permission, cost shown) 
 ending on Home or Partners. Adult defaults to Block (also for anyone who never changed it). The long guide stays under
 Help with its stale lines fixed. Still to check on a phone: a clean install on the second phone, start to finish.
 
-## 2–5
+## 2. First-time server setup (self-hoster)
+
+Traced 2026-11-25: the newest server release (1.0.1) predates D-035, so it couldn't serve the current app; the env
+template still said 240-minute silence and never mentioned `FF_ADMIN_EMAILS`; the installer ended at "healthz ok" with
+no way onto the server from the phone; the CLI sign-in link said an authenticator was still asked (one factor since
+D-035); email needed Resend. Logan (D-040): self-host or be invited, no public server; Resend preferred, SMTP as an
+option; keep server releases current.
+
+Built: README "Start to finish" (five steps, VPS to partner); installer's last step and `admin codes add` print the
+two lines to paste into *Join with an invite*; env template current; SMTP (`FF_SMTP_*`, tested against a local fake
+server); server-v1.1.0 after merge.
+
+## 3–5
 
 Notes are added here as each section runs.

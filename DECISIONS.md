@@ -704,3 +704,15 @@ blocking" (ads/trackers/malware with its strength, malware & phishing, scams, ga
 (`Bundle.core`) offers Report or Block only; one stored as Off by an older version counts as Report
 (`Categories.effectivePolicy`), so the adult list is never silently off. Moving it from Block to Report is still guarded.
 
+## D-040 — Servers: self-host or be invited; Resend or SMTP; server releases kept current
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted
+
+Plan 10, journey 2. A new person gets a server by running their own or being invited onto someone's (the People
+message); there is no public sign-up server, and ff.flyboybyte.com stays private. Email goes through Resend when a key
+is set, otherwise plain SMTP (`FF_SMTP_*`, angus-mail), otherwise the log; Logan: "option for both, lean towards
+Resend". The newest server release was 1.0.1, from before D-035, so a self-hoster couldn't run today's app against it;
+server releases are now kept current with the app (AGENTS.md → Releases), starting with server-v1.1.0. The self-host
+path now ends with the phone connected: the installer's last step and `admin codes add` print the two lines to paste
+into the app.
+

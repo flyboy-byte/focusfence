@@ -162,6 +162,10 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
   patch release that reverts the change.
 - The server deploys separately (private runbook, not in this repo). When a change touches both, deploy the server
   first if the app depends on it.
+- **Keep the server release current** (Logan, 2026-11-25): self-hosters install the newest `server-vX.Y.Z` tag, not
+  `main`. When server code changes in a way the current app needs, tag a new `server-v` release (`server-release.yml`
+  builds the tarball and the Docker image) and update the version in `server/README.md`. Minor bump for features,
+  patch for fixes.
 - Some agent sandboxes can't push tags or edit releases. If yours can't, give the human the exact
   commands (they run them from Termux with `gh`).
 

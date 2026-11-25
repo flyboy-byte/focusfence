@@ -20,6 +20,8 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.38")
     // QR code for the admin's authenticator setup (drawn as inline SVG; no images, no scripts).
     implementation("com.google.zxing:core:3.5.3")
+    // Plain SMTP as an alternative to Resend (2026-11-25, Logan: "option for both, lean towards Resend").
+    implementation("org.eclipse.angus:angus-mail:2.0.3")
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
     testImplementation("io.ktor:ktor-client-core-jvm:$ktor")

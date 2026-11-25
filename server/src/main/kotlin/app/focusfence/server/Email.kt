@@ -28,10 +28,11 @@ interface Notifier {
 }
 
 /**
- * Resend for email; Twilio or Telnyx for SMS, chosen by env. With no keys set,
- * messages print to stdout so the prototype runs without any account.
+ * Resend for email (preferred), or plain SMTP when no Resend key is set; Twilio or Telnyx for SMS, chosen by env.
+ * With neither email set up, messages print to stdout so the prototype runs without any account.
  *
  *   RESEND_API_KEY, FF_MAIL_FROM
+ *   FF_SMTP_HOST, FF_SMTP_PORT (587), FF_SMTP_USER, FF_SMTP_PASSWORD, FF_SMTP_TLS = starttls | ssl | none
  *   FF_SMS_PROVIDER = twilio | telnyx | none (default none)
  *   FF_SMS_FROM, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TELNYX_API_KEY
  */
@@ -57,6 +58,9 @@ class LiveNotifier(
 
     override suspend fun email(to: String, subject: String, html: String): Boolean {
         if (resendKey.isNullOrBlank()) {
+            if (!env("FF_SMTP_HOST").isNullOrBlank()) {
+                return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { smtp(to, subject, html) }
+            }
             println("[email:dev] to=$to subject=$subject\n$html")
             return true
         }
@@ -76,6 +80,44 @@ class LiveNotifier(
             log.warn("email send failed: {}", e::class.simpleName)
             false
         }
+    }
+
+    /** One message over SMTP. Fails loudly in the log, never with the address or the password. */
+    private fun smtp(to: String, subject: String, html: String): Boolean = try {
+        val host = env("FF_SMTP_HOST")!!
+        val port = env("FF_SMTP_PORT")?.toIntOrNull() ?: 587
+        val mode = (env("FF_SMTP_TLS") ?: if (port == 465) "ssl" else "starttls").lowercase()
+        val user = env("FF_SMTP_USER")?.takeIf { it.isNotBlank() }
+        val props = java.util.Properties().apply {
+            put("mail.smtp.host", host)
+            put("mail.smtp.port", port.toString())
+            put("mail.smtp.auth", (user != null).toString())
+            put("mail.smtp.connectiontimeout", "15000")
+            put("mail.smtp.timeout", "20000")
+            put("mail.smtp.writetimeout", "20000")
+            when (mode) {
+                "ssl" -> { put("mail.smtp.ssl.enable", "true"); put("mail.smtp.ssl.checkserveridentity", "true") }
+                // No silent fall back to plain text: STARTTLS is required unless the operator says "none" (a local relay).
+                "starttls" -> { put("mail.smtp.starttls.enable", "true"); put("mail.smtp.starttls.required", "true"); put("mail.smtp.ssl.checkserveridentity", "true") }
+            }
+        }
+        val auth = user?.let { u ->
+            object : jakarta.mail.Authenticator() {
+                override fun getPasswordAuthentication() = jakarta.mail.PasswordAuthentication(u, env("FF_SMTP_PASSWORD").orEmpty())
+            }
+        }
+        val session = jakarta.mail.Session.getInstance(props, auth)
+        val msg = jakarta.mail.internet.MimeMessage(session).apply {
+            setFrom(jakarta.mail.internet.InternetAddress(mailFrom))
+            setRecipients(jakarta.mail.Message.RecipientType.TO, jakarta.mail.internet.InternetAddress.parse(to, true))
+            setSubject(subject, "UTF-8")
+            setContent(html, "text/html; charset=UTF-8")
+        }
+        jakarta.mail.Transport.send(msg)
+        true
+    } catch (e: Exception) {
+        log.warn("email send failed (SMTP): {}", e::class.simpleName)
+        false
     }
 
     override suspend fun sms(to: String, text: String): Boolean = runCatching {

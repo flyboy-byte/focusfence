@@ -36,8 +36,9 @@ your sign-in). On the box, `focusfence-server admin login-link <email>` prints a
 
 ## Start to finish
 
-What you need: a Linux server you can reach from the internet, a domain name pointing at it, and (for email
-partners) a [Resend](https://resend.com) account with that domain verified. App partners work without email.
+What you need: a Linux server you can reach from the internet, a domain name pointing at it, and for email partners
+either a [Resend](https://resend.com) account with that domain verified (easiest) or any SMTP account. App partners
+work without email.
 
 1. **Install** with Docker Compose or the systemd tarball (below). Set `FF_PUBLIC_URL` to your `https://` address.
 2. **HTTPS:** the `https` compose profile (Caddy) or `nginx.conf.example`. The app only talks to `https://`.
@@ -121,7 +122,8 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_STALE_MINUTES` | `60` | Silence before "phone went silent" (phones check in about every 15 min). Email, text and app partners all get it, and a "checking in again" message when the phone is back. |
 | `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
 | `FF_ADMIN_EMAILS` | — | Comma list. Turns on the admin page for these addresses; off when empty. Sign in with an emailed code, or with an authenticator code once one is set up (Activity tab): either one, not both |
-| `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend |
+| `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend (preferred) |
+| `FF_SMTP_HOST`, `FF_SMTP_PORT`, `FF_SMTP_USER`, `FF_SMTP_PASSWORD`, `FF_SMTP_TLS` | —, `587`, —, —, `starttls` | Email over plain SMTP instead (Gmail app password, Fastmail, your own server), used only when no Resend key is set. `FF_SMTP_TLS`: `starttls`, `ssl` (port 465) or `none` (a local relay only) |
 | `FF_SMS_PROVIDER` | `none` | `twilio`, `telnyx`, or `dev` |
 | `FF_SMS_FROM` | — | Sending number |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | — | For `twilio` |
