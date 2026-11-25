@@ -282,7 +282,7 @@ class SettingsFragment : Fragment() {
                 binding.rowCheckNow.prefTitle.setText(R.string.update_check_now)
                 val offer = result.getOrNull()
                 when {
-                    offer != null -> startActivity(app.focusfence.update.UpdateActivity.intent(ctx, offer))
+                    offer != null -> startActivity(app.focusfence.update.Updates.homeIntent(ctx))
                     result.isSuccess -> Toast.makeText(ctx, R.string.update_none, Toast.LENGTH_SHORT).show()
                     else -> Toast.makeText(ctx, R.string.update_check_failed, Toast.LENGTH_SHORT).show()
                 }

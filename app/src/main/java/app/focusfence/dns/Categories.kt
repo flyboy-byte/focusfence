@@ -47,14 +47,25 @@ object Categories {
         val fullUrl: String? = null,
         val license: String = "GPL-3.0 (HaGeZi)",
         val tiered: Boolean = false,
+        /**
+         * Part of the app's purpose, porn accountability, rather than extra blocking on top of it (Logan, 2026-11-25:
+         * the lists exist "to add general blocking on top of nudity and porn accountability filtering"). A core list
+         * is Report or Block, never Off: [effectivePolicy].
+         */
+        val core: Boolean = false,
     )
 
+    /** What a stored policy means: a core list stored as Off (older versions allowed it) counts as Report. */
+    fun effectivePolicy(bundle: Bundle?, stored: Policy): Policy =
+        if (bundle?.core == true && stored == Policy.OFF) Policy.REPORT else stored
+
     /** Strictness of the base Security bundle. Mini variants on device by default. */
-    enum class BaseTier(val label: String, val url: String) {
-        LIGHT("Light — lightest, fewest false positives", "$RAW/light-onlydomains.txt"),
-        PRO("Pro — recommended", "$RAW/pro.mini-onlydomains.txt"),
-        PRO_FULL("Pro (full) — larger, more coverage", "$RAW/pro-onlydomains.txt"),
-        ULTIMATE("Ultimate — aggressive, may break sites", "$RAW/ultimate.mini-onlydomains.txt");
+    /** HaGeZi's tiers under plain names (2.24): Light, Standard, Strong, Strongest. */
+    enum class BaseTier(val label: String, val blurb: String, val url: String) {
+        LIGHT("Light", "Catches the least, almost never blocks something you need", "$RAW/light-onlydomains.txt"),
+        PRO("Standard", "Recommended: a good balance", "$RAW/pro.mini-onlydomains.txt"),
+        PRO_FULL("Strong", "More coverage, a bigger list", "$RAW/pro-onlydomains.txt"),
+        ULTIMATE("Strongest", "Catches the most, may break some sites", "$RAW/ultimate.mini-onlydomains.txt");
 
         companion object {
             val DEFAULT = PRO
@@ -70,47 +81,47 @@ object Categories {
      */
     val BUNDLES = listOf(
         Bundle(
-            "security", "Security — ads, trackers, malware",
-            "The base list. Blocks ads, trackers and known-bad domains. Strictness is set by the tier below.",
+            "security", "Ads, trackers & malware",
+            "The base list. Strength sets how much it catches.",
             Kind.SECURITY, Policy.BLOCK, url = BaseTier.DEFAULT.url, tiered = true,
         ),
         Bundle(
-            "threat", "Threat intelligence (malware / phishing)",
-            "HaGeZi's threat-intelligence feed. Extra malware and phishing coverage.",
+            "threat", "Malware & phishing",
+            "Extra dangerous sites from a live threat feed.",
             Kind.SECURITY, Policy.BLOCK,
             url = "$RAW/tif.mini-onlydomains.txt", fullUrl = "$RAW/tif.medium-onlydomains.txt",
         ),
         Bundle(
-            "bypass", "Bypass guard (DoH / VPN / Tor / proxy)",
-            "Blocks the public resolvers, proxies and VPN/Tor bootstrap hosts used to route around the filter. Recommended for accountability.",
-            Kind.BYPASS, Policy.BLOCK, url = "$RAW/doh-vpn-proxy-bypass-onlydomains.txt",
+            "bypass", "Ways around the filter",
+            "Private DNS, VPNs, proxies and Tor. Keep this on Block for accountability.",
+            Kind.BYPASS, Policy.BLOCK, url = "$RAW/doh-vpn-proxy-bypass-onlydomains.txt", core = true,
         ),
         Bundle(
-            "adult", "Adult / NSFW",
-            "Adult content domains.",
+            "adult", "Adult",
+            "Porn and other adult sites.",
             // REPORT by default: detected and reported, not blocked — the
             // accountability default; blocking stays a choice.
-            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt",
+            Kind.CONTENT, Policy.REPORT, url = "$RAW/nsfw-onlydomains.txt", core = true,
         ),
         Bundle(
             "gambling", "Gambling",
-            "Gambling and betting domains.",
+            "Betting and casino sites.",
             Kind.CONTENT, Policy.REPORT,
             url = "$RAW/gambling.mini-onlydomains.txt", fullUrl = "$RAW/gambling-onlydomains.txt",
         ),
         Bundle(
             "social", "Social media",
-            "Social-network domains.",
+            "Social networks.",
             Kind.CONTENT, Policy.OFF, url = "$RAW/social-onlydomains.txt",
         ),
         Bundle(
             "piracy", "Piracy",
-            "Piracy and illegal-streaming domains.",
+            "Illegal streaming and downloads.",
             Kind.CONTENT, Policy.OFF, url = "$RAW/anti.piracy-onlydomains.txt",
         ),
         Bundle(
-            "scam", "Scam & fake sites",
-            "Scams, fake shops, fake news and rip-offs.",
+            "scam", "Scams & fake sites",
+            "Fake shops, scams and rip-offs.",
             Kind.CONTENT, Policy.OFF, url = "$RAW/fake-onlydomains.txt",
         ),
     )

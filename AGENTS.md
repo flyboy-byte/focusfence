@@ -12,6 +12,9 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
+- **2.24.0 (2026-11-25):** Block lists rework (`CategoriesActivity`: three-way buttons, plain names, strength row,
+  Always allow group, weekly `data/ListRefresh` instead of an "Update list" button per list). Updates happen in Home's
+  banner (`update/Installer`; size, progress, retry); the notification opens Home.
 - **2.23.0 (2026-11-25):** "suggestive" tier: NudeNet's covered-part classes on a risky picture are logged and shown
   in the partner report, report-only (no alert, no picture). `BodyCheck.classify`.
 - **2.22.0 (2026-11-25): licence MIT → AGPL-3.0 (D-038)** so the app can bundle NudeNet. A partner flag (and an automatic

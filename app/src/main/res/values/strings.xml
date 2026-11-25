@@ -205,24 +205,33 @@
     <string name="diag_error">Couldn\'t read the logs: %1$s</string>
 
     <!-- Categories & allowlist -->
-    <string name="categories_title">Categories and allowlist</string>
+    <string name="categories_title">Block lists</string>
     <string name="categories_open">Categories &amp; allowlist</string>
     <string name="categories_settings_summary">Security lists are on by default. Adult, gambling and more are there to switch on.</string>
-    <string name="base_tier_hint">Security strictness</string>
-    <string name="categories_intro">Toggle curated lists Off, Report (recorded only) or Block. You don\'t manage individual sites; the allowlist below is just for the rare false positive.</string>
+    <string name="base_tier_hint">Strength</string>
+    <string name="categories_strength">Strength: %1$s</string>
+    <string name="categories_group_protection">Accountability · always on</string>
+    <string name="categories_group_content">Extra blocking</string>
+    <string name="categories_update_now">Update now</string>
+    <string name="categories_updated">Lists updated %1$s. They refresh every week on their own.</string>
+    <string name="categories_updated_never">Some lists haven\'t downloaded yet.</string>
+    <string name="categories_updating">Updating lists…</string>
+    <string name="categories_update_failed">Couldn\'t update %1$s. Check your connection.</string>
+    <string name="allowlist_remove">Remove %1$s</string>
+    <string name="categories_intro">Porn accountability is always on: adult sites are recorded or blocked, and so are the ways around the filter. Everything under Extra blocking is optional, on top of that. Report lets a site through but records the visit.</string>
     <string name="policy_hint">Policy</string>
     <string name="policy_off">Off</string>
-    <string name="policy_report">Report only</string>
+    <string name="policy_report">Report</string>
     <string name="policy_block">Block</string>
     <string name="category_update">Update list</string>
     <string name="category_downloading">Downloading…</string>
     <string name="category_not_downloaded">List not downloaded yet</string>
-    <string name="category_downloaded">%1$s domains</string>
+    <string name="category_downloaded">%1$s sites</string>
     <string name="category_no_list">Set a list URL to use this category</string>
     <string name="category_download_failed">Download failed: %1$s</string>
-    <string name="allowlist_title">Allowlist</string>
-    <string name="allowlist_intro">Sites here are never blocked by downloaded lists (categories or ads). Your own block rules and bypass protections still apply.</string>
-    <string name="allowlist_hint">Domain to allow (e.g. example.com)</string>
+    <string name="allowlist_title">Always allow</string>
+    <string name="allowlist_intro">For a site a list blocks by mistake. Your own rules and the bypass list still apply.</string>
+    <string name="allowlist_hint">example.com</string>
     <string name="allowlist_add">Add</string>
     <string name="allowlist_invalid">Enter a valid domain</string>
 
@@ -674,6 +683,11 @@
     <string name="excluded_apps_summary">Games, music and maps can bypass the filter if they break behind it.</string>
     <string name="group_card_title">Group</string>
     <string name="update_whats_new">What\'s new</string>
+    <string name="update_size_whats_new">%1$s · What\'s new</string>
+    <string name="update_progress">Downloading · %1$s of %2$s</string>
+    <string name="update_verifying">Checking it\'s a genuine Focus Fence update…</string>
+    <string name="update_try_again">Try again</string>
+    <string name="update_installed_size">You have %1$s · download %2$s</string>
     <string name="update_banner_title">Focus Fence AC %1$s is available</string>
     <string name="update_banner_action">Update</string>
     <string name="update_banner_dismiss">Hide until the next version</string>

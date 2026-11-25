@@ -8,6 +8,13 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 _No changes._
 
+## v2.23.0-accountable
+
+### Added
+- **screenshots:** capture suggestive images (lingerie, swimwear), report-only; release 2.23.0 (`b9ce9af`, [#92](https://github.com/flyboy-byte/focusfence/pull/92))
+
+_Undo any line with `git revert <commit>`._
+
 ## v2.22.0-accountable
 
 ### Added

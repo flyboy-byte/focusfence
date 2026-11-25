@@ -150,10 +150,12 @@ class HomeFragment : Fragment() {
             activity?.runOnUiThread { refreshUpdateBanner() }
         }
         binding.root.postDelayed(ticker, 1000)
+        app.focusfence.update.Installer.observe(installWatch)
     }
 
     override fun onPause() {
         super.onPause()
+        app.focusfence.update.Installer.stopObserving(installWatch)
         binding.root.removeCallbacks(ticker)
         requireContext().unregisterReceiver(stateReceiver)
     }
@@ -375,12 +377,35 @@ class HomeFragment : Fragment() {
         b.updateCard.visibility = if (offer == null) View.GONE else View.VISIBLE
         if (offer == null) return
         b.updateTitle.text = getString(R.string.update_banner_title, offer.version.substringBefore('-'))
+        b.updateNotesToggle.text = if (offer.size > 0) getString(R.string.update_size_whats_new,
+            android.text.format.Formatter.formatShortFileSize(context, offer.size)) else getString(R.string.update_whats_new)
         b.updateNotes.text = offer.notes.ifEmpty { getString(R.string.update_no_notes) }
-        b.updateButton.setOnClickListener { startActivity(app.focusfence.update.UpdateActivity.intent(context, offer)) }
+        // 2.24: download, checks and Android's confirmation all start from here; progress shows in the banner.
+        b.updateButton.setOnClickListener { app.focusfence.update.Installer.start(context, offer) }
         b.updateDismiss.setOnClickListener {
             app.focusfence.update.Updates.dismissBanner(context, offer.tag)
             refreshUpdateBanner()
         }
+        showInstall(app.focusfence.update.Installer.state)
+    }
+
+    private val installWatch: (app.focusfence.update.Installer.State) -> Unit = { showInstall(it) }
+
+    private fun showInstall(s: app.focusfence.update.Installer.State) {
+        val b = _binding ?: return
+        val ctx = context ?: return
+        val busy = app.focusfence.update.Installer.busy
+        b.updateButton.visibility = if (busy || s is app.focusfence.update.Installer.State.Confirming) View.GONE else View.VISIBLE
+        b.updateDismiss.visibility = if (busy) View.GONE else View.VISIBLE
+        b.updateButton.setText(if (s is app.focusfence.update.Installer.State.Failed) R.string.update_try_again else R.string.update_banner_action)
+        b.updateProgress.visibility = if (busy) View.VISIBLE else View.GONE
+        if (s is app.focusfence.update.Installer.State.Downloading && s.total > 0) {
+            b.updateProgress.isIndeterminate = false
+            b.updateProgress.setProgressCompat((s.done * 100 / s.total).toInt(), true)
+        } else if (busy) b.updateProgress.isIndeterminate = true
+        val text = app.focusfence.update.UpdateText.status(ctx, s)
+        b.updateStatus.text = text
+        b.updateStatus.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun refreshAttention() {

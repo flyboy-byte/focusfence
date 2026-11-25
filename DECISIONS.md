@@ -684,3 +684,23 @@ or swimwear) in Instagram", `svc monitor suggestive`, never urgent). No alert, n
 owner's review answers decide whether it alerts or sends like nudity. Both models must agree because each alone
 mistakes ordinary things (faces; T-shirts).
 
+## D-039 — Block lists made plain; updates happen in the Home banner
+
+**Date:** 2026-11-25 · **By:** @flyboy-byte · **Status:** accepted
+
+Logan: the Categories screen "needs a rework… we have the right idea, it's just not very user friendly", and the update
+screen should show the download size and work "like Tokalot where the whole thing is in the header". Block lists now
+shows every list's Off / Report / Block as three buttons in two rounded groups (Protection, Content), with plain names
+("Ways around the filter", strength Light / Standard / Strong / Strongest) and Always allow as its own group. Lists were
+never refreshed unless the owner pressed "Update list" on each card; `data/ListRefresh` now refreshes on-lists older than
+7 days once a day on Wi-Fi and fetches a missing one on any network, and one "Update now" remains. The update banner
+shows the size and does the download, checks and hand-off itself (`update/Installer`); the notification and Check now
+open Home. The strict-mode guard on loosening a list or removing an allowed site is unchanged. Not yet seen on a phone.
+
+**Amended 2026-11-25 by @flyboy-byte: the lists are extra blocking on top of the app's purpose.** Logan: their purpose
+"is to add general blocking on top of nudity and porn accountability filtering… we should treat it like that." So the
+screen has two groups: "Accountability · always on" (Adult, and Ways around the filter, which protects it) and "Extra
+blocking" (ads/trackers/malware with its strength, malware & phishing, scams, gambling, social, piracy). A core list
+(`Bundle.core`) offers Report or Block only; one stored as Off by an older version counts as Report
+(`Categories.effectivePolicy`), so the adult list is never silently off. Moving it from Block to Report is still guarded.
+

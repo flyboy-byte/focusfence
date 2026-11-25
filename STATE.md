@@ -37,7 +37,7 @@ real phones; groups and strict mode pass their tests but haven't been field-test
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.23.0-accountable` (2026-11-25, code 47). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
+| Latest release | `v2.24.0-accountable` (2026-11-25, code 48). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
 
 ## Verification levels
 
