@@ -6,6 +6,13 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- check for updates every time the app comes to the foreground, then every 20 minutes (`1b8bae5`, [#79](https://github.com/flyboy-byte/focusfence/pull/79))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.18.0-accountable
+
 ### Added
 - partners hear within seconds when uninstall protection is turned off (`e6e4d15`, [#76](https://github.com/flyboy-byte/focusfence/pull/76))
 ### Faster or lighter
@@ -13,6 +20,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ### Changed
 - Rounded Settings and Blocking, simpler block notices, Block history (`3b0ddbf`, [#75](https://github.com/flyboy-byte/focusfence/pull/75))
 - server: admin sign-in pages, authenticator QR code, People tab with a ready-to-send invite (`6dc0089`, [#74](https://github.com/flyboy-byte/focusfence/pull/74))
+### Maintenance
+- release 2.18.0 (`118c95b`, [#78](https://github.com/flyboy-byte/focusfence/pull/78))
 
 _Undo any line with `git revert <commit>`._
 
