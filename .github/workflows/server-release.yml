@@ -70,8 +70,40 @@ jobs:
         run: |
           set -euo pipefail
           v="${{ steps.pkg.outputs.version }}"
+          img="${{ steps.image.outputs.image }}"
+          f="focusfence-server-${v}"
+          cat > release-notes.md <<EOF
+          Focus Fence accountability server ${v}. The phone app works without it; you need a server only for partners.
+
+          ## Docker Compose (recommended)
+
+          Image: \`${img}:${v}\` (linux/amd64, linux/arm64).
+
+          \`\`\`sh
+          tar xzf ${f}.tar.gz && cd ${f}
+          cp .env.example .env                    # set FF_PUBLIC_URL, FF_DOMAIN, RESEND_API_KEY, FF_MAIL_FROM
+          docker compose --profile https up -d    # Caddy gets a certificate for FF_DOMAIN (ports 80/443)
+          \`\`\`
+
+          Already have a TLS proxy? Leave out \`--profile https\`; the server listens on 127.0.0.1:8080.
+
+          ## systemd (no Docker)
+
+          Needs Java 17 or newer.
+
+          \`\`\`sh
+          sha256sum -c ${f}.tar.gz.sha256
+          tar xzf ${f}.tar.gz && cd ${f}
+          sudo ./install.sh                       # then edit /etc/focusfence-server/env and start the service
+          \`\`\`
+
+          Run \`sudo ./install.sh\` from a newer release to upgrade: it checks the server comes up and puts the old
+          version back if not. \`nginx.conf.example\` is a ready front end.
+
+          Full guide: [server/README.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/server/README.md).
+          EOF
           # --latest=false: the app's self-update reads releases/latest, which must stay the newest APP release.
           gh release create "$GITHUB_REF_NAME" --latest=false \
             --title "Focus Fence server ${v}" \
-            --notes "Accountability server ${v}. Container: \`${{ steps.image.outputs.image }}:${v}\` (linux/amd64, linux/arm64). Docker Compose: unpack the tarball, copy \`.env.example\` to \`.env\`, edit it, run \`docker compose up -d\` (add \`--profile https\` for automatic HTTPS). See server/README.md." \
+            --notes-file release-notes.md \
             dist/focusfence-server-${v}.tar.gz dist/focusfence-server-${v}.tar.gz.sha256
