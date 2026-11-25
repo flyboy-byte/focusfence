@@ -14,7 +14,8 @@ object UpdateCheck {
     const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases"
     const val DOWNLOAD_PREFIX = "https://github.com/$REPO/releases/download/"
 
-    const val CHECK_EVERY_MS = 24 * 3_600_000L
+    /** Same as Tokalot: at most every 3 hours, so a release reaches the phone the same day. */
+    const val CHECK_EVERY_MS = 3 * 3_600_000L
 
     data class Asset(val name: String, val url: String, val size: Long)
 
@@ -54,8 +55,13 @@ object UpdateCheck {
 
     private val HIDDEN_SECTIONS = setOf("docs", "maintenance", "tests", "ci")
     private val REF = Regex("""\s*\(`[0-9a-f]{7,}`(, \[#\d+]\([^)]*\))?\)\s*$""")
-    /** `**ui:** ` from a scoped title, or a bare `ui: ` / `server: ` prefix from an untyped one. */
-    private val SCOPE = Regex("""^(\*\*[\w-]+:\*\*|[a-z][\w-]{1,15}:)\s+""")
+    /** `**ui:** ` from a scoped title, or a bare `ui: ` / `Server: ` prefix from an untyped one (any case). */
+    private val SCOPE = Regex("""^(?:\*\*([\w-]+):\*\*|([a-zA-Z][\w-]{1,15}):)\s+""")
+    /** Lines about these parts aren't changes to the app on the phone, so the phone doesn't list them. */
+    private val HIDDEN_SCOPES = setOf("server", "ci", "docs", "build", "deps", "tools", "release")
+
+    /** "2.16.0-accountable" -> "2.16.0", for people. */
+    fun shortVersion(version: String): String = version.removePrefix("v").substringBefore('-')
 
     /**
      * The release body's "## What's new" section as plain text for the phone: section names kept ("Added",
@@ -78,8 +84,10 @@ object UpdateCheck {
                     if (keep) out += name
                 }
                 keep && line.startsWith("- ") -> {
-                    val text = line.removePrefix("- ").replace(REF, "").replace(SCOPE, "").trim()
-                    if (text.isNotEmpty()) out += "• " + text.replaceFirstChar { it.uppercase() }
+                    val noRef = line.removePrefix("- ").replace(REF, "")
+                    val scope = SCOPE.find(noRef)?.let { (it.groupValues[1] + it.groupValues[2]).lowercase() }
+                    val text = noRef.replace(SCOPE, "").trim()
+                    if (text.isNotEmpty() && scope !in HIDDEN_SCOPES) out += "• " + text.replaceFirstChar { it.uppercase() }
                 }
             }
         }
@@ -93,7 +101,7 @@ object UpdateCheck {
             a.name.contains("accountable") &&
             a.url.startsWith(DOWNLOAD_PREFIX + tag + "/")
 
-    /** True when a check is due: never checked, a day has passed, or the clock went backwards. */
+    /** True when a check is due: never checked, [CHECK_EVERY_MS] has passed, or the clock went backwards. */
     fun isDue(lastCheckMs: Long, nowMs: Long): Boolean =
         lastCheckMs <= 0 || nowMs - lastCheckMs >= CHECK_EVERY_MS || nowMs < lastCheckMs
 

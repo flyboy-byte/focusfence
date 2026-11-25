@@ -11,32 +11,35 @@ import app.focusfence.R
 import app.focusfence.databinding.ItemDomainCompactBinding
 import app.focusfence.databinding.ItemGroupHeaderBinding
 import app.focusfence.databinding.ItemHintBinding
+import app.focusfence.databinding.ItemLinkBinding
+import app.focusfence.databinding.ItemSectionBinding
 import app.focusfence.dns.BlockRule
 
 sealed class Row {
-    /** [showAdd] puts a + action on the header (used by the apps group). */
-    data class Header(
-        val key: String,
-        val title: String,
-        val expanded: Boolean,
-        val showAdd: Boolean = false,
-    ) : Row()
+    /** A top-level section ("Your sites"); [canAdd] shows its Add button. */
+    data class Section(val key: String, val title: String, val canAdd: Boolean) : Row()
+
+    /** A row that opens another screen (Categories). */
+    data class Link(val key: String, val title: String, val value: String) : Row()
+
+    /** A collapsible group inside a section ("Always blocked (3)"). */
+    data class Header(val key: String, val title: String, val expanded: Boolean) : Row()
 
     data class Domain(val rule: BlockRule, val summary: String) : Row()
     data class App(val pkg: String, val label: String, val summary: String) : Row()
 
-    /** [actionKey] makes the hint tappable; the key identifies what to open. */
-    data class Hint(val text: String, val actionKey: String? = null) : Row()
+    /** Plain help text under an empty section; [key] only keeps rows apart. */
+    data class Hint(val text: String, val key: String) : Row()
 }
 
 class GroupedBlocklistAdapter(
+    private val onSectionAdd: (String) -> Unit,
+    private val onLinkClick: (String) -> Unit,
     private val onHeaderClick: (String) -> Unit,
     private val onDomainClick: (BlockRule) -> Unit,
     private val onDomainDelete: (BlockRule) -> Unit,
-    private val onAppsEdit: () -> Unit,
     private val onAppClick: (String) -> Unit,
     private val onAppRemove: (String) -> Unit,
-    private val onHintClick: (String) -> Unit,
 ) : ListAdapter<Row, RecyclerView.ViewHolder>(DIFF) {
 
     companion object {
@@ -45,6 +48,8 @@ class GroupedBlocklistAdapter(
         private const val TYPE_DOMAIN = 1
         private const val TYPE_APP = 2
         private const val TYPE_HINT = 3
+        private const val TYPE_SECTION = 4
+        private const val TYPE_LINK = 5
 
         private val DIFF = object : DiffUtil.ItemCallback<Row>() {
             override fun areItemsTheSame(oldItem: Row, newItem: Row): Boolean = when {
@@ -52,8 +57,9 @@ class GroupedBlocklistAdapter(
                 oldItem is Row.Domain && newItem is Row.Domain ->
                     oldItem.rule.domain == newItem.rule.domain
                 oldItem is Row.App && newItem is Row.App -> oldItem.pkg == newItem.pkg
-                oldItem is Row.Hint && newItem is Row.Hint ->
-                    oldItem.actionKey == newItem.actionKey
+                oldItem is Row.Hint && newItem is Row.Hint -> oldItem.key == newItem.key
+                oldItem is Row.Section && newItem is Row.Section -> oldItem.key == newItem.key
+                oldItem is Row.Link && newItem is Row.Link -> oldItem.key == newItem.key
                 else -> false
             }
 
@@ -66,6 +72,8 @@ class GroupedBlocklistAdapter(
         is Row.Domain -> TYPE_DOMAIN
         is Row.App -> TYPE_APP
         is Row.Hint -> TYPE_HINT
+        is Row.Section -> TYPE_SECTION
+        is Row.Link -> TYPE_LINK
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -73,6 +81,8 @@ class GroupedBlocklistAdapter(
         return when (viewType) {
             TYPE_HEADER -> HeaderHolder(ItemGroupHeaderBinding.inflate(inflater, parent, false))
             TYPE_HINT -> HintHolder(ItemHintBinding.inflate(inflater, parent, false))
+            TYPE_SECTION -> SectionHolder(ItemSectionBinding.inflate(inflater, parent, false))
+            TYPE_LINK -> LinkHolder(ItemLinkBinding.inflate(inflater, parent, false))
             else -> EntryHolder(ItemDomainCompactBinding.inflate(inflater, parent, false))
         }
     }
@@ -83,6 +93,8 @@ class GroupedBlocklistAdapter(
             is Row.Domain -> (holder as EntryHolder).bindDomain(row)
             is Row.App -> (holder as EntryHolder).bindApp(row)
             is Row.Hint -> (holder as HintHolder).bind(row)
+            is Row.Section -> (holder as SectionHolder).bind(row)
+            is Row.Link -> (holder as LinkHolder).bind(row)
         }
     }
 
@@ -92,8 +104,22 @@ class GroupedBlocklistAdapter(
             binding.headerTitle.text = row.title
             binding.expandIcon.rotation = if (row.expanded) 180f else 0f
             binding.root.setOnClickListener { onHeaderClick(row.key) }
-            binding.addButton.visibility = if (row.showAdd) View.VISIBLE else View.GONE
-            binding.addButton.setOnClickListener { onAppsEdit() }
+        }
+    }
+
+    inner class SectionHolder(private val binding: ItemSectionBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(row: Row.Section) {
+            binding.sectionTitle.text = row.title
+            binding.sectionAction.visibility = if (row.canAdd) View.VISIBLE else View.GONE
+            binding.sectionAction.setOnClickListener { onSectionAdd(row.key) }
+        }
+    }
+
+    inner class LinkHolder(private val binding: ItemLinkBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(row: Row.Link) {
+            binding.linkTitle.text = row.title
+            binding.linkValue.text = row.value
+            binding.root.setOnClickListener { onLinkClick(row.key) }
         }
     }
 
@@ -139,11 +165,6 @@ class GroupedBlocklistAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(row: Row.Hint) {
             binding.hintText.text = row.text
-            val key = row.actionKey
-            binding.hintText.isClickable = key != null
-            binding.hintText.setOnClickListener(
-                if (key == null) null else View.OnClickListener { onHintClick(key) }
-            )
         }
     }
 }

@@ -111,8 +111,13 @@
     <string name="group_paths">Section rules</string>
     <string name="group_apps">Blocked apps</string>
     <string name="group_title_fmt">%1$s (%2$d)</string>
-    <string name="blocklist_empty">Nothing blocked yet — tap + to add your first domain.</string>
-    <string name="apps_empty_hint">No blocked apps — tap here (or +) to choose some.</string>
+    <string name="blocking_add">Add</string>
+    <string name="blocking_lists">Block lists</string>
+    <string name="blocking_lists_value">%1$s · %2$d on</string>
+    <string name="blocking_sites">Your sites</string>
+    <string name="blocking_sites_empty">Block a site all day, on a schedule, or after a daily time limit.</string>
+    <string name="blocking_apps">Apps</string>
+    <string name="blocking_apps_empty">An app you add closes as soon as it opens.</string>
     <string name="blocked_app_summary">Blocked app</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_delete">Delete</string>
@@ -332,7 +337,6 @@
     <string name="settings_group_about">About</string>
     <string name="setup_section_how">How it works</string>
     <string name="acc_change_server">Change server…</string>
-    <string name="categories_card_summary">Baseline: %1$s · %2$d groups on. Tap to change.</string>
 
     <!-- Filter health / VPN error detection -->
     <string name="alert_channel_name">Protection problems</string>
@@ -637,9 +641,10 @@
     <string name="update_available_title">Focus Fence AC %1$s is out</string>
     <string name="update_available_text">Tap to update</string>
     <string name="update_title">Update</string>
-    <string name="update_body">Version %1$s is available. You have %2$s.</string>
-    <string name="update_install">Download and install</string>
-    <string name="update_notes">What\'s new</string>
+    <string name="update_version">Focus Fence %1$s</string>
+    <string name="update_installed">You have %1$s</string>
+    <string name="update_install">Update</string>
+    <string name="update_release_page">Release page on GitHub</string>
     <string name="update_allow_installs">Allow Focus Fence to install updates, then come back and tap again.</string>
     <string name="update_downloading">Downloading…</string>
     <string name="update_installing">Android will ask you to confirm.</string>
@@ -650,7 +655,7 @@
     <string name="update_failed_signer">The download is signed with a different key, so it wasn\'t installed.</string>
     <string name="update_failed_install">Update failed: %1$s</string>
     <string name="update_check_switch">Check for updates</string>
-    <string name="update_check_summary">Once a day the app asks GitHub for the latest release and tells you if there\'s a new one. Nothing installs without you.</string>
+    <string name="update_check_summary">Every few hours, and when you open the app, it asks GitHub for the latest release and tells you if there\'s a new one. Nothing installs without you.</string>
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking…</string>
     <string name="update_none">You have the latest version.</string>
@@ -662,7 +667,7 @@
     <string name="update_banner_title">Focus Fence AC %1$s is available</string>
     <string name="update_banner_action">Update</string>
     <string name="update_banner_dismiss">Hide until the next version</string>
-    <string name="update_no_notes">No notes for this version. Tap Update to see the release page.</string>
+    <string name="update_no_notes">No notes for this version.</string>
     <string name="whats_new_title">What\'s new</string>
     <string name="whats_new_summary">Changes in recent versions</string>
     <string name="whats_new_loading">Loading from GitHub…</string>

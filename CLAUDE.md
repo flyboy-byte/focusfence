@@ -140,7 +140,7 @@ alerts).
 
 ### Self-update (D-029, D-031)
 
-`update/Updates` checks `releases/latest` once a day (WorkManager), remembers a newer offer for Home's banner and posts
+`update/Updates` checks `releases/latest` at most every 3 hours (when the app opens, when the screen comes on, and a WorkManager backstop), remembers a newer offer for Home's banner and posts
 one notification per version; `update/UpdateActivity` downloads only on tap, checks source URL, package, version code
 and signing certificate, then hands the APK to `PackageInstaller`. Release notes come from the release body's
 `## What's new` section (written by `release.yml`), cleaned by `UpdateCheck.userNotes`. The repo slug is

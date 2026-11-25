@@ -491,6 +491,11 @@ that the owner didn't set up (GitHub sees the phone's IP). Considered: fully aut
 Logan chose notify-and-tap); off by default (rejected: people would stay on old versions). If the app ever goes to
 F-Droid, this must be off in that build.
 
+**Amended 2026-11-25:** the once-a-day background check missed 2.16 for hours; Logan had to check by hand in
+Settings. Now it works like Tokalot's: a check when the app opens and when the screen comes on, at most every 3 hours
+(30 minutes after a failure), with WorkManager every 6 hours as a backstop. Still one notification per version and
+the Home banner; nothing downloads without a tap.
+
 ## D-030 — No downgrades in the app; a bad release is fixed by rolling forward
 
 **Date:** 2026-11-24 · **By:** @flyboy-byte · **Status:** accepted

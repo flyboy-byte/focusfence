@@ -63,12 +63,13 @@ class UpdateCheckTest {
     }
 
     @Test
-    fun checksOnceADay() {
-        val day = UpdateCheck.CHECK_EVERY_MS
+    fun checksEveryThreeHours() {
+        val gap = UpdateCheck.CHECK_EVERY_MS
+        assertEquals(3 * 3_600_000L, gap)
         assertTrue(UpdateCheck.isDue(0, 1_000))
-        assertFalse(UpdateCheck.isDue(10 * day, 10 * day + day - 1))
-        assertTrue(UpdateCheck.isDue(10 * day, 11 * day))
-        assertTrue("clock went backwards", UpdateCheck.isDue(10 * day, 9 * day))
+        assertFalse(UpdateCheck.isDue(10 * gap, 10 * gap + gap - 1))
+        assertTrue(UpdateCheck.isDue(10 * gap, 11 * gap))
+        assertTrue("clock went backwards", UpdateCheck.isDue(10 * gap, 9 * gap))
     }
 
     @Test
@@ -105,6 +106,16 @@ class UpdateCheckTest {
             "Added\n• Check GitHub for updates and install with one tap\n• Five-tab layout\n• Settings as an ordered list\nFixed\n• Network blips are one count",
             UpdateCheck.userNotes(body),
         )
+    }
+
+    @Test
+    fun serverAndToolingLinesStayOffThePhone() {
+        val b = "## What's new\n\n### Changed\n" +
+            "- Ui: follow the system colours (`3eb8bc8`, [#67](https://x/67))\n" +
+            "- server: systemd install with automatic rollback (`76efb4a`, [#66](https://x/66))\n" +
+            "- **ci:** release notes (`c6bf699`)\n"
+        assertEquals("Changed\n• Follow the system colours", UpdateCheck.userNotes(b))
+        assertEquals("2.16.0", UpdateCheck.shortVersion("2.16.0-accountable"))
     }
 
     @Test
