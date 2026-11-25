@@ -142,20 +142,40 @@ class Admin(
         c.respondText(if (body.startsWith("<!doctype")) body else Web.page(title, body), ContentType.Text.Html, status)
     }
 
-    private fun loginForm(note: String? = null) =
-        "<h1>Focus Fence server admin</h1>" + (note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: "") +
-            "<form method='post' action='/admin/login'><label>Admin email<br><input name='email' type='email' required maxlength='120'></label><button>Email me a code</button></form>"
+    /** Sign-in and setup pages: the dashboard's look, one centred card, with the admin script for copy buttons. */
+    private fun authPage(title: String, step: String?, body: String): String =
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>" +
+            "<title>${Web.esc(title)} · Focus Fence admin</title><style>$CSS</style><script src='/static/admin.js' defer></script></head><body>" +
+            "<main class='auth'><p class='brand'>Focus Fence server</p><div class='card'>" +
+            (step?.let { "<p class='step'>${Web.esc(it)}</p>" } ?: "") + body + "</div></main></body></html>"
 
-    private fun verifyForm(note: String? = null, linkUsed: Boolean = false): String = if (linkUsed)
-        "<h1>One more code</h1><p class='muted'>Signed in with a link from the server. Now the authenticator code (or a recovery code).</p>" +
-            "<form method='post' action='/admin/verify' autocomplete='off'><label>Authenticator code or a recovery code<br><input name='second' maxlength='24'></label>" +
-            "<p class='muted'>First login on this server: leave it empty; you will set up the authenticator next.</p><button>Sign in</button></form>"
-    else
-        "<h1>Enter your codes</h1><p class='muted'>If that address is an admin, a one-time code was emailed (valid 10 minutes).</p>" +
-            (note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: "") +
-            "<form method='post' action='/admin/verify' autocomplete='off'><label>Emailed code<br><input name='email_code' required maxlength='12' inputmode='numeric'></label>" +
-            "<label>Authenticator code or a recovery code<br><input name='second' maxlength='24'></label>" +
-            "<p class='muted'>First login on this server: leave the second box empty; you will set up the authenticator next.</p><button>Sign in</button></form>"
+    private fun bad(note: String?) = note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: ""
+
+    private fun loginForm(note: String? = null) = authPage("Sign in", null,
+        "<h1>Sign in</h1>" + bad(note) +
+            "<form method='post' action='/admin/login'><label for='email'>Admin email</label>" +
+            "<input id='email' name='email' type='email' required maxlength='120' autocomplete='username' autofocus>" +
+            "<button class='wide'>Email me a code</button></form>" +
+            "<p class='mut'>No email on this server? On the server run <code>focusfence-server admin login-link you@example.com</code> for a one-time link.</p>")
+
+    private fun verifyForm(note: String? = null, linkUsed: Boolean = false): String = authPage("Sign in", if (linkUsed) "Step 2 of 2" else null,
+        (if (linkUsed) "<h1>Authenticator code</h1><p class='mut'>Signed in with a link from the server. One more code.</p>"
+        else "<h1>Check your email</h1><p class='mut'>If that address is an admin, a 6-digit code is on its way. It works for 10 minutes.</p>") +
+            bad(note) +
+            "<form method='post' action='/admin/verify' autocomplete='off'>" +
+            (if (linkUsed) "" else "<label for='ec'>Code from the email</label><input id='ec' name='email_code' required maxlength='12' inputmode='numeric' autocomplete='one-time-code' autofocus>") +
+            "<label for='second'>Authenticator code</label><input id='second' name='second' maxlength='24' inputmode='numeric'${if (linkUsed) " autofocus" else ""}>" +
+            "<p class='mut'>Lost your phone? A recovery code works here too. First time signing in? Leave this empty and you'll set up the authenticator next.</p>" +
+            "<button class='wide'>Sign in</button></form>")
+
+    /** Recovery codes, shown once, with copy and save buttons. */
+    private fun recoveryPage(title: String, intro: String, plain: List<String>, next: String, nextLabel: String) = authPage(title, null,
+        "<h1>${Web.esc(title)}</h1><p>${Web.esc(intro)}</p>" +
+            "<pre class='codes' id='recovery'>${plain.joinToString("\n") { Web.esc(it.chunked(4).joinToString("-")) }}</pre>" +
+            "<p class='actions'><button type='button' class='ghost' data-copy='recovery'>Copy</button>" +
+            "<button type='button' class='ghost' data-download='recovery' data-name='focusfence-recovery-codes.txt'>Save as file</button></p>" +
+            "<p class='mut'>Each code works once, in place of the authenticator. They are not shown again.</p>" +
+            "<p><a class='button wide' href='$next'>${Web.esc(nextLabel)}</a></p>")
 
     private fun hidden(s: Session) = "<input type='hidden' name='csrf' value='${Web.esc(s.csrf)}'>"
 
@@ -183,6 +203,16 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
 @media(prefers-color-scheme:dark){button{color:#111}}button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}button.danger{background:var(--bad);color:#fff}
 .note{border-left:4px solid var(--acc)}.code{font:600 1.25em ui-monospace,monospace;letter-spacing:.04em;word-break:break-all}
 .row{display:flex;flex-wrap:wrap;gap:12px}.row>div{flex:1;min-width:140px}
+.auth{max-width:440px;padding-top:8vh}.brand{font-weight:600;margin:0 0 12px 4px}.auth .card{padding:22px 22px 18px}
+.auth input{max-width:none}.step{margin:0 0 4px;color:var(--mut);font-size:.85em}.wide{width:100%;margin-top:14px;padding:10px 14px}
+a.button{display:inline-block;text-align:center;text-decoration:none;padding:10px 14px;border-radius:8px;background:var(--acc);color:#fff;box-sizing:border-box}
+@media(prefers-color-scheme:dark){a.button{color:#111}}
+pre.msg{font:inherit;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;white-space:pre-wrap;word-break:break-all}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.qr{width:200px;height:200px;display:block;margin:12px auto;border-radius:8px}
+.key{font:600 1em ui-monospace,monospace;letter-spacing:.06em;word-break:break-all}
+.invite{border-left:4px solid var(--ok)}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.item:first-of-type{border-top:0}.grow{flex:1;min-width:0}
 """
 
     private fun ago(ms: Long): String {
@@ -195,30 +225,51 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
 
     private fun shell(s: Session, tab: String, body: String): String {
         fun tabLink(id: String, label: String) = "<a href='/admin${if (id == "overview") "" else "/$id"}'${if (tab == id) " class='on'" else ""}>$label</a>"
-        return "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Focus Fence admin</title><style>$CSS</style></head><body>" +
-            "<header><b>Focus Fence server</b><nav>${tabLink("overview", "Overview")}${tabLink("codes", "Codes")}${tabLink("devices", "Devices")}${tabLink("activity", "Activity")}</nav><span class='sp'></span>" +
+        return "<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Focus Fence admin</title><style>$CSS</style><script src='/static/admin.js' defer></script></head><body>" +
+            "<header><b>Focus Fence server</b><nav>${tabLink("overview", "Overview")}${tabLink("codes", "People")}${tabLink("devices", "Devices")}${tabLink("activity", "Activity")}</nav><span class='sp'></span>" +
             "<span class='mut'>${Web.esc(s.email)}</span><form class='inline' method='post' action='/admin/logout'>${hidden(s)}<button class='ghost'>Sign out</button></form></header><main>$body</main></body></html>"
     }
 
-    private fun flash(newCode: String?, note: String?) =
+    private fun flash(newCode: String?, note: String?, invite: String? = null) =
         (note?.let { "<div class='card note'>${Web.esc(it)}</div>" } ?: "") +
-            (newCode?.let { "<div class='card note'><h2>New enrollment code</h2><div class='code'>${Web.esc(it)}</div><p class='mut'>Shown once. Give it to one person; it is stored only as a hash.</p></div>" } ?: "")
+            (newCode?.let {
+                "<div class='card invite'><h2>Send this to them</h2>" +
+                    "<pre class='msg' id='invite'>${Web.esc(invite ?: it)}</pre>" +
+                    "<p class='actions'><button type='button' data-copy='invite'>Copy message</button><button type='button' class='ghost' data-copy='newcode'>Copy code only</button></p>" +
+                    "<p class='mut'>Code <code class='key' id='newcode'>${Web.esc(it)}</code> is shown once and stored only as a hash. If it's lost, revoke it and make another.</p></div>"
+            } ?: "")
+
+    /** The message an admin sends a new person: where to get the app, this server's address, and their code. */
+    private fun inviteText(name: String, code: String, uses: Int, expiresMs: Long): String {
+        val limits = listOfNotNull(
+            if (uses == 1) "works once" else if (uses > 1) "works $uses times" else null,
+            if (expiresMs != 0L) "until " + java.time.format.DateTimeFormatter.ofPattern("MMM d").withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.ofEpochMilli(expiresMs)) else null,
+        ).joinToString(", ")
+        return "Hi ${name.ifBlank { "there" }}, here's how to join my Focus Fence server:\n" +
+            "1. Install Focus Fence AC: ${cfg.appUrl}\n" +
+            "2. In the app, open Partners and, under Server, enter ${cfg.publicUrl}\n" +
+            "3. Enrollment code: $code" + (if (limits.isNotEmpty()) " ($limits)" else "")
+    }
 
     private fun dashboard(s: Session, tab: String = "overview", newCode: String? = null, note: String? = null): String {
         val now = cfg.now()
         val body = when (tab) {
             "codes" -> {
                 val list = codes.list().sortedByDescending { it.createdMs }
-                flash(newCode, note) + "<h1>Enrollment codes</h1><div class='card'><div class='tw'><table><tr><th>For</th><th>Used</th><th>Last used</th><th>Expires</th><th>State</th><th></th></tr>" +
-                    (if (list.isEmpty()) "<tr><td colspan='6' class='mut'>No codes yet. The server's own bootstrap code still works" + (if (cfg.enrollToken != null) "." else ", and enrollment is open (no code needed) until you make one.") + "</td></tr>" else "") +
+                val made = newCode?.let { nc -> list.firstOrNull()?.let { inviteText(it.label, nc, it.maxUses, it.expiresMs) } }
+                val addForm = "<div class='card'><h2>Add a person</h2><p class='mut'>Makes an enrollment code for one person's phone and a message to send them.</p>" +
+                    "<form method='post' action='/admin/codes/add'>${hidden(s)}<div class='row'><div><label for='pl'>Name</label><input id='pl' name='label' required maxlength='60' placeholder='Sam'></div>" +
+                    "<div><label for='pd'>Code expires in (days)</label><input id='pd' name='days' inputmode='numeric' maxlength='4' placeholder='never' value='14'></div><div><label for='pu'>Phones it can add</label><input id='pu' name='uses' inputmode='numeric' maxlength='4' placeholder='unlimited' value='1'></div></div><p><button>Make code</button></p></form></div>"
+                flash(newCode, note, made) + "<h1>People</h1>" + addForm + "<div class='card'><h2>Enrollment codes</h2>" +
+                    (if (list.isEmpty()) "<p class='mut'>No codes yet. The server's own bootstrap code still works" + (if (cfg.enrollToken != null) "." else ", and enrollment is open (no code needed) until you make one.") + "</p>" else "") +
                     list.joinToString("") { c ->
                         val state = if (c.revoked) "<span class='badge bad'>revoked</span>" else if (c.expiresMs != 0L && now > c.expiresMs) "<span class='badge warn'>expired</span>"
                         else if (c.maxUses != 0 && c.uses >= c.maxUses) "<span class='badge warn'>used up</span>" else "<span class='badge ok'>live</span>"
-                        "<tr><td>${Web.esc(c.label)}</td><td>${c.uses}/${if (c.maxUses == 0) "∞" else c.maxUses.toString()}</td><td>${ago(c.lastUsedMs)}</td><td>${if (c.expiresMs == 0L) "never" else Web.time(c.expiresMs)}</td><td>$state</td><td>" +
-                            (if (!c.revoked) "<form class='inline' method='post' action='/admin/codes/revoke'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(c.id)}'><button class='ghost'>Revoke</button></form>" else "") + "</td></tr>"
-                    } + "</table></div></div>" +
-                    "<div class='card'><h2>Make a code</h2><form method='post' action='/admin/codes/add'>${hidden(s)}<div class='row'><div><label>Who is it for</label><input name='label' required maxlength='60' placeholder='Sam'></div>" +
-                    "<div><label>Expires in days</label><input name='days' inputmode='numeric' maxlength='4' placeholder='never' value='14'></div><div><label>Max uses</label><input name='uses' inputmode='numeric' maxlength='4' placeholder='unlimited' value='1'></div></div><p><button>Create code</button></p></form></div>"
+                        val detail = "${c.uses} of ${if (c.maxUses == 0) "unlimited" else c.maxUses.toString()} used · last used ${ago(c.lastUsedMs)} · " +
+                            (if (c.expiresMs == 0L) "never expires" else "expires ${Web.time(c.expiresMs)}")
+                        "<div class='item'><div class='grow'><div><b>${Web.esc(c.label)}</b> $state</div><div class='mut'>$detail</div></div>" +
+                            (if (!c.revoked) "<form class='inline' method='post' action='/admin/codes/revoke'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(c.id)}'><button class='ghost'>Revoke</button></form>" else "") + "</div>"
+                    } + "</div>"
             }
             "devices" -> {
                 val devs = store.allDevices().sortedByDescending { it.lastSeenMs }
@@ -255,7 +306,7 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
                     "<div class='card'><div class='mut'>Blind mailboxes</div><div class='big'>$boxes</div>${bar(boxes.toDouble() / cfg.maxMailboxes)}<div class='mut'>of ${cfg.maxMailboxes}</div></div>" +
                     "<div class='card'><div class='mut'>Silent phones</div><div class='big ${if (silent > 0) "bad" else "ok"}'>$silent</div><div class='mut'>no check-in for ${cfg.staleMs / 3_600_000} h</div></div></div>" +
                     "<div class='card'><h2>Enrollment</h2><p>${if (cfg.enrollToken == null && live == 0 && codes.list().isEmpty()) "<span class='bad'>Open: anyone who finds this server can enroll a phone.</span>" else "Closed: a code is needed."} " +
-                    "$live live code(s)${if (cfg.enrollToken != null) " plus the bootstrap code" else ""}. <a href='/admin/codes'>Manage codes</a></p></div>" +
+                    "$live live code(s)${if (cfg.enrollToken != null) " plus the bootstrap code" else ""}. <a href='/admin/codes'>People and codes</a></p></div>" +
                     "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${cfg.staleMs / 3_600_000} h silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · confirmation emails capped at ${cfg.confirmGlobalDailyCap}/day</p></div>"
             }
         }
@@ -316,8 +367,8 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
         // Audit S2: GET only shows a button, so a chat app's link preview can't use the link up; the POST spends it.
         r.get("/admin/link/{token}") {
             val tok = call.parameters["token"].orEmpty().filter { it.isLetterOrDigit() || it == '-' || it == '_' }
-            html(call, "Sign in", "<h1>Sign in</h1><p>Continue with this one-time link. The authenticator is asked next.</p>" +
-                "<form method='post' action='/admin/link/${Web.esc(tok)}'><button>Continue</button></form>")
+            html(call, "Sign in", authPage("Sign in", "Step 1 of 2", "<h1>Sign in</h1><p>Continue with this one-time link. The authenticator code is asked next.</p>" +
+                "<form method='post' action='/admin/link/${Web.esc(tok)}'><button class='wide'>Continue</button></form>"))
         }
         r.post("/admin/link/{token}") {
             val email = consumeLink(call.parameters["token"].orEmpty())?.takeIf { it in allowed }
@@ -371,8 +422,7 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             call.request.cookies[COOKIE]?.let { sessions.remove(it) }
             newSession(call, s.email, true)
             audit(s.email, clientOf(call), "totp_enrolled")
-            html(call, "Recovery codes", "<h1>Authenticator set up</h1><p>Save these recovery codes now. Each works once if you lose your phone. They are not shown again.</p><div class='card'><code>" +
-                plain.joinToString("<br>") { it.chunked(4).joinToString("-") } + "</code></div><p><a href='/admin'>Continue to the dashboard</a></p>")
+            html(call, "Recovery codes", recoveryPage("Save your recovery codes", "Your authenticator is set up. Keep these somewhere safe in case you lose that phone.", plain, "/admin", "I saved them, continue"))
         }
         suspend fun ApplicationCall.authed(block: suspend (Session, io.ktor.http.Parameters) -> Unit) {
             val s = session(this)?.takeIf { it.full } ?: return html(this, "Admin", loginForm("Sign in again."), HttpStatusCode.Unauthorized)
@@ -416,8 +466,7 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
             val plain = List(8) { newInviteCode() + newInviteCode() }
             updateRecs { all -> all[s.email]?.let { it.recovery = plain.map { c -> Integrity.sha256(normalizeCode(c)) } } }
             audit(s.email, clientOf(call), "recovery_codes_renewed")
-            html(call, "Recovery codes", "<h1>New recovery codes</h1><p>The old ones no longer work. Save these now; they are not shown again.</p><div class='card'><code>" +
-                plain.joinToString("<br>") { it.chunked(4).joinToString("-") } + "</code></div><p><a href='/admin/activity'>Back</a></p>")
+            html(call, "Recovery codes", recoveryPage("New recovery codes", "The old ones no longer work.", plain, "/admin/activity", "I saved them, go back"))
         } }
         r.post("/admin/test-email") { call.authed { s, _ ->
             val ok = cfg.emailConfigured && testEmail.allow("all") && notifier.email(s.email, "Focus Fence admin test", "<p>This is a test email from your Focus Fence server. Sending works.</p>")
@@ -433,10 +482,14 @@ input[type=checkbox]{width:auto}button{font:inherit;padding:7px 14px;border-radi
 
     private fun setupPage(s: Session, note: String? = null): String {
         val uri = "otpauth://totp/Focus%20Fence:${java.net.URLEncoder.encode(s.email, "UTF-8")}?secret=${s.setupSecret}&issuer=Focus%20Fence"
-        return "<h1>Set up your authenticator</h1>" + (note?.let { "<p class='bad'>${Web.esc(it)}</p>" } ?: "") +
-            "<p>In an authenticator app (any TOTP app), add an account by entering this key (time-based, 6 digits):</p><div class='card'><code>${Web.esc(s.setupSecret)}</code></div>" +
-            "<p class='muted'>Or open this link on the phone that has the app: <a href='${Web.esc(uri)}'>${Web.esc("otpauth link")}</a></p>" +
-            "<form method='post' action='/admin/setup'>${hidden(s)}<label>Code the app shows now<br><input name='totp' required maxlength='8' inputmode='numeric'></label><button>Confirm</button></form>"
+        return authPage("Set up", "Last step",
+            "<h1>Add an authenticator</h1>" + bad(note) +
+                "<p>Scan this with an authenticator app (Aegis, Google Authenticator, 1Password, any TOTP app).</p>" +
+                Qr.svg(uri, "QR code for your authenticator app") +
+                "<p class='mut'>Can't scan? Enter this key instead (time-based, 6 digits), or <a href='${Web.esc(uri)}'>open it on the phone that has the app</a>.</p>" +
+                "<p class='actions'><code class='key' id='totpKey'>${Web.esc(s.setupSecret)}</code> <button type='button' class='ghost' data-copy='totpKey'>Copy key</button></p>" +
+                "<form method='post' action='/admin/setup'>${hidden(s)}<label for='totp'>Code the app shows now</label>" +
+                "<input id='totp' name='totp' required maxlength='8' inputmode='numeric' autocomplete='one-time-code' autofocus><button class='wide'>Confirm</button></form>")
     }
 }
 

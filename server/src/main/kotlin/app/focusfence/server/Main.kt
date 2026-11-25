@@ -68,6 +68,8 @@ class Config(
     val confirmGlobalDailyCap: Int = 30,
     /** If set, /v1/enroll needs this in the X-FF-Enroll header: open enrollment lets anyone take device slots. */
     val enrollToken: String? = null,
+    /** Where a new person gets the app; the admin page's invite message links it. */
+    val appUrl: String = "https://github.com/flyboy-byte/focusfence/releases/latest",
     /** Emails allowed to sign in to /admin; empty switches the admin page off. */
     val adminEmails: List<String> = emptyList(),
     /** False when no email provider is set: admin email codes would only reach the log (audit A6). */
@@ -120,6 +122,7 @@ fun main(args: Array<String>) {
         staleMs = (env("FF_STALE_MINUTES") ?: "240").toLong() * 60_000,
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
+        appUrl = env("FF_APP_URL")?.takeIf { it.startsWith("https://") } ?: "https://github.com/flyboy-byte/focusfence/releases/latest",
         adminEmails = env("FF_ADMIN_EMAILS").orEmpty().split(",").map { it.trim() }.filter { it.contains("@") },
         emailConfigured = !env("RESEND_API_KEY").isNullOrBlank(),
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
@@ -208,7 +211,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         onCall { call ->
             // Scripts only where D-023 needs them (the partner's browser opens the sealed report), and only our own file.
             val path = call.request.local.uri.substringBefore('?')
-            val scripts = path.startsWith("/p/") || path.startsWith("/i/") || path == "/join" || path == "/key"
+            // The admin page has one too (/static/admin.js): copy and download buttons, nothing that talks to the server.
+            val scripts = path.startsWith("/p/") || path.startsWith("/i/") || path == "/join" || path == "/key" || path.startsWith("/admin")
             call.response.headers.append("Content-Security-Policy",
                 "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" +
                     if (scripts) "; script-src 'self'; connect-src 'self'" else "")
@@ -574,8 +578,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
         get("/key") { call.respondText(Web.keyPage(), ContentType.Text.Html) }
 
-        get("/static/report.js") {
-            val js = object {}.javaClass.getResource("/static/report.js")?.readText()
+        for (name in listOf("report.js", "admin.js")) get("/static/$name") {
+            val js = object {}.javaClass.getResource("/static/$name")?.readText()
                 ?: return@get call.respond(HttpStatusCode.NotFound)
             call.respondText(js, ContentType.parse("text/javascript"))
         }
