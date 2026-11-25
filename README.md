@@ -1,23 +1,24 @@
 # Focus Fence AC
 
-An Android app that blocks sites you don't want to see, and optionally lets people you trust know
-when you turn it off.
+Accountability for porn on Android. It blocks adult sites, can check the screen for nudity, and tells people you
+trust when protection changes. It can block anything else you choose too.
 
 ![license](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
 ![root](https://img.shields.io/badge/root-not%20needed-lightgrey)
 
 [Install](#install) · [What it does](#what-it-does) · [How it works](#how-it-works) ·
-[Privacy](#privacy) · [Your own server](#running-your-own-server) · [Building](#building)
+[Privacy](#privacy) · [Your own server](#running-your-own-server) · [Feedback](#feedback) · [Building](#building)
 
 ---
 
-On its own it's a website blocker. It sets up a VPN on the phone that only handles DNS lookups, so
-your normal traffic never goes through it, and blocked sites simply don't resolve. No account, no
-server, no root.
+On its own it's a filter. It sets up a VPN on the phone that only handles DNS lookups, so your normal traffic never
+goes through it, and blocked sites simply don't resolve. Adult sites, ads and the usual ways around a filter are
+blocked from the start. No account, no server, no root.
 
-Everything else is off until you turn it on: an activity log, uninstall protection, a strict mode
-that makes you wait before loosening anything, and accountability partners. Partners get an email
+The first run offers the rest, and you can turn each on later: screen checks (on-device AI, clear images never leave
+the phone), a strict mode that makes you wait before loosening anything, uninstall protection, and accountability
+partners. Partners get an email
 when protection is switched off and can open a report of your activity in their browser. The report
 is encrypted on your phone and the key is only in the link you give them, so the server that
 delivers it can't read it.
@@ -31,11 +32,11 @@ apps for your browser or file manager. Every release is signed with the same key
 2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671
 ```
 
-After that the app keeps itself current: once a day it checks for a new release and offers it on the home screen
-(you can turn this off in Settings).
+After that the app keeps itself current: whenever you open it, it checks for a new release and offers it on the home
+screen, where it downloads and installs when you tap (you can turn this off in Settings).
 
-The first run sets up the filter and then shows a guide to the optional features, with what each
-one does and costs.
+The first run is five short steps: what it's for, turn on the filter, screen checks, strict mode, and a partner if you
+want one. Each can be skipped.
 
 > [!IMPORTANT]
 > Turn off Private DNS (Settings → Network & internet → Private DNS). While it's on, Android sends
@@ -49,7 +50,7 @@ one does and costs.
 |---|---|
 | ✅ | Block domains always, on a schedule, or after a daily time limit |
 | ✅ | Allow part of a site and block the rest (`facebook.com/marketplace` but not the feed) |
-| ✅ | Ad, tracker and malware lists; adult, gambling, social and others if you want them |
+| ✅ | Adult sites blocked from the start; extra lists for ads, malware, scams, gambling, social and piracy |
 | ✅ | Block apps by sending them back to the home screen |
 | ✅ | A log of lookups, apps and protection changes, kept on the phone |
 | ✅ | Screenshot checks with on-device AI (optional; clear images never leave the phone) |
@@ -59,12 +60,14 @@ one does and costs.
 | ✅ | One invite for any partner: opened in a browser they get email reports, pasted into Focus Fence on their phone they see the same report in the app |
 | 🧪 | Encrypted partner reports, about 15 minutes fresh: status, needs-attention, one timeline, day-by-day bars, screenshots, sortable app and site tables |
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
+| 🧪 | Partners hear when protection is loosened: filter off, adult list set to Report, screen checks off, leaving the server |
 | 🧪 | Groups of up to four, and partner unlock codes in the partner's app |
 | 🧪 | Flagged screenshots sent to partners automatically, heavily blurred (48 px at most), with a note from you |
 | 🧪 | Suggestive images (lingerie, swimwear) noted in the partner report |
 | 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
 | 🧪 | A notice (or nothing) when you open a blocked adult, gambling or scam site; partners hear if you keep trying; a Block history page |
 | ✅ | Updates itself: checks GitHub whenever you open the app, shows what's new, installs when you tap |
+| 🧪 | Feedback, feature requests and bug reports from Settings, as GitHub issues with your versions filled in |
 | ❌ | Hiding apps from reports, partner logins, scanning on-screen text for explicit content (planned) |
 
 What's next is in [`docs/roadmap.md`](docs/roadmap.md).
@@ -120,12 +123,22 @@ The full privacy page is at https://flyboy-byte.github.io/focusfence/privacy.htm
 
 ## Running your own server
 
-You only need a server for partners. It's a small Kotlin app that stores everything in files and
-sends email through Resend (SMS through Twilio or Telnyx is optional). Each person on a server is
-separate unless they link up. Every phone on a server joins by invite: the admin page makes one for the person being
-filtered, and their phone makes one for each partner.
+You only need a server for partners. There's no public one: run your own, or join someone's by invite. It's a small
+Kotlin app that stores everything in files and sends email through Resend or any SMTP account (SMS through Twilio or
+Telnyx is optional). Each person on a server is separate unless they link up. Every phone on a server joins by invite:
+the operator makes one for the person being filtered (admin page or `admin codes add`), and their phone makes one for
+each partner.
 
-Setup: [`server/README.md`](server/README.md) and [`docs/plans/04-backend-deploy.md`](docs/plans/04-backend-deploy.md).
+Install the newest `server-v` release (Docker image or a tarball with a systemd installer). The app and server keep
+working with each other two protocol versions back, and CI holds both to that (D-041).
+
+Setup, start to finish: [`server/README.md`](server/README.md).
+
+## Feedback
+
+In the app: Settings → Feedback & bug reports. Or open an issue here and pick bug report, feature request or feedback.
+The repository is public, so don't paste logs or screenshots: they show what you browse. Security problems go through
+private reporting ([`SECURITY.md`](SECURITY.md)).
 
 ## Building
 
