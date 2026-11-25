@@ -6,10 +6,16 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+_No changes._
+
+## v2.19.0-accountable
+
 ### Changed
 - Simpler accounts: one invite, every phone enrolled, one-factor admin sign-in (D-035) (`4d179b7`, [#83](https://github.com/flyboy-byte/focusfence/pull/83))
 ### Docs
 - update check on return to the app verified on the phone (`f9ae2ec`, [#82](https://github.com/flyboy-byte/focusfence/pull/82))
+### Maintenance
+- release 2.19.0 (`e5680cf`, [#84](https://github.com/flyboy-byte/focusfence/pull/84))
 
 _Undo any line with `git revert <commit>`._
 
