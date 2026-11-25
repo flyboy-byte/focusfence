@@ -25,18 +25,21 @@ import java.security.MessageDigest
 import kotlin.concurrent.thread
 
 /**
- * Opened from the update notification or Settings → Check now. Downloads the release APK only when the owner taps,
- * checks it is this app, newer, and signed by the same key as the installed copy, then hands it to Android's
- * installer, which shows its own confirmation. Android refuses a different signer anyway; checking first turns that
- * into a clear message instead of a vague "App not installed".
+ * Opened from Settings → Check now. Since 2.24 the update normally happens in Home's banner; both use [Installer],
+ * which does the download, the checks and the hand-off to Android's installer.
  */
 class UpdateActivity : AppCompatActivity() {
     private lateinit var b: app.focusfence.databinding.ActivityUpdateBinding
-    @Volatile private var busy = false
+    private lateinit var offer: UpdateCheck.Offer
+    private val watch: (Installer.State) -> Unit = { show(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val version = intent.getStringExtra(EXTRA_VERSION) ?: return finish()
+        offer = UpdateCheck.Offer(
+            version, intent.getStringExtra(EXTRA_TAG).orEmpty(), intent.getStringExtra(EXTRA_URL).orEmpty(),
+            intent.getLongExtra(EXTRA_SIZE, 0), intent.getStringExtra(EXTRA_PAGE).orEmpty(), intent.getStringExtra(EXTRA_NOTES).orEmpty(),
+        )
         b = app.focusfence.databinding.ActivityUpdateBinding.inflate(layoutInflater)
         setContentView(b.root)
         setSupportActionBar(b.toolbar)
@@ -45,139 +48,30 @@ class UpdateActivity : AppCompatActivity() {
         b.toolbar.setNavigationOnClickListener { finish() }
 
         b.updateVersion.text = getString(R.string.update_version, UpdateCheck.shortVersion(version))
-        b.updateInstalled.text = getString(R.string.update_installed, UpdateCheck.shortVersion(Updates.installedVersion(this)))
-        val notes = intent.getStringExtra(EXTRA_NOTES).orEmpty()
-        b.updateNotes.text = notes.ifEmpty { getString(R.string.update_no_notes) }
-        b.updateInstall.setOnClickListener { start() }
-        val page = intent.getStringExtra(EXTRA_PAGE).orEmpty()
-        b.updatePage.visibility = if (page.isEmpty()) View.GONE else View.VISIBLE
-        b.updatePage.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(page))) }
+        b.updateInstalled.text = getString(R.string.update_installed_size, UpdateCheck.shortVersion(Updates.installedVersion(this)),
+            android.text.format.Formatter.formatShortFileSize(this, offer.size))
+        b.updateNotes.text = offer.notes.ifEmpty { getString(R.string.update_no_notes) }
+        b.updateInstall.setOnClickListener { Installer.start(this, offer) }
+        b.updatePage.visibility = if (offer.pageUrl.isEmpty()) View.GONE else View.VISIBLE
+        b.updatePage.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(offer.pageUrl))) }
         Updates.cancelNotification(this)
     }
 
-    private fun say(text: String) {
+    override fun onStart() { super.onStart(); Installer.observe(watch) }
+    override fun onStop() { Installer.stopObserving(watch); super.onStop() }
+
+    private fun show(s: Installer.State) {
+        b.updateInstall.isEnabled = !Installer.busy
+        b.updateProgress.visibility = if (s is Installer.State.Downloading || s is Installer.State.Verifying) View.VISIBLE else View.GONE
+        if (s is Installer.State.Downloading && s.total > 0) b.updateProgress.progress = (s.done * 100 / s.total).toInt()
+        val text = UpdateText.status(this, s)
         b.updateStatus.text = text
-        b.updateStatus.visibility = View.VISIBLE
-    }
-
-    private fun start() {
-        if (busy) return
-        if (!packageManager.canRequestPackageInstalls()) {
-            say(getString(R.string.update_allow_installs))
-            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
-            return
-        }
-        val url = intent.getStringExtra(EXTRA_URL) ?: return
-        // The worker already filtered this, but the intent is ours to re-check before fetching anything.
-        if (!url.startsWith(UpdateCheck.DOWNLOAD_PREFIX)) return fail(getString(R.string.update_failed_source))
-        busy = true
-        b.updateInstall.isEnabled = false
-        b.updateProgress.visibility = View.VISIBLE
-        say(getString(R.string.update_downloading))
-        thread(name = "update-download") {
-            val apk = File(cacheDir, "update.apk")
-            val error = try {
-                download(url, apk)
-                verify(apk)
-            } catch (e: Exception) {
-                getString(R.string.update_failed_download)
-            }
-            runOnUiThread {
-                if (error != null) {
-                    apk.delete()
-                    fail(error)
-                } else {
-                    say(getString(R.string.update_installing))
-                    try {
-                        installApk(apk)
-                    } catch (e: Exception) {
-                        fail(getString(R.string.update_failed_install, e.message ?: ""))
-                    }
-                }
-            }
-        }
-    }
-
-    private fun download(url: String, to: File) {
-        val conn = URL(url).openConnection() as HttpURLConnection
-        conn.connectTimeout = 20_000
-        conn.readTimeout = 30_000
-        conn.setRequestProperty("User-Agent", "FocusFenceAC")
-        try {
-            check(conn.responseCode == 200)
-            val total = conn.contentLengthLong.takeIf { it > 0 } ?: intent.getLongExtra(EXTRA_SIZE, 0)
-            conn.inputStream.use { input ->
-                to.outputStream().use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    var done = 0L
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        out.write(buf, 0, n)
-                        done += n
-                        if (total > 0) runOnUiThread { b.updateProgress.progress = (done * 100 / total).toInt() }
-                    }
-                }
-            }
-        } finally {
-            conn.disconnect()
-        }
-    }
-
-    /** Null when the APK is this app, newer, and signed like the installed copy; otherwise the message to show. */
-    private fun verify(apk: File): String? {
-        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
-        val got = packageManager.getPackageArchiveInfo(apk.path, flags) ?: return getString(R.string.update_failed_invalid)
-        val mine = packageManager.getPackageInfo(packageName, flags)
-        if (got.packageName != packageName) return getString(R.string.update_failed_invalid)
-        if (versionCode(got) <= versionCode(mine)) return getString(R.string.update_failed_not_newer)
-        val theirs = signers(got)
-        // Some Android versions can't read an archive's signers; Android's installer still enforces the same key.
-        if (theirs.isNotEmpty() && !UpdateCheck.sameSigner(signers(mine), theirs)) {
-            return getString(R.string.update_failed_signer)
-        }
-        return null
-    }
-
-    private fun versionCode(p: PackageInfo): Long =
-        if (Build.VERSION.SDK_INT >= 28) p.longVersionCode else @Suppress("DEPRECATION") p.versionCode.toLong()
-
-    private fun signers(p: PackageInfo): List<String> {
-        val sigs = if (Build.VERSION.SDK_INT >= 28) p.signingInfo?.apkContentsSigners else @Suppress("DEPRECATION") p.signatures
-        return sigs.orEmpty().map { s ->
-            MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
-        }
-    }
-
-    private fun installApk(apk: File) {
-        val installer = packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-            .apply { setAppPackageName(packageName) }
-        val id = installer.createSession(params)
-        installer.openSession(id).use { session ->
-            session.openWrite("base.apk", 0, apk.length()).use { out ->
-                apk.inputStream().use { it.copyTo(out) }
-                session.fsync(out)
-            }
-            // Mutable: the installer adds the status and the confirm intent to it.
-            val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
-            val result = PendingIntent.getBroadcast(this, id, Intent(this, InstallResultReceiver::class.java), flags)
-            EventLog.activity(LogEvents.service(System.currentTimeMillis(), "update", "install_started", intent.getStringExtra(EXTRA_VERSION)), urgent = true)
-            session.commit(result.intentSender)
-        }
-    }
-
-    private fun fail(message: String) {
-        busy = false
-        b.updateInstall.isEnabled = true
-        b.updateProgress.visibility = View.GONE
-        say(message)
-        EventLog.activity(LogEvents.service(System.currentTimeMillis(), "update", "failed", message.take(80)))
+        b.updateStatus.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
     }
 
     companion object {
         private const val EXTRA_VERSION = "version"
+        private const val EXTRA_TAG = "tag"
         private const val EXTRA_URL = "url"
         private const val EXTRA_SIZE = "size"
         private const val EXTRA_PAGE = "page"
@@ -185,10 +79,25 @@ class UpdateActivity : AppCompatActivity() {
 
         fun intent(c: Context, o: UpdateCheck.Offer): Intent = Intent(c, UpdateActivity::class.java)
             .putExtra(EXTRA_VERSION, o.version)
+            .putExtra(EXTRA_TAG, o.tag)
             .putExtra(EXTRA_URL, o.apkUrl)
             .putExtra(EXTRA_SIZE, o.size)
             .putExtra(EXTRA_PAGE, o.pageUrl)
             .putExtra(EXTRA_NOTES, o.notes)
+    }
+}
+
+/** What to say for each [Installer.State], shared by the Home banner and [UpdateActivity]. */
+object UpdateText {
+    fun status(c: Context, s: Installer.State): String = when (s) {
+        Installer.State.Idle -> ""
+        is Installer.State.Downloading -> if (s.total > 0) c.getString(
+            R.string.update_progress,
+            android.text.format.Formatter.formatShortFileSize(c, s.done), android.text.format.Formatter.formatShortFileSize(c, s.total),
+        ) else c.getString(R.string.update_downloading)
+        Installer.State.Verifying -> c.getString(R.string.update_verifying)
+        Installer.State.Confirming -> c.getString(R.string.update_installing)
+        is Installer.State.Failed -> s.message
     }
 }
 
@@ -205,6 +114,7 @@ class InstallResultReceiver : BroadcastReceiver() {
             else -> {
                 val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "unknown"
                 EventLog.activity(LogEvents.service(System.currentTimeMillis(), "update", "failed", msg.take(80)))
+                Installer.installFailed(context, msg)
                 Toast.makeText(context, context.getString(R.string.update_failed_install, msg), Toast.LENGTH_LONG).show()
             }
         }

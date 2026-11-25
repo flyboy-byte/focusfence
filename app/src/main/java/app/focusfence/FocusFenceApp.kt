@@ -21,6 +21,7 @@ class FocusFenceApp : Application() {
         Monitor.checkIntegrityAsync(this)
         app.focusfence.sync.Sync.schedule(this)
         app.focusfence.update.Updates.schedule(this)
+        app.focusfence.data.ListRefresh.schedule(this)
         watchForeground()
         // Managed mode was removed (D-028): undo anything an older version set on a device-owner phone.
         app.focusfence.admin.DeviceAdmin.clearLegacyPoliciesOnce(this)

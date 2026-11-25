@@ -166,6 +166,16 @@ object Updates {
         prefs(c).edit().putString(KEY_DISMISSED_TAG, tag).apply()
     }
 
+    /** Asked for the update (notification, Check now): show the banner again even if it was dismissed. */
+    fun undismiss(c: Context) {
+        prefs(c).edit().remove(KEY_DISMISSED_TAG).apply()
+    }
+
+    /** Home, with the update banner showing: where the update happens since 2.24. */
+    fun homeIntent(c: Context): android.content.Intent = android.content.Intent(c, app.focusfence.MainActivity::class.java)
+        .putExtra(app.focusfence.MainActivity.EXTRA_SHOW_UPDATE, true)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
     private fun toJson(o: UpdateCheck.Offer) = JSONObject()
         .put("version", o.version).put("tag", o.tag).put("apk", o.apkUrl).put("size", o.size)
         .put("page", o.pageUrl).put("notes", o.notes).toString()
@@ -200,7 +210,7 @@ object Updates {
             NotificationChannel(CHANNEL, c.getString(R.string.update_channel), NotificationManager.IMPORTANCE_DEFAULT)
         )
         val open = PendingIntent.getActivity(
-            c, 0, UpdateActivity.intent(c, offer),
+            c, 0, homeIntent(c),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         nm.notify(

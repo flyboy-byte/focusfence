@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
             true
         }
         if (savedInstanceState == null) {
+            showUpdateIfAsked(intent)
             binding.bottomNav.selectedItemId = R.id.nav_home
         }
 
@@ -68,6 +69,24 @@ class MainActivity : AppCompatActivity() {
         if (!BlocklistStore.prefs(this).getBoolean(OnboardingActivity.KEY_ONBOARDED, false)) {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (showUpdateIfAsked(intent)) {
+            // Re-create Home so its banner reads the offer again.
+            if (binding.bottomNav.selectedItemId == R.id.nav_home) {
+                supportFragmentManager.beginTransaction().replace(R.id.fragmentContainer, HomeFragment()).commit()
+            } else selectTab(R.id.nav_home)
+        }
+    }
+
+    /** The update notification opens Home with the banner (2.24). */
+    private fun showUpdateIfAsked(i: Intent?): Boolean {
+        if (i?.getBooleanExtra(EXTRA_SHOW_UPDATE, false) != true) return false
+        i.removeExtra(EXTRA_SHOW_UPDATE)
+        app.focusfence.update.Updates.undismiss(this)
+        return true
     }
 
     fun selectTab(itemId: Int) {
@@ -85,5 +104,9 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    companion object {
+        const val EXTRA_SHOW_UPDATE = "show_update"
     }
 }
