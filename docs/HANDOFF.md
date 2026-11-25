@@ -1,6 +1,6 @@
 # Handoff: how to pick this project up cold
 
-_Rewritten 2026-11-23 (late); updated 2026-11-25 after 2.16.0 and the first server release (server-v1.0.1). Read order: this file → [`STATE.md`](../STATE.md)
+_Rewritten 2026-11-23 (late); updated 2026-11-25 (late) after 2.20.0 and the D-035 server deploy. Read order: this file → [`STATE.md`](../STATE.md)
 (where things stand) → [`docs/roadmap.md`](roadmap.md) (what's next, in order) → [`AGENTS.md`](../AGENTS.md) (how to work
 here). If this and `STATE.md` disagree, `STATE.md` wins._
 
@@ -37,10 +37,15 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
   until they choose to link.
 - **Screenshots:** partners **never** get a clear image (level D ruled out). Level B is built: the owner may send a
   48 px, once-blurred thumbnail (D-025 as amended). Automatic sending (C) waits on the AI's false-flag rate.
-- **Block feedback (D-024, built in 2.14):** notification by default, optional full screen; trackers silent; notices for
+- **Accounts (D-035, 2.19–2.20):** one partner invite. In a browser it's an email partner; pasted into the app
+  (*Join with an invite*) it enrolls that phone and pairs it. Every phone is enrolled, and only enrolled phones open
+  mailboxes. The server knows who watches whom (Logan's choice) and gives an app partner its own `/p/{token}` link: the
+  same report page, data and screenshots as email. Admin sign-in is an emailed code **or** an authenticator, not both.
+  Logan is the only user: breaking old pairings is fine.
+- **Block feedback (D-024, D-034):** a notification or nothing (the full-screen page is gone); Block history page; trackers silent; notices for
   own rules and adult/gambling/scam front doors; partners told after 3 confirmed tries in 10 min, by category. No
   browser block page (P-006, would need a CA).
-- **Updates (D-029, D-030, D-031):** the app checks GitHub daily and offers updates (notify + tap, Home banner, What's
+- **Updates (D-029 as amended):** the app checks GitHub every time it comes to the foreground, then every 20 minutes, and offers updates (notify + tap, Home banner, What's
   new). No downgrades: a bad release is fixed by a patch release. Privacy pages live on GitHub Pages; the server no
   longer serves them.
 - **UI (D-032):** plain in a good way, colour only for state and taken from the system theme (no fixed green),
@@ -72,7 +77,22 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
 | Squash-merging the bottom of a stacked PR set deletes its branch and GitHub **closes** the PR above (can't reopen after a force-push) | retarget the next PR to `main` *before* merging; #31 was replaced by #35 |
 | No emulator on this machine, and a debug build can't install over the release app (different key) | UI changes are checked on Logan's phone from a release |
 | GitHub sometimes 500s on push or loses a Pages artifact | retry the push; re-run the Pages workflow |
+| `lintVitalAnalyzeRelease` failed 2.18.0 on Maven Central 429s, not code | `gh run rerun <id> --failed` on the same tag |
+| The VPN keeps the process alive, so "app launch" is neither process start nor `MainActivity.onCreate` | started-activity count in `FocusFenceApp` (2.18.1, ✅ on the phone) |
+| `dialog_two_fields` caps field 1 at 40 characters, which cut every pasted invite (2.19.0) | Join sets its own filters (2.19.1) |
+| A `WebView` inside a wrap_content scroll parent fails release lint | it fills the screen beside the scroll view (2.20) |
+| The ubuntu sudo window (`vps-sudo`) needs Logan's password; check `sudo -n true` before asking | deploys this session used an open window |
 
+## Next (Logan, 2026-11-25: "the filter is pretty good; needs lots of work on accountability mechanics and networking")
+1. **Networking first** (felt every day). The 2026-11-24 export: 8.9% of forwarded lookups failed, 673 failovers, worst
+   p95 window 9.9 s, `vpn_metered` flapping. Ask for a normal day's export on 2.20 as the new baseline.
+2. **Report freshness:** slices upload about hourly ("last report 18 minutes ago" looked odd to Logan). Measure the battery
+   cost before going shorter or syncing on change.
+3. **Alerts to app partners** poll every 15 min; staleness is flagged after 14 h. Consider server push and a shorter
+   silence window. Alerts and unlock codes still use the pairing mailbox; the report no longer does.
+4. Still unseen on the phone: the 2.16–2.18 screens (rounded Settings/Blocking, Block history, Notify me, uninstall copy).
+
+## Open questions only a person can answer
 ## Open questions only a person can answer
 How 2.13 to 2.15 look and behave on the phone (nothing seen yet; Logan's screenshots drive the next UI pass); a day's log
 export on 2.15 for the battery pass; keystore backup confirmed (Logan);
