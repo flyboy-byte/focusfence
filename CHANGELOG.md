@@ -6,7 +6,17 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
-_No changes._
+### Docs
+- handoff after 2.20 and D-035; next is networking and accountability mechanics (`95e69f1`, [#87](https://github.com/flyboy-byte/focusfence/pull/87))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.20.0-accountable
+
+### Changed
+- App partners see the same report as email partners; organised report page; release 2.20.0 (`dcadeb4`, [#86](https://github.com/flyboy-byte/focusfence/pull/86))
+
+_Undo any line with `git revert <commit>`._
 
 ## v2.19.1-accountable
 

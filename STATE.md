@@ -2,17 +2,18 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
-> **2.12.0 (2026-11-23, main) = 2.11.0 plus:** a **five-tab layout** (Home · Blocking · Partners · Monitoring · Settings; Settings → **Classic layout** brings the old four tabs back on the phone, no release needed), Settings in four groups, a Categories card on Blocking, one Guide (setup checklist + how it works; first run ends there), Partners folds the server fields once connected; **strict-mode changes alert partners** (request, wait ended, unlocked by code, turned off); **owner-sent blurred screenshots** (Review → "Send blurred to partners…", ≤ 24 px thumbnail, sealed; D-025). Tests + lint green; 🧪 none of the UI seen on a device (no emulator here); 📱 Logan checks on his phone.
+> **Where it stands (2026-11-25, 2.20.0 + server main-dcadeb4):** the filter is in daily use and in good shape. Accounts
+> were simplified (D-035): **one partner invite** (a browser makes an email partner; pasted into the app under *Join with
+> an invite* it enrolls and pairs that phone), every phone enrolled, the server knows who watches whom, and an app partner
+> opens **the same server report** as an email partner. 📱 2026-11-25: a second phone joined by invite and shows the main
+> phone's reports. Update checks run every time the app comes to the foreground (📱 2.18.1 → 2.18.2 offered with no tap).
+> Admin sign-in is an emailed code or an authenticator code. **Next (with Logan): accountability networking and
+> mechanics**; the list is in [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
 
-> **D-023 is live (2026-11-23):** server deployed from main at ac68738 (sealed reports, admin audit A1–A7 + S1–S3); 2.11.0 released. The old readable records were purged at startup. Earlier email partners need **Resend key link** to read the new reports.
+> Screenshots: automatic capture never sends an image. The owner can choose to send a **blurred** (≤ 48 px) thumbnail of
+> a flagged shot to partners (D-025, Phase 2 level B); a clear image never leaves the phone.
 
-> **2.10.0 (code 31, 2026-11-23)** = 2.9.2 plus: DNS resolvers race in Automatic mode (`dns/Hedged`, 0.6 s, bounded pool) after a morning of 3-7 s p95 lookups, `net` diag record (link, roaming, signal), Setup screen as cards, About row (button hidden if no URL; pages served at `https://ff.flyboybyte.com/about/`), screenshot wording corrected (images never leave the phone), a paired partner's code can skip the strict wait (wait always offered), two unguarded API-29 device-owner calls fixed (lint). Tests + lint green; 🧪 none of it seen on a phone yet.
-
-> **Block notice (2026-11-23, on main after 2.10.0):** when a site blocked by a user rule is opened, Focus Fence says so. Settings → Filtering → "When a site is blocked": a notification (default), the full-screen "Blocked by Focus Fence" page (`BlockedActivity`; section rules use it too instead of the toast), or nothing. With the accessibility service on, it first confirms the browser's address bar shows that site; without it, only the notification, rate-limited per domain. Logic in `dns/BlockScreen` with tests. 🧪 not yet seen on a phone.
-
-> Screenshots: automatic capture never sends an image. Since 2.12 the owner can choose to send a **blurred** (≤ 24 px) thumbnail of a flagged shot to email/web partners (D-025, Phase 2 level B); a clear image never leaves the phone. Level C (automatic blurred sending) waits on Phase 7's false-flag work.
-
-_Last updated: 2026-11-25 (2.18.0). Update this file in the same commit as any change that moves an item
+_Last updated: 2026-11-25 (2.20.0). Update this file in the same commit as any change that moves an item
 below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -21,9 +22,10 @@ below. It is the single place to answer "where are we?" — keep it honest, shor
 **Ever Accountable** (EA). The core is the DNS-only filter, which works alone with no account or server. Optional
 layers add an activity log, filter-health detection, settings friction and strict mode, uninstall protection (device admin),
 opt-in text and screenshot capture with an on-device AI, and partners: email/web partners with end-to-end sealed
-reports through a self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23), and app-to-app pairing and
-groups through a blind mailbox. The filter, logs and email alerts are in daily use; groups, app pairing and strict
-mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
+reports through a self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23). One invite serves every partner
+(D-035): in a browser it's an email partner, in the app it enrolls and pairs that phone, which then reads the same sealed
+report. Groups of up to four also go through the server. The filter, logs, email alerts and app partners have run on
+real phones; groups and strict mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
 
 ## Where the code is
 
@@ -33,8 +35,8 @@ mode pass their tests but haven't been field-tested. The repo went public on 202
 | Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR (squash-only, branches auto-deleted). `main` is the default branch. |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | 262 app JVM unit tests + 50 server tests; CI runs both on every PR |
-| Latest release | `v2.20.0-accountable` (2026-11-25, code 44): an app partner opens the same server report an email partner does (same page, data and screenshots, full 7-day backlog); the report page is reorganised (summary, Today / 7 days, tabs, sortable and filterable tables). Server deployed the same day. 2.19.1 (code 43): fixes Join with an invite (the paste box cut text at 40 characters, so every invite failed) and shortens the invite message. 2.19.0 (code 42): one invite for every partner (browser = email partner, pasted into the app = enrolls and pairs that phone), Join with an invite, Save connects and reports back, groups enroll their members (D-035). Server main-4d179b7 deployed the same day: every phone enrolled, signed mailbox creation, admin sign-in = emailed code or authenticator. 🧪 until a second phone joins. 2.18.1 (code 40): update check on every return to the app (✅ seen on the phone with 2.18.2). |
+| Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
+| Latest release | `v2.20.0-accountable` (2026-11-25, code 44). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at dcadeb4, installed with the release `install.sh`. |
 
 ## Verification levels
 
@@ -57,8 +59,8 @@ without evidence.
 | VPN exclusions by risk (`dns/ExclusionPolicy`): games/music/maps toggle instantly even in strict mode; everything that could show adult content needs the strict delay | 🧪 | Settings → VPN exclusions. Added because games with anti-cheat refuse to run behind a VPN. Risk comes from Android's app category, so an app that declares the wrong category is misfiled (unknown = guarded); a few open games (Roblox, Discord) are forced to guarded. Excluded apps bypass **all** filtering and capture-by-DNS, so this is a real hole for anything free. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
-| Block triage (D-024): owner notice for own rules and adult/gambling/scam front doors; partner alert after 3 confirmed tries in 10 min | 🧪 | `dns/BlockTriage`, Settings → Filtering → When a site is blocked. Unreleased. Partner tier needs the accessibility service. |
-| Self-update (D-029): daily GitHub check, notification + Home banner, What's new, one-tap install with signature check | 🧪 | 2.14/2.15. First real run is 2.15 → 2.16. Settings → About → Check for updates. |
+| Block triage (D-024, D-034): a notification for own rules and adult/gambling/scam front doors, or nothing; Block history (sites / trackers); partner alert after 3 confirmed tries in 10 min | 🧪 | `dns/BlockTriage`, `dns/BlockHistory`, Blocking → Block notices / Block history. Partner tier needs the accessibility service. |
+| Self-update (D-029 as amended): checks every time the app comes to the foreground, then every 20 min; notification + Home banner, What's new, one-tap install with signature check | 📱 | 2.18.1 offered 2.18.2 on switching back to the app, no tap (2026-11-25). Every update 2.14 → 2.20 installed this way. |
 | User allowlist | 🧪 | |
 | DoH-bypass guards | 📱 | Inherited. |
 | App blocking (accessibility bounce) | 📱 | Inherited. |
@@ -95,13 +97,13 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 
 | Feature | Status | Notes |
 |---|---|---|
-| Server (Kotlin/Ktor, flat files): signed ingest, heartbeat, invites, partner pages, alerts, weekly report, blind mailbox | 🧪 | **Deployed 2026-11-23 at `https://ff.flyboybyte.com`; first phone enrolled, uploaded and triggered a real alert email the same day** (flyboybyte VPS, user `ffbackend`, nginx + Let's Encrypt; `docs/plans/04-backend-deploy.md`). Checked with curl only: no phone has enrolled yet. Hardened after an independent audit and a re-audit (quotas, partner double opt-in with an email-only token, CSP/escaping, range-checked records, optional enrollment code, server-wide email caps). 31 server tests in CI. Not done: off-box backups, key attestation at enroll, a push alert when the server is full (it logs a warning). Compiles the phone's `dns/` code so alert rules are shared. |
+| Server (Kotlin/Ktor, flat files): signed ingest, heartbeat, invites, partner pages, alerts, weekly report, pairing mailboxes, admin page | 🧪 | **2026-11-25: D-035 deployed (every phone enrolled, invite-as-credential, signed mailbox creation, app partners recorded with their own report link, admin sign-in = emailed code or authenticator); report page reorganised.** Delivery: D-033 (Docker or tarball + `install.sh`). History: **deployed 2026-11-23 at `https://ff.flyboybyte.com`; first phone enrolled, uploaded and triggered a real alert email the same day** (flyboybyte VPS, user `ffbackend`, nginx + Let's Encrypt; `docs/plans/04-backend-deploy.md`). Checked with curl only: no phone has enrolled yet. Hardened after an independent audit and a re-audit (quotas, partner double opt-in with an email-only token, CSP/escaping, range-checked records, optional enrollment code, server-wide email caps). 31 server tests in CI. Not done: off-box backups, key attestation at enroll, a push alert when the server is full (it logs a warning). Compiles the phone's `dns/` code so alert rules are shared. |
 | Phone upload + heartbeat (WorkManager, 15 min, hardware-backed P-256 key, hash chain, cursor resync) | 📱 | `sync/SyncWorker`. Starts from "now" at enrollment, not old history. |
-| Email partners: one-time invite code → `/join` → confirm email → private report page | 📱 | Partners are double opt-in: nothing but the confirmation email goes to an address until its owner clicks Confirm. The confirm token exists only in that email (never in a redirect), so the joiner can't confirm for the owner (found by the re-audit, fixed 2026-11-23). |
+| Email partners: the invite link opened in a browser → `/join` → confirm email → private report page (summary, Today / 7 days, tabs, sortable tables) | 📱 | Partners are double opt-in: nothing but the confirmation email goes to an address until its owner clicks Confirm. The confirm token exists only in that email (never in a redirect), so the joiner can't confirm for the owner (found by the re-audit, fixed 2026-11-23). |
 | Instant alerts (filter off/revoked, a11y/usage access off, log cleared, records missing, partner removed, health problems, silence) | 📱 (filter-off only) | One rule: `Digest.alertText`. **2026-11-23, Pixel 9 + `ff.flyboybyte.com`: turned the VPN off from Android's own settings without touching the app; the confirmed partner got a "Filter turned off" email.** The other alert kinds, the silence alert and the weekly report have not been seen on a phone. Not yet measured: how long the email took, and whether it arrived before the app was opened. |
 | Weekly report email | 🧪 | |
 | SMS alerts (Twilio/Telnyx, opt-in, code-verified, throttled) | 🧪 | Provider account + number needed. |
-| App-to-app pairing by shared key; blind mailbox; partner app view | 🧪 | `dns/Pairing`, `AccountabilityActivity`, `PartnerReportActivity`. Both phones must use the same server. |
+| App partners (D-035): the invite pasted into *Join with an invite* enrolls the phone, records the pair on the server and opens the same server report as email; alerts and unlock codes still go through the pairing mailbox | 📱 (reports) | **2026-11-25: second phone joined and shows the main phone's reports.** Alerts to the app partner poll every 15 min; silence is flagged after 14 h. `sync/Accountability.join`, `PartnerReportActivity`. |
 | Setup guide (`SetupActivity`, Settings → Set up accountability): status of every optional layer, recommended vs optional, measured cost, link to the screen that owns it | 🧪 | 2026-11-23: a checklist that changes nothing itself. Never opened on a phone. Release check for "all optional layers off": `tools/check_light_mode.py` (not yet run on a real light-mode export). |
 | Group accountability screen and sync (`GroupActivity`, `GroupSync`, `GroupStore`): start/join by invite, approve by fingerprint, remove, partner-only role, narrow who sees me, leave | 🧪 | 2026-11-23: builds, all JVM tests green, **never opened on a phone and never run against the server**. Reached from Partners & reports. Needs a server address; with no group nothing changes. Known limits (server keeps 300 messages / 30 days of group history, one group per phone): `docs/plans/05-group-and-release.md`. |
 | Group join/approval protocol (`dns/GroupProtocol`): signed, replayable log in one blind mailbox; members approve each other by a 12-digit fingerprint; pairing secrets handed over sealed to one member's key; narrowing/leaving revokes pairings | 🧪 | 2026-11-23: pure protocol, 13 JVM tests that simulate 4 phones (real signing, sealing and ECIES over an in-memory mailbox): all 12 pairings made with matching codes, stranger gets nothing, forged leave/remove and stolen-id hellos dropped, cap and close enforced. **No storage, sync worker or UI yet; never run on a phone.** |
@@ -113,8 +115,8 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 
 ## What's weak (read before trusting anything)
 
-1. **Only part of the partner loop has run for real.** Email partners and instant alerts work against the live
-   server; app-to-app pairing and groups have never run on two phones. Expect first-contact bugs there.
+1. **Only part of the partner loop has run for real.** Email partners, instant alerts and an app partner's report work
+   against the live server; app-partner alerts, unlock codes and groups have never run on two phones.
 2. **Most features are 🧪, not 📱.** The relay looked fine in tests twice and failed on the phone
    twice. Assume any 🧪 item can fail the same way.
 3. **Silence detection depends on timing guesses.** The server flags a phone after 4 h without a
@@ -136,16 +138,20 @@ tier (end-to-end sealed reports, D-023), licence (MIT, D-015), landing on `main`
 
 ## Next steps, in order
 
-The ordered list lives in [`docs/roadmap.md`](docs/roadmap.md). Short version (2026-11-24):
+The ordered list lives in [`docs/roadmap.md`](docs/roadmap.md); the near-term list is in `docs/HANDOFF.md` → Next.
+Short version (2026-11-25, agreed with Logan: "the filter is pretty good; needs lots of work on accountability
+mechanics and networking"):
 
-1. Phase 0: field-test 2.13 to 2.15 on the phone (new UI, triage, self-update 2.15 → 2.16, strict mode); then groups and
-   app pairing on two phones.
-2. UI pass two from Logan's screenshots: the screens one level down (strict mode, Categories, Review, domain editor).
-3. Battery pass from a day's log export on 2.15.
+1. **Accountability networking and mechanics** (what Logan means by "networking"): how phones, partners and the server
+   reach each other. Report freshness (slices about hourly), alerts to app partners (15 min polling, 14 h silence),
+   moving alerts and unlock codes onto the server route the report now uses, push instead of polling.
+2. **Internet DNS:** solid in daily use per Logan; the 2026-11-24 export still showed 8.9% forward failures and a slow
+   worst case. Unknown: gaming and latency-sensitive apps. Check from a normal day's export on 2.20.
+3. Field-test the 2.16 to 2.20 screens and groups on two phones; battery from the same export.
 4. Retune the AI flag rules only from `rev` answers on the Review screen.
-5. Then: report exclusions, automatic blurred screenshots (level C), partner login if wanted.
-6. ~~Release 2.13~~ · ~~go public~~ · ~~self-update~~ · ~~block triage~~ · ~~redesign Home/Checks/Settings/Partners~~
-   (2.13 to 2.15, 2026-11-24).
+5. Then: report exclusions, automatic blurred screenshots (level C).
+6. ~~Release 2.13~~ · ~~go public~~ · ~~self-update~~ · ~~block triage~~ · ~~redesign~~ · ~~simpler accounts (D-035)~~
+   · ~~one report for every partner~~ (2.13 to 2.20, 2026-11-24/25).
 
 ## Incidents (what went wrong, so it isn't repeated)
 

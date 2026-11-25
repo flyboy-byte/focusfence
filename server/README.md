@@ -8,26 +8,31 @@ It compiles the phone's pure `app/src/main/java/app/focusfence/dns/` code too, s
 alerts on exactly what the phone's `Digest.alertText` alerts on, and the partner web page shows
 the same `Digest` the partner app does. One rule set for both ends.
 
-## Two ways to be a partner, side by side
+## One invite, any partner (D-035)
 
-**1. Web + email (+ optional SMS) — the default.**
-The phone enrolls a hardware-backed P-256 key. It **never uploads its activity log** (D-023): it builds the partner
-report on the phone, seals it with a key only it and its partners hold, and uploads the ciphertext hourly, plus signed
-alert lines and heartbeats. The partner's browser opens the report; the key rides after `#` in the invite link. The owner creates a one-time invite code
-in the app and sends it to their partner. The partner joins at `/join`, and gets:
-- an email alert when protection changes (filter off, accessibility off, log cleared, records
-  missing, partner removed, …) and when the phone goes silent;
-- a weekly report email;
-- a private report page at `/p/{token}` (the link is their login);
-- optional SMS alerts: opt-in, verified with a code, alerts only, throttled to one per 10 min.
+Every phone on the server is enrolled with a hardware-backed P-256 key. The phone **never uploads its activity log**
+(D-023): it builds the partner report on the phone, seals it with a key only it and its partners hold, and uploads the
+ciphertext hourly, plus signed alert lines and heartbeats.
 
-**2. App to app — the equal option.**
-Both people run the app and pair with a key the owner sends over any message app. The key
-never reaches the server: the phone derives a mailbox id, an access token and an encryption key
-from it (`dns/Pairing`). The server is a **blind mailbox** — it stores ciphertext under an id it
-can't link to anyone, and keeps only a hash of the token. The partner's app polls, decrypts, shows
-the report, and raises its own notifications. It also shows a rotating unlock code that the
-owner's phone accepts offline as the partner PIN.
+**Getting a phone on.** The admin page's *People* tab makes an enrollment code and a message to send; the person pastes
+it into *Partners → Join with an invite*. A partner's phone needs no code: the invite it was sent is its credential.
+
+**Adding a partner.** The owner's phone asks for an invite (24 h, single use, max 5 live) and shares one link,
+`/i/SECRET#k=REPORT_KEY&p=PAIRING_KEY`. Browsers never send the part after `#`.
+- **In a browser:** an email partner. They join with name and email, confirm the address (double opt-in), and get alert
+  emails, a weekly report, a private report page at `/p/{token}` (the link is their login), and optional SMS alerts
+  (opt-in, code-verified, throttled to one per 10 min).
+- **In the app:** the phone enrolls with SECRET, takes the invite (`/v1/invites/accept`) and gets its own `/p/{token}`:
+  the same page, sealed data and screenshots as an email partner. The server records the pair. Alerts and the rotating
+  unlock code (accepted offline by the owner's phone as the partner PIN) go through a pairing mailbox derived from
+  PAIRING_KEY: ciphertext under an id, with only a hash of the access token stored.
+
+**Groups** (up to 4 phones) use one shared mailbox for the group log; a group invite carries an enroll-only server
+invite so new members' phones can enroll. Only enrolled phones open new mailboxes.
+
+**Admin page** (`FF_ADMIN_EMAILS`): sign in with an emailed code, or with an authenticator code once one is set up.
+Tabs: Overview, People (add a person: code + message), Devices (who watches whom), Activity (admin log, sessions,
+your sign-in). On the box, `focusfence-server admin login-link <email>` prints a one-time sign-in link.
 
 ## Run with Docker Compose (recommended)
 
@@ -116,16 +121,18 @@ of server time.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/v1/enroll` | Register a device key → `deviceId` |
-| POST | `/v1/invites` | Signed. New one-time invite code (24 h, max 5 live) |
-| POST | `/v1/partners/list` | Signed. Partners (emails masked) |
+| POST | `/v1/enroll` | Register a device key → `deviceId`. Needs `X-FF-Enroll` (a code) or `X-FF-Invite` (a live invite) when codes are on |
+| POST | `/v1/invites` | Signed. New one-time invite link (24 h, max 5 live); `kind: enroll` for a group's members |
+| POST | `/v1/invites/accept` | Signed. The calling phone takes an invite and becomes that phone's app partner; returns its report link |
+| POST | `/v1/partners/list` | Signed. Email partners (masked) and app partners, each with the invite it came from |
 | POST | `/v1/partners/unlink` | Signed. Remove a partner — **they are emailed/texted** |
 | POST | `/v1/batches` | Signed batch: seq + hash chain + signature checked; 409 returns the server cursor |
 | POST | `/v1/heartbeat` | Signed liveness |
 | POST | `/v1/shots` | Signed encrypted screenshot (ciphertext only) |
-| POST | `/v1/mailbox/{id}` | Create a blind mailbox with a token hash |
+| POST | `/v1/mailbox/{id}` | Create a mailbox with a token hash; a new one needs a signed request from an enrolled phone |
 | POST/GET | `/v1/mailbox/{id}/msgs` | Post / read ciphertext (`X-FF-Token` header) |
-| GET/POST | `/join` | Partner joins with an invite code |
+| GET | `/i/{secret}` | The invite link: join form, later the partner's report |
+| GET/POST | `/join` | Partner joins with an invite |
 | GET | `/p/{token}` | Partner's private report page |
 | POST | `/p/{token}/sms`, `/sms/verify`, `/sms/stop`, `/leave` | Partner settings |
 
