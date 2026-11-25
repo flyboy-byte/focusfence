@@ -102,7 +102,7 @@ class AccountabilityFragment : Fragment() {
                 if (!isAdded || view == null) return@runOnUiThread
                 always()
                 r.onSuccess(done).onFailure {
-                    Toast.makeText(requireContext(), getString(R.string.acc_failed, it.message ?: it.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.acc_failed, Accountability.friendly(it)), Toast.LENGTH_LONG).show()
                 }
             }
         }
