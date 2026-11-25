@@ -84,7 +84,7 @@ volume survives a restart. Caddy getting a real public certificate wasn't tested
 Each `server-vX.Y.Z` release also has a tarball with an installer. It needs a JRE 17 or newer on the host.
 
 ```sh
-v=1.1.0   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
+v=1.2.0   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
 f=focusfence-server-$v.tar.gz
 base=https://github.com/flyboy-byte/focusfence/releases/download/server-v$v
 curl -fLO $base/$f && curl -fLO $base/$f.sha256

@@ -521,9 +521,12 @@
     <string name="acc_none">None yet</string>
     <string name="acc_sms_on">text alerts on</string>
     <string name="acc_need_server">Set the server address first.</string>
+    <string name="feedback_title">Feedback &amp; bug reports</string>
+    <string name="feedback_summary">Report a bug, ask for a feature, or tell us what you think, on GitHub</string>
     <string name="bug_title">Report a bug</string>
-    <string name="bug_summary">Opens a GitHub issue with your app and phone versions</string>
-    <string name="bug_body">This opens a new issue on GitHub, where Focus Fence is developed in public. You\'ll need a GitHub account.\n\nAnyone can read it, so don\'t paste logs, screenshots or anything that shows what you browse.</string>
+    <string name="feature_title">Ask for a feature</string>
+    <string name="feedback_general">Other feedback</string>
+    <string name="bug_body">This opens a new post on GitHub, where Focus Fence is developed in public. You\'ll need a GitHub account.\n\nAnyone can read it, so don\'t paste logs, screenshots or anything that shows what you browse.</string>
     <string name="bug_add_summary">Add a numbers-only summary (battery, DNS, error counts; no sites or apps)</string>
     <string name="bug_summary_loading">Working it out…</string>
     <string name="bug_open">Open GitHub</string>

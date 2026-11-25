@@ -732,7 +732,7 @@ signature formats, against the current server; `CompatWindowTest` fails if a lev
 releases run `tools/check_protocol.py`, which fails if the newest `server-v*` release can't serve the app. A server
 release from before this speaks level 1.
 
-Also 2026-11-25: Settings → Report a bug opens GitHub's issue form (`.github/ISSUE_TEMPLATE/bug_report.yml`) filled with
+Also 2026-11-25: Settings → Feedback & bug reports opens one of three GitHub issue forms (bug, feature request, feedback; Logan: "Don't do just bugs") (`.github/ISSUE_TEMPLATE/bug_report.yml`) filled with
 versions and, if ticked, a numbers-only summary the owner sees first (`dns/BugReport`). The repo is public, so the app
 and the form both say not to paste logs or screenshots, and the app sends nothing itself.
 

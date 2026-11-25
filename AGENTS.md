@@ -12,6 +12,9 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates or block notices. Newest first.
 
+- **2.25.0 / server 1.2.0 (2026-11-25):** plan 10 first-time journeys (5-step onboarding, adult blocked by default,
+  self-host path, SMTP, guarded Leave this server, no-email invites, loosening alerts); protocol window D-041;
+  Settings → Feedback & bug reports (three GitHub issue forms).
 - **2.24.0 (2026-11-25):** Block lists rework (`CategoriesActivity`: three-way buttons, plain names, strength row,
   Always allow group, weekly `data/ListRefresh` instead of an "Update list" button per list). Updates happen in Home's
   banner (`update/Installer`; size, progress, retry); the notification opens Home.

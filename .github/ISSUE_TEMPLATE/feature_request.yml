@@ -1,0 +1,28 @@
+name: Feature request
+description: Something Focus Fence AC or its server could do, or do better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This repository is public.** Describe the idea without logs, screenshots or anything that shows what you browse.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should it do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it would help
+      description: The situation where you'd use it, or the problem it solves.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+  - type: input
+    id: device
+    attributes:
+      label: Phone and Android version

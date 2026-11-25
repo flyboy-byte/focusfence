@@ -11,6 +11,13 @@ import java.net.URLEncoder
 object BugReport {
     const val TEMPLATE = "bug_report.yml"
 
+    /** The three issue forms in `.github/ISSUE_TEMPLATE/`. Only a bug offers the numbers-only summary. */
+    enum class Kind(val template: String, val label: String) {
+        BUG("bug_report.yml", "bug"),
+        FEATURE("feature_request.yml", "enhancement"),
+        FEEDBACK("feedback.yml", "feedback"),
+    }
+
     data class Info(
         val appVersion: String,
         val protocol: Int,
@@ -51,15 +58,15 @@ object BugReport {
     }.trimEnd()
 
     /** The new-issue link: GitHub fills the form's fields from these query parameters (by field id). */
-    fun url(repo: String, info: Info, summary: String?): String {
+    fun url(repo: String, info: Info, summary: String?, kind: Kind = Kind.BUG): String {
         fun q(s: String) = URLEncoder.encode(s, "UTF-8")
         val params = linkedMapOf(
-            "template" to TEMPLATE,
-            "labels" to "bug",
+            "template" to kind.template,
+            "labels" to kind.label,
             "version" to "${info.appVersion} (protocol ${info.protocol}, server ${info.serverProtocol})",
             "device" to "${info.device}, Android ${info.android}",
         )
-        if (!summary.isNullOrBlank()) params["summary"] = summary
+        if (!summary.isNullOrBlank() && kind == Kind.BUG) params["summary"] = summary
         return "https://github.com/$repo/issues/new?" + params.entries.joinToString("&") { (k, v) -> "$k=${q(v)}" }
     }
 }

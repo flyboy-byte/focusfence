@@ -26,4 +26,12 @@ class BugReportTest {
         assertTrue(BugReport.url("x/y", info, BugReport.summary(numbers)).contains("&summary=filter+on"))
         assertEquals(false, u.contains(" "))
     }
+
+    @Test
+    fun featureRequestsAndFeedbackUseTheirOwnFormsAndNeverTheSummary() {
+        val f = BugReport.url("x/y", info, "filter on", BugReport.Kind.FEATURE)
+        assertTrue(f.contains("template=feature_request.yml&labels=enhancement&"))
+        assertFalse(f.contains("summary="))
+        assertTrue(BugReport.url("x/y", info, null, BugReport.Kind.FEEDBACK).contains("template=feedback.yml&labels=feedback&"))
+    }
 }

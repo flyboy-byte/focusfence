@@ -89,7 +89,7 @@ class SettingsFragment : Fragment() {
         // About
         row(b.rowGuide, R.string.settings_guide, null) { open(app.focusfence.SetupActivity::class.java) }
         row(b.rowAbout, R.string.about_title, null) { showAbout() }
-        row(b.rowBug, R.string.bug_title, R.string.bug_summary) { reportBug() }
+        row(b.rowBug, R.string.feedback_title, R.string.feedback_summary) { chooseFeedback() }
         row(b.rowGithub, R.string.github_title, null) {
             runCatching {
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/" + app.focusfence.dns.UpdateCheck.REPO)))
@@ -314,12 +314,26 @@ class SettingsFragment : Fragment() {
      * Report a bug (2026-11-25): opens GitHub's issue form filled with versions, and, if ticked, a numbers-only summary
      * shown here first (dns/BugReport). The repo is public, so the dialog says not to paste logs or screenshots.
      */
-    private fun reportBug() {
+    /** Bug, feature request or feedback: each opens its own GitHub issue form, with versions filled in. */
+    private fun chooseFeedback() {
+        val kinds = app.focusfence.dns.BugReport.Kind.values()
+        val names = arrayOf(getString(R.string.bug_title), getString(R.string.feature_title), getString(R.string.feedback_general))
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.feedback_title)
+            .setItems(names) { _, i -> reportBug(kinds[i]) }
+            .show()
+    }
+
+    private fun reportBug(kind: app.focusfence.dns.BugReport.Kind = app.focusfence.dns.BugReport.Kind.BUG) {
         val ctx = requireContext()
+        val bug = kind == app.focusfence.dns.BugReport.Kind.BUG
         val pad = (20 * resources.displayMetrics.density).toInt()
         val box = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0) }
         box.addView(android.widget.TextView(ctx).apply { setText(R.string.bug_body) })
-        val check = com.google.android.material.checkbox.MaterialCheckBox(ctx).apply { setText(R.string.bug_add_summary) }
+        val check = com.google.android.material.checkbox.MaterialCheckBox(ctx).apply {
+            setText(R.string.bug_add_summary)
+            visibility = if (bug) View.VISIBLE else View.GONE
+        }
         box.addView(check)
         val preview = android.widget.TextView(ctx).apply {
             typeface = android.graphics.Typeface.MONOSPACE
@@ -340,7 +354,11 @@ class SettingsFragment : Fragment() {
             }
         }
         com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.bug_title)
+            .setTitle(when (kind) {
+                app.focusfence.dns.BugReport.Kind.BUG -> R.string.bug_title
+                app.focusfence.dns.BugReport.Kind.FEATURE -> R.string.feature_title
+                app.focusfence.dns.BugReport.Kind.FEEDBACK -> R.string.feedback_general
+            })
             .setView(box)
             .setPositiveButton(R.string.bug_open) { _, _ ->
                 val sync = app.focusfence.sync.SyncStore
@@ -351,7 +369,7 @@ class SettingsFragment : Fragment() {
                     "${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})",
                     "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
                 )
-                val url = app.focusfence.dns.BugReport.url(app.focusfence.dns.UpdateCheck.REPO, info, summary.takeIf { check.isChecked })
+                val url = app.focusfence.dns.BugReport.url(app.focusfence.dns.UpdateCheck.REPO, info, summary.takeIf { bug && check.isChecked }, kind)
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
             }
             .setNegativeButton(android.R.string.cancel, null)
