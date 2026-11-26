@@ -113,7 +113,7 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `thr` record (diag): `top` (`name=ms;…;other=ms`), `total`, `screen` | Whole-process CPU by thread since the previous battery sample, from /proc — catches UI, GC, AI runtime threads |
 | `dns_cpu_us`, `fwd_cpu_us`, `a11y_cpu_us`, `text_cpu_us`, `shot_cpu_us`, `sync_cpu_us`, `sync`, `sync_fail` | Thread-CPU attribution per component (µs), so battery cost can be traced to a part of the app |
 | `text_captured`, `text_empty` | Text captures written / screens with no text |
-| `url_read`, `url_miss`, `url_editing` | Browser address bar read / not found / skipped because the user was typing in it |
+| `url_read`, `url_miss`, `url_hidden`, `url_editing` | Browser address bar read / not found / its known bar not on screen (a video, the toolbar scrolled away; the poll slows to 15 s after 3) / skipped because the user was typing in it |
 | `http_req`, `http_ms`, `http_4xx`, `http_5xx`, `http_fail_dns` / `_timeout` / `_connect` / `_tls` / `_io` | Every request the app makes to a server (`sync/Api`): count, total time of the answered ones, error answers, and failures by kind. No address or content |
 | `sync_ms` | Wall time of each sync pass (with `sync_cpu_us`, the battery and network cost of a pass) |
 | `ask_poll` | Extra once-a-minute syncs while an "ask a partner" request waits (plan 12) |

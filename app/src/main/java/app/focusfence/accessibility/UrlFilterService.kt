@@ -81,6 +81,7 @@ class UrlFilterService : AccessibilityService() {
         private const val URL_POLL_MS = 4_000L
         /** Foreground tick when only text capture needs it. */
         private const val TEXT_POLL_MS = 15_000L
+        private const val HIDDEN_SLOW_AFTER = 3
 
         @Volatile
         private var instance: UrlFilterService? = null
@@ -353,12 +354,22 @@ class UrlFilterService : AccessibilityService() {
             return
         }
         if (url == null) {
-            // A browser with no readable address bar: either the page has no
-            // toolbar showing (fullscreen, menus) or the browser changed its view
-            // IDs. A high rate here is the signal to update URL_BAR_IDS.
+            if (urlBarHidden) {
+                // Its known address bar isn't on screen: a video playing, the
+                // toolbar scrolled away, a menu. Nothing is wrong (2026-11-26
+                // export: 61% of "misses" were YouTube in Brave), so it's counted
+                // apart and the poll slows down until the bar comes back.
+                Monitor.perf.count("url_hidden")
+                hiddenStreak++
+                return
+            }
+            // A browser whose address bar was never found: it changed its view
+            // IDs or isn't one we know. A high rate here is the signal to update
+            // URL_BAR_IDS.
             Monitor.perf.count("url_miss")
             return
         }
+        hiddenStreak = 0
         Monitor.perf.count("url_read")
         val parts = LogEvents.splitUrl(url)
         if (logUrls && parts != null && urlDeduper.accept(eventPackage, parts.first, parts.second)) {
@@ -436,6 +447,7 @@ class UrlFilterService : AccessibilityService() {
         if (pkg == fgPkg) return
         fgPkg = pkg
         lastTextCaptureAt = 0L // a new screen gets its text read right away
+        hiddenStreak = 0 // and its address bar polled at the normal pace
         main.removeCallbacks(fgTick)
         if (tickNeeded(pkg)) onForegroundTick()
     }
@@ -470,7 +482,10 @@ class UrlFilterService : AccessibilityService() {
             }
         }
         Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
-        main.postDelayed(fgTick, if (logUrls && isBrowser) URL_POLL_MS else TEXT_POLL_MS)
+        // Three polls in a row with the address bar hidden (a video): poll at the
+        // slower text pace until it shows again, instead of every 4 s for an hour.
+        val fast = logUrls && isBrowser && hiddenStreak < HIDDEN_SLOW_AFTER
+        main.postDelayed(fgTick, if (fast) URL_POLL_MS else TEXT_POLL_MS)
     }
 
     override fun onInterrupt() {
@@ -480,14 +495,29 @@ class UrlFilterService : AccessibilityService() {
     /** Set by [findUrl] when the address bar has input focus (being edited). */
     private var urlBarEditing = false
 
+    /** Set by [findUrl]: this browser's address bar ID has worked before, it just isn't on screen now. */
+    private var urlBarHidden = false
+    private var hiddenStreak = 0
+    /** Browsers whose [URL_BAR_IDS] entry found the bar since the service started: their IDs are right. */
+    private val idWorks = HashSet<String>()
+
     private fun findUrl(packageName: String): String? {
         urlBarEditing = false
+        urlBarHidden = false
         val root = rootInActiveWindow ?: return null
         URL_BAR_IDS[packageName]?.let { id ->
-            root.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()?.let { node ->
+            val node = root.findAccessibilityNodeInfosByViewId(id)?.firstOrNull()
+            if (node != null) {
+                idWorks += packageName
                 if (node.isFocused) { urlBarEditing = true; return null }
                 node.text?.toString()?.takeIf { it.isNotBlank() }?.let { return it }
+            } else if (packageName in idWorks) {
+                // Known-good ID, bar not in the tree: hidden. The fallback search
+                // would walk the whole page every poll and find nothing.
+                urlBarHidden = true
+                return null
             }
+            Unit
         }
         return findUrlHeuristically(root)
     }
