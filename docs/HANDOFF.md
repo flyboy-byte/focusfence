@@ -25,9 +25,11 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 | Server tests (59, incl. `GroupsTest` ×4, `CompatLevel2Test`) | pass |
 | App `testDebugUnitTest assembleDebug lint` | pass, 0 lint errors |
 | Live `/v1/version` | protocol 2, oldest 2, server 2.1.0 |
-| Groups on phones | **not done** |
+| Groups on phones | Logan, 2026-11-26: "i just used group and it looks amazing" |
 
 ## Next, in order
+
+0. Plan 15 (repo health, `docs/plans/15-repo-health.md`): scoped from the assessment, not started.
 
 1. Logan tests on both phones: update; Pixel Partners → Start a group; second phone Join with a code or scan; each sees
    the other's report within ~2 min; leave on one, both stop.

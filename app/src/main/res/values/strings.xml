@@ -748,9 +748,11 @@
     <string name="acc_invite_email_row">Invite to %1$s</string>
     <string name="acc_invite_ends">Not used yet · ends in %1$d h</string>
     <string name="acc_join">Join</string>
-    <string name="acc_join_code">Code (8 characters)</string>
+    <string name="acc_join_code">Code (8 characters, dash optional)</string>
     <string name="acc_join_server">Server (under the code on their phone)</string>
-    <string name="acc_join_scan">To scan their QR code, use your camera app: it opens the invite, which offers this app.</string>
+    <string name="acc_join_scan">Or scan their QR code with your camera, then tap the link it shows: the page opens this app.</string>
+    <string name="acc_scan_qr">Scan a QR code</string>
+    <string name="acc_no_camera">No camera app found. Type the code instead.</string>
     <string name="acc_join_from_link">Invite on %1$s.</string>
     <string name="seen_title">%1$s\'s report</string>
     <string name="seen_ready_row">Alerts as notifications</string>
