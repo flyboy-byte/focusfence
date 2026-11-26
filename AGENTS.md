@@ -132,6 +132,9 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 6. No timers or polling for background work: piggyback on existing broadcasts (see `Monitor`) or
    use WorkManager. Battery is a feature.
 7. Update the relevant spec, and **`STATE.md`** if a status changed.
+8. Removing a feature: the plan's clean-cut section lists every public doc to update, and the PR adds the removed
+   words to `tools/check_docs.py` (CI fails on any public doc that still names them; a line that describes the past
+   on purpose ends with `<!-- docs: past -->`).
 
 ## Known traps (each one already bit this project)
 

@@ -10,7 +10,7 @@ replaced (four public docs still described plan 12's partners two days after pla
 | # | Fix | Size | Needs Logan |
 |---|---|---|---|
 | 1 | ~~Issue #18: a google.com rule stops all push notifications~~ DONE (2026-11-26) | ~1 h | no |
-| 2 | Docs drift guard in CI | ~1 h | no |
+| 2 | ~~Docs drift guard in CI~~ DONE (2026-11-26) | ~1 h | no |
 | 3 | Partner flow test across app and server (JVM) | ~half a day | no |
 | 4 | Emulator smoke test in CI | ~half a day | no |
 | 5 | Lint triage (130 warnings) | ~1 h | no |
@@ -35,7 +35,11 @@ blocked by a user rule.
 - Rule editor: one line under a rule that covers one of them ("Push notifications keep working").
 - Tests in `BlocklistTest`; close #18 with the PR.
 
-## 2. Docs drift guard (~1 h)
+## 2. ~~Docs drift guard~~ DONE (2026-11-26)
+
+Built as below, plus `double opt-in`; history lines opt out with `<!-- docs: past -->` (one, in `server/README.md`).
+AGENTS.md → "How to add or change a feature" step 8.
+
 
 `tools/check_docs.py`, run in `android.yml`: fails when a public doc (README, SECURITY, CONTRIBUTING, `docs/site/`,
 `server/README.md`, CLAUDE.md) names something removed. The list lives in the script, one line per term with the plan

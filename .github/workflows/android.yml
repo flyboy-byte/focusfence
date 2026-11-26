@@ -17,6 +17,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Plan 15: public docs must not describe removed features (list in the script).
+      - name: Check docs for removed features
+        run: python3 tools/check_docs.py
+
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
