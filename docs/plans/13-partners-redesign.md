@@ -124,4 +124,7 @@ from the pairing seed (an ask replaces them).
 ## Questions for Logan (next)
 
 1. Unlock codes read aloud (from the pairing seed) go away; ask-a-partner replaces them. OK?
-2. Mockups next: a page of phone screens to look at on the Pixel, or rough sketches in this file?
+2. ~~Mockups next~~: DONE (2026-11-26). An 8-screen clickable prototype (private Design canvas,
+   https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco): Partners, Add a partner (code + QR, or email), Sam joined,
+   partner join with a code, waiting for the key, the partner's report, the invite email, browser join. Logan: "i think
+   i like that." It's the basis for the build, so the screens follow it.
