@@ -218,9 +218,10 @@ def main():
     if p95s:
         print(f"  latency p95          median {statistics.median(p95s):.0f} ms, worst window {max(p95s)} ms")
     if tot["url_read"] + tot["url_miss"]:
-        print(f"  url read miss        {tot['url_miss'] / (tot['url_read'] + tot['url_miss']):.1%}")
+        print(f"  url read miss        {tot['url_miss'] / (tot['url_read'] + tot['url_miss']):.1%}"
+              + (f"  (bar hidden, not counted: {tot['url_hidden']})" if tot["url_hidden"] else ""))
     print(f"  a11y events          {tot['a11y_ev']}  ({tot['a11y_ev'] / span_h:.0f}/h)" if span_h else "")
-    shown = ("q", "fwd", "fwd_fail", "fwd_failover", "url_read", "url_miss", "a11y_ev", "http_req", "http_ms", "http_4xx", "http_5xx")
+    shown = ("q", "fwd", "fwd_fail", "fwd_failover", "url_read", "url_miss", "url_hidden", "a11y_ev", "http_req", "http_ms", "http_4xx", "http_5xx")
     if tot["sync_ms"]:
         shown += ("sync", "sync_fail", "sync_ms", "sync_cpu_us", "ask_poll")
     other = {k: v for k, v in tot.items() if k not in shown and not k.startswith(("http_fail_", "feed_"))}

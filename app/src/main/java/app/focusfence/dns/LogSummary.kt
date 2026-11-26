@@ -101,7 +101,10 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         return if (ok + fail == 0L) null else fail.toDouble() / (ok + fail)
     }
 
-    /** Fraction of browser address-bar reads that found no URL. */
+    /**
+     * Fraction of browser address-bar reads that found no URL where one should be. A known bar hidden by a video or
+     * a scrolled-away toolbar (`url_hidden`) isn't a miss.
+     */
     fun urlMissRate(): Double? {
         val ok = perfTotals["url_read"] ?: 0L
         val miss = perfTotals["url_miss"] ?: 0L
