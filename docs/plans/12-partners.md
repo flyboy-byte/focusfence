@@ -77,6 +77,19 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
   (Firebase) goes against no-Google and F-Droid; UnifiedPush needs a second app. First check how Ever Accountable and
   Accountable2You do it (not verified).
 
+## UI options for some other time (Logan, 2026-11-26: "log as options for some other time")
+
+Logan's reading after 2.26: "we added more functionality, less ui". Most of plan 12 lives on the partner's web page, in
+notifications or in dialogs. Options, best first, none decided:
+
+1. **Approve / Say no on the notification itself.** The partner's phone shows "… asks for your OK" with two action
+   buttons. It needs the ask id in the feed entry, and the app posting to `/p/{token}/unlock/{id}`.
+2. **A waiting card on the owner's Partners screen:** "Waiting for an OK to loosen a filter bundle · asked 4 min ago",
+   with Cancel (`ApprovalStore.waiting`).
+3. **A native "How alerts reach you" screen** in the partner's app, instead of the web form inside their report
+   WebView (`/p/{token}/prefs`).
+4. **Settings → Notifications** opening Android's page for the four partner categories.
+
 ## Notes per section
 
 Notes are added here as each section runs.
