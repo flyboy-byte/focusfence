@@ -565,6 +565,8 @@
     <string name="ask_failed">Couldn\'t ask (HTTP %1$d). Try again, or wait instead.</string>
     <string name="partner_stale_alert">No report from their phone for %1$d hours. Protection may be off, or the app removed.</string>
     <string name="report_unlock_title">Unlock code</string>
+    <string name="report_stop_seeing">Stop seeing this report</string>
+    <string name="acc_watch_gone">This report link no longer works: they removed you, or moved servers. Open it to remove it.</string>
     <string name="report_unlock_hint">If they ask, this code unlocks anything they\'ve set to need a partner PIN. Changes in %1$d min.</string>
     <string name="report_alerts">Recent alerts</string>
     <string name="report_no_digest">No report yet. Their phone sends one every few hours once it\'s online.</string>

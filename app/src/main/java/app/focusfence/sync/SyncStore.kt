@@ -172,6 +172,8 @@ object SyncStore {
         val heldDay: Long = 0,
         /** Plan 12 §8: the server feed has answered at least once; its owner's phone then stops using the mailbox. */
         val feedOk: Boolean = false,
+        /** Their server says this report link no longer exists (404): they removed you, or left the server. */
+        val linkGone: Boolean = false,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -220,6 +222,7 @@ object SyncStore {
             held = m["held"] as? String ?: "",
             heldDay = m["held_day"] as? Long ?: 0,
             feedOk = m["feed_ok"] == true,
+            linkGone = m["link_gone"] == true,
         )
     }.sortedBy { it.addedMs }
 
@@ -229,7 +232,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
                 "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
-                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay, "feed_ok" to w.feedOk,
+                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay, "feed_ok" to w.feedOk, "link_gone" to w.linkGone,
             )),
         ).commit()
     }

@@ -107,10 +107,15 @@
   }
 
   function merge(digests) {
-    var m = { off: 0, missing: 0, net: 0, lookups: 0, blocked: 0, enforce: 0, flagged: 0, events: [],
+    var m = { off: 0, offDays: {}, missing: 0, net: 0, lookups: 0, blocked: 0, enforce: 0, flagged: 0, events: [],
       lists: { cats: {}, cat_hosts: {}, apps_min: {}, sites: {}, top_blocked: {} }, from: null, to: null };
     digests.sort(function (a, b) { return (a.from || 0) - (b.from || 0); }).forEach(function (d) {
-      m.off += +d.off_min || 0; m.missing += +d.missing || 0; m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
+      m.off += +d.off_min || 0; m.missing += +d.missing || 0;
+      // Which days it was off, so "off for 130 minutes" says when: a week-old outage isn't news from today.
+      if (+d.off_min > 0) {
+        var day = new Date(+d.to || 0).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+        m.offDays[day] = (m.offDays[day] || 0) + (+d.off_min);
+      } m.net += +d.net_trouble || 0; m.lookups += +d.lookups || 0;
       m.blocked += +d.blocked || 0; m.enforce += +d.enforce || 0; m.flagged += +d.flagged_shots || 0;
       // A change has no time of its own: it happened within its slice, so it is shown under that slice's day.
       String(d.events || '').split('\n').forEach(function (e) { if (e.trim()) m.events.push({ t: +d.to || 0, from: +d.from || 0, text: e }); });
@@ -281,7 +286,10 @@
     var attn = el('div', null, 'card attn');
     attn.appendChild(el('h2', 'Needs attention'));
     var items = [];
-    if (m.off > 0) items.push(['Protection was off for ' + m.off + ' minutes.', 'bad']);
+    if (m.off > 0) {
+      var when = Object.keys(m.offDays).map(function (k) { return k + ' (' + m.offDays[k] + ' min)'; }).join(', ');
+      items.push(['Protection was off for ' + m.off + ' minutes in this period: ' + when + '.', 'bad']);
+    }
     if (m.missing > 0) items.push([m.missing + ' records are missing from the log (deleted or lost).', 'bad']);
     alerts.filter(function (a) { return alarming(a.text); }).slice(-5).reverse().forEach(function (a) {
       items.push([dayName(a.t).split(',')[0] + ' ' + hm(a.t) + ': ' + short(a.text), 'bad']);
