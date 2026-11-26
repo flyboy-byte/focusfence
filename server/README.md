@@ -29,7 +29,7 @@ Whoever uses it first joins: in the Focus Fence app (by code, or "Open in the ap
   through the emailed link (which proves the address). A browser joined by code gets the report, not alerts.
 - **Removing** a partner, or a partner leaving or dropping a device, makes the phone start a new report key.
 
-Apps at protocol level 1 (pairing mailboxes, keyed `/i/` links, email double opt-in, SMS, groups) get HTTP 426 and an
+Apps at protocol level 1 (pairing mailboxes, keyed `/i/` links, email double opt-in, SMS, groups) get HTTP 426 and an <!-- docs: past -->
 "update the app" message. Their partner data was deleted, not converted (`Store.migrateToV2`, at every start).
 
 **Admin page** (`FF_ADMIN_EMAILS`): sign in with an emailed code, or with an authenticator code once one is set up.
