@@ -29,11 +29,10 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 ## Next, in order
 
-0. Plan 15 (repo health, `docs/plans/15-repo-health.md`): scoped from the assessment, not started.
-
-1. Logan tests on both phones: update; Pixel Partners → Start a group; second phone Join with a code or scan; each sees
-   the other's report within ~2 min; leave on one, both stop.
-2. Fix what that finds; unpause production after a good test.
+1. Logan tries 3.1.2 (share as QR picture, one join box, Scan a QR code, dash auto-added).
+2. Plan 15 (repo health, `docs/plans/15-repo-health.md`), scoped, not started: #18 first (~1 h), then the docs-drift
+   check (~1 h), then the app+server partner-flow test (~half a day).
+3. Unpause production once Logan's happy with the partner and group flows (groups: "looks amazing", 2026-11-26).
 
 ## Parked (don't build unless Logan asks)
 
