@@ -1,6 +1,7 @@
 # Plan 14: groups on the plan 13 partners (started 2026-11-26)
 
-**Status:** planned, not built. Mockups before code, like plan 13.
+**Status:** planned, not built. Mockups done 2026-11-26 (screens 9–13 on the plan 13 canvas,
+https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco), waiting for Logan's look before code.
 
 **Why:** plan 13 cut the old groups (they ran on pairing keys and mailboxes, both gone). Logan, 2026-11-26, after the
 first 3.0.0 test: real groups, not just mutual pairs ("Real groups is the I'm leaning towards"). No user accounts
