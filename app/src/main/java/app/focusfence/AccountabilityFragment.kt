@@ -448,7 +448,18 @@ class AccountabilityFragment : Fragment() {
             SyncStore.serverUrl(requireContext()).removePrefix("https://")) else null
         val name = field(R.string.acc_join_name, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         name.filters = arrayOf(android.text.InputFilter.LengthFilter(60))
-        if (linked == null) box.addView(note(getString(R.string.acc_join_scan)))
+        if (linked == null) {
+            box.addView(note(getString(R.string.acc_join_scan)))
+            // The camera app reads the QR code and opens its /c/ page, whose button comes back here with the code
+            // filled in. No scanner of our own: no camera permission, nothing to maintain.
+            box.addView(MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                setText(R.string.acc_scan_qr)
+                setOnClickListener {
+                    runCatching { startActivity(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)) }
+                        .onFailure { Toast.makeText(requireContext(), R.string.acc_no_camera, Toast.LENGTH_LONG).show() }
+                }
+            })
+        }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.acc_watch_add)
             .setView(box)

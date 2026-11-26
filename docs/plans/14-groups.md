@@ -76,4 +76,5 @@ Changes from the plan while building:
 
 **Verified:** server tests (59, 4 new in `GroupsTest`: pairs both ways and keys, two groups one pair, six and full,
 enroll by group code and the QR page). App unit tests, assembleDebug and lint pass.
-**Not verified:** on phones. Needs server 2.1.0 deployed before app 3.1.0.
+**On phones (2026-11-26):** Logan used a group on 3.1.x: "i just used group and it looks amazing". He asked for a Scan a
+QR code button (opens the camera app; 3.1.2) and codes with or without the dash (already so; now tested on the server).

@@ -94,7 +94,8 @@ class GroupsTest {
         val look = http.postJson("/v1/codes/lookup", """{"code":"${g.code}"}""")
         assertEquals(LookupResponse("group", "Tuesday group", listOf("Logan")), json.decodeFromString(LookupResponse.serializer(), look.bodyAsText()))
         assertEquals(HttpStatusCode.OK, http.join(sam, g.code, "Sam").status)
-        assertEquals(HttpStatusCode.OK, http.join(jo, g.code, "Jo").status)
+        // Typed without the dash, in lower case: the same code.
+        assertEquals(HttpStatusCode.OK, http.join(jo, g.code.replace("-", "").lowercase(), "Jo").status)
         // Three people: each phone has the other two as partners, made by the group, alerts "important" by default.
         for (p in listOf(logan, sam, jo)) {
             assertEquals(2, partners(p).size)
