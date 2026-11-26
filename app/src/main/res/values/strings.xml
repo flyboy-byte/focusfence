@@ -3,13 +3,7 @@
     <string name="app_name">Focus Fence AC</string>
     <string name="blocking_switch_label">Protection</string>
     <string name="status_inactive">Not filtering. Turn it on to block sites.</string>
-    <string name="status_active">Active — filtering and recording (%1$d blocked this session)</string>
     <string name="domain_hint">Domain to block (e.g. reddit.com)</string>
-    <string name="add_button">Add</string>
-    <string name="preset_button">Add social media presets</string>
-    <string name="blocked_domains_header">Blocked domains</string>
-    <string name="delete_domain">Remove domain</string>
-    <string name="edit_schedule">Edit schedule</string>
     <string name="invalid_domain">Enter a valid domain, like example.com</string>
     <string name="vpn_permission_denied">VPN permission is required to block sites</string>
     <string name="notification_channel_name">Blocking status</string>
@@ -20,29 +14,18 @@
     <string name="rule_window">Blocked %1$s–%2$s daily</string>
     <string name="rule_budget">Limit %1$d min/day · %2$d min used</string>
     <string name="rule_budget_exhausted">Limit %1$d min/day · used up, blocked until midnight</string>
-    <string name="schedule_always">Block always</string>
-    <string name="schedule_window">Block only during set hours…</string>
-    <string name="schedule_budget">Daily time limit…</string>
-    <string name="budget_dialog_title">Daily time limit for %1$s</string>
-    <string name="schedule_paths">Allow only specific sections…</string>
     <string name="rule_paths">Blocked except: %1$s</string>
-    <string name="paths_dialog_title">Allowed sections of %1$s</string>
     <string name="paths_dialog_message">Everything on this site will be blocked in the browser except pages under these paths. Separate several with commas.</string>
     <string name="paths_dialog_hint">/marketplace, /groups</string>
     <string name="paths_invalid">Enter at least one path, like /marketplace</string>
 
     <string name="strict_title">Strict mode</string>
-    <string name="strict_off">Off — rules can be changed freely</string>
-    <string name="strict_locked">Locked — turning blocking off or removing rules requires a 10-minute unlock</string>
-    <string name="strict_pending">Unlocks in %1$s — go do something else</string>
-    <string name="strict_unlocked">Unlocked for %1$s — make your changes now</string>
     <string name="strict_request_unlock">Request unlock</string>
     <string name="strict_dialog_locked">Strict mode is on. To turn blocking off, remove rules, or un-block apps, request an unlock and wait 10 minutes; you\'ll get a notification when it opens and then a 15-minute window to make changes.</string>
     <string name="strict_dialog_pending">Unlock already requested — %1$s to go. When it opens you\'ll get a notification and have 15 minutes to make changes.</string>
     <string name="strict_locked_toast">Strict mode: un-blocking needs an unlock first</string>
 
     <string name="apps_dialog_title">Block these apps</string>
-    <string name="apps_choose_button">Blocked apps (%1$d) — choose</string>
     <string name="app_blocked_toast">App blocked by Focus Fence</string>
 
     <string name="app_rule_dialog_title">%1$s — when to block</string>
@@ -57,7 +40,6 @@
     <string name="app_rule_until">Blocked until %1$s</string>
     <string name="app_rule_until_passed">Commitment finished — no longer blocking</string>
     <string name="app_rule_budget_unsupported">Daily limits for apps aren\'t supported yet — not blocking</string>
-    <string name="excluded_apps_button">Apps that skip the filter (%1$d)</string>
     <string name="excluded_dialog_title">Exclude apps from filtering</string>
     <string name="excluded_guarded_suffix">%1$s  ·  needs delay in strict mode</string>
 
@@ -83,9 +65,6 @@
     <string name="stats_today_label">Today</string>
 
     <string name="section_service_label">Accessibility service</string>
-    <string name="section_idle">Needed for blocking apps, parts of sites, and telling partners about repeated tries.</string>
-    <string name="section_enabled">On. Reading browser address bars.</string>
-    <string name="section_disabled">Off, but your rules need it. Tap to turn on.</string>
     <string name="section_enable_button">Enable</string>
     <string name="section_enable_message">Section rules work by reading the browser\'s address bar and backing out of blocked pages, which Android only allows via an accessibility service. Enable "Focus Fence" on the next screen. Nothing is stored or sent anywhere.</string>
     <string name="section_blocked_toast">Blocked by Focus Fence</string>
@@ -109,7 +88,6 @@
     <string name="group_window">Scheduled</string>
     <string name="group_budget">Time limits</string>
     <string name="group_paths">Section rules</string>
-    <string name="group_apps">Blocked apps</string>
     <string name="group_title_fmt">%1$s (%2$d)</string>
     <string name="blocking_add">Add</string>
     <string name="blocking_add_site">Add site</string>
@@ -120,7 +98,6 @@
     <string name="blocking_sites_empty">Block a site all day, on a schedule, or after a daily time limit.</string>
     <string name="blocking_apps">Apps</string>
     <string name="blocking_apps_empty">An app you add closes as soon as it opens.</string>
-    <string name="blocked_app_summary">Blocked app</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_remove">Remove</string>
@@ -145,9 +122,7 @@
     <string name="attention_accessibility">Section rules and blocked apps need the accessibility permission.</string>
     <string name="attention_adlist">Ad blocking is on, but no filter list is downloaded yet.</string>
     <string name="attention_adlist_action">Open settings</string>
-    <string name="settings_accessibility_button">Open accessibility settings</string>
     <string name="settings_guide">Guide</string>
-    <string name="list_hint">Tap a domain to choose how it\'s blocked: always, on a schedule, with a daily limit, or allowing only some sections.</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_back">Back</string>
     <string name="onb_welcome_title">Accountability for porn</string>
@@ -171,7 +146,6 @@
     <string name="onb_partner_add">Add a partner</string>
     <string name="onb_partner_me">Just me for now</string>
     <string name="onboarding_skip">Skip</string>
-    <string name="onboarding_done">Get started</string>
     <string name="onboarding_progress">%1$d of %2$d</string>
 
     <string name="help_overview_title">Filtering + accountability</string>
@@ -198,12 +172,10 @@
     <string name="adlist_none">No filter list downloaded yet</string>
     <string name="adlist_status">%1$s domains · updated %2$s</string>
     <string name="adlist_downloading">Downloading filter list…</string>
-    <string name="adlist_update">Update</string>
     <string name="adlist_error">Couldn\'t download the filter list — check your connection</string>
 
     <!-- Logs & diagnostics -->
     <string name="diag_title">Logs and diagnostics</string>
-    <string name="diag_settings_summary">What happened on this phone, how well the filter works, and battery cost. Stays on the phone unless you export it.</string>
     <string name="diag_open">Open logs &amp; diagnostics</string>
     <string name="diag_recording">What gets recorded</string>
     <string name="diag_log_allowed">Record allowed lookups, not just blocked ones</string>
@@ -226,8 +198,6 @@
 
     <!-- Categories & allowlist -->
     <string name="categories_title">Block lists</string>
-    <string name="categories_open">Categories &amp; allowlist</string>
-    <string name="categories_settings_summary">Security lists are on by default. Adult, gambling and more are there to switch on.</string>
     <string name="base_tier_hint">Strength</string>
     <string name="categories_strength">Strength: %1$s</string>
     <string name="categories_group_protection">Accountability · always on</string>
@@ -239,16 +209,12 @@
     <string name="categories_update_failed">Couldn\'t update %1$s. Check your connection.</string>
     <string name="allowlist_remove">Remove %1$s</string>
     <string name="categories_intro">Porn accountability is always on: adult sites are recorded or blocked, and so are the ways around the filter. Everything under Extra blocking is optional, on top of that. Report lets a site through but records the visit.</string>
-    <string name="policy_hint">Policy</string>
     <string name="policy_off">Off</string>
     <string name="policy_report">Report</string>
     <string name="policy_block">Block</string>
-    <string name="category_update">Update list</string>
     <string name="category_downloading">Downloading…</string>
     <string name="category_not_downloaded">List not downloaded yet</string>
     <string name="category_downloaded">%1$s sites</string>
-    <string name="category_no_list">Set a list URL to use this category</string>
-    <string name="category_download_failed">Download failed: %1$s</string>
     <string name="allowlist_title">Always allow</string>
     <string name="allowlist_intro">For a site a list blocks by mistake. Your own rules and the bypass list still apply.</string>
     <string name="allowlist_hint">example.com</string>
@@ -265,10 +231,7 @@
 
     <!-- Monitoring (experimental) -->
     <string name="monitor_title">Screen checks</string>
-    <string name="monitor_open">Monitoring (experimental)</string>
     <string name="monitor_settings_summary">Screenshots and on-screen text, checked on this phone.</string>
-    <string name="monitor_banner">This records what is on your screen.</string>
-    <string name="monitor_banner_detail">For self-accountability: you choose the apps and your partner. While capture is on, a permanent notification is always shown so anyone using the phone can see it. It cannot be hidden.</string>
     <string name="monitor_shots">Screenshots</string>
     <string name="monitor_ai">AI flagging</string>
     <string name="monitor_ai_hint">About 0.1 s per screenshot, on this phone.</string>
@@ -285,7 +248,6 @@
     <string name="monitor_retain_score">Score only (no images)</string>
     <string name="monitor_retain_flagged">Flagged images only</string>
     <string name="monitor_retain_all">All sampled images</string>
-    <string name="monitor_partner_key">Partner encryption key</string>
     <string name="monitor_key_set">A partner key is set. Kept images are encrypted so only your partner can open them.</string>
     <string name="monitor_key_unset">No partner key yet. Without one, images are not kept — only scores.</string>
     <string name="monitor_partner_key_hint">Paste partner public key (Base64)</string>
@@ -294,8 +256,6 @@
     <string name="watched_dialog_title">Apps to monitor</string>
 
     <!-- Strict mode configuration + PIN unlock -->
-    <string name="strict_open">Strict mode</string>
-    <string name="strict_settings_summary">Make loosening anything wait, or need a PIN you or a partner hold.</string>
     <string name="strict_enable">Strict mode</string>
     <string name="strict_explain">While on, turning off protection, clearing logs, or reducing monitoring takes a delay (or a PIN). Adding protection is always allowed.</string>
     <string name="strict_unlock_mode">How to unlock</string>
@@ -331,7 +291,6 @@
     <string name="guard_level_partner_pin">Partner PIN</string>
 
     <!-- Uninstall protection (device admin) -->
-    <string name="owner_settings_summary">Uninstalling takes an extra confirm</string>
     <string name="admin_card_title">Uninstall protection</string>
     <string name="admin_card_body">While it\'s on, Android asks you to deactivate it before Focus Fence can be uninstalled (in App info it shows as \"Deactivate &amp; uninstall\"). It\'s one extra confirm, not a lock: the app can always be removed.\n\nTurning it off is recorded. If the app is uninstalled, it stops checking in, and partners get a \"phone went silent\" alert within a few hours.</string>
     <string name="admin_activate">Turn on</string>
@@ -340,29 +299,15 @@
     <string name="admin_disable_warning">Turning off Focus Fence protection is recorded. If the app is then uninstalled, your partners are told the phone went silent.</string>
 
     <!-- Home status card + settings groups -->
-    <string name="home_status_title">Status</string>
     <string name="home_row_bundles">Block lists</string>
     <string name="home_row_monitoring">Screen checks</string>
     <string name="home_row_timeline">App time</string>
-    <string name="home_row_strict">Friction (strict mode)</string>
     <string name="home_row_managed">Uninstall protection</string>
-    <string name="home_row_log">Activity log</string>
-    <plurals name="home_bundles_on">
-        <item quantity="one">%1$d bundle on (%2$d blocking)</item>
-        <item quantity="other">%1$d bundles on (%2$d blocking)</item>
-    </plurals>
-    <string name="home_none_on">None on</string>
     <string name="home_mon_both">Screenshots + text</string>
     <string name="home_mon_shots">Screenshots</string>
     <string name="home_mon_text">On-screen text</string>
     <string name="home_off">Off</string>
-    <string name="home_timeline_on">Recording which apps are used</string>
-    <string name="home_timeline_off">Off: grant Usage access</string>
-    <string name="home_managed_admin">On</string>
-    <string name="home_managed_off">Off — tap to turn on</string>
-    <string name="home_log_value">View, export, battery and health</string>
     <string name="settings_group_accountability">Accountability</string>
-    <string name="settings_group_filtering">Filtering</string>
     <string name="settings_group_protection">Protection</string>
     <string name="settings_group_advanced">Advanced</string>
     <string name="settings_group_about">About</string>
@@ -386,7 +331,6 @@
     <string name="home_health_lockdown">Blocking internet — turn off lockdown</string>
     <string name="home_row_health">Filter health</string>
     <string name="home_health_off">Off</string>
-    <string name="home_health_ok">Working</string>
     <string name="home_health_offline">No network</string>
     <string name="home_health_degraded">Slow / failing</string>
     <string name="home_health_down">Lookups failing</string>
@@ -396,13 +340,9 @@
     <!-- Accountability partners -->
     <!-- Setup guide -->
     <string name="setup_title">Set up accountability</string>
-    <string name="setup_open_summary">A checklist of the optional layers, what each one costs, and where to turn it on. Skip any of it.</string>
-    <string name="setup_open">Open</string>
     <string name="setup_intro">All optional and independent. With everything off, this is the same light on-device blocker: no uploads, no capture, no server. Costs were measured on one Pixel 9 over five days.</string>
     <string name="setup_section_recommended">Recommended</string>
     <string name="setup_section_optional">Optional</string>
-    <string name="setup_recommended">recommended</string>
-    <string name="setup_optional">optional</string>
     <string name="setup_on">On</string>
     <string name="setup_off">Off</string>
     <string name="setup_filter">Website filter</string>
@@ -499,12 +439,9 @@
     <string name="report_stop_seeing">Stop seeing this report</string>
     <string name="acc_watch_gone">This report link no longer works: they removed you, or the server was reset. Open it to remove it.</string>
     <string name="home_row_partners">Partners</string>
-    <string name="home_partners_none">Off (optional, needs a server)</string>
-    <string name="home_partners_count">%1$d set up · synced %2$s</string>
 
     <!-- DNS server choice -->
     <string name="dns_title">DNS server</string>
-    <string name="dns_change">Change</string>
     <string name="dns_intro">Where allowed lookups go after Focus Fence filters them. Your filter rules apply first either way, so this never weakens blocking.</string>
     <string name="dns_auto">Automatic (recommended): your network\'s DNS, then Cloudflare/Google</string>
     <string name="dns_custom">My own DNS server</string>
@@ -512,7 +449,6 @@
     <string name="dns_fallback">If it doesn\'t answer, fall back to automatic (keeps the internet working)</string>
     <string name="dns_bad_lines">Ignored (not a server address): %1$s</string>
     <string name="dns_need_entry">Add at least one server, or pick another option.</string>
-    <string name="capture_status_title">Is capture working?</string>
     <string name="monitor_watching">Watching: %1$s</string>
     <string name="watch_all">All apps (recommended)</string>
     <string name="watch_by_type">Choose by type (browsers, social, video…)</string>
@@ -522,7 +458,6 @@
     <string name="hero_off">Not protected</string>
     <string name="hero_problem">Needs attention</string>
     <string name="monitor_section_capture">What it checks</string>
-    <string name="monitor_section_schedule">How often, and what to keep</string>
     <string name="monitor_section_key">Old partner key (optional)</string>
     <string name="restricted_settings_hint">Switch greyed out, or "Restricted setting"? Android 13+ blocks this for apps not from the Play Store until you allow it: tap App info below → ⋮ (top right) → Allow restricted settings, then come back and turn it on.</string>
     <string name="open_app_info">App info</string>
@@ -537,7 +472,6 @@
     <string name="oem_tip_oppo">OnePlus/OPPO/realme also: App info → Battery → Allow background activity (and Auto launch).</string>
     <string name="oem_tip_huawei">Huawei/Honor also: Settings → Battery → App launch → Focus Fence AC → Manage manually, all on.</string>
     <string name="oem_tip_vivo">vivo also: Settings → Battery → Background power consumption → allow Focus Fence AC.</string>
-    <string name="friction_settings_button">Friction settings ›</string>
     <string name="review_title">Review flagged screenshots</string>
     <string name="review_button">Review %1$d flagged</string>
     <string name="review_switch">Keep a private copy of risky screenshots</string>
@@ -583,27 +517,22 @@
     <string name="blocked_screen_open_app">Open Focus Fence</string>
     <string name="blocked_reason_always">This site is on your block list.</string>
     <string name="blocked_reason_schedule">This site is blocked from %1$s to %2$s.</string>
-    <string name="blocked_reason_budget">You\'ve used your %1$d minutes on this site for today.</string>
+    <plurals name="blocked_reason_budget">
+        <item quantity="one">You\'ve used your %1$d minute on this site for today.</item>
+        <item quantity="other">You\'ve used your %1$d minutes on this site for today.</item>
+    </plurals>
     <string name="blocked_reason_commitment">You committed to staying off this site until %1$s.</string>
     <string name="blocked_reason_section">Only some parts of this site are allowed.</string>
-    <string name="block_screen_label">When a site is blocked</string>
-    <string name="block_screen_summary">Ads and trackers are blocked quietly. When you open a site you blocked, Focus Fence lets you know, so it doesn\'t look like your internet is broken.</string>
-    <string name="block_style_notify">A notification</string>
-    <string name="block_style_screen">Show a full \"Blocked by Focus Fence\" screen</string>
-    <string name="block_style_off">Nothing. The site just doesn\'t load</string>
     <string name="block_screen_channel">Blocked sites</string>
     <string name="block_screen_notify_title">%1$s blocked by Focus Fence</string>
     <string name="block_screen_notify_text">Tap to see why.</string>
     <string name="admin_turn_off">Turn off</string>
     <string name="admin_status_on">Uninstall protection is on</string>
     <string name="admin_status_off">Uninstall protection is off</string>
-    <string name="block_notice_high_risk">Also adult, gambling and scam sites</string>
     <string name="block_notice_high_risk_summary">Only for lists you turned on</string>
     <string name="block_partner_repeated">Tell partners if I keep trying</string>
-    <string name="block_partner_repeated_summary">Three tries at an adult, gambling or scam site within 10 minutes. Partners see the category, not the site. Needs the accessibility service, so a browser loading in the background never counts.</string>
     <string name="block_notify_category_title">Blocked: %1$s</string>
     <string name="blocked_reason_category">It\'s on the %1$s list you turned on.</string>
-    <string name="block_style_full_screen_note">The full screen needs the accessibility service. Without it you get the notification.</string>
     <!-- Home redesign (2026-11-24) -->
     <string name="home_hero_on_sub">Filter on</string>
     <string name="home_hero_on_strict_sub">Filter on · strict mode locked</string>
@@ -661,13 +590,11 @@
     <string name="update_failed_signer">The download is signed with a different key, so it wasn\'t installed.</string>
     <string name="update_failed_install">Update failed: %1$s</string>
     <string name="update_check_switch">Check for updates</string>
-    <string name="update_check_summary">Every few hours, and when you open the app, it asks GitHub for the latest release and tells you if there\'s a new one. Nothing installs without you.</string>
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking…</string>
     <string name="update_none">You have the latest version.</string>
     <string name="update_check_failed">Couldn\'t reach GitHub. Try again later.</string>
     <string name="settings_group_blocking">Blocking</string>
-    <string name="excluded_apps_summary">Games, music and maps can bypass the filter if they break behind it.</string>
     <string name="update_whats_new">What\'s new</string>
     <string name="update_size_whats_new">%1$s · What\'s new</string>
     <string name="update_progress">Downloading · %1$s of %2$s</string>
@@ -679,12 +606,10 @@
     <string name="update_banner_dismiss">Hide until the next version</string>
     <string name="update_no_notes">No notes for this version.</string>
     <string name="whats_new_title">What\'s new</string>
-    <string name="whats_new_summary">Changes in recent versions</string>
     <string name="whats_new_loading">Loading from GitHub…</string>
     <string name="whats_new_failed">Couldn\'t reach GitHub. Try again later.</string>
     <string name="whats_new_installed">(installed)</string>
     <string name="github_title">Source code on GitHub</string>
-    <string name="github_summary">Code, every release, and where to report a problem</string>
     <!-- Settings, rounded groups (2026-11-25) -->
     <string name="settings_group_updates">Updates</string>
     <string name="settings_strict_summary">Loosening anything takes a wait or a PIN</string>
@@ -699,7 +624,6 @@
     <string name="settings_none">None</string>
     <string name="notices_title">When a site is blocked</string>
     <string name="notices_intro">Ads and trackers are always blocked quietly. This is for sites you or your lists block.</string>
-    <string name="notices_group_style">When a site is blocked, show</string>
     <string name="notices_group_high_risk">Adult, gambling and scam lists</string>
     <string name="notices_high_risk_title">Tell me about these too</string>
     <string name="notices_partner_summary">3 tries in 10 minutes. Partners see the category, not the site. Needs the accessibility service.</string>
