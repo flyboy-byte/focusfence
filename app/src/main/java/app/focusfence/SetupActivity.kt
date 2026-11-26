@@ -7,11 +7,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import app.focusfence.admin.DeviceAdmin
-import app.focusfence.data.GroupStore
 import app.focusfence.data.LogSettings
 import app.focusfence.data.MonitorSettings
 import app.focusfence.data.StrictStore
-import app.focusfence.databinding.ActivityGroupBinding
+import app.focusfence.databinding.ActivitySetupBinding
 import app.focusfence.sync.SyncStore
 import app.focusfence.vpn.DnsVpnService
 
@@ -23,11 +22,11 @@ import app.focusfence.vpn.DnsVpnService
  */
 class SetupActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityGroupBinding
+    private lateinit var binding: ActivitySetupBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityGroupBinding.inflate(layoutInflater) // same plain scroll-view skeleton as the group screen
+        binding = ActivitySetupBinding.inflate(layoutInflater) // a plain scroll-view skeleton
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setTitle(R.string.help_title)
@@ -45,7 +44,7 @@ class SetupActivity : AppCompatActivity() {
 
     private fun layers(): List<Layer> {
         val server = SyncStore.serverUrl(this).startsWith("https://")
-        val partners = server && (SyncStore.deviceId(this) != null || SyncStore.ownPairings(this).isNotEmpty() || SyncStore.watches(this).isNotEmpty())
+        val partners = server && SyncStore.deviceId(this) != null
         val admin = DeviceAdmin.isDeviceOwner(this) || DeviceAdmin.isAdminActive(this)
         return listOf(
             Layer(R.string.setup_filter, R.string.setup_filter_what, R.string.setup_filter_cost, true, DnsVpnService.isRunning, MainActivity::class.java),
@@ -53,7 +52,6 @@ class SetupActivity : AppCompatActivity() {
             Layer(R.string.setup_strict, R.string.setup_strict_what, R.string.setup_strict_cost, true, StrictStore.isEnabled(this), StrictModeActivity::class.java),
             Layer(R.string.setup_admin, R.string.setup_admin_what, R.string.setup_admin_cost, true, admin, UninstallProtectionActivity::class.java),
             Layer(R.string.setup_partners, R.string.setup_partners_what, R.string.setup_partners_cost, true, partners, AccountabilityActivity::class.java),
-            Layer(R.string.setup_group, R.string.setup_group_what, R.string.setup_group_cost, false, GroupStore.active(this), GroupActivity::class.java),
             Layer(R.string.setup_text, R.string.setup_text_what, R.string.setup_text_cost, false, MonitorSettings.textEnabled(this), MonitoringActivity::class.java),
             Layer(R.string.setup_shots, R.string.setup_shots_what, R.string.setup_shots_cost, false,
                 MonitorSettings.screenshotsEnabled(this) && MonitorSettings.aiEnabled(this), MonitoringActivity::class.java),

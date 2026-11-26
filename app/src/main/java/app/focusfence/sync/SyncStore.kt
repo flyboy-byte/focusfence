@@ -3,19 +3,17 @@ package app.focusfence.sync
 import android.content.Context
 import android.content.SharedPreferences
 import app.focusfence.dns.LogJson
-import app.focusfence.dns.Pairing
 
 /**
  * Sync state, in its own prefs file: it changes on every upload, and keeping it
  * out of the `focusfence` file means it never wakes the services' rule
  * listeners.
  *
- * Two independent partner channels live here:
- *  - **server**: device id + upload cursor (seq, hash chain) for the web/email
- *    partner path.
- *  - **pairings**: app-to-app. [OwnPairing] = someone watching this phone;
- *    [Watch] = a phone this user is a partner for. Each holds the pairing key,
- *    from which everything else is derived (see [Pairing]).
+ * Both sides of plan 13's partners live here:
+ *  - **this phone, watched**: its server, device id, alert cursor and report key. Who its partners are is the
+ *    server's list ([Accountability.partners]); nothing about them is kept here.
+ *  - **reports this user sees** ([Seen]): each on its own server, with this phone's device key for it and, once the
+ *    owner's phone has sealed it over, that report's key.
  */
 object SyncStore {
 
@@ -30,8 +28,7 @@ object SyncStore {
     private const val KEY_ERROR = "last_error"
     private const val KEY_REPORT_KEY = "report_key"
     private const val KEY_LAST_REPORT = "last_report_ms"
-    private const val OWN = "own:"
-    private const val WATCH = "watch:"
+    private const val SEEN = "seen:"
 
     fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -81,16 +78,32 @@ object SyncStore {
     }
 
     /**
-     * The key that seals this phone's web/email partner report (D-023). Created on first use, kept only here and in
-     * the links handed to partners; the server never sees it. Clearing app data makes a new one, and partners then
-     * need the new link.
+     * The key that seals this phone's partner report (D-023). Created on first use and kept only here; partners'
+     * devices get it sealed to their own keys (plan 13), so the server never sees it. Clearing app data makes a new
+     * one, and the phone seals that over at the next check-in.
      */
     fun reportKey(context: Context): String {
         prefs(context).getString(KEY_REPORT_KEY, null)?.takeIf { app.focusfence.dns.ReportSeal.keyBytes(it) != null }?.let { return it }
         val k = app.focusfence.dns.ReportSeal.newKey()
-        prefs(context).edit().putString(KEY_REPORT_KEY, k).apply()
+        prefs(context).edit().putString(KEY_REPORT_KEY, k).commit()
         return k
     }
+
+    /**
+     * A new report key: after a partner is removed, leaves, or drops a device, so what they still hold opens only the
+     * reports from before. The next heartbeat sends its id, and the server asks for it to be sealed to everyone left.
+     */
+    fun rotateReportKey(context: Context) {
+        prefs(context).edit().putString(KEY_REPORT_KEY, app.focusfence.dns.ReportSeal.newKey()).commit()
+    }
+
+    /** What the owner calls themselves in invites ("Logan wants you as a partner"). Empty until asked once. */
+    fun ownerName(context: Context): String = prefs(context).getString("owner_name", "").orEmpty()
+    fun setOwnerName(context: Context, name: String) { prefs(context).edit().putString("owner_name", name.trim().take(40)).apply() }
+
+    /** When this phone last made an invite: for 30 minutes after, it checks in every minute so a joiner waits under one. */
+    fun inviteMadeMs(context: Context): Long = prefs(context).getLong("invite_made", 0)
+    fun setInviteMadeMs(context: Context, t: Long) { prefs(context).edit().putLong("invite_made", t).apply() }
 
     fun lastReportMs(context: Context): Long = prefs(context).getLong(KEY_LAST_REPORT, 0)
     fun setLastReportMs(context: Context, t: Long) { prefs(context).edit().putLong(KEY_LAST_REPORT, t).apply() }
@@ -125,127 +138,84 @@ object SyncStore {
 
     /** Anything configured that the worker should run for. */
     fun hasWork(context: Context): Boolean =
-        serverUrl(context).isNotBlank() &&
-            (deviceId(context) != null || ownPairings(context).isNotEmpty() || watches(context).isNotEmpty() ||
-                app.focusfence.data.GroupStore.active(context))
+        (serverUrl(context).isNotBlank() && deviceId(context) != null) || seen(context).isNotEmpty()
 
-    // ---- pairings ------------------------------------------------------------
+    // ---- reports this user sees (plan 13) -------------------------------------
 
-    /** A partner watching this phone, app to app. */
-    data class OwnPairing(
-        val code: String,
-        val name: String,
-        val createdMs: Long,
-        val lastDigestMs: Long,
-        val alertSeq: Long,
-        val boxReady: Boolean,
-        /** D-035: the invite this pairing went out with; [pending] until a phone takes it. Nothing is sent while pending. */
-        val inviteId: String = "",
-        val pending: Boolean = false,
-        /**
-         * Plan 12 §8: their app reads the server's alert feed, which already carries everything partners hear. Alerts
-         * and digests then stop going through this pairing's mailbox (one path). Learned once from the server, kept.
-         */
-        val viaServer: Boolean = false,
-    ) {
-        val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
-    }
-
-    /** A phone this user is the partner for. */
-    data class Watch(
-        val code: String,
-        val name: String,
+    /**
+     * One report this phone opens as a partner device. [server] and [token] make its link (/p/{token}); [deviceId] is
+     * this phone among the partner's devices, [wrappedKey] this phone's private key for it ([PartnerKey]). [reportKey]
+     * is empty until the owner's phone has sealed it over; [keyId] says which one it is.
+     */
+    data class Seen(
+        val id: String,
+        val server: String,
+        val token: String,
+        val deviceId: String,
+        val wrappedKey: String,
+        val owner: String,
         val addedMs: Long,
-        val after: Long,
-        val lastMsgMs: Long,
-        /** Latest digest message, as its LogJson line. */
-        val digest: String?,
-        /** Recent alerts, newest last: "t\ttext" per line. */
-        val alerts: String,
-        val staleNotified: Boolean,
-        /** D-035: this person's report on the server (/p/{token}#k=key), the same page an email partner reads. */
-        val reportUrl: String = "",
-        /** Server time of the newest alert already shown from the server feed (/p/{token}/alerts). */
+        val reportKey: String = "",
+        val keyId: String = "",
+        /** Server time of the newest alert already shown from the feed (/p/{token}/alerts). */
         val serverAlertT: Long = 0,
+        /** Recent alerts, newest last: "t\ttext" per line. */
+        val alerts: String = "",
         /** Plan 12 §5: alerts held for quiet hours or the daily message ("t\ttext" per line), and the day last sent. */
         val held: String = "",
         val heldDay: Long = 0,
-        /** Plan 12 §8: the server feed has answered at least once; its owner's phone then stops using the mailbox. */
-        val feedOk: Boolean = false,
-        /** Their server says this report link no longer exists (404): they removed you, or left the server. */
+        /** Their server says this report link no longer exists (404): they removed you, or you left elsewhere. */
         val linkGone: Boolean = false,
     ) {
-        val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
+        val reportUrl: String get() = "$server/p/$token"
     }
 
-    fun ownPairings(context: Context): List<OwnPairing> = entries(context, OWN).mapNotNull { m ->
-        OwnPairing(
-            code = m["code"] as? String ?: return@mapNotNull null,
-            name = m["name"] as? String ?: "",
-            createdMs = m["created"] as? Long ?: 0,
-            lastDigestMs = m["digest_at"] as? Long ?: 0,
-            alertSeq = m["alert_seq"] as? Long ?: 0,
-            boxReady = m["box"] == true,
-            inviteId = m["invite"] as? String ?: "",
-            pending = m["pending"] == true,
-            viaServer = m["via_server"] == true,
-        )
-    }.sortedBy { it.createdMs }
-
-    fun saveOwn(context: Context, p: OwnPairing) {
-        prefs(context).edit().putString(
-            OWN + p.keys.mailboxId,
-            LogJson.encode(linkedMapOf(
-                "code" to p.code, "name" to p.name, "created" to p.createdMs,
-                "digest_at" to p.lastDigestMs, "alert_seq" to p.alertSeq, "box" to p.boxReady,
-                "invite" to p.inviteId, "pending" to p.pending, "via_server" to p.viaServer,
-            )),
-        ).commit()
-    }
-
-    fun removeOwn(context: Context, p: OwnPairing) {
-        prefs(context).edit().remove(OWN + p.keys.mailboxId).commit()
-    }
-
-    fun watches(context: Context): List<Watch> = entries(context, WATCH).mapNotNull { m ->
-        Watch(
-            code = m["code"] as? String ?: return@mapNotNull null,
-            name = m["name"] as? String ?: "",
+    fun seen(context: Context): List<Seen> = entries(context, SEEN).mapNotNull { m ->
+        Seen(
+            id = m["id"] as? String ?: return@mapNotNull null,
+            server = m["server"] as? String ?: return@mapNotNull null,
+            token = m["token"] as? String ?: return@mapNotNull null,
+            deviceId = m["device"] as? String ?: return@mapNotNull null,
+            wrappedKey = m["wrapped"] as? String ?: return@mapNotNull null,
+            owner = m["owner"] as? String ?: "",
             addedMs = m["added"] as? Long ?: 0,
-            after = m["after"] as? Long ?: 0,
-            lastMsgMs = m["last_msg"] as? Long ?: 0,
-            digest = m["digest"] as? String,
-            alerts = m["alerts"] as? String ?: "",
-            staleNotified = m["stale"] == true,
-            reportUrl = m["report_url"] as? String ?: "",
+            reportKey = m["report_key"] as? String ?: "",
+            keyId = m["key_id"] as? String ?: "",
             serverAlertT = m["server_alert_t"] as? Long ?: 0,
+            alerts = m["alerts"] as? String ?: "",
             held = m["held"] as? String ?: "",
             heldDay = m["held_day"] as? Long ?: 0,
-            feedOk = m["feed_ok"] == true,
             linkGone = m["link_gone"] == true,
         )
     }.sortedBy { it.addedMs }
 
-    fun saveWatch(context: Context, w: Watch) {
+    fun seen(context: Context, id: String): Seen? = seen(context).firstOrNull { it.id == id }
+
+    fun saveSeen(context: Context, s: Seen) {
         prefs(context).edit().putString(
-            WATCH + w.keys.mailboxId,
+            SEEN + s.id,
             LogJson.encode(linkedMapOf(
-                "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
-                "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
-                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay, "feed_ok" to w.feedOk, "link_gone" to w.linkGone,
+                "id" to s.id, "server" to s.server, "token" to s.token, "device" to s.deviceId, "wrapped" to s.wrappedKey,
+                "owner" to s.owner, "added" to s.addedMs, "report_key" to s.reportKey, "key_id" to s.keyId,
+                "server_alert_t" to s.serverAlertT, "alerts" to s.alerts, "held" to s.held, "held_day" to s.heldDay, "link_gone" to s.linkGone,
             )),
         ).commit()
     }
 
-    fun removeWatch(context: Context, w: Watch) {
-        prefs(context).edit().remove(WATCH + w.keys.mailboxId).commit()
+    fun removeSeen(context: Context, s: Seen) {
+        prefs(context).edit().remove(SEEN + s.id).commit()
     }
 
-    fun watch(context: Context, mailboxId: String): Watch? = watches(context).firstOrNull { it.keys.mailboxId == mailboxId }
-
-    /** Partner-PIN check against every pairing's current unlock code. */
-    fun verifyPartnerCode(context: Context, code: String, now: Long): Boolean =
-        ownPairings(context).any { Pairing.verifyCode(it.keys.otp, code, now) }
+    /**
+     * Plan 13 clean cut: the partner data of every earlier version (pairings this phone made, phones it watched, the
+     * group). Deleted, never converted. Returns how many entries went, so the caller can tell the person once.
+     */
+    fun clearOldPartners(context: Context): Int {
+        val p = prefs(context)
+        val old = p.all.keys.filter { it.startsWith("own:") || it.startsWith("watch:") }
+        if (old.isNotEmpty()) p.edit().apply { old.forEach { remove(it) } }.commit()
+        return old.size
+    }
 
     private fun entries(context: Context, prefix: String): List<Map<String, Any?>> =
         prefs(context).all.filterKeys { it.startsWith(prefix) }.values.mapNotNull { (it as? String)?.let(LogJson::decode) }

@@ -1,6 +1,6 @@
 # Plan 13: one partner system, designed once (started 2026-11-26)
 
-**Status:** design stage. **Production is paused** (Logan, 2026-11-26: "hard pause the whole app and go through some
+**Status:** built on branch `feat/partners-v2-server` (2026-11-26), not released. **Production is paused** (Logan, 2026-11-26: "hard pause the whole app and go through some
 iterations and testing with updates before we start back into production"). The live server was wiped the same night
 (devices, mailboxes, screenshots; the admin login and enrollment codes kept; root-only backup
 `/var/backups/ffbackend-data-20261126.tgz` on the VPS). No code until Logan has seen mockups.
@@ -121,7 +121,7 @@ The owner's phone still hands the report key to each partner device, but **autom
 with the plan 12 choices, ask a partner, seen, leaving. **Out:** groups, SMS, pairing keys, the mailbox, unlock codes
 from the pairing seed (an ask replaces them).
 
-## Questions for Logan (next)
+## Questions for Logan (answered)
 
 1. ~~Unlock codes read aloud go away?~~ DECIDED (2026-11-26): **yes, they go.** Ask a partner replaces them. Logan
    left it to me ("ur pick"). Why: they need the pairing key, which the rebuild removes, so keeping them would mean
@@ -131,3 +131,28 @@ from the pairing seed (an ask replaces them).
    https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco): Partners, Add a partner (code + QR, or email), Sam joined,
    partner join with a code, waiting for the key, the partner's report, the invite email, browser join. Logan: "i think
    i like that." It's the basis for the build, so the screens follow it.
+
+## Build (2026-11-26)
+
+Built after Logan said "keep going". Defaults I picked, each changeable:
+
+| Choice | Default | Why |
+|---|---|---|
+| Versions | app 3.0.0, server 2.0.0, released together | Partners reset; the app needs the new server |
+| A browser joined by code | Gets the report, no alerts; the page says so | No proven email to send to |
+| Email partner | Only via the emailed link (it proves the address) | No double opt-in pages any more |
+| Alerts | The partner's app while it reads the feed (3 days), else email | One path, as in plan 12 §8 |
+| More devices | "Add this browser" on the report page, max 4 per partner | Owner notified, partner emailed, others alerted |
+| New key | When a partner is removed, leaves, or drops a device | What they hold then opens only older slices |
+| QR code | Drawn on the phone (zxing core, encode only) | No camera code: the camera app opens the `/c/` page, which offers the app |
+| Partner device key (app) | Software P-256 key, wrapped by a keystore AES key | Keystore ECDH needs Android 12; the app runs from 8 |
+| Bare code typed in the app | Also asks for the server (pre-filled with this phone's) | A code alone doesn't say which server |
+
+**Verified:**
+- Server: 54 tests including `CompatLevel2Test`.
+- App: unit tests and lint pass.
+- Interop: a key sealed by the app's `Ecies` code opens in the browser's WebCrypto code.
+- End to end in headless Chrome against a local server, with a script as the owner's phone: join by code, wait, the key
+  arrives, the report opens; a second browser is offered "Add this browser".
+
+**Not verified:** the app on a phone (no emulator here). Test on the Pixel and the second phone after release.

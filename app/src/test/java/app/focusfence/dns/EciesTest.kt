@@ -36,4 +36,21 @@ class EciesTest {
         val hex = okm.joinToString("") { "%02x".format(it) }
         assertEquals("3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865", hex)
     }
+
+    /** Plan 13: the report key sealed to a partner device has its own label, so it can't be passed off as a shot. */
+    @Test fun aSealedReportKeyOpensOnlyAsAKey() {
+        val kp = java.security.KeyPairGenerator.getInstance("EC").apply { initialize(java.security.spec.ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+        val key = ReportSeal.newKey()
+        val sealed = Ecies.encrypt(key.toByteArray(), kp.public, Ecies.INFO_KEY)
+        org.junit.Assert.assertEquals(key, String(Ecies.decrypt(sealed, kp.private, Ecies.INFO_KEY)))
+        org.junit.Assert.assertTrue(runCatching { Ecies.decrypt(sealed, kp.private) }.isFailure)
+    }
+
+    @Test fun aKeyIdNamesAKeyWithoutGivingItAway() {
+        val a = ReportSeal.newKey()
+        org.junit.Assert.assertEquals(ReportSeal.keyId(a), ReportSeal.keyId(a))
+        org.junit.Assert.assertNotEquals(ReportSeal.keyId(a), ReportSeal.keyId(ReportSeal.newKey()))
+        org.junit.Assert.assertEquals(16, ReportSeal.keyId(a).length)
+        org.junit.Assert.assertFalse(a.contains(ReportSeal.keyId(a)))
+    }
 }

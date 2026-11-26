@@ -55,7 +55,7 @@ object Totp {
  * The operator page: per-person enrollment codes, devices, usage and an audit log. Sign-in is one factor
  * (D-035): a one-time code emailed to an allow-listed address, or an authenticator code once one is set up.
  * Off unless FF_ADMIN_EMAILS is set. No passwords exist anywhere. It can never show a report token, invite
- * code, mailbox id, activity record or screenshot: none of those are read here.
+ * code, sealed key, activity record or screenshot: none of those are read here.
  */
 class Admin(
     private val cfg: Config,
@@ -250,7 +250,7 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
         ).joinToString(", ")
         return "Hi ${name.ifBlank { "there" }}, here's how to join my Focus Fence server:\n" +
             "1. Install Focus Fence AC: ${cfg.appUrl}\n" +
-            "2. In the app, open Partners, tap Join with an invite and paste this whole message.\n" +
+            "2. In the app, open Partners, tap Join with a code and paste this whole message.\n" +
             "Server: ${cfg.publicUrl}\n" +
             "Enrollment code: $code" + (if (limits.isNotEmpty()) " ($limits)" else "")
     }
@@ -285,8 +285,7 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
                         "<div class='card'><div class='row'><div><div class='mut'>Device <code>${Web.esc(d.id.take(8))}</code></div><div class='big'>${Web.esc(d.label.ifBlank { "unnamed" })}</div></div>" +
                             "<div><div class='mut'>Last seen</div>${ago(d.lastSeenMs)}${if (silent) " <span class='badge bad'>silent</span>" else ""}</div>" +
                             "<div><div class='mut'>Enrolled</div>${Web.time(d.enrolledMs)}<div class='mut'>with ${Web.esc(byCode[d.codeId]?.label ?: if (d.codeId.isEmpty()) "bootstrap code / open" else "a removed code")}</div></div>" +
-                            "<div><div class='mut'>Partners</div>${d.partners.size} by email (${d.partners.count { it.confirmed }} confirmed), ${d.appPartners.size} in the app" +
-                                (if (d.appPartners.isEmpty()) "" else "<div class='mut'>Watched by ${Web.esc(d.appPartners.joinToString(", ") { p -> devs.firstOrNull { it.id == p.deviceId }?.label?.ifEmpty { null } ?: p.name })}</div>") + "<div class='mut'>${mb(store.deviceBytes(d.id))} stored</div></div></div>" +
+                            "<div><div class='mut'>Partners</div>${d.partners.size}, on ${d.partners.sumOf { it.devices.size }} device(s)<div class='mut'>${mb(store.deviceBytes(d.id))} stored</div></div></div>" +
                             "<form method='post' action='/admin/devices/label'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(d.id)}'><div class='row'><div><input name='label' maxlength='40' placeholder='Name this device' value='${Web.esc(d.label)}'></div><div><button class='ghost'>Save name</button></div></div></form>" +
                             "<form method='post' action='/admin/devices/remove' style='margin-top:8px'>${hidden(s)}<input type='hidden' name='id' value='${Web.esc(d.id)}'><label><input type='checkbox' name='sure' value='1' required> Delete this device and everything stored for it</label><button class='danger'>Remove device</button></form></div>"
                     }
@@ -306,17 +305,16 @@ pre.codes{font:600 1.05em/1.7 ui-monospace,monospace;background:var(--bg);border
                     "<form class='inline' method='post' action='/admin/test-email'>${hidden(s)}<button class='ghost'>Send me a test email</button></form></div>"
             }
             else -> {
-                val used = store.usedBytes(now); val devs = store.deviceCount(); val boxes = store.mailboxCount()
+                val used = store.usedBytes(now); val devs = store.deviceCount()
                 val all = store.allDevices(); val silent = all.count { it.staleAlerted }
                 val live = codes.list().count { !it.revoked && (it.expiresMs == 0L || now < it.expiresMs) && (it.maxUses == 0 || it.uses < it.maxUses) }
                 flash(newCode, note) + "<h1>Overview</h1><div class='grid'>" +
                     "<div class='card'><div class='mut'>Data</div><div class='big'>${mb(used)}</div>${bar(used.toDouble() / cfg.maxDataBytes)}<div class='mut'>of ${mb(cfg.maxDataBytes)}</div></div>" +
                     "<div class='card'><div class='mut'>Phones</div><div class='big'>$devs</div>${bar(devs.toDouble() / cfg.maxDevices)}<div class='mut'>of ${cfg.maxDevices}</div></div>" +
-                    "<div class='card'><div class='mut'>Blind mailboxes</div><div class='big'>$boxes</div>${bar(boxes.toDouble() / cfg.maxMailboxes)}<div class='mut'>of ${cfg.maxMailboxes}</div></div>" +
                     "<div class='card'><div class='mut'>Silent phones</div><div class='big ${if (silent > 0) "bad" else "ok"}'>$silent</div><div class='mut'>no check-in for ${Alerts.minutes(cfg.staleMs)}</div></div></div>" +
                     "<div class='card'><h2>Enrollment</h2><p>${if (cfg.enrollToken == null && live == 0 && codes.list().isEmpty()) "<span class='bad'>Open: anyone who finds this server can enroll a phone.</span>" else "Closed: a code is needed."} " +
                     "$live live code(s)${if (cfg.enrollToken != null) " plus the bootstrap code" else ""}. <a href='/admin/codes'>People and codes</a></p></div>" +
-                    "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${Alerts.minutes(cfg.staleMs)} of silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · confirmation emails capped at ${cfg.confirmGlobalDailyCap}/day</p></div>"
+                    "<div class='card'><h2>Server</h2><p class='mut'>Up for ${ago(startedMs).removeSuffix(" ago")} · public URL ${Web.esc(cfg.publicUrl)} · alerts after ${Alerts.minutes(cfg.staleMs)} of silence · email: ${if (cfg.adminEmails.isNotEmpty()) "${cfg.adminEmails.size} admin(s)" else ""} · invite emails capped at ${cfg.inviteEmailDailyCap}/day</p></div>"
             }
         }
         return shell(s, tab, body)

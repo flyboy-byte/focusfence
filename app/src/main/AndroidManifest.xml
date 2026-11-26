@@ -122,10 +122,6 @@
             android:name=".SetupActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
-        <activity
-            android:name=".GroupActivity"
-            android:exported="false"
-            android:parentActivityName=".AccountabilityActivity" />
 
         <!-- Uninstall protection. We never block uninstall; this receiver logs every
              admin lifecycle event so turning protection off is recorded. -->
@@ -146,7 +142,7 @@
             android:exported="false" />
 
         <!-- Partner invites open in the app (LinkActivity) through the invite page's "Open in the app" button
-             (focusfence://invite). It works the same on every server: no server is built into the app. -->
+             (focusfence://join). It works the same on every server: no server is built into the app. -->
         <activity
             android:name=".LinkActivity"
             android:exported="true"
@@ -157,7 +153,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="focusfence" android:host="invite" />
+                <data android:scheme="focusfence" android:host="join" />
             </intent-filter>
         </activity>
         <activity

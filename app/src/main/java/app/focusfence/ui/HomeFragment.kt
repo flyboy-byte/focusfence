@@ -218,9 +218,9 @@ class HomeFragment : Fragment() {
         }
     }
 
+    /** Whether partners could be watching: the phone is on a server (who they are is the server's list). */
     private fun partnerCount(context: Context): Int =
-        app.focusfence.sync.SyncStore.ownPairings(context).size +
-            (if (app.focusfence.sync.SyncStore.deviceId(context) != null) 1 else 0)
+        if (app.focusfence.sync.SyncStore.deviceId(context) != null) 1 else 0
 
     private fun refreshStrict() {
         val b = _binding ?: return

@@ -1,6 +1,5 @@
 package app.focusfence.server
 
-import app.focusfence.dns.Pairing
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -34,20 +33,14 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 
 /**
- * PROTOTYPE accountability backend. Two ways to be a partner, side by side:
- *
- *  1. **Web + email (+ optional SMS)** — the default. The phone enrolls a device
- *     key, uploads signed, sequence-checked batches of its activity log, and
- *     heartbeats. The owner creates an invite code and sends it to the partner,
- *     who joins on /join. The partner gets alerts and a weekly report by email
- *     (and alerts by SMS if they opt in) and a private report page.
- *  2. **App to app** — both people run the app and pair with a shared key the
- *     server never sees (see `dns/Pairing`). The server is only a *blind mailbox*:
- *     it stores ciphertext under an id it can't link to anyone.
+ * PROTOTYPE accountability backend. The phone enrolls a device key, uploads sealed report slices and alert lines, and
+ * heartbeats. Partners (plan 13, one kind): the owner invites by email, by an 8-character code, or by a QR code of that
+ * code's link. Whoever uses the invite first joins, from the Focus Fence app or a browser; that device makes its own key
+ * pair, and the owner's phone seals the report key to it at its next check-in. The server relays public keys and
+ * ciphertext only (D-023). Alerts reach a partner in their app, or by email when they have no app.
  *
  * Env: FF_DATA_DIR (./data), FF_PORT (8080), FF_PUBLIC_URL (http://localhost:8080),
- * FF_STALE_MINUTES (60), RESEND_API_KEY, FF_MAIL_FROM, FF_SMS_PROVIDER, FF_SMS_FROM,
- * TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TELNYX_API_KEY.
+ * FF_STALE_MINUTES (60), RESEND_API_KEY, FF_MAIL_FROM.
  */
 class Config(
     val publicUrl: String,
@@ -58,17 +51,16 @@ class Config(
     val staleMs: Long = 60 * 60_000L,
     val reportEveryMs: Long = 7L * 24 * 3_600_000,
     val inviteTtlMs: Long = 24 * 3_600_000L,
-    val smsMinIntervalMs: Long = 10 * 60_000L,
     /** Signed requests must be this fresh: stops replay of a captured request. */
     val clockSkewMs: Long = 10 * 60_000L,
-    /** Hard bounds, because this box's disk is shared with other services and enroll/mailbox creation are open. */
+    /** Hard bounds, because this box's disk is shared with other services. */
     val maxDevices: Int = 100,
-    val maxMailboxes: Int = 500,
     val maxDataBytes: Long = 2L * 1024 * 1024 * 1024,
     val maxPartnersPerDevice: Int = 5,
     /** Whole-server email ceilings per day, whatever the number of addresses. */
     val emailGlobalDailyCap: Int = 200,
-    val confirmGlobalDailyCap: Int = 30,
+    /** Invite emails go to addresses nobody has confirmed yet, so they have their own, smaller ceiling. */
+    val inviteEmailDailyCap: Int = 30,
     /** If set, /v1/enroll needs this in the X-FF-Enroll header: open enrollment lets anyone take device slots. */
     val enrollToken: String? = null,
     /** Where a new person gets the app; the admin page's invite message links it. */
@@ -80,8 +72,6 @@ class Config(
     /** Backstop on top of double opt-in: no address is emailed more often than this, or more than the daily cap. */
     val emailMinIntervalMs: Long = 60_000L,
     val emailDailyCap: Int = 60,
-    /** A partner who never confirms their email is dropped after this. */
-    val unconfirmedTtlMs: Long = 3L * 24 * 3_600_000,
     /** Which peers may set X-Forwarded-For (the reverse proxy in front of us). */
     val trustedProxy: (String) -> Boolean = TrustedProxies.LOOPBACK,
     val now: () -> Long = System::currentTimeMillis,
@@ -91,13 +81,24 @@ class Config(
 
 @Serializable data class EnrollRequest(val publicKeySpki: String)
 @Serializable data class EnrollResponse(val deviceId: String)
-@Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null, val kind: String? = null)
-@Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
-@Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
-@Serializable data class AcceptResponse(val ownerId: String, val ownerName: String, val reportUrl: String = "")
-@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long, val lastViewMs: Long = 0, val readsFeed: Boolean = false)
-@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "", val lastViewMs: Long = 0)
-@Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val app: List<AppPartnerInfo> = emptyList())
+@Serializable data class SignedRequest(val deviceId: String, val t: Long, val signature: String, val partnerId: String? = null, val kind: String? = null, val inviteId: String? = null)
+/** [email] empty: a code (and QR code) only. [from]: what the owner calls themselves in the email and on join pages. */
+@Serializable data class InviteRequest(val deviceId: String, val t: Long, val signature: String, val email: String = "", val from: String = "")
+@Serializable data class InviteResponse(val id: String, val code: String, val expiresMs: Long, val qrUrl: String, val emailed: Boolean = false)
+/** Plan 13: the partner's side. Unsigned: the invite is the credential. [link] is an emailed link's secret, [code] a typed one. */
+@Serializable data class JoinRequest(val code: String = "", val link: String = "", val name: String = "", val kind: String, val label: String = "", val publicKeySpki: String)
+@Serializable data class JoinResponse(val partnerId: String, val deviceId: String, val token: String, val reportUrl: String, val ownerName: String)
+@Serializable data class AddDeviceRequest(val kind: String, val label: String = "", val publicKeySpki: String)
+@Serializable data class AddDeviceResponse(val deviceId: String)
+@Serializable data class KeyResponse(val ready: Boolean, val sealed: String = "", val keyId: String = "")
+@Serializable data class PartnerDeviceInfo(val id: String, val kind: String, val label: String, val addedMs: Long, val ready: Boolean)
+/** [alertsBy]: "app", "email", or "none" (a browser-only partner who joined by code: the report, no alerts). */
+@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val linkedMs: Long, val lastViewMs: Long, val alertsBy: String, val devices: List<PartnerDeviceInfo>)
+@Serializable data class InviteInfo(val id: String, val expiresMs: Long, val email: String)
+@Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val invites: List<InviteInfo> = emptyList())
+/** A partner device waiting for the report key. [firstDevice]: this partner had none yet, so they just joined. */
+@Serializable data class SealTarget(val partnerId: String, val deviceId: String, val name: String, val kind: String, val label: String, val publicKeySpki: String, val firstDevice: Boolean)
+@Serializable data class SealRequest(val deviceId: String, val t: Long, val signature: String, val partnerDeviceId: String, val keyId: String, val sealed: String)
 @Serializable data class BatchRequest(
     val deviceId: String,
     val firstSeq: Long,
@@ -127,32 +128,37 @@ val serverVersion: String by lazy {
     val level: String = "all", val quiet: Boolean = false,
     val quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR, val quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
 )
-@Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
+@Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>, val ownerName: String = "")
 @Serializable data class HeartbeatRequest(
     val deviceId: String, val t: Long, val lastSeq: Long, val signature: String,
     /** After a long gap: the phone's account of it ("no internet; protection stayed on"), signed on its own. */
     val gap: String? = null, val gapSignature: String? = null,
     /** The newest owner notice the phone already has; only newer ones come back. Read cursor, not signed. */
     val noticesAfter: Long = 0,
+    /**
+     * Plan 13: a short id of the report key the phone uses now. Not signed: a wrong one only makes the phone seal the
+     * key again to its own partners' devices, which the server can't open.
+     */
+    val keyId: String = "",
 )
 /** Plan 12: owner notices ride on the heartbeat. Older apps read only the status code, so this adds nothing for them. */
 @Serializable data class HeartbeatResponse(
     val ok: Boolean = true, val notices: List<Store.AlertEntry> = emptyList(),
     /** Plan 12 §3: the owner's latest ask-a-partner request, while it can still matter to the phone. */
     val unlock: UnlockStatus? = null,
+    /** Plan 13: partner devices that need the report key sealed to them (just joined, added, or the key changed). */
+    val seal: List<SealTarget> = emptyList(),
+    /** Live invites: while any is open the phone checks in every minute, so someone joining in person waits under one. */
+    val invitesOpen: Int = 0,
+    /** A partner left or removed a device: start a new report key and seal it to the rest. */
+    val rotateKey: Boolean = false,
 )
 @Serializable data class UnlockStatus(val id: String, val action: String, val state: String, val by: String, val askedMs: Long, val decidedMs: Long)
 
 private fun Store.UnlockRequest.status(now: Long) =
     UnlockStatus(id, action, app.focusfence.dns.UnlockAsk.state(state, askedMs, now), by, askedMs, decidedMs)
-@Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
 @Serializable data class OkResponse(val ok: Boolean = true)
-@Serializable data class CreateMailboxRequest(val tokenHash: String, val deviceId: String = "", val t: Long = 0, val signature: String = "")
-@Serializable data class PostMailRequest(val c: String)
-@Serializable data class PostMailResponse(val id: Long)
-@Serializable data class MailListResponse(val msgs: List<Store.MailMessage>, val lastWriteMs: Long)
-
 
 fun main(args: Array<String>) {
     val env: (String) -> String? = { System.getenv(it) }
@@ -167,17 +173,15 @@ fun main(args: Array<String>) {
         adminEmails = env("FF_ADMIN_EMAILS").orEmpty().split(",").map { it.trim() }.filter { it.contains("@") },
         emailConfigured = !env("RESEND_API_KEY").isNullOrBlank(),
         maxDevices = (env("FF_MAX_DEVICES") ?: "100").toInt(),
-        maxMailboxes = (env("FF_MAX_MAILBOXES") ?: "500").toInt(),
         maxDataBytes = (env("FF_MAX_DATA_MB") ?: "2048").toLong() * 1024 * 1024,
     )
     if (runAdmin(args, File(env("FF_DATA_DIR") ?: "data"), System.currentTimeMillis(), ::println)) return
     val store = Store(File(env("FF_DATA_DIR") ?: "data"))
     store.purgeLegacyRecords().takeIf { it > 0 }?.let { println("D-023: deleted $it readable activity record files from earlier versions") }
+    store.migrateToV2().takeIf { it > 0 }?.let { println("plan 13: cleared old partner data from $it devices (partners re-join with the new invites)") }
     val notifier = LiveNotifier(
         resendKey = env("RESEND_API_KEY"),
         mailFrom = env("FF_MAIL_FROM") ?: "accountability@localhost",
-        smsProvider = env("FF_SMS_PROVIDER") ?: "none",
-        smsFrom = env("FF_SMS_FROM"),
         env = env,
     )
     val alerts = Alerts(store, notifier, cfg)
@@ -229,34 +233,30 @@ private val random = SecureRandom()
 private val partnerJournal = org.slf4j.LoggerFactory.getLogger("ff.partners")
 private const val CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-/** 8 Crockford chars (40 bits), shown XXXX-XXXX. Short enough to text; single use, 24 h, rate-limited. */
+/** 8 Crockford chars (40 bits), shown XXXX-XXXX. Short enough to read out; single use, 24 h, rate-limited. */
 fun newInviteCode(): String = buildString { repeat(8) { append(CODE_ALPHABET[random.nextInt(32)]) } }
 
 fun normalizeCode(s: String): String =
     s.uppercase().filter { it.isLetterOrDigit() }.replace('O', '0').replace('I', '1').replace('L', '1')
 
-fun normalizePhone(s: String): String? {
-    val digits = s.filter { it.isDigit() }
-    if (digits.length !in 8..15) return null
-    return "+$digits"
-}
-
 private fun newToken(): String = ByteArray(24).also { random.nextBytes(it) }
     .let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
 
-private fun smsCode(): String = (100000 + random.nextInt(900000)).toString()
+
+
+private const val TOO_OLD = "This version of Focus Fence is too old for this server. Update the app."
 
 fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     val enrollCodes = EnrollCodes(File(store.dir, "codes.json"))
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; encodeDefaults = true }) }
-    // The partner pages are plain server-rendered HTML with inline CSS and no scripts, so a strict CSP costs nothing
-    // and turns any future escaping slip into a non-event.
+    // The partner pages are plain server-rendered HTML with inline CSS and one script of ours, so a strict CSP costs
+    // nothing and turns any future escaping slip into a non-event.
     install(createApplicationPlugin("SecurityHeaders") {
         onCall { call ->
-            // Scripts only where D-023 needs them (the partner's browser opens the sealed report), and only our own file.
+            // Scripts only where D-023 needs them (the partner's browser makes its key and opens the sealed report).
             val path = call.request.local.uri.substringBefore('?')
             // The admin page has one too (/static/admin.js): copy and download buttons, nothing that talks to the server.
-            val scripts = path.startsWith("/p/") || path.startsWith("/i/") || path == "/join" || path == "/key" || path.startsWith("/admin")
+            val scripts = path.startsWith("/p/") || path.startsWith("/j/") || path.startsWith("/c/") || path.startsWith("/admin")
             call.response.headers.append("Content-Security-Policy",
                 "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" +
                     if (scripts) "; script-src 'self'; connect-src 'self'" else "")
@@ -265,10 +265,18 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         }
     })
     // D-041: every response says which protocol levels this server speaks, so an app can tell its owner which side
-    // needs updating instead of failing in odd ways.
+    // needs updating instead of failing in odd ways. Plan 13: below Protocol.OLDEST the API refuses outright.
     intercept(io.ktor.server.application.ApplicationCallPipeline.Plugins) {
         call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER, app.focusfence.dns.Protocol.LEVEL.toString())
         call.response.headers.append(app.focusfence.dns.Protocol.HEADER_SERVER_OLDEST, app.focusfence.dns.Protocol.OLDEST.toString())
+        val path = call.request.local.uri.substringBefore('?')
+        if (path.startsWith("/v1/") && path != "/v1/version") {
+            val level = call.request.headers[app.focusfence.dns.Protocol.HEADER_APP]?.toIntOrNull() ?: 0
+            if (level < app.focusfence.dns.Protocol.OLDEST) {
+                call.respond(HttpStatusCode.UpgradeRequired, ErrorResponse(TOO_OLD))
+                finish()
+            }
+        }
     }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -279,43 +287,18 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     }
     val alerts = Alerts(store, notifier, cfg)
     val joinLimiter = RateLimiter(10, 3_600_000, cfg.now)
-    val smsLimiter = RateLimiter(3, 3_600_000, cfg.now)
     val enrollLimiter = RateLimiter(5, 3_600_000, cfg.now)
-    val mailboxLimiter = RateLimiter(20, 3_600_000, cfg.now)
-    val confirmLimiter = RateLimiter(1, 3_600_000, cfg.now) // confirmation emails per address
-    val confirmGlobal = RateLimiter(cfg.confirmGlobalDailyCap, 24 * 3_600_000L, cfg.now)
+    val inviteLimiter = RateLimiter(10, 3_600_000, cfg.now) // per owner phone
+    val inviteEmailLimiter = RateLimiter(1, 3_600_000, cfg.now) // per address: an invite email is unasked-for mail
+    val inviteEmailGlobal = RateLimiter(cfg.inviteEmailDailyCap, 24 * 3_600_000L, cfg.now)
 
     fun ApplicationCall.client() = clientKey(request.origin.remoteHost, request.headers["X-Forwarded-For"], cfg.trustedProxy)
     fun full(): Boolean = store.usedBytes(cfg.now()) >= cfg.maxDataBytes
-    /** One confirmation email per address per hour; that cap holds for resends too. */
-    suspend fun sendConfirmation(deviceId: String, partner: Store.Partner) {
-        if (!confirmLimiter.allow(partner.email.lowercase()) || !confirmGlobal.allow("all")) return
-        // A new single-use token every time (only its hash is stored), so an older email's link stops working...
-        val token = newToken()
-        val hash = Integrity.sha256(token)
-        var previous: String? = null
-        store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id }?.let { previous = it.confirmHash; it.confirmHash = hash } }
-        val sent = notifier.email(
-            partner.email, "Focus Fence: confirm your email",
-            "<p>Someone used an invite to add this address as an accountability partner for a Focus Fence phone.</p>" +
-                "<p>If that was you, <a href=\"${cfg.publicUrl}/confirm/$token\">confirm here</a>. " +
-                "If it wasn't, ignore this email: nothing else will be sent, and the request expires in a few days.</p>",
-        )
-        // ...but only if the email really went out: otherwise nobody holds the new link, and the old one must keep working.
-        if (!sent) store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == partner.id && it.confirmHash == hash }?.confirmHash = previous }
-    }
     suspend fun ApplicationCall.serverFull(): Unit {
         // Visible to the operator: a full server silently refuses every phone.
         application.log.warn("server full: refusing {} (data {} MB of {} MB, {} devices of {})",
             request.local.uri.substringBefore('?'), store.usedBytes(cfg.now()) / 1_048_576, cfg.maxDataBytes / 1_048_576, store.deviceCount(), cfg.maxDevices)
         respond(HttpStatusCode.InsufficientStorage, ErrorResponse("server full"))
-    }
-
-    /** The enrolled phone whose live invite link has this secret, and that invite. */
-    fun inviteOwner(secret: String): Pair<Store.Device, Store.Invite>? {
-        val hash = Integrity.sha256(secret); val now = cfg.now()
-        for (d in store.allDevices()) d.invites.firstOrNull { it.linkHash == hash && it.expiresMs > now }?.let { return d to it }
-        return null
     }
 
     fun signedOk(device: Store.Device, action: String, t: Long, extra: String, sig: String): Boolean {
@@ -326,6 +309,15 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
     suspend fun ApplicationCall.unauthorized() = respond(HttpStatusCode.Unauthorized, ErrorResponse("bad signature or stale request"))
     suspend fun ApplicationCall.unknownDevice() = respond(HttpStatusCode.NotFound, ErrorResponse("unknown device"))
+    fun ownerName(d: Store.Device) = d.ownerName.ifEmpty { d.label }.ifEmpty { "Your partner" }
+    fun clean(s: String, max: Int) = s.filter { !it.isISOControl() }.trim().take(max)
+    fun keyOk(spki: String) = spki.length <= 200 && runCatching { Integrity.publicKeyFromBase64Spki(spki) }.isSuccess
+
+    /** Unlinking or leaving: the rest of the partners can still read on, but the phone starts a new key for them. */
+    fun forget(deviceId: String, partnerId: String) = store.updateDevice(deviceId) { d ->
+        d.partners = d.partners.filter { it.id != partnerId }
+        d.rotateKey = true
+    }
 
     routing {
         Admin(cfg, store, notifier, enrollCodes) { it.client() }.routes(this)
@@ -336,17 +328,14 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.respond(VersionResponse(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, serverVersion))
         }
 
-        // ---- device API -------------------------------------------------------
+        // ---- the owner's phone -------------------------------------------------
 
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
             if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-            val codesOn = cfg.enrollToken != null || enrollCodes.any()
-            var needsCode = codesOn
-            // D-035: a live invite from an enrolled phone lets the phone it was sent to enroll, with no separate code.
-            val invited = call.request.headers["X-FF-Invite"]?.takeIf { it.length >= 20 }?.let { inviteOwner(it) } != null
-            if (invited) needsCode = false
-            else if (codesOn) {
+            // Only a phone being watched enrolls (plan 13: partners join with an invite and need no account here).
+            var needsCode = cfg.enrollToken != null || enrollCodes.any()
+            if (needsCode) {
                 val got = call.request.headers["X-FF-Enroll"].orEmpty()
                 val boot = cfg.enrollToken?.let { java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(it).toByteArray()) } ?: false
                 if (boot) needsCode = false
@@ -362,70 +351,98 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.respond(EnrollResponse(created.id))
         }
 
+        // Plan 13: one invite, three ways in. The code is typed in the app or scanned (the QR code is its /c/ link); with
+        // an email, the address gets a link of its own. Whichever is used first spends the invite.
         post("/v1/invites") {
-            val req = call.receive<SignedRequest>()
+            val req = call.receive<InviteRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
-            if (!signedOk(device, "invite", req.t, "", req.signature)) return@post call.unauthorized()
+            if (!signedOk(device, "invite", req.t, req.email, req.signature)) return@post call.unauthorized()
+            val email = req.email.trim().lowercase().take(120)
+            if (email.isNotEmpty() && !EMAIL.matches(email)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("That email address doesn't look right."))
+            if (email.isNotEmpty() && !notifier.emailAvailable) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("This server can't send email. Use the code instead."))
+            if (device.partners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict,
+                ErrorResponse("You already have ${cfg.maxPartnersPerDevice} partners, the most a phone can have."))
+            if (!inviteLimiter.allow(device.id)) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many invites. Try again in an hour."))
+            val now = cfg.now()
             val code = newInviteCode()
-            // The link's own long secret: unlike the short code it stays valid once used, as that partner's report link.
-            val secret = newToken()
-            val expires = cfg.now() + cfg.inviteTtlMs
-            val inviteId = java.util.UUID.randomUUID().toString()
+            val secret = if (email.isNotEmpty()) newToken() else ""
+            val inv = Store.Invite(java.util.UUID.randomUUID().toString(), Integrity.sha256(code), now + cfg.inviteTtlMs,
+                linkHash = if (secret.isEmpty()) "" else Integrity.sha256(secret), email = email, createdMs = now)
+            val from = clean(req.from, 40)
             store.updateDevice(device.id) { d ->
-                // At most 5 live invites; expired ones are dropped.
-                d.invites = (d.invites.filter { it.expiresMs > cfg.now() } + Store.Invite(Integrity.sha256(code), expires, Integrity.sha256(secret), inviteId, if (req.kind == "enroll") "enroll" else "")).takeLast(5)
+                d.invites = (d.invites.filter { it.expiresMs > now } + inv).takeLast(5)
+                if (from.isNotEmpty()) d.ownerName = from
             }
-            val shown = code.chunked(4).joinToString("-")
-            call.respond(InviteResponse(shown, expires, "${cfg.publicUrl}/i/$secret", inviteId))
+            var emailed = false
+            if (email.isNotEmpty() && inviteEmailLimiter.allow(email) && inviteEmailGlobal.allow("all")) {
+                val who = Web.esc(from.ifEmpty { ownerName(device) })
+                val link = "${cfg.publicUrl}/j/$secret"
+                emailed = notifier.email(email, "Focus Fence: $who wants you as an accountability partner",
+                    "<p>$who uses Focus Fence to block sites and asked you to be their accountability partner: you'd see their " +
+                        "report and hear if their protection is turned off.</p>" +
+                        "<p><a href=\"$link\"><b>Open the invite</b></a></p>" +
+                        "<p>It works once and ends in 24 hours. If you have the Focus Fence app, the page offers to open it there.</p>" +
+                        "<p>Not expecting this? Ignore it: nothing else will be sent to you.</p>")
+            }
+            partnerJournal.info("invite dev={} email={} emailed={}", device.id.take(8), email.isNotEmpty(), emailed)
+            call.respond(InviteResponse(inv.id, code.chunked(4).joinToString("-"), inv.expiresMs, "${cfg.publicUrl}/c/$code", emailed))
         }
 
-        // D-035: the invite opened in the app instead of a browser. The calling phone (enrolled, often just now with
-        // this same invite) becomes an app partner of the phone that made it. Single use, like the web join.
-        post("/v1/invites/accept") {
-            val req = call.receive<AcceptRequest>()
-            val me = store.device(req.deviceId) ?: return@post call.unknownDevice()
-            if (!signedOk(me, "accept", req.t, Integrity.sha256(req.secret), req.signature)) return@post call.unauthorized()
-            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-            val (owner, invite) = inviteOwner(req.secret)?.takeIf { !it.second.enrollOnly } ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("invite not valid"))
-            if (owner.id == me.id) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("that's this phone's own invite"))
-            // Five of each kind (Logan, 2026-11-25), like email partners at /join.
-            if (owner.appPartners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict,
-                ErrorResponse("This phone already has ${cfg.maxPartnersPerDevice} app partners, the most it can have."))
-            val name = req.name.filter { !it.isISOControl() }.trim().take(60).ifEmpty { me.label.ifEmpty { "Partner" } }
-            val token = newToken()
-            store.updateDevice(owner.id) { d ->
-                d.invites = d.invites.filter { it.linkHash != invite.linkHash }
-                d.appPartners = d.appPartners.filter { it.deviceId != me.id } + Store.AppPartner(java.util.UUID.randomUUID().toString(), me.id, name, cfg.now(), invite.id, token)
-            }
-            // The same report an email partner reads: same page, same sealed data, same screenshots. The key stays on the phone.
-            call.respond(AcceptResponse(owner.id, owner.label, "${cfg.publicUrl}/p/$token"))
+        post("/v1/invites/cancel") {
+            val req = call.receive<SignedRequest>()
+            val id = req.inviteId ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("inviteId"))
+            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (!signedOk(device, "invite_cancel", req.t, id, req.signature)) return@post call.unauthorized()
+            store.updateDevice(device.id) { d -> d.invites = d.invites.filter { it.id != id } }
+            call.respond(OkResponse())
         }
 
         post("/v1/partners/list") {
             val req = call.receive<SignedRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "partners", req.t, "", req.signature)) return@post call.unauthorized()
-            call.respond(PartnersResponse(device.partners.map {
-                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed, it.inviteId, it.lastViewMs)
-            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs, it.lastViewMs, it.lastFeedMs > 0) }))
+            val now = cfg.now()
+            call.respond(PartnersResponse(
+                device.partners.map { p ->
+                    val by = when { p.devices.any { it.kind == Store.KIND_APP && now - it.lastFeedMs < Store.APP_QUIET_MS } -> "app"; p.email.isNotEmpty() -> "email"; p.devices.any { it.kind == Store.KIND_APP } -> "app"; else -> "none" }
+                    PartnerInfo(p.id, p.name, if (p.email.isEmpty()) "" else Web.mask(p.email), p.linkedMs, p.lastViewMs, by,
+                        p.devices.map { PartnerDeviceInfo(it.id, it.kind, it.label, it.addedMs, it.sealed != null && it.keyId == device.reportKeyId) })
+                },
+                device.invites.filter { it.expiresMs > now }.map { InviteInfo(it.id, it.expiresMs, if (it.email.isEmpty()) "" else Web.mask(it.email)) },
+            ))
         }
 
-        // Unlinking is never silent: the removed partner is told.
+        // Removing is never silent: a partner with email is told; an app partner's feed stops and their app says so.
         post("/v1/partners/unlink") {
             val req = call.receive<SignedRequest>()
             val pid = req.partnerId ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("partnerId"))
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "unlink", req.t, pid, req.signature)) return@post call.unauthorized()
-            // An app partner is told through the pairing itself (the phone posts a last message); here it's only forgotten.
-            if (device.appPartners.any { it.id == pid }) {
-                store.updateDevice(device.id) { d -> d.appPartners = d.appPartners.filter { it.id != pid } }
-                return@post call.respond(OkResponse())
-            }
             val removed = device.partners.firstOrNull { it.id == pid }
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("unknown partner"))
-            alerts.toPartners(device.copy(partners = listOf(removed)), "you were removed as a partner",
-                listOf("The phone's owner removed you as their accountability partner. You won't get further reports."))
-            store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != pid } }
+            if (removed.email.isNotEmpty()) alerts.emailOne(removed, "you were removed as a partner",
+                listOf("${ownerName(device)} removed you as their accountability partner. You won't get further reports."))
+            forget(device.id, pid)
+            partnerJournal.info("unlink dev={} partner={}", device.id.take(8), pid.take(8))
+            call.respond(OkResponse())
+        }
+
+        // Plan 13: the report key, sealed by the phone to one partner device's public key. Ciphertext only.
+        post("/v1/seal") {
+            val req = call.receive<SealRequest>()
+            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (req.sealed.length > 2048 || req.keyId.length > 64) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
+            if (!signedOk(device, "seal", req.t, "${req.partnerDeviceId}|${req.keyId}|${Integrity.sha256(req.sealed)}", req.signature)) return@post call.unauthorized()
+            // Sealed with a key the phone has since replaced: refuse, and the next heartbeat asks for the new one.
+            if (req.keyId != device.reportKeyId) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("stale key"))
+            var found = false
+            store.updateDevice(device.id) { d ->
+                d.partners.forEach { p -> p.devices.firstOrNull { it.id == req.partnerDeviceId }?.let { pd ->
+                    pd.sealed = req.sealed; pd.keyId = req.keyId; pd.sealedMs = cfg.now(); found = true
+                } }
+            }
+            if (!found) return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("unknown partner device"))
+            partnerJournal.info("sealed dev={} pdev={}", device.id.take(8), req.partnerDeviceId.take(8))
             call.respond(OkResponse())
         }
 
@@ -436,8 +453,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("unknown action"))
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "unlock", req.t, action.key, req.signature)) return@post call.unauthorized()
-            if (device.partners.none { it.confirmed } && device.appPartners.isEmpty())
-                return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("no partner to ask yet"))
+            if (device.partners.none { it.ready }) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("no partner to ask yet"))
             val now = cfg.now()
             // Asking again for the same thing while it's open doesn't tell partners twice.
             val open = device.unlockRequest?.takeIf { it.action == action.key && app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, now) }
@@ -487,15 +503,27 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!signedOk(device, "heartbeat", req.t, req.lastSeq.toString(), req.signature)) return@post call.unauthorized()
             val gap = req.gap?.takeIf { g -> req.gapSignature != null && signedOk(device, "gap", req.t, Integrity.sha256(g), req.gapSignature) }
             alerts.checkedIn(device.id, gap?.filter { !it.isISOControl() }?.take(300))
-            val now = store.device(device.id)
-            val ask = now?.unlockRequest?.takeIf { cfg.now() - it.askedMs < app.focusfence.dns.UnlockAsk.LAPSE_MS + app.focusfence.dns.UnlockAsk.GRANT_MS }
+            val keyId = req.keyId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(64)
+            // A new key id means the phone has started a new key: whatever asked for one is answered.
+            if (keyId.isNotEmpty() && keyId != device.reportKeyId) store.updateDevice(device.id) { it.reportKeyId = keyId; it.rotateKey = false }
+            val d = store.device(device.id) ?: return@post call.unknownDevice()
+            val now = cfg.now()
+            val ask = d.unlockRequest?.takeIf { now - it.askedMs < app.focusfence.dns.UnlockAsk.LAPSE_MS + app.focusfence.dns.UnlockAsk.GRANT_MS }
+            val seal = if (keyId.isEmpty()) emptyList() else d.partners.flatMap { p ->
+                p.devices.filter { it.sealed == null || it.keyId != keyId }.map { pd ->
+                    SealTarget(p.id, pd.id, p.name, pd.kind, pd.label, pd.publicKeySpki, firstDevice = !p.ready)
+                }
+            }
             call.respond(HeartbeatResponse(
-                notices = now?.ownerNotices.orEmpty().filter { it.t > req.noticesAfter },
-                unlock = ask?.status(cfg.now()),
+                notices = d.ownerNotices.filter { it.t > req.noticesAfter },
+                unlock = ask?.status(now),
+                seal = seal,
+                invitesOpen = d.invites.count { it.expiresMs > now },
+                rotateKey = d.rotateKey,
             ))
         }
 
-        // D-023: the partner report, sealed on the phone; stored as ciphertext and opened only in the partner's browser.
+        // D-023: the partner report, sealed on the phone; stored as ciphertext and opened only on partner devices.
         post("/v1/reports") {
             val req = call.receive<ReportRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
@@ -520,190 +548,82 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.respond(OkResponse())
         }
 
-        // Encrypted screenshot blob; the server stores ciphertext only.
-        post("/v1/shots") {
-            val req = call.receive<ShotRequest>()
-            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
-            if (!signedOk(device, "shot", req.t, req.shotId, req.signature)) return@post call.unauthorized()
-            if (full()) return@post call.serverFull()
-            if (req.ciphertextB64.length > Store.SHOT_MAX_BYTES * 4 / 3 + 16) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
-            val bytes = Base64.getDecoder().decode(req.ciphertextB64)
-            if (bytes.size > Store.SHOT_MAX_BYTES) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
-            store.saveBlob(req.deviceId, req.shotId, bytes)
-            call.respond(OkResponse())
-        }
+        // ---- the partner's side -----------------------------------------------
 
-        // ---- blind mailbox (app to app) -------------------------------------
-        // The id and token are derived from a pairing key the server never sees.
-        // The server keeps only sha256(token), so it can't post as either side.
-
-        post("/v1/mailbox/{id}") {
-            val id = call.parameters["id"].orEmpty()
-            if (!MAILBOX_ID.matches(id)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
-            val req = call.receive<CreateMailboxRequest>()
-            if (store.mailbox(id) == null) { // an existing mailbox is just re-checked; only NEW ones are limited
-                // D-035: only an enrolled phone opens a new mailbox, so nobody can fill the server without an invite or code.
-                val dev = store.device(req.deviceId) ?: return@post call.unknownDevice()
-                if (!signedOk(dev, "mailbox", req.t, id, req.signature)) return@post call.unauthorized()
-                if (!mailboxLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-                if (full() || store.mailboxCount() >= cfg.maxMailboxes) return@post call.serverFull()
-            }
-            if (req.tokenHash.length != 43) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad token hash"))
-            val mb = store.createMailbox(id, req.tokenHash, cfg.now())
-            if (mb.tokenHash != req.tokenHash) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("taken"))
-            call.respond(OkResponse())
-        }
-
-        post("/v1/mailbox/{id}/msgs") {
-            val id = call.parameters["id"].orEmpty()
-            if (!MAILBOX_ID.matches(id)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
-            if (full()) return@post call.serverFull()
-            val mb = store.mailbox(id) ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("no mailbox"))
-            if (!tokenOk(call, mb)) return@post call.respond(HttpStatusCode.Forbidden, ErrorResponse("bad token"))
-            val req = call.receive<PostMailRequest>()
-            if (req.c.length > 96 * 1024) return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("too large"))
-            call.respond(PostMailResponse(store.postMail(id, req.c, cfg.now())))
-        }
-
-        get("/v1/mailbox/{id}/msgs") {
-            val id = call.parameters["id"].orEmpty()
-            if (!MAILBOX_ID.matches(id)) return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad id"))
-            val mb = store.mailbox(id) ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("no mailbox"))
-            if (!tokenOk(call, mb)) return@get call.respond(HttpStatusCode.Forbidden, ErrorResponse("bad token"))
-            val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
-            call.respond(MailListResponse(store.readMail(id, after), mb.lastWriteMs))
-        }
-
-        // ---- partner web pages ---------------------------------------------
-
-        // The partner's one link (D-026). Before joining: the join form. After joining and confirming the address: on to
-        // the report, and the browser carries the '#k=' key across the redirect, so it works in any browser, any time.
-        get("/i/{secret}") {
-            val secret = call.parameters["secret"].orEmpty()
-            if (secret.length < 20) return@get call.respondText(Web.message("Not found", "This link isn't valid."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            val hash = Integrity.sha256(secret)
-            store.partnerByLinkHash(hash)?.let { (_, partner) ->
-                return@get if (partner.confirmed) call.respondRedirect("/p/${partner.token}")
-                else call.respondText(Web.message("Confirm your email first",
-                    "We emailed ${Web.mask(partner.email)} a confirmation link. Click it, then open this same link again: it's your report link from then on."),
-                    ContentType.Text.Html)
+        // Plan 13: whoever uses an invite first joins (Logan: "trust who uses the invite"). Their device made a key pair
+        // and sends only the public half; the owner's phone seals the report key to it at its next check-in.
+        post("/v1/join") {
+            val req = call.receive<JoinRequest>()
+            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many tries. Try again in an hour."))
+            if (req.kind != Store.KIND_APP && req.kind != Store.KIND_WEB) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("kind"))
+            if (!keyOk(req.publicKeySpki)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key"))
+            val hash = when {
+                req.link.length >= 20 -> Integrity.sha256(req.link.take(64))
+                normalizeCode(req.code).length == 8 -> Integrity.sha256(normalizeCode(req.code))
+                else -> return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Type the 8-character code."))
             }
             val now = cfg.now()
-            if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now && !it.enrollOnly } }) {
-                return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            val (owner, inv) = store.inviteByHash(hash, now)
+                ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("That invite isn't valid. It may have expired or been used already; ask for a new one."))
+            if (full()) return@post call.serverFull()
+            val viaEmail = inv.linkHash.isNotEmpty() && inv.linkHash == hash
+            val label = clean(req.label, 40).ifEmpty { if (req.kind == Store.KIND_APP) "Phone" else "Browser" }
+            val pd = Store.PartnerDevice(java.util.UUID.randomUUID().toString(), req.kind, label, req.publicKeySpki, now)
+            var partner: Store.Partner? = null
+            var refusal: String? = null
+            store.updateDevice(owner.id) { d ->
+                when {
+                    d.invites.none { it.id == inv.id } -> refusal = "That invite was just used."
+                    d.partners.size >= cfg.maxPartnersPerDevice -> refusal = "They already have the most partners a phone can have."
+                    else -> {
+                        val name = clean(req.name, 60).ifEmpty { "Partner" }
+                        val p = Store.Partner(java.util.UUID.randomUUID().toString(), name, newToken(), now,
+                            email = if (viaEmail) inv.email else "", devices = listOf(pd), inviteId = inv.id)
+                        d.partners = d.partners + p
+                        d.invites = d.invites.filter { it.id != inv.id }
+                        partner = p
+                    }
+                }
             }
-            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
-            call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret, pkg = cfg.androidPackage), ContentType.Text.Html)
+            refusal?.let { return@post call.respond(HttpStatusCode.Conflict, ErrorResponse(it)) }
+            val p = partner ?: return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("That invite isn't valid any more."))
+            partnerJournal.info("join dev={} partner={} kind={} email={}", owner.id.take(8), p.id.take(8), req.kind, viaEmail)
+            call.respond(JoinResponse(p.id, pd.id, p.token, "${cfg.publicUrl}/p/${p.token}", ownerName(owner)))
         }
 
-        get("/join") {
-            val code = call.request.queryParameters["code"].orEmpty()
-            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
-            call.respondText(Web.joinForm(code, null, notifier.smsAvailable), ContentType.Text.Html)
+        // The pages an invite opens: the emailed link (/j/) and the QR code's link (/c/). report.js joins from here.
+        get("/j/{secret}") {
+            val secret = call.parameters["secret"].orEmpty().take(64)
+            val found = secret.takeIf { it.length >= 20 }?.let { store.inviteByHash(Integrity.sha256(it), cfg.now()) }
+            call.respondText(Web.joinPage(found?.let { ownerName(it.first) }, link = secret, code = "", pkg = cfg.androidPackage),
+                ContentType.Text.Html, if (found == null) HttpStatusCode.NotFound else HttpStatusCode.OK)
         }
-
-        post("/join") {
-            val form = call.receiveParameters()
-            val rawCode = form["code"].orEmpty()
-            // Without email the confirmation can never arrive: refuse before the invite is spent.
-            if (!notifier.emailAvailable) return@post call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
-            if (!joinLimiter.allow(call.client())) {
-                return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
-                    ContentType.Text.Html, HttpStatusCode.TooManyRequests)
-            }
-            val rawLink = form["link"].orEmpty().take(64)
-            val linkHash = if (rawLink.length >= 20) Integrity.sha256(rawLink) else ""
-            val codeHash = Integrity.sha256(normalizeCode(rawCode))
-            fun again(err: String) = Web.joinForm(rawCode, err, notifier.smsAvailable, link = rawLink.takeIf { linkHash.isNotEmpty() }, pkg = cfg.androidPackage)
-            val name = form["name"].orEmpty().filter { !it.isISOControl() }.trim().take(60)
-            val email = form["email"].orEmpty().trim().take(120)
-            if (name.isEmpty() || !EMAIL.matches(email)) {
-                return@post call.respondText(again("Enter your name and email."), ContentType.Text.Html)
-            }
-            val now = cfg.now()
-            fun Store.Invite.matches() = expiresMs > now && !enrollOnly && (if (linkHash.isNotEmpty()) this.linkHash == linkHash else this.codeHash == codeHash)
-            val device = store.allDevices().firstOrNull { d -> d.invites.any { it.matches() } }
-                ?: return@post call.respondText(again("That invite isn't valid. It may have expired or already been used."), ContentType.Text.Html)
-            val invite = device.invites.first { it.matches() }
-            if (device.partners.size >= cfg.maxPartnersPerDevice) {
-                return@post call.respondText(again("This phone already has the most partners it can have."), ContentType.Text.Html)
-            }
-            // Double opt-in: the address is NOT trusted yet. Until its owner clicks the link below, the only thing
-            // ever sent to it is that one email, so a stranger's address can't be signed up to receive alerts.
-            val partner = Store.Partner(java.util.UUID.randomUUID().toString(), name, email, newToken(), now, confirmed = false,
-                linkHash = invite.linkHash.ifEmpty { null }, inviteId = invite.id)
-            store.updateDevice(device.id) { d ->
-                d.invites = d.invites.filter { it.codeHash != invite.codeHash } // single use: the code is spent, the link now belongs to this partner
-                d.partners = d.partners + partner
-            }
-            sendConfirmation(device.id, partner)
-            // No redirect to the report: the joiner must not receive any token for an address they haven't proven they own.
-            call.respondText(Web.joinPending(partner.id), ContentType.Text.Html)
-
-        }
-
-        // The first email can fail (provider down, sender not verified) or land in spam: let the joiner ask again.
-        // Keyed by partner id, which grants nothing; the per-address hourly cap and the per-client join cap still apply.
-        post("/join/resend/{pid}") {
-            if (!joinLimiter.allow(call.client())) return@post call.respondText(Web.message("Slow down", "Too many attempts. Try again in an hour."), ContentType.Text.Html, HttpStatusCode.TooManyRequests)
-            val found = store.partnerById(call.parameters["pid"].orEmpty())
-            if (found != null && !found.second.confirmed) sendConfirmation(found.first.id, found.second)
-            call.respondText(Web.joinPending(call.parameters["pid"].orEmpty().take(64), "If that request is still open, we sent the email again."), ContentType.Text.Html)
-        }
-
-        // The email link only SHOWS a button; confirming is a POST, so a mail scanner that opens links can't confirm for you.
-        get("/confirm/{token}") {
-            val token = call.parameters["token"].orEmpty()
-            store.partnerByConfirmToken(token)
-                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid or has already been used."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            call.respondText(Web.confirmForm(token), ContentType.Text.Html)
-        }
-
-        post("/confirm/{token}") {
-            val token = call.parameters["token"].orEmpty()
-            val (device, partner) = store.partnerByConfirmToken(token)
-                ?: return@post call.respondText(Web.message("Not found", "This link isn't valid or has already been used."), ContentType.Text.Html, HttpStatusCode.NotFound)
-            run {
-                store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.apply { confirmed = true; confirmHash = null } }
-                // Journey 4 (2026-11-25): say what's coming, so the first alert isn't a surprise and silence isn't a worry.
-                notifier.email(
-                    partner.email, "Focus Fence: you're now an accountability partner",
-                    "<p>Hi ${Web.esc(partner.name)}, you're set up. Here's what you'll get:</p><ul>" +
-                        "<li><b>Alerts by email, within minutes,</b> when their protection changes (the filter turned off, " +
-                        "uninstall protection removed) or the phone stops checking in for about an hour. You'll also hear when it's back.</li>" +
-                        "<li><b>Flagged screenshots,</b> heavily blurred, if they turned on screen checks and the phone finds nudity on screen. They may add a note.</li>" +
-                        "<li><b>A weekly email</b> pointing to the report. The report itself updates about every 15 minutes.</li></ul>" +
-                        "<p>The report is end-to-end encrypted. Open it from the Focus Fence link they sent you: that link carries the " +
-                        "key and works in any browser. This one works too in a browser that has opened that link before: " +
-                        "<a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>" +
-                        "<p>You can stop being their partner any time from the bottom of the report page.</p>",
-                )
-            }
-            // Only now does the confirmed owner of the address get their report link (here, and in the email).
-            call.respondRedirect("/p/${partner.token}?welcome=1")
+        get("/c/{code}") {
+            val code = normalizeCode(call.parameters["code"].orEmpty().take(20))
+            val found = code.takeIf { it.length == 8 }?.let { store.inviteByHash(Integrity.sha256(it), cfg.now()) }
+            call.respondText(Web.joinPage(found?.let { ownerName(it.first) }, link = "", code = code, pkg = cfg.androidPackage),
+                ContentType.Text.Html, if (found == null) HttpStatusCode.NotFound else HttpStatusCode.OK)
         }
 
         get("/p/{token}") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
-                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more."), ContentType.Text.Html, HttpStatusCode.NotFound)
+                ?: return@get call.respondText(Web.message("Not found", "This link isn't valid any more. If you were removed or left, you're no longer their partner."), ContentType.Text.Html, HttpStatusCode.NotFound)
+            val q = call.request.queryParameters
             val notice = when {
-                call.request.queryParameters["welcome"] != null && !partner.confirmed ->
-                    "Check your email and confirm your address to start getting alerts. Until then nothing is sent to you."
-                call.request.queryParameters["welcome"] != null -> "You're linked. Bookmark this page — it's your private report."
-                call.request.queryParameters["sms"] == "on" -> "Text alerts are on."
-                call.request.queryParameters["sms"] == "bad" -> "That code didn't match. Try again."
-                call.request.queryParameters["unlock"] == "approved" -> "Approved. They've been told, and so have any other partners."
-                call.request.queryParameters["unlock"] == "denied" -> "You said no. They've been told. They can still wait out the delay."
-                call.request.queryParameters["unlock"] == "late" -> "That request was already answered or has lapsed."
-                call.request.queryParameters["prefs"] == "saved" -> "Saved. Alerts now reach you the way you chose."
+                q["unlock"] == "approved" -> "Approved. They've been told, and so have any other partners."
+                q["unlock"] == "denied" -> "You said no. They've been told. They can still wait out the delay."
+                q["unlock"] == "late" -> "That request was already answered or has lapsed."
+                q["prefs"] == "saved" -> "Saved. Alerts now reach you the way you chose."
+                q["device"] == "removed" -> "Removed. That device can't open the report any more."
+                q["device"] == "last" -> "That's your only device. To stop seeing the report, use Stop being their partner."
                 else -> null
             }
-            val ask = device.unlockRequest?.takeIf { app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, cfg.now()) && partner.confirmed }
-            call.respondText(Web.partnerPage(partner, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, notifier.smsAvailable, notice, ask),
+            val ask = device.unlockRequest?.takeIf { app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, cfg.now()) && partner.ready }
+            call.respondText(Web.partnerPage(partner, ownerName(device), cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, notice, ask, partner.emailsAlerts(cfg.now())),
                 ContentType.Text.Html)
         }
 
-        // The sealed report slices for this partner's phone. Ciphertext only: the key is in the partner's browser.
+        // The sealed report slices for this partner's phone. Ciphertext only: the key is on the partner's devices.
         get("/p/{token}/data") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
@@ -711,68 +631,70 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             // Plan 12 §2: only the page's script fetches this, so a mail scanner opening the link doesn't count as a look.
             store.markViewed(device.id, partner.id, cfg.now())
             call.respond(ReportData(device.id, partner.name, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs,
-                store.readReports(device.id).filter { cfg.now() - it.to <= cfg.reportEveryMs + 3_600_000L }))
+                store.readReports(device.id).filter { cfg.now() - it.to <= cfg.reportEveryMs + 3_600_000L }, ownerName(device)))
         }
 
-        // What this partner has been told, for app partners to notify on (2026-11-25). The same lines alert emails carry.
+        // Plan 13: this device's copy of the report key, sealed to its own public key, once the owner's phone has sent it.
+        get("/p/{token}/key") {
+            val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            val pd = partner.devices.firstOrNull { it.id == call.request.queryParameters["d"] }
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("unknown device"))
+            call.response.headers.append("Cache-Control", "no-store")
+            val s = pd.sealed
+            call.respond(if (s == null) KeyResponse(false) else KeyResponse(true, s, pd.keyId).also { if (pd.keyId != device.reportKeyId) partnerJournal.info("key old dev={} pdev={}", device.id.take(8), pd.id.take(8)) })
+        }
+
+        // What partners have been told, for a partner's app to notify on. The same lines alert emails carry.
         get("/p/{token}/alerts") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
             val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
             call.response.headers.append("Cache-Control", "no-store")
-            store.markFeedRead(device.id, partner.id, cfg.now())
+            call.request.queryParameters["d"]?.let { store.markFeedRead(device.id, partner.id, it, cfg.now()) }
             call.respond(AlertFeed(cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, cfg.staleMs,
-                if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList(),
+                if (partner.ready) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList(),
                 partner.alertLevel, partner.quiet, partner.quietFrom, partner.quietTo))
         }
 
-        // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
-        get("/key") { call.respondText(Web.keyPage(), ContentType.Text.Html) }
+        // Plan 13: another device of the same partner (a laptop browser, a new phone). The report link is the credential,
+        // so this can't be silent: the owner's phone says "Sam added a browser" when it seals, and Sam is emailed.
+        post("/p/{token}/devices") {
+            val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
+                ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
+            val req = call.receive<AddDeviceRequest>()
+            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many tries. Try again in an hour."))
+            if (req.kind != Store.KIND_APP && req.kind != Store.KIND_WEB) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("kind"))
+            if (!keyOk(req.publicKeySpki)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key"))
+            if (partner.devices.size >= Store.DEVICES_PER_PARTNER) return@post call.respond(HttpStatusCode.Conflict,
+                ErrorResponse("You already have ${Store.DEVICES_PER_PARTNER} devices, the most there can be. Remove one first."))
+            val label = clean(req.label, 40).ifEmpty { if (req.kind == Store.KIND_APP) "Phone" else "Browser" }
+            val pd = Store.PartnerDevice(java.util.UUID.randomUUID().toString(), req.kind, label, req.publicKeySpki, cfg.now())
+            store.updateDevice(device.id) { d -> d.partners.firstOrNull { it.id == partner.id }?.let { it.devices = it.devices + pd } }
+            partnerJournal.info("device added dev={} partner={} kind={}", device.id.take(8), partner.id.take(8), req.kind)
+            if (partner.email.isNotEmpty()) alerts.emailOne(partner, "a device was added",
+                listOf("A ${if (req.kind == Store.KIND_APP) "phone" else "browser"} ($label) was added to the devices that open ${ownerName(device)}'s report. If that wasn't you, remove it from the bottom of the report page."))
+            call.respond(AddDeviceResponse(pd.id))
+        }
+
+        post("/p/{token}/devices/{id}/remove") {
+            val token = call.parameters["token"].orEmpty()
+            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val pd = partner.devices.firstOrNull { it.id == call.parameters["id"] } ?: return@post call.respondRedirect("/p/$token")
+            if (partner.devices.size == 1) return@post call.respondRedirect("/p/$token?device=last")
+            store.updateDevice(device.id) { d ->
+                d.partners.firstOrNull { it.id == partner.id }?.let { it.devices = it.devices.filter { x -> x.id != pd.id } }
+                d.rotateKey = true
+            }
+            store.addOwnerNotice(device.id, "${partner.name} removed a device (${pd.label}).", cfg.now(), "device")
+            partnerJournal.info("device removed dev={} partner={}", device.id.take(8), partner.id.take(8))
+            call.respondRedirect("/p/$token?device=removed")
+        }
 
         for (name in listOf("report.js", "admin.js")) get("/static/$name") {
             val js = object {}.javaClass.getResource("/static/$name")?.readText()
                 ?: return@get call.respond(HttpStatusCode.NotFound)
             call.respondText(js, ContentType.parse("text/javascript"))
-        }
-
-        post("/p/{token}/sms") {
-            val token = call.parameters["token"].orEmpty()
-            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
-            val form = call.receiveParameters()
-            val phone = form["phone"]?.let(::normalizePhone)
-            if (partner.confirmed && phone != null && form["sms_consent"] == "yes" && notifier.smsAvailable) {
-                startSmsVerification(store, notifier, smsLimiter, cfg, device.id, partner.id, phone)
-            }
-            call.respondRedirect("/p/$token")
-        }
-
-        post("/p/{token}/sms/verify") {
-            val token = call.parameters["token"].orEmpty()
-            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
-            val code = call.receiveParameters()["code"].orEmpty().filter { it.isDigit() }
-            val ok = partner.smsCodeHash != null && cfg.now() < partner.smsCodeExpiresMs &&
-                Integrity.sha256(code) == partner.smsCodeHash
-            if (ok) {
-                store.updateDevice(device.id) { d ->
-                    d.partners.firstOrNull { it.id == partner.id }?.apply {
-                        phoneVerified = true
-                        smsCodeHash = null
-                    }
-                }
-            }
-            call.respondRedirect("/p/$token?sms=${if (ok) "on" else "bad"}")
-        }
-
-        post("/p/{token}/sms/stop") {
-            val token = call.parameters["token"].orEmpty()
-            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
-            store.updateDevice(device.id) { d ->
-                d.partners.firstOrNull { it.id == partner.id }?.apply {
-                    phone = null
-                    phoneVerified = false
-                }
-            }
-            call.respondRedirect("/p/$token")
         }
 
         // Plan 12 §5: how alerts reach this partner. Their own page sets it; nobody else can.
@@ -787,7 +709,6 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val to = app.focusfence.dns.AlertPrefs.hourOr(form["to"]?.toIntOrNull(), partner.quietTo)
             store.updateDevice(device.id) { d ->
                 d.partners.firstOrNull { it.id == partner.id }?.apply { alertLevel = level; this.quiet = quiet; quietFrom = from; quietTo = to; if (zone != null) this.zone = zone }
-                d.appPartners = d.appPartners.map { if (it.id == partner.id) it.copy(alertLevel = level, quiet = quiet, quietFrom = from, quietTo = to) else it }
             }
             partnerJournal.info("prefs dev={} partner={} level={} quiet={}", device.id.take(8), partner.id.take(8), level, if (quiet) "$from-$to" else "off")
             call.respondRedirect("/p/$token?prefs=saved")
@@ -802,7 +723,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             var answered: Store.UnlockRequest? = null
             store.updateDevice(device.id) { d ->
                 val r = d.unlockRequest
-                if (partner.confirmed && r != null && r.id == call.parameters["id"] && app.focusfence.dns.UnlockAsk.open(r.state, r.askedMs, now)) {
+                if (partner.ready && r != null && r.id == call.parameters["id"] && app.focusfence.dns.UnlockAsk.open(r.state, r.askedMs, now)) {
                     answered = r.copy(state = if (approve) app.focusfence.dns.UnlockAsk.APPROVED else app.focusfence.dns.UnlockAsk.DENIED, by = partner.name, decidedMs = now)
                     d.unlockRequest = answered
                 }
@@ -819,14 +740,14 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/p/{token}/leave") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@post call.respond(HttpStatusCode.NotFound)
-            store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != partner.id }; d.appPartners = d.appPartners.filter { it.id != partner.id } }
+            forget(device.id, partner.id)
             // Leaving is never silent (plan 12): the owner's phone hears it at its next check-in, and everyone still
             // watching is told, so a partner quietly dropping off can't leave the owner believing they're watched.
             partnerJournal.info("partner left dev={} partner={}", device.id.take(8), partner.id.take(8))
             val who = partner.name.ifBlank { "A partner" }
-            store.addOwnerNotice(device.id, "$who stopped being your accountability partner.", cfg.now())
+            store.addOwnerNotice(device.id, "$who stopped being your accountability partner.", cfg.now(), "left")
             store.device(device.id)?.let { d ->
-                if (d.partners.any { it.confirmed } || d.appPartners.isNotEmpty())
+                if (d.partners.any { it.ready })
                     alerts.toPartners(d, "a partner left", listOf("$who stopped being an accountability partner for this phone."), minor = setOf(0))
             }
             call.respondText(Web.message("Done", "You're no longer their accountability partner. They've been told."), ContentType.Text.Html)
@@ -834,27 +755,4 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
     }
 }
 
-private val MAILBOX_ID = Regex("^[0-9a-f]{64}$")
 private val EMAIL = Regex("^[^\\s@<>\"',;]{1,64}@[A-Za-z0-9.-]{1,80}\\.[A-Za-z]{2,24}$")
-
-private fun tokenOk(call: ApplicationCall, mb: Store.Mailbox): Boolean {
-    val token = call.request.headers["X-FF-Token"] ?: return false
-    return java.security.MessageDigest.isEqual(Pairing.tokenHash(token).toByteArray(), mb.tokenHash.toByteArray())
-}
-
-private suspend fun startSmsVerification(
-    store: Store, notifier: Notifier, limiter: RateLimiter, cfg: Config,
-    deviceId: String, partnerId: String, phone: String,
-) {
-    if (!limiter.allow(partnerId)) return
-    val code = smsCode()
-    store.updateDevice(deviceId) { d ->
-        d.partners.firstOrNull { it.id == partnerId }?.apply {
-            this.phone = phone
-            phoneVerified = false
-            smsCodeHash = Integrity.sha256(code)
-            smsCodeExpiresMs = cfg.now() + 15 * 60_000
-        }
-    }
-    notifier.sms(phone, "Focus Fence code: $code. Confirms text alerts for an accountability partner. Reply STOP to opt out.")
-}

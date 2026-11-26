@@ -736,3 +736,27 @@ Also 2026-11-25: Settings → Feedback & bug reports opens one of three GitHub i
 versions and, if ticked, a numbers-only summary the owner sees first (`dns/BugReport`). The repo is public, so the app
 and the form both say not to paste logs or screenshots, and the app sends nothing itself.
 
+
+## D-042 — One kind of partner, and a clean protocol cut (plan 13)
+
+**Date:** 2026-11-26 · **By:** @flyboy-byte · **Status:** accepted (built; not yet released)
+
+Logan, after testing 2.26 on two phones: "its such a convolution of email vs app and routes for both all mixed and
+shitty ui", "dont require stupid pasting", "figure out the perfect setup, then fully enforce the new protocol without
+any residue and overlap". Production was paused and the live server wiped the same night.
+
+One kind of partner: a person with devices (their Focus Fence app, or a browser). Email versus app only decides how
+alerts reach them. Invites are an 8-character code, its QR code (the code's `/c/` link), or an email with a link of its
+own (`/j/`); single use, 24 hours. **No approval step** (Logan: "trust who uses the invite, more permission is clutter"):
+whoever uses an invite first joins. Each device makes its own P-256 key pair; the owner's phone seals the report key to
+it (ECIES with its own label) at its next check-in, so no key is ever in a link or seen by the server. A device added
+later with the report link alone is never silent: the owner's phone notifies, the partner is emailed, other partners get
+a housekeeping alert. The cost, accepted: a server operator could join a pending invite, or add a device using a report
+token it stores in the clear; both show up as a named partner or device on the owner's phone.
+
+Removing a partner, a partner leaving, or a partner dropping a device makes the owner's phone start a new report key.
+Ask-a-partner replaces the read-aloud unlock codes (Logan: "ur pick"); a handed-over partner PIN still works offline.
+
+Clean cut: protocol level 2 with `Protocol.FLOOR = 2`, so level-1 apps get HTTP 426 and the server and app delete old
+partner data (pairings, watches, mailboxes, groups, app partners, email double opt-in, SMS, the screenshot blob store)
+instead of converting it. Groups and SMS remain ideas in scope notes only. App 3.0.0 and server 2.0.0 ship together.

@@ -48,7 +48,7 @@ export.
 
 | `comp` | `state` values |
 |---|---|
-| `partner` | `server_enrolled`, `invite_created`, `partner_removed` (detail: name), `pairing_created` / `pairing_removed` (detail: name), `partner_left` (detail: the server's plain-words notice; a partner removed themselves, plan 12), `server_left` |
+| `partner` | Owner side: `server_enrolled`, `invite_created` (detail: `code`/`email`), `partner_joined` (detail: name; their first device got the key), `device_added` (detail: `name: device`), `partner_removed` (detail: name), `partner_left` / `device_removed` (detail: the server's plain-words notice), `key_rotated` (a new report key after someone left), `server_left`. Partner side: `joined` / `left` (detail: owner's name), `report_ready` (this phone got the key). Once: `partners_reset` (plan 13 deleted the old partner data). `partner_joined` and `device_added` are partner alerts (housekeeping) |
 | `vpn` | `start` (detail: rule count, exclusions, ad list, always-on), `stop` (`user` or `restart`), `stop_refused` (strict), `revoked`, `destroyed`, `establish_failed`, `health` (detail: `ok`/`offline`/`degraded`/`upstream_down`/`silent`/`bypassed`/`lockdown`, `fail_pct`, `was`) |
 | `a11y` | `connected` (detail: scope), `destroyed` |
 | `app` | `process_start` (detail: boot count, version), `updated` (from/to) |
@@ -81,12 +81,13 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `perf` | `win` (window ms) + counters below + `p50`/`p95`/`p99`/`max` resolver latency ms | Right after each `bat` sample, closing the window since the previous one |
 | `err` | `comp`, `what`, `detail`? (≤300 chars) | Non-fatal failures: `ipv6_rejected`, `tun_read`, `interrupt`, monitor exceptions |
 | `svc` | `comp=adlist`, `state=loaded`, `detail` (`n=…,ms=…`) | Ad list loaded after VPN start. Until then ad domains resolve normally |
-| `err` | `comp=sync`, `what` = the step (`heartbeat`, `shares`, `alerts`, `report`, `group`, `invites`, `pairing`, `watch`), `detail` = exception and message | A sync step failed. Once per step until the message changes or 6 h pass |
+| `err` | `comp=sync`, `what` = the step (`heartbeat`, `shares`, `alerts`, `report`, `seen`), `detail` = exception and message | A sync step failed. Once per step until the message changes or 6 h pass |
 | `err` | `comp=ask`, `what` = `network` or `http_<code>`, `detail` | "Ask a partner" couldn't be sent (409 no partner, 404 server too old) |
 | `svc` | `comp=notify`, `state=channels`, `detail` (`enabled=…,partner_alerts=<importance>,…`) | Whether partner notifications can show, per category; written when it changes (0 = switched off in Android) |
 | `svc` | `comp=partner`, `state=feed_prefs`, `detail` (`Name: level=…,quiet=22-7`) | A partner's own alert choices as their server reports them; written when they change |
-| `svc` | `comp=partner`, `state=link_gone`, `detail` (name) | A report this phone watched no longer exists on its server (404): its owner removed this partner, or left the server. Counter `feed_gone` |
-| `svc` | `comp=partner`, `state=via_server`, `detail` (name) | This phone stopped using the pairing mailbox for that partner: their app reads the server feed (plan 12 §8) |
+| `svc` | `comp=partner`, `state=link_gone`, `detail` (name) | A report this phone sees no longer exists on its server (404): its owner removed this partner, or the server was reset. Counter `feed_gone` |
+| `err` | `comp=seal`, `what` = `bad_key` or `http_<code>`, `detail` (device id prefix) | The owner's phone couldn't seal the report key to a partner device |
+| `err` | `comp=seen`, `what=open_key`, `detail` (exception) | This phone couldn't open the report key sealed to it |
 | `svc` | `comp=link`, `state=invite_opened` / `not_invite` | The app was opened from an invite page's "Open in the app" button. The link itself is never logged |
 
 `perf` counters (absent = 0):
@@ -116,6 +117,7 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `http_req`, `http_ms`, `http_4xx`, `http_5xx`, `http_fail_dns` / `_timeout` / `_connect` / `_tls` / `_io` | Every request the app makes to a server (`sync/Api`): count, total time of the answered ones, error answers, and failures by kind. No address or content |
 | `sync_ms` | Wall time of each sync pass (with `sync_cpu_us`, the battery and network cost of a pass) |
 | `ask_poll` | Extra once-a-minute syncs while an "ask a partner" request waits (plan 12) |
+| `invite_poll`, `key_poll`, `sealed` | Plan 13: extra once-a-minute syncs while an invite is open (owner) or the key hasn't arrived (partner), at most 30 minutes; report keys sealed to partner devices |
 | `feed_read`, `feed_fail`, `feed_new`, `feed_now`, `feed_other`, `feed_held`, `feed_skip`, `feed_flush` | A partner's phone reading the server's alert feed: reads, failed reads, new alerts, and what happened to each (shown as important, shown as other, held for quiet hours or the daily message, not shown by their choice), and held batches sent (plan 12) |
 | `lat_n` | Latencies recorded (percentiles use at most 4096 per window) |
 | `log_dropped` | Log lines that failed to write |

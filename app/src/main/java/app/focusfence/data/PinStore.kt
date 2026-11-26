@@ -44,17 +44,10 @@ object PinStore {
         return pin
     }
 
-    /**
-     * The handed-over PIN, or the current unlock code shown in a paired
-     * partner's app (see [app.focusfence.dns.Pairing.code]) — verified offline,
-     * so a partner PIN works without a PIN ever being handed over.
-     */
-    fun verifyPartner(context: Context, pin: String): Boolean =
-        verify(context, KEY_PARTNER, pin) ||
-            app.focusfence.sync.SyncStore.verifyPartnerCode(context, pin, System.currentTimeMillis())
+    /** The PIN handed to the partner. (Plan 13: the codes a paired partner's app showed are gone; ask a partner replaces them.) */
+    fun verifyPartner(context: Context, pin: String): Boolean = verify(context, KEY_PARTNER, pin)
 
-    fun hasPartnerPin(context: Context): Boolean =
-        prefs(context).contains(KEY_PARTNER) || app.focusfence.sync.SyncStore.ownPairings(context).isNotEmpty()
+    fun hasPartnerPin(context: Context): Boolean = prefs(context).contains(KEY_PARTNER)
 
     fun hasOwnerPin(context: Context): Boolean = prefs(context).contains(KEY_OWNER)
 

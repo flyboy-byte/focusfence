@@ -29,14 +29,16 @@ object Ecies {
 
     private val MAGIC = byteArrayOf('F'.code.toByte(), 'F'.code.toByte(), 'S'.code.toByte(), '1'.code.toByte())
     private val INFO = "focusfence-shot-v1".toByteArray()
+    /** Plan 13: the report key sealed to one partner device. Its own label, so a sealed key can't pass as a shot. */
+    val INFO_KEY = "focusfence-key-v1".toByteArray()
 
     fun publicKeyFromSpki(der: ByteArray): PublicKey =
         KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(der))
 
-    fun encrypt(plain: ByteArray, recipient: PublicKey): ByteArray {
+    fun encrypt(plain: ByteArray, recipient: PublicKey, info: ByteArray = INFO): ByteArray {
         val kpg = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }
         val eph = kpg.generateKeyPair()
-        val key = deriveKey(eph.private, recipient)
+        val key = deriveKey(eph.private, recipient, info)
         val iv = Pin.randomBytes(12)
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
@@ -46,25 +48,25 @@ object Ecies {
             .put(MAGIC).putShort(ephDer.size.toShort()).put(ephDer).put(iv).put(ct).array()
     }
 
-    /** Partner-side decrypt; used by tests (the real partner decrypts in the browser). */
-    fun decrypt(blob: ByteArray, recipientPrivate: PrivateKey): ByteArray {
+    /** Recipient-side decrypt: a partner's app opening its sealed report key, and tests (a browser does it in report.js). */
+    fun decrypt(blob: ByteArray, recipientPrivate: PrivateKey, info: ByteArray = INFO): ByteArray {
         val bb = ByteBuffer.wrap(blob)
         val magic = ByteArray(4).also { bb.get(it) }
-        require(magic.contentEquals(MAGIC)) { "not a FocusFence shot" }
+        require(magic.contentEquals(MAGIC)) { "not a Focus Fence sealed blob" }
         val ephDer = ByteArray(bb.short.toInt()).also { bb.get(it) }
         val iv = ByteArray(12).also { bb.get(it) }
         val ct = ByteArray(bb.remaining()).also { bb.get(it) }
-        val key = deriveKey(recipientPrivate, publicKeyFromSpki(ephDer))
+        val key = deriveKey(recipientPrivate, publicKeyFromSpki(ephDer), info)
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
         return c.doFinal(ct)
     }
 
-    private fun deriveKey(priv: PrivateKey, pub: PublicKey): ByteArray {
+    private fun deriveKey(priv: PrivateKey, pub: PublicKey, info: ByteArray): ByteArray {
         val ka = KeyAgreement.getInstance("ECDH")
         ka.init(priv)
         ka.doPhase(pub, true)
-        return hkdf(ka.generateSecret(), ByteArray(0), INFO, 32)
+        return hkdf(ka.generateSecret(), ByteArray(0), info, 32)
     }
 
     /** RFC 5869 HKDF-SHA256. */

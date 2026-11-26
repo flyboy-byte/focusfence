@@ -16,7 +16,7 @@ import java.time.ZoneId
  *
  * "Important" (Logan picked all four groups): phone silent or protection off, flagged screenshots, unlock asks, and
  * loosening or repeated blocked tries. That is nearly everything; what's left is housekeeping such as "the phone is
- * back", partners joining or leaving, group changes, and the answer to an ask.
+ * back", partners joining, adding a device or leaving, and the answer to an ask.
  */
 object AlertPrefs {
     enum class Level(val key: String) {
@@ -81,7 +81,7 @@ object AlertPrefs {
     fun isImportant(f: Map<String, Any?>): Boolean {
         val comp = f["comp"]; val state = f["state"] as? String ?: return true
         if (f["type"] != LogEvents.TYPE_SERVICE) return true
-        if (comp == "partner" && (state == "partner_removed" || state == "pairing_removed" || state.startsWith("group_"))) return false
+        if (comp == "partner" && state in setOf("partner_removed", "partner_joined", "device_added")) return false
         if (comp == "strict" && state == "partner_approval_used") return false
         return true
     }

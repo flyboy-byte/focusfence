@@ -22,17 +22,15 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.concurrent.Executors
 
 /**
- * Who can see this phone's reports, and whose reports this user sees.
- * Two partner paths, side by side: email/web (the default) and app-to-app
- * pairing. Adding a partner is immediate; removing one goes through the
- * friction guard, is logged, and the removed partner is told.
+ * Who can see this phone's report, and whose reports this user sees (plan 13: one kind of partner, a person with
+ * devices). Adding a partner is an invite (a code, its QR code, or an email); removing one goes through the friction
+ * guard, is logged, and the removed partner is told.
  */
 class AccountabilityFragment : Fragment() {
 
     private lateinit var binding: ActivityAccountabilityBinding
     private val io = Executors.newSingleThreadExecutor()
-    private var emailPartners: List<Accountability.Partner> = emptyList()
-    private var appPartners: List<Accountability.AppPartner> = emptyList()
+    private var partners: Accountability.Partners? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = ActivityAccountabilityBinding.inflate(inflater, container, false)
@@ -78,7 +76,6 @@ class AccountabilityFragment : Fragment() {
             if (moving) UiUtil.guard(requireContext(), GuardPolicy.Action.LEAVE_SERVER) { connect() } else connect()
         }
         binding.serverLeave.setOnClickListener { leaveServer() }
-        binding.groupButton.setOnClickListener { startActivity(Intent(requireContext(), GroupActivity::class.java)) }
         binding.inviteButton.setOnClickListener { invite() }
         binding.watchButton.setOnClickListener { join() }
     }
@@ -87,6 +84,14 @@ class AccountabilityFragment : Fragment() {
         super.onResume()
         bind()
         refreshPartners()
+        // Plan 13: once, after the update that replaced the partner system.
+        if (app.focusfence.data.PartnerReset.noticeDue(requireContext())) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.partners_reset_title)
+                .setMessage(R.string.partners_reset_body)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
         // An invite opened from a link (LinkActivity): the Join dialog, filled in, once.
         requireActivity().intent?.let { i ->
             i.getStringExtra(EXTRA_INVITE)?.let { invite -> i.removeExtra(EXTRA_INVITE); join(invite) }
@@ -144,7 +149,7 @@ class AccountabilityFragment : Fragment() {
 
     private fun bind() {
         val ok = SyncStore.lastOk(requireContext())
-        val configured = SyncStore.deviceId(requireContext()) != null || SyncStore.ownPairings(requireContext()).isNotEmpty() || SyncStore.watches(requireContext()).isNotEmpty()
+        val configured = SyncStore.deviceId(requireContext()) != null
         binding.syncStatus.text = if (!configured) {
             getString(R.string.acc_status_none)
         } else {
@@ -164,120 +169,237 @@ class AccountabilityFragment : Fragment() {
         renderWatches()
     }
 
-    // ---- email partners ------------------------------------------------------
+    // ---- your partners ------------------------------------------------------
 
-    private fun refreshPartners() {
+    private fun refreshPartners(then: ((Accountability.Partners) -> Unit)? = null) {
         if (SyncStore.serverUrl(requireContext()).isBlank() || SyncStore.deviceId(requireContext()) == null) return
         val ctx = requireContext().applicationContext
-        background({ Accountability.resolvePending(ctx); Accountability.partners(ctx) }) {
-            emailPartners = it.email
-            appPartners = it.app
+        background({ Accountability.partners(ctx) }) {
+            partners = it
             renderPartners()
+            then?.invoke(it)
         }
     }
 
-    /** Everyone who sees this phone's reports, email and app alike (D-035), plus invites not used yet. */
+    /** Everyone who sees this phone's report, with their devices, and invites not used yet. */
     private fun renderPartners() {
         val c = binding.emailPartners
         c.removeAllViews()
-        val pairings = SyncStore.ownPairings(requireContext())
-        if (emailPartners.isEmpty() && pairings.isEmpty()) {
+        val all = partners ?: return
+        if (all.partners.isEmpty() && all.invites.isEmpty()) {
             c.addView(note(getString(R.string.acc_none)))
             return
         }
-        for (p in pairings) {
-            val looked = appPartners.firstOrNull { p.inviteId.isNotEmpty() && it.inviteId == p.inviteId }?.lastViewMs
-            val sub = (if (p.pending) getString(R.string.acc_pending) else getString(R.string.acc_in_app)) +
-                if (p.pending) "" else looked(looked)
-            c.addView(row(p.name, sub, getString(R.string.acc_remove)) {
-                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
-                    background({ Accountability.removePairing(requireContext(), p) }) { bind() }
-                }
-            })
+        for (p in all.partners) {
+            val sub = if (!p.ready) getString(R.string.acc_partner_waiting) else {
+                getString(when (p.alertsBy) { "app" -> R.string.acc_by_app; "email" -> R.string.acc_by_email; else -> R.string.acc_by_none }) +
+                    (if (p.devices.size > 1) " · " + getString(R.string.acc_devices, p.devices.size) else "") + looked(p.lastViewMs)
+            }
+            c.addView(row(p.name, sub, getString(R.string.acc_details)) { partnerDetails(p) })
         }
-        for (p in emailPartners) {
-            val sub = p.email + (if (p.sms) " · " + getString(R.string.acc_sms_on) else "") + looked(p.lastViewMs)
-            c.addView(row(p.name, sub, getString(R.string.acc_remove)) {
-                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
-                    background({ Accountability.unlink(requireContext(), p) }) { refreshPartners() }
-                }
+        for (i in all.invites) {
+            val left = ((i.expiresMs - System.currentTimeMillis()) / 3_600_000L).coerceAtLeast(1)
+            val title = if (i.email.isNotEmpty()) getString(R.string.acc_invite_email_row, i.email) else getString(R.string.acc_invite_code_row)
+            c.addView(row(title, getString(R.string.acc_invite_ends, left), getString(android.R.string.cancel)) {
+                val ctx = requireContext().applicationContext
+                background({ Accountability.cancelInvite(ctx, i.id) }) { refreshPartners() }
             })
         }
     }
 
-    /** Plan 12 §2: " · looked 2 hours ago", " · hasn't opened the report yet", or nothing when the server can't say. */
-    private fun looked(ms: Long?): String = when {
-        ms == null || ms < 0 -> ""
-        ms == 0L -> " · " + getString(R.string.acc_not_looked)
-        else -> " · " + getString(R.string.acc_looked, android.text.format.DateUtils.getRelativeTimeSpanString(
-            ms, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS))
+    /** One partner: their devices (each one opens the report), how alerts reach them, and Remove. */
+    private fun partnerDetails(p: Accountability.Partner) {
+        val lines = p.devices.joinToString("\n") { d ->
+            "• ${d.label} (${getString(if (d.kind == "app") R.string.acc_device_app else R.string.acc_device_web)})" +
+                if (d.ready) "" else " · " + getString(R.string.acc_device_waiting)
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(p.name)
+            .setMessage(getString(R.string.acc_partner_details, lines, p.email.ifEmpty { getString(R.string.acc_no_email) }))
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(R.string.acc_remove) { _, _ ->
+                UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
+                    val ctx = requireContext().applicationContext
+                    background({ Accountability.unlink(ctx, p) }) { refreshPartners() }
+                }
+            }
+            .show()
     }
 
+    /** Plan 12 §2: " · looked 2 hours ago" or " · hasn't opened the report yet". */
+    private fun looked(ms: Long): String = when {
+        ms <= 0L -> " · " + getString(R.string.acc_not_looked)
+        else -> " · " + getString(R.string.acc_looked, DateUtils.getRelativeTimeSpanString(ms, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS))
+    }
+
+    /** Plan 13: what partners call this person, asked once, before the first invite. */
     private fun invite() {
         if (!hasServer()) return
-        prompt(R.string.acc_invite_for) { name ->
-            val ctx = requireContext().applicationContext
-            background({ Accountability.createInvite(ctx, name) }) { inv ->
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(R.string.acc_invite_ready_title)
-                    .setMessage(getString(R.string.acc_invite_ready, name) + "\n\n" + inv.link)
-                    .setPositiveButton(R.string.acc_share) { _, _ -> share(getString(R.string.acc_invite_share, inv.link)) }
-                    // A partner on a new phone or browser needs the report key again; it never goes through the server.
-                    .setNeutralButton(R.string.acc_key_link) { _, _ -> share(getString(R.string.acc_key_link_share, Accountability.keyLink(requireContext()))) }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-                bind()
-            }
+        if (SyncStore.ownerName(requireContext()).isNotBlank()) return showInvite()
+        prompt(R.string.acc_your_name) { name ->
+            SyncStore.setOwnerName(requireContext(), name)
+            showInvite()
         }
     }
+
+    /**
+     * Add a partner (the prototype's screen 2): a code and its QR code at once, for someone in the room or on the
+     * phone, and an email box for someone who isn't. While it's open the list refreshes, and when a new partner's key
+     * has gone over this says so and closes.
+     */
+    private fun showInvite() {
+        val ctx = requireContext().applicationContext
+        val readyBefore = partners?.partners?.count { it.ready } ?: 0
+        background({ Accountability.createInvite(ctx) }) { inv ->
+            val box = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding(dp(24), dp(8), dp(24), 0)
+            }
+            box.addView(TextView(requireContext()).apply {
+                text = getString(R.string.acc_invite_howto)
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+            })
+            qr(inv.qrUrl)?.let { bmp ->
+                box.addView(android.widget.ImageView(requireContext()).apply {
+                    setImageBitmap(bmp)
+                    contentDescription = getString(R.string.acc_qr_desc)
+                    setPadding(0, dp(12), 0, dp(4))
+                }, LinearLayout.LayoutParams(dp(200), dp(216)))
+            }
+            box.addView(TextView(requireContext()).apply {
+                text = app.focusfence.dns.InviteLink.showCode(inv.code)
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineMedium)
+                letterSpacing = 0.12f
+                setTextIsSelectable(true)
+                gravity = Gravity.CENTER
+            })
+            box.addView(note(getString(R.string.acc_invite_meta, SyncStore.serverUrl(requireContext()).removePrefix("https://"))).apply { gravity = Gravity.CENTER })
+            val email = EditText(requireContext()).apply {
+                setHint(R.string.acc_invite_email_hint)
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                isSingleLine = true
+            }
+            box.addView(email, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
+            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.acc_invite)
+                .setView(box)
+                .setPositiveButton(R.string.acc_send_email, null)
+                .setNeutralButton(R.string.acc_share, null)
+                .setNegativeButton(R.string.acc_done, null)
+                .create()
+            // Someone joining now gets the key within about a minute: watch for it while this is open.
+            val poll = object : Runnable {
+                override fun run() {
+                    if (!dialog.isShowing || !isAdded) return
+                    app.focusfence.sync.Sync.kick(ctx)
+                    refreshPartners { now ->
+                        val joined = now.partners.filter { it.ready }
+                        if (joined.size > readyBefore && dialog.isShowing) {
+                            dialog.dismiss()
+                            Toast.makeText(requireContext(), getString(R.string.acc_partner_joined, joined.last().name), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    handler.postDelayed(this, 15_000)
+                }
+            }
+            dialog.setOnShowListener {
+                dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    share(getString(R.string.acc_invite_share, inv.qrUrl))
+                }
+                dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val address = email.text.toString().trim()
+                    if (address.isEmpty()) { email.requestFocus(); return@setOnClickListener }
+                    background({ Accountability.createInvite(ctx, address) }) { sent ->
+                        Toast.makeText(requireContext(), getString(if (sent.emailed) R.string.acc_email_sent else R.string.acc_email_not_sent, address), Toast.LENGTH_LONG).show()
+                        if (sent.emailed) email.setText("")
+                        refreshPartners()
+                    }
+                }
+                handler.postDelayed(poll, 15_000)
+            }
+            dialog.setOnDismissListener { handler.removeCallbacks(poll); refreshPartners() }
+            dialog.show()
+            refreshPartners()
+        }
+    }
+
+    /** The invite's QR code: its /c/ link, so any camera app opens the join page, which offers this app. */
+    private fun qr(text: String): android.graphics.Bitmap? = runCatching {
+        val m = com.google.zxing.qrcode.QRCodeWriter().encode(text, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
+            mapOf(com.google.zxing.EncodeHintType.MARGIN to 2))
+        val scale = 8
+        android.graphics.Bitmap.createBitmap(m.width * scale, m.height * scale, android.graphics.Bitmap.Config.RGB_565).apply {
+            for (y in 0 until height) for (x in 0 until width) setPixel(x, y, if (m.get(x / scale, y / scale)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+        }
+    }.getOrNull()
+
+    // ---- reports you see ----------------------------------------------------
 
     private fun renderWatches() {
         val c = binding.watchList
         c.removeAllViews()
-        val watches = SyncStore.watches(requireContext())
-        if (watches.isEmpty()) {
+        val seen = SyncStore.seen(requireContext())
+        if (seen.isEmpty()) {
             c.addView(note(getString(R.string.acc_none)))
             return
         }
-        for (w in watches) {
-            val sub = if (w.linkGone) getString(R.string.acc_watch_gone)
-            else if (w.reportUrl.isNotEmpty()) getString(R.string.acc_watch_status_server)
-            else if (w.lastMsgMs == 0L) getString(R.string.acc_watch_status_waiting)
-            else getString(R.string.acc_watch_status, DateUtils.getRelativeTimeSpanString(w.lastMsgMs))
-            c.addView(row(w.name, sub, getString(R.string.acc_open_report)) {
-                startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_MAILBOX, w.keys.mailboxId))
+        for (s in seen) {
+            val sub = when {
+                s.linkGone -> getString(R.string.acc_watch_gone)
+                s.reportKey.isEmpty() -> getString(R.string.seen_waiting_title, s.owner)
+                else -> getString(R.string.seen_ready_row)
+            }
+            c.addView(row(s.owner, sub, getString(R.string.acc_open_report)) {
+                startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_SEEN, s.id))
             })
         }
     }
 
-    /** D-035: one paste box for every invite: a partner's invite link, or the admin page's server message. */
+    /**
+     * Join with a code (the prototype's screen 4): the 8 characters from their phone and your name. A bare code needs
+     * the server, filled in with this phone's own when it has one; a link opened from the invite page carries its own.
+     */
     private fun join(prefill: String? = null) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_two_fields, null)
-        val text = view.findViewById<EditText>(R.id.field1)
-        val name = view.findViewById<EditText>(R.id.field2)
-        text.setHint(R.string.acc_join_paste)
-        name.setHint(R.string.acc_join_name)
-        // The shared layout caps field 1 at 40 characters for names: an invite is ~150, so lift it, and let it wrap.
-        text.filters = arrayOf()
-        text.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-        text.maxLines = 4
-        if (prefill != null) text.setText(prefill)
+        val linked = prefill?.let { app.focusfence.dns.InviteLink.parse(it) as? app.focusfence.dns.InviteLink.Parsed.Join }
+        val box = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), 0)
+        }
+        fun field(hint: Int, type: Int, value: String = "") = EditText(requireContext()).apply {
+            setHint(hint); inputType = type; isSingleLine = true; setText(value)
+            box.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        if (linked != null) box.addView(note(getString(R.string.acc_join_from_link, linked.server.removePrefix("https://"))))
+        val code = if (linked == null) field(R.string.acc_join_code, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) else null
+        val server = if (linked == null) field(R.string.acc_join_server, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI,
+            SyncStore.serverUrl(requireContext()).removePrefix("https://")) else null
+        val name = field(R.string.acc_join_name, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS)
         name.filters = arrayOf(android.text.InputFilter.LengthFilter(60))
-        name.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        if (linked == null) box.addView(note(getString(R.string.acc_join_scan)))
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.acc_watch_add)
-            .setView(view)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
+            .setView(box)
+            .setPositiveButton(R.string.acc_join) { _, _ ->
                 val ctx = requireContext().applicationContext
-                val pasted = text.text.toString()
+                val text = prefill ?: code?.text.toString()
+                val srv = server?.text?.toString().orEmpty()
                 val me = name.text.toString()
-                background({ Accountability.join(ctx, pasted, me) }) { owner ->
-                    if (owner.isEmpty()) connected(SyncStore.serverUrl(requireContext()))
-                    else Toast.makeText(requireContext(), getString(R.string.acc_joined, owner), Toast.LENGTH_LONG).show()
-                    binding.serverInput.setText(SyncStore.serverUrl(requireContext()))
-                    binding.enrollInput.setText(SyncStore.enrollCode(requireContext()))
+                background({ Accountability.join(ctx, text, me, srv) }) { owner ->
+                    if (owner.isEmpty()) {
+                        // It was the server's message: this phone is now on that server.
+                        binding.serverInput.setText(SyncStore.serverUrl(requireContext()))
+                        binding.enrollInput.setText(SyncStore.enrollCode(requireContext()))
+                        connected(SyncStore.serverUrl(requireContext()))
+                        bind(); refreshPartners()
+                        return@background
+                    }
+                    Toast.makeText(requireContext(), getString(R.string.acc_joined, owner), Toast.LENGTH_LONG).show()
                     bind()
-                    refreshPartners()
+                    SyncStore.seen(requireContext()).lastOrNull()?.let {
+                        startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_SEEN, it.id))
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -368,7 +490,7 @@ class AccountabilityFragment : Fragment() {
 
     companion object {
         const val ARG_TAB = "tab"
-        /** An invite's text from [LinkActivity]; opens Join with an invite, filled in. */
+        /** An invite link from [LinkActivity] (focusfence://join…); opens Join, filled in. */
         const val EXTRA_INVITE = "invite"
         fun asTab() = AccountabilityFragment().apply { arguments = Bundle().apply { putBoolean(ARG_TAB, true) } }
     }

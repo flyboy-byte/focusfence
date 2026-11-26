@@ -10,11 +10,11 @@ import java.util.concurrent.ConcurrentHashMap
  * the *same format the phone writes and exports* (docs/specs/event-log.md), one
  * file per device, so there is one schema end to end and an operator can read
  * the data with the same tools/analyze_logs.py. Device metadata (partners,
- * invites) is a small JSON file per device. Mailboxes are opaque ciphertext.
+ * invites) is a small JSON file per device. Reports and sealed keys are opaque ciphertext.
  * Prototype: swap in Postgres + object storage before anything but personal or
  * small-group use.
  */
-class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_BYTES_PER_DEVICE) {
+class Store(private val root: File) {
 
     private val json = Json { prettyPrint = false; ignoreUnknownKeys = true; encodeDefaults = true }
     private val locks = ConcurrentHashMap<String, Any>()
@@ -22,41 +22,23 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
 
     init {
         File(root, "devices").mkdirs()
-        File(root, "blobs").mkdirs()
-        File(root, "mailbox").mkdirs()
     }
 
+    /**
+     * Plan 13: one kind of partner, a person with one or more devices (their app, or a browser). Each device made its own
+     * key pair; the owner's phone seals the report key to each device's public key ([PartnerDevice.sealed]), so the
+     * server relays only public keys and ciphertext (D-023). Email or app only decides how alerts reach them.
+     */
     @Serializable
     data class Partner(
         val id: String,
-        val name: String,
-        val email: String,
-        /**
-         * Secret in the partner's private report link (/p/{token}). Kept in the
-         * clear so alert emails can carry the link; it grants only that report.
-         */
+        var name: String,
+        /** Secret in the partner's report link (/p/{token}), the same for all their devices. Alert emails carry it. */
         val token: String,
         val linkedMs: Long,
-        /** False until the address owner clicks the link we emailed. Nothing but that one email goes to an unconfirmed address. */
-        var confirmed: Boolean = true,
-        /**
-         * SHA-256 of the single-use token in the confirmation email. Only the hash is kept, and the token itself is
-         * only ever in that email: it is never in a redirect or a response, so the person who typed the address in
-         * can't confirm it for its owner. Null once confirmed (or for partners created before double opt-in).
-         */
-        var confirmHash: String? = null,
-        var phone: String? = null,
-        var phoneVerified: Boolean = false,
-        var smsCodeHash: String? = null,
-        var smsCodeExpiresMs: Long = 0,
-        var lastSmsMs: Long = 0,
-        /**
-         * SHA-256 of the secret in the invite link (/i/{secret}) this partner joined with. That link is theirs for good:
-         * it carries the report key after '#', so opening it in any browser shows the report (2026-11-24, "they should be
-         * able to just hold the link"). Null for partners who joined by typing a code or before this existed.
-         */
-        var linkHash: String? = null,
-        /** The invite they joined with, so the inviting phone can tell which of its invites went to the web (D-035). */
+        /** Set only when they joined through the emailed link, so the address is proven theirs. Empty: alerts go to their app. */
+        var email: String = "",
+        var devices: List<PartnerDevice> = emptyList(),
         val inviteId: String = "",
         /** Plan 12 §2: when they last opened the report (its data, fetched by the page's script). The owner sees it. */
         var lastViewMs: Long = 0,
@@ -66,41 +48,49 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var zone: String = "UTC",
         var quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR,
         var quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
-        /** Alerts waiting for quiet hours to end or for the daily message, oldest first. */
+        /** Alerts waiting for quiet hours to end or for the daily message, oldest first (email only; the app holds its own). */
         var held: List<AlertEntry> = emptyList(),
         var lastFlushDay: Long = 0,
     ) {
         fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone, quietFrom, quietTo)
-    }
 
-    @Serializable
-    data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "", val id: String = "", val kind: String = "") {
-        /** A group invite's way onto the server (D-035): it enrolls a phone, and is never a partner invite. */
-        val enrollOnly: Boolean get() = kind == "enroll"
-    }
+        /** At least one of their devices has the report key: they can read it, and their answers to asks count. */
+        val ready: Boolean get() = devices.any { it.sealed != null }
 
-    /** D-035: an enrolled phone that watches this one through the app. Reports stay sealed in their pairing mailbox. */
-    @Serializable
-    data class AppPartner(
-        val id: String, val deviceId: String, val name: String, val linkedMs: Long, val inviteId: String = "",
-        /** Their private report link (/p/{token}), the same page and data an email partner gets (2026-11-25). */
-        val token: String = "",
-        /** Plan 12 §2: as [Partner.lastViewMs]. Their app's background alert checks don't count, only opening the report. */
-        val lastViewMs: Long = 0,
-        /** Plan 12 §5: as [Partner.alertLevel]; their own app applies them, in their phone's time zone. */
-        val alertLevel: String = "all",
-        val quiet: Boolean = false,
-        val quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR,
-        val quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
         /**
-         * Plan 12 §8: when their app last read the alert feed. Once it has, the owner's phone stops sending them the
-         * same alerts and digest through the pairing mailbox: one path instead of two.
+         * Email alerts go out only when no app of theirs reads the alert feed: one path, never two (plan 12 §8). An app
+         * that stopped reading for [APP_QUIET_MS] (uninstalled, signed out) hands alerts back to email.
          */
-        val lastFeedMs: Long = 0,
-    ) {
-        /** As the partner pages see them: no email, no texts, always confirmed. */
-        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs, alertLevel = alertLevel, quiet = quiet, quietFrom = quietFrom, quietTo = quietTo)
+        fun emailsAlerts(now: Long): Boolean = email.isNotEmpty() && devices.none { it.kind == KIND_APP && now - it.lastFeedMs < APP_QUIET_MS }
     }
+
+    @Serializable
+    data class PartnerDevice(
+        val id: String,
+        /** [KIND_APP] or [KIND_WEB]. */
+        val kind: String,
+        /** What the partner called it, or "Pixel 8" / "Firefox on Linux" from the device; shown to the owner. */
+        val label: String,
+        /** The device's own P-256 public key (SPKI, base64). The report key is sealed to it with [app.focusfence.dns.Ecies]. */
+        val publicKeySpki: String,
+        val addedMs: Long,
+        /** The report key sealed to this device by the owner's phone, and which key it is ([Device.reportKeyId]). */
+        var sealed: String? = null,
+        var keyId: String = "",
+        var sealedMs: Long = 0,
+        /** An app device's last read of the alert feed. */
+        var lastFeedMs: Long = 0,
+    )
+
+    /**
+     * Plan 13: an invite, single use. [codeHash] is the short code (typed, or in the QR code's link); [linkHash] the long
+     * secret in an emailed link, which proves the address when used.
+     */
+    @Serializable
+    data class Invite(
+        val id: String, val codeHash: String, val expiresMs: Long,
+        val linkHash: String = "", val email: String = "", val createdMs: Long = 0,
+    )
 
     @Serializable
     data class Device(
@@ -115,7 +105,14 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var missingRecords: Long = 0,
         var partners: List<Partner> = emptyList(),
         var invites: List<Invite> = emptyList(),
-        var appPartners: List<AppPartner> = emptyList(),
+        /** Plan 13: 1 for devices from before the partner rebuild; [migrateToV2] clears their partner data. */
+        var schema: Int = 1,
+        /** What the owner calls themselves in invites ("Logan wants you as a partner"). Set by the phone. */
+        var ownerName: String = "",
+        /** Short id of the report key the phone uses now (sent with each heartbeat). Devices sealed to another key are re-sealed. */
+        var reportKeyId: String = "",
+        /** A partner left or removed a device: the phone should start a new report key, so they can't read on. */
+        var rotateKey: Boolean = false,
         /** Which enrollment code let this phone in (EnrollCodes id; empty for the bootstrap token). Admin page only. */
         var codeId: String = "",
         /** A name the operator gave the device on the admin page. */
@@ -141,24 +138,17 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val state: String = app.focusfence.dns.UnlockAsk.PENDING, val by: String = "", val decidedMs: Long = 0,
     )
 
+    /** [kind] tells the owner's phone what a notice is about ("left", "device", "joined", "reply"); free text otherwise. */
     @Serializable
-    data class AlertEntry(val t: Long, val text: String, val important: Boolean = true)
-
-    @Serializable
-    data class Mailbox(val tokenHash: String, val createdMs: Long, var lastWriteMs: Long = 0, var nextId: Long = 1)
-
-    @Serializable
-    data class MailMessage(val id: Long, val t: Long, val c: String)
+    data class AlertEntry(val t: Long, val text: String, val important: Boolean = true, val kind: String = "")
 
     private fun deviceFile(id: String) = File(root, "devices/$id.json")
     private fun recordsFile(id: String) = File(root, "devices/$id.activity.jsonl")
-    private fun mailboxFile(id: String) = File(root, "mailbox/$id.json")
-    private fun mailFile(id: String) = File(root, "mailbox/$id.msgs.jsonl")
     fun lock(id: String): Any = locks.computeIfAbsent(id) { Any() }
 
     fun createDevice(publicKeySpki: String, now: Long): Device {
         val id = java.util.UUID.randomUUID().toString()
-        val d = Device(id, publicKeySpki, enrolledMs = now, lastSeenMs = now, lastReportMs = now)
+        val d = Device(id, publicKeySpki, enrolledMs = now, lastSeenMs = now, lastReportMs = now, schema = 2)
         saveDevice(d)
         return d
     }
@@ -194,7 +184,6 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     }
 
     fun deviceCount(): Int = File(root, "devices").listFiles { f -> f.name.endsWith(".json") }?.size ?: 0
-    fun mailboxCount(): Int = File(root, "mailbox").listFiles { f -> f.name.endsWith(".json") && !f.name.endsWith(".msgs.jsonl") }?.size ?: 0
 
     /** Read-modify-write under the device lock. */
     fun <T> updateDevice(id: String, block: (Device) -> T): T? = synchronized(lock(id)) {
@@ -204,19 +193,17 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         r
     }
 
-    /** Bytes a device occupies (records, rotated records, screenshots), for the admin page. */
+    /** Bytes a device occupies (reports and anything older versions left), for the admin page. */
     fun deviceBytes(id: String): Long {
         if (!SAFE_ID.matches(id)) return 0
-        val rec = File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }.orEmpty().sumOf { it.length() }
-        val blobs = File(root, "blobs").listFiles { f -> f.name.startsWith("${id}_") }.orEmpty().sumOf { it.length() }
-        return rec + blobs
+        return File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }.orEmpty().sumOf { it.length() }
     }
 
-    /** Removes a device, its records and its screenshots. Only the admin page calls this. */
+    /** Removes a device and everything stored for it. Only the admin page calls this. */
     fun deleteDevice(id: String): Boolean = synchronized(lock(id)) {
         if (!SAFE_ID.matches(id) || !deviceFile(id).exists()) return false
         deviceFile(id).delete(); recordsFile(id).delete()
-        File(root, "blobs").listFiles { f -> f.name.startsWith(id + "_") }?.forEach { it.delete() }
+        File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }?.forEach { it.delete() }
         true
     }
 
@@ -225,38 +212,34 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
             ?.mapNotNull { runCatching { json.decodeFromString(Device.serializer(), it.readText()) }.getOrNull() }
             ?: emptyList()
 
-    /** The device and partner a report-link token belongs to. */
+    /** The device and partner a report-link token belongs to (constant-time compare). */
     fun partnerByToken(token: String): Pair<Device, Partner>? {
         if (token.length < 20) return null
-        fun same(t: String) = t.isNotEmpty() && java.security.MessageDigest.isEqual(t.toByteArray(), token.toByteArray())
-        for (d in allDevices()) {
-            d.partners.firstOrNull { same(it.token) }?.let { return d to it }
-            d.appPartners.firstOrNull { same(it.token) }?.let { return d to it.asPartner() }
-        }
+        for (d in allDevices()) d.partners.firstOrNull { java.security.MessageDigest.isEqual(it.token.toByteArray(), token.toByteArray()) }?.let { return d to it }
         return null
     }
 
-    /** The device and unconfirmed partner a confirmation-email token belongs to (constant-time hash compare). */
-    fun partnerByConfirmToken(token: String): Pair<Device, Partner>? {
-        if (token.length < 20) return null
-        val want = Integrity.sha256(token).toByteArray()
-        for (d in allDevices()) {
-            val p = d.partners.firstOrNull { it.confirmHash != null && java.security.MessageDigest.isEqual(it.confirmHash!!.toByteArray(), want) } ?: continue
-            return d to p
-        }
-        return null
-    }
-
-    /** The partner who joined with the invite link whose secret hashes to [hash]. */
-    fun partnerByLinkHash(hash: String): Pair<Device, Partner>? {
+    /** The live invite whose short code or emailed-link secret hashes to [hash], and the phone that made it. */
+    fun inviteByHash(hash: String, now: Long): Pair<Device, Invite>? {
         if (hash.isEmpty()) return null
-        for (d in allDevices()) d.partners.firstOrNull { it.linkHash != null && java.security.MessageDigest.isEqual(it.linkHash!!.toByteArray(), hash.toByteArray()) }?.let { return d to it }
+        fun same(x: String) = x.isNotEmpty() && java.security.MessageDigest.isEqual(x.toByteArray(), hash.toByteArray())
+        for (d in allDevices()) d.invites.firstOrNull { it.expiresMs > now && (same(it.codeHash) || same(it.linkHash)) }?.let { return d to it }
         return null
     }
 
-    fun partnerById(id: String): Pair<Device, Partner>? {
-        for (d in allDevices()) d.partners.firstOrNull { it.id == id }?.let { return d to it }
-        return null
+    /**
+     * Plan 13 clean cut: partner data from before the rebuild (email partners, app partners, pairing mailboxes, groups)
+     * is deleted, not converted, so no old path lingers. Runs at every start; returns how many devices it cleared.
+     */
+    fun migrateToV2(): Int {
+        // Pairing mailboxes and the pairing partners' encrypted screenshots: nothing reads either any more.
+        for (old in listOf("mailbox", "blobs")) File(root, old).takeIf { it.isDirectory }?.deleteRecursively()
+        var n = 0
+        for (d in allDevices()) if (d.schema < 2) {
+            updateDevice(d.id) { it.partners = emptyList(); it.invites = emptyList(); it.alerts = emptyList(); it.ownerNotices = emptyList(); it.unlockRequest = null; it.schema = 2 }
+            n++
+        }
+        return n
     }
 
     /**
@@ -297,25 +280,20 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
      * doesn't rewrite the device file each time.
      */
     fun markViewed(deviceId: String, partnerId: String, now: Long) {
-        val d = device(deviceId) ?: return
-        val last = d.partners.firstOrNull { it.id == partnerId }?.lastViewMs ?: d.appPartners.firstOrNull { it.id == partnerId }?.lastViewMs ?: return
+        val last = device(deviceId)?.partners?.firstOrNull { it.id == partnerId }?.lastViewMs ?: return
         if (now - last < VIEW_EVERY_MS) return
-        updateDevice(deviceId) { dev ->
-            dev.partners.firstOrNull { it.id == partnerId }?.lastViewMs = now
-            dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastViewMs = now) else it }
-        }
+        updateDevice(deviceId) { dev -> dev.partners.firstOrNull { it.id == partnerId }?.lastViewMs = now }
     }
 
-    /** Plan 12 §8: an app partner's app read its feed. Written at most hourly: only "has it ever" matters. */
-    fun markFeedRead(deviceId: String, partnerId: String, now: Long) {
-        val d = device(deviceId) ?: return
-        val ap = d.appPartners.firstOrNull { it.id == partnerId } ?: return
-        if (now - ap.lastFeedMs < 3_600_000L) return
-        updateDevice(deviceId) { dev -> dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastFeedMs = now) else it } }
+    /** An app device read its partner's alert feed. Written at most hourly: only "is it still reading" matters. */
+    fun markFeedRead(deviceId: String, partnerId: String, partnerDeviceId: String, now: Long) {
+        val pd = device(deviceId)?.partners?.firstOrNull { it.id == partnerId }?.devices?.firstOrNull { it.id == partnerDeviceId && it.kind == KIND_APP } ?: return
+        if (now - pd.lastFeedMs < 3_600_000L) return
+        updateDevice(deviceId) { dev -> dev.partners.firstOrNull { it.id == partnerId }?.devices?.firstOrNull { it.id == partnerDeviceId }?.lastFeedMs = now }
     }
 
-    fun addOwnerNotice(id: String, text: String, now: Long) = updateDevice(id) { d ->
-        d.ownerNotices = (d.ownerNotices + AlertEntry(now, text)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
+    fun addOwnerNotice(id: String, text: String, now: Long, kind: String = "") = updateDevice(id) { d ->
+        d.ownerNotices = (d.ownerNotices + AlertEntry(now, text, kind = kind)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
     }
 
     @Serializable
@@ -343,67 +321,6 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     fun purgeLegacyRecords(): Int =
         File(root, "devices").listFiles { f -> f.name.contains(".activity.jsonl") }.orEmpty().count { it.delete() }
 
-    fun saveBlob(deviceId: String, shotId: String, bytes: ByteArray) {
-        require(SAFE_ID.matches(deviceId) && SAFE_ID.matches(shotId))
-        require(bytes.size <= SHOT_MAX_BYTES) { "shot too large" }
-        File(root, "blobs/${deviceId}_$shotId.bin").writeBytes(bytes)
-        // Keep only the newest SHOTS_PER_DEVICE per device, so a signed-in client can't fill the disk.
-        val mine = File(root, "blobs").listFiles { f -> f.name.startsWith("${deviceId}_") }.orEmpty()
-        // ...and no more than shotBytesPerDevice, oldest first.
-        val byAge = mine.filter { it.exists() }.sortedBy { it.lastModified() }.toMutableList()
-        var total = byAge.sumOf { it.length() }
-        while (byAge.size > 1 && (byAge.size > SHOTS_PER_DEVICE || total > shotBytesPerDevice)) {
-            val oldest = byAge.removeAt(0)
-            total -= oldest.length()
-            oldest.delete()
-        }
-    }
-
-    // ---- blind mailbox --------------------------------------------------------
-
-    fun mailbox(id: String): Mailbox? =
-        mailboxFile(id).takeIf { it.exists() }?.let { json.decodeFromString(Mailbox.serializer(), it.readText()) }
-
-    /** Creates the mailbox, or returns the existing one (the caller checks its token hash). */
-    fun createMailbox(id: String, tokenHash: String, now: Long): Mailbox = synchronized(lock("mb:$id")) {
-        mailbox(id) ?: Mailbox(tokenHash, now).also {
-            writeAtomic(mailboxFile(id), json.encodeToString(Mailbox.serializer(), it))
-        }
-    }
-
-    fun postMail(id: String, ciphertextB64: String, now: Long): Long = synchronized(lock("mb:$id")) {
-        val mb = mailbox(id) ?: error("no mailbox")
-        val msg = MailMessage(mb.nextId, now, ciphertextB64)
-        mailFile(id).appendText(json.encodeToString(MailMessage.serializer(), msg) + "\n")
-        mb.nextId++
-        mb.lastWriteMs = now
-        writeAtomic(mailboxFile(id), json.encodeToString(Mailbox.serializer(), mb))
-        if (msg.id % 25 == 0L) prune(id, now) // not on every post: pruning reads the file
-        msg.id
-    }
-
-    fun readMail(id: String, after: Long, limit: Int = 200): List<MailMessage> {
-        val f = mailFile(id)
-        if (!f.exists()) return emptyList()
-        return f.useLines { seq ->
-            seq.filter { it.isNotBlank() }
-                .mapNotNull { runCatching { json.decodeFromString(MailMessage.serializer(), it) }.getOrNull() }
-                .filter { it.id > after }.take(limit).toList()
-        }
-    }
-
-    /** Keep the last [MAIL_KEEP] messages and nothing older than [MAIL_MAX_AGE_MS]. */
-    private fun prune(id: String, now: Long) {
-        val f = mailFile(id)
-        val lines = f.useLines { seq -> seq.filter { it.isNotBlank() }.toList() }
-        if (lines.size <= MAIL_KEEP + 25) return
-        val kept = lines.takeLast(MAIL_KEEP).filter {
-            val t = runCatching { json.decodeFromString(MailMessage.serializer(), it).t }.getOrDefault(now)
-            now - t <= MAIL_MAX_AGE_MS
-        }
-        writeAtomic(f, kept.joinToString("\n", postfix = "\n"))
-    }
-
     companion object {
         const val REPORTS_KEEP = 240
         const val ALERTS_KEEP = 100
@@ -412,10 +329,11 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         const val REPORTS_MAX_AGE_MS = 9L * 24 * 3_600_000
         const val REPORT_MAX_CHARS = 64 * 1024
         val SAFE_ID = Regex("^[A-Za-z0-9_-]{1,80}$")
-        const val MAIL_KEEP = 300
-        const val SHOT_MAX_BYTES = 2 * 1024 * 1024
-        const val SHOTS_PER_DEVICE = 200
-        const val SHOT_BYTES_PER_DEVICE = 64L * 1024 * 1024
-        const val MAIL_MAX_AGE_MS = 30L * 24 * 3_600_000
+        const val KIND_APP = "app"
+        const val KIND_WEB = "web"
+        /** Plan 13: a partner's devices, phones and browsers together. */
+        const val DEVICES_PER_PARTNER = 4
+        /** An app that hasn't read the feed for this long no longer counts as where alerts go. */
+        const val APP_QUIET_MS = 3L * 24 * 3_600_000
     }
 }

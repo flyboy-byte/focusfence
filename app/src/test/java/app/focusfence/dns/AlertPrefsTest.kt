@@ -88,7 +88,8 @@ class AlertPrefsTest {
         assertTrue(AlertPrefs.isImportant(svc("strict", "disabled")))
         assertTrue(AlertPrefs.isImportant(svc("partner", "shot_auto_sent")))
         assertTrue(AlertPrefs.isImportant(mapOf("type" to "integ", "key" to "list_adult")))
-        assertFalse(AlertPrefs.isImportant(svc("partner", "group_notice")))
+        assertFalse(AlertPrefs.isImportant(svc("partner", "partner_joined")))
+        assertFalse(AlertPrefs.isImportant(svc("partner", "device_added")))
         assertFalse(AlertPrefs.isImportant(svc("partner", "partner_removed")))
         assertFalse(AlertPrefs.isImportant(svc("strict", "partner_approval_used")))
     }
