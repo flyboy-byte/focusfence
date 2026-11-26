@@ -27,12 +27,13 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 | Live `/v1/version` | protocol 2, oldest 2, server 2.1.0 |
 | Groups on phones | Logan, 2026-11-26: "i just used group and it looks amazing" |
 
-## Next, in order
+## Next, in order (Logan's answers, 2026-11-26)
 
-1. Logan tries 3.1.2 (share as QR picture, one join box, Scan a QR code, dash auto-added).
-2. Plan 15 (repo health, `docs/plans/15-repo-health.md`), scoped, not started: #18 first (~1 h), then the docs-drift
-   check (~1 h), then the app+server partner-flow test (~half a day).
-3. Unpause production once Logan's happy with the partner and group flows (groups: "looks amazing", 2026-11-26).
+1. Production pause lifted. Logan tried 3.1.2; 3.1.3 released with plan 15 items 1, 2, 3, 5 (item 4 parked).
+2. Next session: plan 15 item 7, targetSdk 35, in small pieces (compileSdk 35 → library updates → target 35 and screen
+   insets → Logan checks every screen).
+3. After that, Logan wants all of: F-Droid (plan 11), partner polish (guide page, replies, removing one group member) and
+   push, **but more real testing of partners and groups first**. Ask which to start before building any.
 
 ## Parked (don't build unless Logan asks)
 

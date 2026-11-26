@@ -6,12 +6,28 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- **rules:** the rule editor says push and time keep working under a google.com rule; closes #18 (`beaf806`, [#135](https://github.com/flyboy-byte/focusfence/pull/135))
+### Docs
+- park plan 15 item 4 with its trigger; STATE pause note no longer claims sync errors (`096579a`, [#139](https://github.com/flyboy-byte/focusfence/pull/139))
+- handoff after 3.1.2 (`ac465d9`, [#134](https://github.com/flyboy-byte/focusfence/pull/134))
+### Maintenance
+- **lint:** triage 130 warnings to a baseline of 37 (plan 15 item 5) (`f22ac0f`, [#138](https://github.com/flyboy-byte/focusfence/pull/138))
+- **server:** the partner flow end to end with the app's own crypto (plan 15 item 3) (`48ffe86`, [#137](https://github.com/flyboy-byte/focusfence/pull/137))
+- fail when a public doc names a removed feature (plan 15 item 2) (`e03cb9e`, [#136](https://github.com/flyboy-byte/focusfence/pull/136))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.2-accountable
+
 ### Added
 - **partners:** Scan a QR code opens the camera from Join; plan 15 scoped from the repo assessment (`5699a22`, [#130](https://github.com/flyboy-byte/focusfence/pull/130))
 ### Changed
 - Share an invite as a QR picture; one join box for code, link or message (`a60b08a`, [#132](https://github.com/flyboy-byte/focusfence/pull/132))
 ### Docs
 - README for 3.1 (partners, groups, what's verified), and the privacy, limits and architecture notes current with plans 13 and 14 (`9131cd6`, [#129](https://github.com/flyboy-byte/focusfence/pull/129))
+### Maintenance
+- release 3.1.2 (`b69c44e`, [#133](https://github.com/flyboy-byte/focusfence/pull/133))
 
 _Undo any line with `git revert <commit>`._
 
