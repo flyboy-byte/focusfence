@@ -82,7 +82,7 @@ class BlockedActivity : AppCompatActivity() {
                 R.string.blocked_reason_schedule,
                 timeOfDay(rule.startMinute), timeOfDay(rule.endMinute),
             )
-            BlockScreen.Why.BUDGET -> getString(R.string.blocked_reason_budget, rule.budgetMinutes)
+            BlockScreen.Why.BUDGET -> resources.getQuantityString(R.plurals.blocked_reason_budget, rule.budgetMinutes, rule.budgetMinutes)
             BlockScreen.Why.COMMITMENT -> getString(
                 R.string.blocked_reason_commitment,
                 DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)

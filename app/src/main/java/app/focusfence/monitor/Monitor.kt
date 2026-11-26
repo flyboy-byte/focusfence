@@ -193,7 +193,8 @@ object Monitor {
         val sig = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) best.signalStrength.takeIf { it != android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED } else null
         EventLog.diag(LogEvents.net(now, tr,
             best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED),
-            !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
+            // NOT_ROAMING exists from Android 9; before that hasCapability says no, which would log every network as roaming.
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
             !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
             best.linkDownstreamBandwidthKbps, best.linkUpstreamBandwidthKbps, sig))
     }

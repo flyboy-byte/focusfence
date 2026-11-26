@@ -196,6 +196,7 @@ class UrlFilterService : AccessibilityService() {
 
     override fun onDestroy() {
         main.removeCallbacks(fgTick)
+        app.focusfence.monitor.ScreenCapture.onServiceGone()
         instance = null
         BlocklistStore.prefs(this).unregisterOnSharedPreferenceChangeListener(prefsListener)
         Monitor.a11yConnected = false

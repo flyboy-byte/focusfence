@@ -15,6 +15,12 @@ import app.focusfence.dns.LogJson
  *  - **reports this user sees** ([Seen]): each on its own server, with this phone's device key for it and, once the
  *    owner's phone has sealed it over, that report's key.
  */
+/*
+ * commit(), not apply(), where it's used here (lint ApplySharedPref): these run on the sync worker, and a process killed
+ * before apply() flushes would lose the report key, the enrollment or a partner's report, which partners then can't
+ * get back. Everything else uses apply().
+ */
+@android.annotation.SuppressLint("ApplySharedPref")
 object SyncStore {
 
     private const val FILE = "focusfence_sync"

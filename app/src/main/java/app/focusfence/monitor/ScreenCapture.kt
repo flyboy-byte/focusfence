@@ -103,6 +103,13 @@ object ScreenCapture {
         schedule()
     }
 
+    /** The accessibility service is going away: stop the timer and let go of it, so a dead service isn't kept or used. */
+    fun onServiceGone() {
+        main.removeCallbacks(tick)
+        foregroundWatched = false
+        service = null
+    }
+
     /** A watched app's window changed (scrolling, new content): capture now if due. */
     @RequiresApi(Build.VERSION_CODES.R)
     fun onWatchedWindow(service: AccessibilityService, pkg: String) {

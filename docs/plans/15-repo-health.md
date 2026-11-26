@@ -13,7 +13,7 @@ replaced (four public docs still described plan 12's partners two days after pla
 | 2 | ~~Docs drift guard in CI~~ DONE (2026-11-26) | ~1 h | no |
 | 3 | ~~Partner flow test across app and server (JVM)~~ DONE (2026-11-26) | ~half a day | no |
 | 4 | Emulator smoke test in CI | ~half a day | no |
-| 5 | Lint triage (130 warnings) | ~1 h | no |
+| 5 | ~~Lint triage (130 warnings)~~ DONE (2026-11-26) | ~1 h | no |
 | 6 | Split the biggest files | as they're touched | no |
 | 7 | targetSdk 35 | ~2 h + a phone check | the phone check |
 | 8 | Server lookups by index | only past ~100 devices | parked |
@@ -70,7 +70,20 @@ in the same job on the emulator's host address. One instrumented test: enroll, c
 phone as a partner (allowed: one phone can be both), run the worker twice, assert the report key arrived. Slow (~8 min),
 so not on every push.
 
-## 5. Lint triage (~1 h)
+## 5. ~~Lint triage~~ DONE (2026-11-26)
+
+130 → 0 new, 37 kept in `app/lint-baseline.xml` (`./gradlew updateLintBaseline` after fixing one).
+
+| Warning | Done |
+|---|---|
+| UnusedResources 79 | Deleted (77 strings and plurals from removed screens, 2 icons; no `getIdentifier` lookups, no translations) |
+| PluralsCandidate 11 | The budget block message is a plural now ("your 1 minute"); `acc_devices` shows only for 2+; the rest read right in English ("1 blocked", "1 left"): baseline |
+| ApplySharedPref 9 | All deliberate (sync worker; losing the report key or enrollment to a kill is unrecoverable): `@SuppressLint` on `SyncStore` and `ApprovalStore` with the reason |
+| StaticFieldLeak 2 | Real: `ScreenCapture` kept the accessibility service and its timer after the service died. `onServiceGone()` from `UrlFilterService.onDestroy`. Lint still flags the field: baseline |
+| GradleDependency 7 | All need compileSdk 35 or newer (core-ktx 1.15+, activity 1.10+, work 2.10+, material 1.13+): item 7 |
+| Also fixed | Remove button on an allowed site had no label for screen readers; Android 8 logged every network as roaming (`NOT_ROAMING` is API 28) |
+| Kept, cosmetic | Compat drawable attributes, overdraw, a useless parent, RTL padding, button-bar style, `BatteryLife` (the battery prompt is deliberate; not on Play) |
+
 
 130 warnings: 79 `UnusedResources` (mostly strings from removed features: delete), 11 `PluralsCandidate` (use plurals
 where a count leads), 9 `ApplySharedPref` (check each `commit()` is deliberate, comment it), 7 `GradleDependency`

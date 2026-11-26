@@ -8,6 +8,12 @@ import app.focusfence.dns.UnlockAsk
  * The owner's latest "ask a partner" request (plan 12 §3) as the server last reported it. Its own prefs file: the guard
  * reads it at the moment of the action, so no service listener needs it (unlike rules in `focusfence`).
  */
+/*
+ * commit(), not apply(), where it's used here (lint ApplySharedPref): these run on the sync worker, and a process killed
+ * before apply() flushes would lose the report key, the enrollment or a partner's report, which partners then can't
+ * get back. Everything else uses apply().
+ */
+@android.annotation.SuppressLint("ApplySharedPref")
 object ApprovalStore {
     private const val PREFS = "focusfence_approval"
 

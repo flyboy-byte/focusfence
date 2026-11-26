@@ -22,6 +22,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/menu_remove"
         android:src="@drawable/ic_close"
         app:tint="?attr/colorOnSurfaceVariant" />
 </LinearLayout>
