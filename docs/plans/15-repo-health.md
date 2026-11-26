@@ -11,7 +11,7 @@ replaced (four public docs still described plan 12's partners two days after pla
 |---|---|---|---|
 | 1 | ~~Issue #18: a google.com rule stops all push notifications~~ DONE (2026-11-26) | ~1 h | no |
 | 2 | ~~Docs drift guard in CI~~ DONE (2026-11-26) | ~1 h | no |
-| 3 | Partner flow test across app and server (JVM) | ~half a day | no |
+| 3 | ~~Partner flow test across app and server (JVM)~~ DONE (2026-11-26) | ~half a day | no |
 | 4 | Emulator smoke test in CI | ~half a day | no |
 | 5 | Lint triage (130 warnings) | ~1 h | no |
 | 6 | Split the biggest files | as they're touched | no |
@@ -47,7 +47,14 @@ that removed it: `mailbox`, `SMS`, `pairing key`, `/i/`, `X-FF-Invite`, `GroupSy
 (AGENTS.md status log, DECISIONS.md, `docs/plans/`) are exempt. Rule added to AGENTS.md: a plan that removes a feature
 lists the docs to update in its clean-cut section.
 
-## 3. Partner flow test across app and server (~half a day)
+## 3. ~~Partner flow test across app and server~~ DONE (2026-11-26)
+
+`server/src/test/.../PartnerFlowTest.kt`, two tests. (1) Invite: QR link read by `InviteLink`, join, enroll with the
+partner token, seal, report opens; a second partner by an undashed code; removing one rotates the key, the other still
+reads and the removed one's old key can't open the new report. (2) A group of three: everyone reads everyone, one
+leaves, the other two still read each other, the leaver's old key opens nothing new. Checked by breaking it: a phone
+that ignores `rotateKey`, or seals with the screenshot label instead of `INFO_KEY`, fails both.
+
 
 The bugs that reach phones live between the two halves (signatures, field names, the seal round trip). A JVM test in
 `server/src/test` that drives the server the way the app does, with the app's pure code (`dns/Ecies`, `ReportSeal`,
