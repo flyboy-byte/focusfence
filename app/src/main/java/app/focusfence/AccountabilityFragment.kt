@@ -83,6 +83,8 @@ class AccountabilityFragment : Fragment() {
         binding.serverLeave.setOnClickListener { leaveServer() }
         binding.inviteButton.setOnClickListener { invite() }
         binding.watchButton.setOnClickListener { join() }
+        binding.groupStartButton.setOnClickListener { startGroup() }
+        binding.groupJoinButton.setOnClickListener { join() }
     }
 
     override fun onResume() {
@@ -196,6 +198,58 @@ class AccountabilityFragment : Fragment() {
             renderPartners()
             then?.invoke(it)
         }
+        background({ Accountability.groups(ctx) }) { groups = it; renderGroups() }
+    }
+
+    // ---- groups (plan 14) ---------------------------------------------------
+
+    private var groups: List<Accountability.Group>? = null
+
+    private fun renderGroups() {
+        val c = binding.groupsList
+        c.removeAllViews()
+        for (g in groups.orEmpty()) {
+            val names = g.members.joinToString(", ") { if (it.me) getString(R.string.grp_you) else it.name }
+            c.addView(row(g.name, getString(R.string.grp_row, g.members.size, g.max, names), getString(R.string.grp_open)) { openGroup(g.id, g.name) })
+        }
+    }
+
+    private fun openGroup(id: String, name: String) {
+        startActivity(Intent(requireContext(), GroupActivity::class.java).putExtra(GroupActivity.EXTRA_GROUP, id).putExtra(GroupActivity.EXTRA_NAME, name))
+    }
+
+    /** Start a group (prototype screen 10): a name, then its code and QR code. Asks what partners call you first, once. */
+    private fun startGroup() {
+        if (!hasServer()) return
+        fun named() = prompt(R.string.grp_name_hint) { name ->
+            val ctx = requireContext().applicationContext
+            background({ Accountability.createGroup(ctx, name) }) { code ->
+                GroupUi.showCode(requireContext(), code, 5) { refreshPartners() }
+                refreshPartners()
+            }
+        }
+        if (SyncStore.ownerName(requireContext()).isNotBlank()) return named()
+        prompt(R.string.acc_your_name) { me -> SyncStore.setOwnerName(requireContext(), me); named() }
+    }
+
+    /** A group's code typed or scanned (screen 11): say which group and who's in it, then join. */
+    private fun confirmGroup(found: Accountability.Lookup, code: String, server: String, me: String) {
+        if (found.full) {
+            Toast.makeText(requireContext(), getString(R.string.grp_full, found.name), Toast.LENGTH_LONG).show(); return
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.grp_confirm_title, found.name))
+            .setMessage(getString(R.string.grp_confirm_text, found.members.joinToString(", ")))
+            .setPositiveButton(R.string.grp_join_button) { _, _ ->
+                val ctx = requireContext().applicationContext
+                background({ Accountability.joinGroup(ctx, code, server, me) }) { g ->
+                    Toast.makeText(requireContext(), getString(R.string.grp_you_joined, g.name), Toast.LENGTH_LONG).show()
+                    bind(); refreshPartners()
+                    openGroup(g.id, g.name)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /** Everyone who sees this phone's report, with their devices, and invites not used yet. */
@@ -211,7 +265,7 @@ class AccountabilityFragment : Fragment() {
             val sub = if (!p.ready) getString(R.string.acc_partner_waiting) else {
                 getString(when (p.alertsBy) { "app" -> R.string.acc_by_app; "email" -> R.string.acc_by_email; else -> R.string.acc_by_none }) +
                     (if (p.devices.size > 1) " · " + getString(R.string.acc_devices, p.devices.size) else "") + looked(p.lastViewMs)
-            }
+            } + (if (p.groups.isNotEmpty()) " · " + p.groups.joinToString(", ") else "")
             c.addView(row(p.name, sub, getString(R.string.acc_details)) { partnerDetails(p) })
         }
         for (i in all.invites) {
@@ -226,6 +280,13 @@ class AccountabilityFragment : Fragment() {
 
     /** One partner: their devices (each one opens the report), how alerts reach them, and Remove. */
     private fun partnerDetails(p: Accountability.Partner) {
+        // Plan 14: a group made this pair, so it's left through the group, not removed here.
+        if (p.groups.isNotEmpty()) {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(p.name)
+                .setMessage(getString(R.string.grp_partner_note, p.name, p.groups.joinToString(", ")))
+                .setPositiveButton(android.R.string.ok, null).show()
+            return
+        }
         val lines = p.devices.joinToString("\n") { d ->
             "• ${d.label} (${getString(if (d.kind == "app") R.string.acc_device_app else R.string.acc_device_web)})" +
                 if (d.ready) "" else " · " + getString(R.string.acc_device_waiting)
@@ -343,14 +404,7 @@ class AccountabilityFragment : Fragment() {
     }
 
     /** The invite's QR code: its /c/ link, so any camera app opens the join page, which offers this app. */
-    private fun qr(text: String): android.graphics.Bitmap? = runCatching {
-        val m = com.google.zxing.qrcode.QRCodeWriter().encode(text, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
-            mapOf(com.google.zxing.EncodeHintType.MARGIN to 2))
-        val scale = 8
-        android.graphics.Bitmap.createBitmap(m.width * scale, m.height * scale, android.graphics.Bitmap.Config.RGB_565).apply {
-            for (y in 0 until height) for (x in 0 until width) setPixel(x, y, if (m.get(x / scale, y / scale)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-        }
-    }.getOrNull()
+    private fun qr(text: String): android.graphics.Bitmap? = GroupUi.qr(text)
 
     // ---- reports you see ----------------------------------------------------
 
@@ -367,7 +421,7 @@ class AccountabilityFragment : Fragment() {
                 s.linkGone -> getString(R.string.acc_watch_gone)
                 s.reportKey.isEmpty() -> getString(R.string.seen_waiting_title, s.owner)
                 else -> getString(R.string.seen_ready_row)
-            }
+            } + (if (s.group.isNotEmpty()) " · " + s.group else "")
             c.addView(row(s.owner, sub, getString(R.string.acc_open_report)) {
                 startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_SEEN, s.id))
             })
@@ -403,6 +457,23 @@ class AccountabilityFragment : Fragment() {
                 val text = prefill ?: code?.text.toString()
                 val srv = server?.text?.toString().orEmpty()
                 val me = name.text.toString()
+                // One code box for both kinds (plan 14): a group's code gets its own confirmation, with who's in it.
+                val bare = linked?.code?.takeIf { it.isNotEmpty() }
+                    ?: app.focusfence.dns.InviteLink.normalizeCode(text).takeIf { it.length == 8 && linked == null }
+                val groupServer = linked?.server ?: srv
+                if (bare != null) {
+                    background({ runCatching { Accountability.lookup(ctx, bare, groupServer) }.getOrNull() }) { found ->
+                        if (found?.kind == "group") confirmGroup(found, bare, groupServer, me) else joinPartner(ctx, text, me, srv)
+                    }
+                    return@setPositiveButton
+                }
+                joinPartner(ctx, text, me, srv)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun joinPartner(ctx: android.content.Context, text: String, me: String, srv: String) {
                 background({ Accountability.join(ctx, text, me, srv) }) { owner ->
                     if (owner.isEmpty()) {
                         // It was the server's message: this phone is now on that server.
@@ -418,9 +489,6 @@ class AccountabilityFragment : Fragment() {
                         startActivity(Intent(requireContext(), PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_SEEN, it.id))
                     }
                 }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
     }
 
     /** Connected: say so, and the first time on this server, what its operator can see (journey 3). */

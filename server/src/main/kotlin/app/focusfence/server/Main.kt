@@ -93,7 +93,9 @@ class Config(
 @Serializable data class KeyResponse(val ready: Boolean, val sealed: String = "", val keyId: String = "")
 @Serializable data class PartnerDeviceInfo(val id: String, val kind: String, val label: String, val addedMs: Long, val ready: Boolean)
 /** [alertsBy]: "app", "email", or "none" (a browser-only partner who joined by code: the report, no alerts). */
-@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val linkedMs: Long, val lastViewMs: Long, val alertsBy: String, val devices: List<PartnerDeviceInfo>)
+@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val linkedMs: Long, val lastViewMs: Long, val alertsBy: String, val devices: List<PartnerDeviceInfo>,
+    /** Plan 14: the groups that made this pair (names). A pair with groups is left through the group, not removed. */
+    val groups: List<String> = emptyList(), val chosen: Boolean = true)
 @Serializable data class InviteInfo(val id: String, val expiresMs: Long, val email: String)
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val invites: List<InviteInfo> = emptyList())
 /** A partner device waiting for the report key. [firstDevice]: this partner had none yet, so they just joined. */
@@ -425,7 +427,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 device.partners.map { p ->
                     val by = when { p.devices.any { it.kind == Store.KIND_APP && now - it.lastFeedMs < Store.APP_QUIET_MS } -> "app"; p.email.isNotEmpty() -> "email"; p.devices.any { it.kind == Store.KIND_APP } -> "app"; else -> "none" }
                     PartnerInfo(p.id, p.name, if (p.email.isEmpty()) "" else Web.mask(p.email), p.linkedMs, p.lastViewMs, by,
-                        p.devices.map { PartnerDeviceInfo(it.id, it.kind, it.label, it.addedMs, it.sealed != null && it.keyId == device.reportKeyId) })
+                        p.devices.map { PartnerDeviceInfo(it.id, it.kind, it.label, it.addedMs, it.sealed != null && it.keyId == device.reportKeyId) },
+                        p.groupIds.mapNotNull { store.group(it)?.name }, p.chosen)
                 },
                 device.invites.filter { it.expiresMs > now }.map { InviteInfo(it.id, it.expiresMs, if (it.email.isEmpty()) "" else Web.mask(it.email)) },
             ))

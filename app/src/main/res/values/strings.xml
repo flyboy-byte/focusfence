@@ -767,4 +767,37 @@
     <string name="partners_reset_title">Partners were reset</string>
     <string name="partners_reset_body">This version has a new, simpler partner system, and partners from before don\'t carry over. Add them again under Partners: one code or invite each, nothing to paste.</string>
     <string name="acc_server_forgot">The server no longer knows this phone (it was reset). Enter an enrollment code under Server to reconnect.</string>
+    <!-- Groups (plan 14) -->
+    <string name="grp_title">Groups</string>
+    <string name="grp_hint">Up to 6 people who all see each other\'s report. Start one, or join with someone\'s code.</string>
+    <string name="grp_start">Start a group</string>
+    <string name="grp_row">%1$d of %2$d · %3$s</string>
+    <string name="grp_name_hint">Group name (everyone sees it)</string>
+    <string name="grp_code_howto">Each person opens Focus Fence → Partners → Join with a code, then types or scans this.</string>
+    <string name="grp_code_meta">Works for %1$d more · ends in 24 hours · on %2$s</string>
+    <string name="grp_share">Join my accountability group \"%1$s\" on Focus Fence: %2$s</string>
+    <string name="grp_member_joined">%1$s joined %2$s</string>
+    <string name="grp_confirm_title">Join %1$s?</string>
+    <string name="grp_confirm_text">%1$s.\n\nJoining means all of them see your report, and you see theirs.</string>
+    <string name="grp_full">%1$s is full.</string>
+    <string name="grp_join_button">Join group</string>
+    <string name="grp_you_joined">You\'re in %1$s. Reports arrive within a few minutes, as each phone checks in.</string>
+    <string name="grp_page_sub">%1$d of %2$d · everyone sees everyone\'s report</string>
+    <string name="grp_member_looked">Looked at yours %1$s</string>
+    <string name="grp_member_not_looked">Hasn\'t looked at yours yet</string>
+    <string name="grp_member_waiting">Their report is on its way</string>
+    <string name="grp_you">You</string>
+    <string name="grp_open">Open</string>
+    <string name="grp_alerts_title">Alerts from this group</string>
+    <string name="grp_level">Notify me about: %1$s</string>
+    <string name="grp_level_all">Everything</string>
+    <string name="grp_level_important">Important only</string>
+    <string name="grp_level_daily">Once a day</string>
+    <string name="grp_add">Add someone (%1$d left)</string>
+    <string name="grp_is_full">The group is full</string>
+    <string name="grp_leave">Leave group</string>
+    <string name="grp_leave_text">Leaving stops all of them seeing your report, and you seeing theirs. They\'re told.</string>
+    <string name="grp_left">You left %1$s.</string>
+    <string name="grp_partner_note">%1$s sees your report through %2$s. To stop sharing, leave the group.</string>
+    <string name="grp_seen_note">You see this report through %1$s. To stop, leave the group.</string>
 </resources>

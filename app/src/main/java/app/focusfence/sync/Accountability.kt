@@ -16,7 +16,8 @@ object Accountability {
     class Invite(val id: String, val code: String, val qrUrl: String, val expiresMs: Long, val emailed: Boolean)
     class Device(val id: String, val kind: String, val label: String, val addedMs: Long, val ready: Boolean)
     /** [lastViewMs]: when they last opened the report (plan 12 §2), 0 never. [alertsBy]: "app", "email" or "none". */
-    class Partner(val id: String, val name: String, val email: String, val alertsBy: String, val lastViewMs: Long, val devices: List<Device>) {
+    class Partner(val id: String, val name: String, val email: String, val alertsBy: String, val lastViewMs: Long, val devices: List<Device>,
+                  val groups: List<String> = emptyList(), val chosen: Boolean = true) {
         val ready: Boolean get() = devices.any { it.ready }
     }
     class OpenInvite(val id: String, val expiresMs: Long, val email: String)
@@ -30,7 +31,7 @@ object Accountability {
     }
 
     /** Registers this phone's key with the server, once, with the server's enrollment code if it has one. */
-    fun ensureEnrolled(ctx: Context): String {
+    fun ensureEnrolled(ctx: Context, groupCode: String = ""): String {
         SyncStore.deviceId(ctx)?.let { return it }
         val code = SyncStore.enrollCode(ctx)
         // Being someone's partner on this server is a credential too: no enrollment code needed.
@@ -40,6 +41,7 @@ object Accountability {
             buildMap {
                 if (code.isNotEmpty()) put("X-FF-Enroll", code)
                 if (token != null) put("X-FF-Partner", token)
+                if (groupCode.isNotEmpty()) put("X-FF-Group", groupCode)
             },
         )
         val id = r.body?.optString("deviceId").orEmpty()
@@ -203,7 +205,8 @@ object Accountability {
                 Partner(p.getString("id"), p.getString("name"), p.optString("email"), p.optString("alertsBy"), p.optLong("lastViewMs"),
                     (0 until (ds?.length() ?: 0)).map { j -> ds!!.getJSONObject(j).let { d ->
                         Device(d.getString("id"), d.optString("kind"), d.optString("label"), d.optLong("addedMs"), d.optBoolean("ready"))
-                    } })
+                    } },
+                    p.optJSONArray("groups").let { g -> (0 until (g?.length() ?: 0)).map { g!!.getString(it) } }, p.optBoolean("chosen", true))
             },
             (0 until (inv?.length() ?: 0)).map { i -> inv!!.getJSONObject(i).let { OpenInvite(it.getString("id"), it.optLong("expiresMs"), it.optString("email")) } },
         )
@@ -248,6 +251,109 @@ object Accountability {
         SyncStore.rotateReportKey(ctx)
         log("partner_removed", partner.name)
         Sync.kick(ctx)
+    }
+
+    // ---- groups (plan 14) -----------------------------------------------------
+
+    class GroupMember(val name: String, val me: Boolean, val joinedMs: Long, val theirToken: String, val lastViewMs: Long)
+    class Group(val id: String, val name: String, val members: List<GroupMember>, val codeExpiresMs: Long, val max: Int, val level: String) {
+        val spots: Int get() = max - members.size
+    }
+    class GroupCode(val groupId: String, val name: String, val code: String, val expiresMs: Long, val qrUrl: String)
+    /** What a code is before joining with it: [kind] "group" (with [members]) or "invite" (from [name]). */
+    class Lookup(val kind: String, val name: String, val members: List<String>, val full: Boolean)
+
+    private fun fail(r: Api.Response, what: String): Nothing =
+        error(r.body?.optString("error")?.takeIf { it.isNotEmpty() } ?: "$what (HTTP ${r.code}).")
+
+    private fun groupCode(b: JSONObject) = GroupCode(b.getString("groupId"), b.optString("name"), b.getString("code"), b.getLong("expiresMs"), b.getString("qrUrl"))
+
+    private fun group(o: JSONObject): Group {
+        val ms = o.optJSONArray("members")
+        return Group(o.getString("id"), o.optString("name"), (0 until (ms?.length() ?: 0)).map { i -> ms!!.getJSONObject(i).let { m ->
+            GroupMember(m.optString("name"), m.optBoolean("me"), m.optLong("joinedMs"), m.optString("theirToken"), m.optLong("lastViewMs"))
+        } }, o.optLong("codeExpiresMs"), o.optInt("max", 6), o.optString("level"))
+    }
+
+    /** The server a typed code belongs to: a link carries its own, a bare code uses [server] or this phone's. */
+    private fun codeServer(ctx: Context, server: String): String =
+        InviteLink.server(server) ?: SyncStore.serverUrl(ctx).takeIf { it.startsWith("https://") } ?: error("Type the server too: it's under the code on their phone.")
+
+    /** Whether [code] is a group's or a partner invite, before joining. Null when the server doesn't know it. */
+    fun lookup(ctx: Context, code: String, server: String): Lookup? {
+        val r = Api(codeServer(ctx, server)).post("/v1/codes/lookup", JSONObject().put("code", InviteLink.normalizeCode(code)))
+        if (r.code == 404) return null
+        val b = r.body
+        if (r.code != 200 || b == null) fail(r, "Couldn't check the code")
+        val ms = b.optJSONArray("members")
+        return Lookup(b.optString("kind"), b.optString("name"), (0 until (ms?.length() ?: 0)).map { ms!!.getString(it) }, b.optBoolean("full"))
+    }
+
+    fun groups(ctx: Context): List<Group> {
+        if (SyncStore.deviceId(ctx) == null) return emptyList()
+        val r = api(ctx).post("/v1/groups/list", signed(ctx, "groups"))
+        if (r.code != 200) fail(r, "Couldn't load groups")
+        val arr = r.body?.optJSONArray("groups")
+        return (0 until (arr?.length() ?: 0)).map { group(arr!!.getJSONObject(it)) }
+    }
+
+    fun createGroup(ctx: Context, name: String): GroupCode {
+        val n = name.trim().take(40)
+        val r = api(ctx).post("/v1/groups/create", signed(ctx, "group_create", n).put("name", n).put("label", SyncStore.ownerName(ctx)))
+        val b = r.body
+        if (r.code != 200 || b == null) fail(r, "Couldn't start the group")
+        log("group_created", n)
+        SyncStore.setInviteMadeMs(ctx, System.currentTimeMillis())
+        Sync.kickAfter(ctx, "group_${System.currentTimeMillis() / 60_000}", 60_000)
+        return groupCode(b)
+    }
+
+    /** A fresh code for one more person (the old one stops working). */
+    fun newGroupCode(ctx: Context, groupId: String): GroupCode {
+        val r = api(ctx).post("/v1/groups/code", signed(ctx, "group_code", groupId).put("groupId", groupId))
+        val b = r.body
+        if (r.code != 200 || b == null) fail(r, "Couldn't make a code")
+        SyncStore.setInviteMadeMs(ctx, System.currentTimeMillis())
+        return groupCode(b)
+    }
+
+    /**
+     * Joins a group from this phone: it must be on that server, since every member is watched, so a phone not on one yet
+     * enrolls there with the group code. Never moves a phone that is on another server.
+     */
+    fun joinGroup(ctx: Context, code: String, server: String, myName: String): Group {
+        val srv = codeServer(ctx, server).trimEnd('/')
+        val own = SyncStore.serverUrl(ctx).trimEnd('/')
+        check(SyncStore.deviceId(ctx) == null || own == srv) {
+            "This phone is on ${own.removePrefix("https://")}, and the group is on ${srv.removePrefix("https://")}. A phone is on one server."
+        }
+        if (SyncStore.deviceId(ctx) == null) SyncStore.setServerUrl(ctx, srv)
+        val c = InviteLink.normalizeCode(code)
+        ensureEnrolled(ctx, c)
+        if (myName.isNotBlank() && SyncStore.ownerName(ctx).isBlank()) SyncStore.setOwnerName(ctx, myName.trim().take(40))
+        val r = api(ctx).post("/v1/groups/join", signed(ctx, "group_join", c).put("code", c).put("label", myName.trim().take(40)))
+        val b = r.body
+        if (r.code != 200 || b == null) fail(r, "Couldn't join the group")
+        val g = group(b)
+        log("group_joined", g.name)
+        Sync.kick(ctx)
+        return g
+    }
+
+    /** Leaves a group: every pair it made goes both ways (pairs another group or an invite also made stay). */
+    fun leaveGroup(ctx: Context, g: Group) {
+        val r = api(ctx).post("/v1/groups/leave", signed(ctx, "group_leave", g.id).put("groupId", g.id))
+        if (r.code != 200 && r.code != 404) fail(r, "Couldn't leave the group")
+        log("group_left", g.name)
+        SyncStore.rotateReportKey(ctx)
+        Sync.kick(ctx)
+    }
+
+    /** How this phone hears about the group's members (plan 12 levels: all, important, daily). */
+    fun setGroupLevel(ctx: Context, g: Group, level: String) {
+        val r = api(ctx).post("/v1/groups/level", signed(ctx, "group_level", "${g.id}|$level").put("groupId", g.id).put("level", level))
+        if (r.code != 200) fail(r, "Couldn't save")
+        log("group_alerts", "${g.name}: $level")
     }
 
     private fun log(state: String, detail: String?) {
