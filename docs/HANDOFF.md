@@ -38,4 +38,4 @@ answers, the build table) and `DECISIONS.md` D-042.
 ## Parked (don't build unless Logan asks)
 
 Replies to alerts, a partner guide page (closed PR #108), push (notes in plan 12), the partner UI options (plan 12),
-F-Droid (plan 11), SMS (Twilio scope), groups (scope).
+F-Droid (plan 11), SMS (Twilio scope). Groups are back as plan 14 (2026-11-26).
