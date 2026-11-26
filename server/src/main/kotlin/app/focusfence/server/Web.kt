@@ -150,6 +150,17 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
         append("<p class='muted'>The phone's owner can see when you last opened this report, not what you looked at.</p>")
         append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
+        // Plan 12 §5: how alerts reach them. The time zone comes from their browser (report.js fills #tz).
+        val lvl = app.focusfence.dns.AlertPrefs.Level.fromKey(partner.alertLevel)
+        fun radio(l: app.focusfence.dns.AlertPrefs.Level, label: String) =
+            "<label style='display:block'><input type='radio' name='level' value='${l.key}'${if (l == lvl) " checked" else ""}> $label</label>"
+        append("<h2>How alerts reach you</h2><form method='post' action='/p/$t/prefs'>")
+        append(radio(app.focusfence.dns.AlertPrefs.Level.ALL, "Every alert, as it happens"))
+        append(radio(app.focusfence.dns.AlertPrefs.Level.DAILY, "Important ones as they happen; the rest in one message a day, at 7 am"))
+        append(radio(app.focusfence.dns.AlertPrefs.Level.IMPORTANT, "Important ones only; the rest stay in this report"))
+        append("<label style='display:block'><input type='checkbox' name='quiet'${if (partner.quiet) " checked" else ""}> Quiet hours: nothing from 10 pm to 7 am; what came in overnight arrives together at 7 am</label>")
+        append("<input type='hidden' name='tz' id='tz' value=''><div class='muted'>Your time zone: <span id='tzname'>${esc(partner.zone)}</span>. Important: the phone going silent, protection turned off, flagged screenshots, requests for your OK, and anything loosened.</div>")
+        append("<button>Save</button></form>")
         // An app partner (no email, D-035) gets alerts in their own app: no texts section.
         if (partner.email.isNotEmpty()) append("<h2>Text alerts</h2>")
         if (partner.email.isNotEmpty()) when {

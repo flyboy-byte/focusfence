@@ -31,7 +31,7 @@ answer (batched), build in small PRs ranked by value, and mark a section done wh
 | 2 | "Seen": owners know partners are looking | The owner sees when each partner last opened the report | built 🧪 (PR pending), not yet on a phone |
 | 3 | Approve an unlock from the report page | Email or app partner taps Approve/Deny on a pending request; the phone acts on it within a minute while the screen is on | built 🧪 (PR pending), not yet on a phone |
 | 4 | Replies to alerts | A partner answers an alert; the owner sees the answer in the app | parked: Logan's "random things to add" list (below) |
-| 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | next: all three (urgent only / everything, daily digest, quiet hours) |
+| 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | built 🧪 (PR pending), not yet on a phone |
 | 6 | Faster alerts for app partners | An urgent alert reaches an app partner in under a minute without Google services | parked (Logan); research Ever Accountable / Accountable2You first |
 | 7 | Owner's partner list and keys | Each partner's status (pending / active / last seen); a new report key that cuts off old links | after 2 |
 | 8 | One path | Alerts and unlock codes off the pairing mailbox, onto the server route | after 3 |
@@ -72,6 +72,27 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 ## Notes per section
 
 Notes are added here as each section runs.
+
+### 5. Partner settings (built 2026-11-25)
+
+- **Logan:** all four groups count as important ("Honestly those are all valid"). New partners get everything at once,
+  as today. Quiet hours hold *everything* until 7 am.
+- **Rules:** `dns/AlertPrefs` (app and server):
+  - `Level` ALL / DAILY / IMPORTANT;
+  - quiet hours from 22:00 to 07:00, fixed for now;
+  - held alerts go out together once a day at 07:00, never inside quiet hours;
+  - `isImportant` marks only housekeeping as minor: partner removed, group changes, a change made with a partner's
+    OK. The server also marks "phone is back", answers to asks, and a partner leaving as minor.
+- **Email partners:** a "How alerts reach you" form on `/p/{token}` (`POST /p/{token}/prefs`). The time zone comes from
+  the browser (`report.js` fills `#tz`), and a form without one keeps the old zone. `Alerts.toPartners` routes each
+  line; held lines wait in `Partner.held`; `sweep` sends them as "N alerts held for you".
+- **App partners:** the same form, in the report WebView. The feed carries their `level`/`quiet` and each entry's
+  `important`, and their own app applies them in its phone's time zone (`Watch.held`, one "N held for you"
+  notification at 7).
+- **The owner's phone** sends `minor` indices with `/v1/alerts`. It's unsigned, because a wrong value only changes
+  *when* a partner hears.
+- Not done: editable quiet hours; SMS for held alerts (they go by email only).
+- Tests: `AlertPrefsTest`, `ServerTest.aPartnersQuietHoursAndDailyMessageFollowTheirOwnClock`.
 
 ### 2. Seen (built 2026-11-25)
 

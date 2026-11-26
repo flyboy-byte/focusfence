@@ -60,7 +60,16 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val inviteId: String = "",
         /** Plan 12 §2: when they last opened the report (its data, fetched by the page's script). The owner sees it. */
         var lastViewMs: Long = 0,
-    )
+        /** Plan 12 §5: their choice of how alerts reach them ([app.focusfence.dns.AlertPrefs]), set on their page. */
+        var alertLevel: String = "all",
+        var quiet: Boolean = false,
+        var zone: String = "UTC",
+        /** Alerts waiting for quiet hours to end or for the daily message, oldest first. */
+        var held: List<AlertEntry> = emptyList(),
+        var lastFlushDay: Long = 0,
+    ) {
+        fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone)
+    }
 
     @Serializable
     data class Invite(val codeHash: String, val expiresMs: Long, val linkHash: String = "", val id: String = "", val kind: String = "") {
@@ -76,9 +85,12 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val token: String = "",
         /** Plan 12 §2: as [Partner.lastViewMs]. Their app's background alert checks don't count, only opening the report. */
         val lastViewMs: Long = 0,
+        /** Plan 12 §5: as [Partner.alertLevel]; their own app applies them, in their phone's time zone. */
+        val alertLevel: String = "all",
+        val quiet: Boolean = false,
     ) {
         /** As the partner pages see them: no email, no texts, always confirmed. */
-        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs)
+        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs, alertLevel = alertLevel, quiet = quiet)
     }
 
     @Serializable
@@ -121,7 +133,7 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     )
 
     @Serializable
-    data class AlertEntry(val t: Long, val text: String)
+    data class AlertEntry(val t: Long, val text: String, val important: Boolean = true)
 
     @Serializable
     data class Mailbox(val tokenHash: String, val createdMs: Long, var lastWriteMs: Long = 0, var nextId: Long = 1)
@@ -263,12 +275,13 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     }
 
     /** Keeps the newest [ALERTS_KEEP] within [ALERTS_MAX_AGE_MS]. */
-    fun addAlerts(id: String, lines: List<String>, now: Long) {
+    fun addAlerts(id: String, lines: List<String>, now: Long, minor: Set<Int> = emptySet()) {
         if (lines.isEmpty()) return
         updateDevice(id) { d ->
-            d.alerts = (d.alerts + lines.map { AlertEntry(now, it) }).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
+            d.alerts = (d.alerts + lines.mapIndexed { i, l -> AlertEntry(now, l, i !in minor) }).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
         }
     }
+
 
     /**
      * Plan 12 §2: a partner opened the report. Written at most every [VIEW_EVERY_MS], so a page left open or reloaded
