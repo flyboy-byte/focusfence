@@ -77,19 +77,30 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
 </style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
     /** The invite opened in a browser on a server that can't send email (journey 4): point to the app instead. */
-    fun joinNeedsApp(): String = page(
+    const val DEFAULT_PACKAGE = "app.focusfence.accountable"
+
+    /**
+     * Filled by report.js on Android: "Open in the Focus Fence app", an intent link to focusfence://invite carrying the
+     * whole invite (its key stays on the phone; an intent isn't a web request). Without the app, it falls back to the
+     * download page.
+     */
+    private fun openInApp(pkg: String) = "<p id='openapp' data-package='${esc(pkg)}'></p>"
+
+    fun joinNeedsApp(pkg: String = DEFAULT_PACKAGE): String = page(
         "Join in the Focus Fence app",
-        "<h1>Join in the Focus Fence app</h1><p>This server can't send email, so you can't join as an email partner. " +
+        "<h1>Join in the Focus Fence app</h1>" + openInApp(pkg) + "<p>This server can't send email, so you can't join as an email partner. " +
             "Install Focus Fence AC on your phone, open <b>Partners → Join with an invite</b>, and paste the whole message " +
             "you were sent. You'll see the same report there, and alerts arrive as notifications.</p>" +
             "<p><a href=\"https://github.com/flyboy-byte/focusfence/releases/latest\">Get Focus Fence AC</a></p>" +
             "<p class='muted'>The invite still works: nothing was used up by opening this page.</p>",
+        "join",
     )
 
-    fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null): String = page(
+    fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null, pkg: String = DEFAULT_PACKAGE): String = page(
         "Become an accountability partner",
         buildString {
             append("<h1>Become an accountability partner</h1>")
+            if (link != null) append(openInApp(pkg))
             append("<p>Someone asked you to be their accountability partner on Focus Fence. You'll get a weekly report by email and an alert if their protection changes.</p>")
             if (error != null) append("<p class='bad'>${esc(error)}</p>")
             // Filled by /static/report.js when the link carried a report key (D-023), so a partner who opened this inside a

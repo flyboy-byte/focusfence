@@ -73,6 +73,31 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 
 Notes are added here as each section runs.
 
+### Links open in the app, and partner notification categories (built 2026-11-25)
+
+Logan: "how hard to get email and etc links to open in the app … expose some of this in the apps notifications
+settings". Then: "build both".
+
+- **Invite links open the app:**
+  - `LinkActivity` takes `https://ff.flyboybyte.com/i/…` as a verified App Link. The host is `appLinkHost` in
+    `app/build.gradle.kts`.
+  - It also takes `focusfence://invite?link=…` from the invite page's "Open in the Focus Fence app" button, which
+    `report.js` shows on Android only. It's an `intent://` link carrying the whole invite, and the key never goes over
+    the network. Without the app, it falls back to the release page.
+  - Either way, *Join with an invite* opens filled in, and the person still taps OK. Parsing is
+    `InviteLink.fromOpened`, which accepts partner invites only.
+  - **Server:** `/.well-known/assetlinks.json` is served only when `FF_ANDROID_CERT_SHA256` is set. The release key's
+    fingerprint is `2C:A7:69:A5:23:A0:CF:41:BC:BA:67:AB:AD:C7:1C:5A:BE:5D:AD:DF:EB:13:06:65:F8:53:C8:44:76:09:86:71`.
+  - **Deploy step:** add that line to the live env so the App Link verifies. Without it, the button still works.
+  - Report links (`/p/…`) still open in the browser on purpose: email partners read there, and app partners open
+    theirs from the app.
+- **Notification categories,** each settable in Android's own settings:
+  - "Important partner alerts" keeps the old `partner_alerts` id, so settings people already made carry over;
+  - "Other partner alerts" (housekeeping);
+  - "Held for you" (the 7 am message);
+  - "Your partners" (a partner left, an answer to your ask).
+  - Each partner gets one notification per category, so an "other" one never replaces an important one.
+
 ### 7. Key reset: skipped (Logan, 2026-11-25: "Skip it and document it")
 
 - **The idea:** "Make a new report key", so that a leaked partner link stops opening the report.

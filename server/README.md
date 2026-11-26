@@ -120,6 +120,8 @@ FF_PUBLIC_URL=https://ff.example.com RESEND_API_KEY=... FF_MAIL_FROM=reports@exa
 | `FF_MAX_DEVICES`, `FF_MAX_MAILBOXES`, `FF_MAX_DATA_MB` | `100`, `500`, `2048` | Hard bounds on what unauthenticated enrol/mailbox creation can use |
 | `FF_DATA_DIR` | `./data` | Flat-file store |
 | `FF_STALE_MINUTES` | `60` | Silence before "phone went silent" (phones check in about every 15 min). Email, text and app partners all get it, and a "checking in again" message when the phone is back. |
+| `FF_ANDROID_CERT_SHA256` | — | Comma list of the app's signing-certificate SHA-256 fingerprints (`AA:BB:…`). Serves `/.well-known/assetlinks.json` so Android opens this server's invite links straight in the app. Only works for the server built into the app (`appLinkHost` in `app/build.gradle.kts`, `ff.flyboybyte.com`); every other server's invite page offers an "Open in the app" button instead. The official release key's is `2C:A7:69:A5:23:A0:CF:41:BC:BA:67:AB:AD:C7:1C:5A:BE:5D:AD:DF:EB:13:06:65:F8:53:C8:44:76:09:86:71` |
+| `FF_ANDROID_PACKAGE` | `app.focusfence.accountable` | The app that button and `assetlinks.json` name; only a fork with its own app id changes it |
 | `FF_ENROLL_TOKEN` | — | Optional bootstrap enroll code; more codes come from `admin codes` |
 | `FF_ADMIN_EMAILS` | — | Comma list. Turns on the admin page for these addresses; off when empty. Sign in with an emailed code, or with an authenticator code once one is set up (Activity tab): either one, not both |
 | `RESEND_API_KEY`, `FF_MAIL_FROM` | — | Email via Resend (preferred) |

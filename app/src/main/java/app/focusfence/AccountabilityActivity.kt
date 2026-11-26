@@ -11,4 +11,10 @@ class AccountabilityActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction().replace(android.R.id.content, AccountabilityFragment()).commit()
         }
     }
+
+    /** A second invite link while this is open: the fragment reads it in onResume. */
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
 }

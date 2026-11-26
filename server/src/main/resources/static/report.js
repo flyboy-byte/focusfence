@@ -31,6 +31,7 @@
   }
 
   // A key in the address (#k=...) is saved, then removed from the address bar so it isn't bookmarked or shared.
+  var rawHash = location.hash; // the whole invite fragment, for "Open in the app" below
   var fromHash = new URLSearchParams(location.hash.slice(1)).get('k');
   var saved = fromHash ? saveKey(fromHash) : false;
   if (fromHash) history.replaceState(null, '', location.pathname + location.search);
@@ -51,6 +52,19 @@
     return;
   }
   if (page === 'join') {
+    // On Android, offer the app: the whole invite goes to it in an intent (focusfence://invite), never over the
+    // network. Without the app installed, Chrome falls back to the download page.
+    var oa = document.getElementById('openapp');
+    if (oa && /Android/i.test(navigator.userAgent) && /[#&]k=/.test(rawHash)) {
+      var invite = location.origin + location.pathname + rawHash;
+      var pkg = (oa.getAttribute('data-package') || '').replace(/[^A-Za-z0-9_.]/g, '');
+      var a = el('a', 'Open in the Focus Fence app');
+      a.href = 'intent://invite?link=' + encodeURIComponent(invite) + '#Intent;scheme=focusfence;package=' + pkg +
+        ';S.browser_fallback_url=' + encodeURIComponent('https://github.com/flyboy-byte/focusfence/releases/latest') + ';end';
+      var b = el('b'); b.appendChild(a);
+      oa.appendChild(b);
+      oa.appendChild(el('span', ' Have the app? Join there instead, and alerts arrive as notifications.', 'muted'));
+    }
     // Chat apps open links in their own browser, and the confirmation email often opens in another. Offer the key as a
     // link the partner can copy into the browser they'll read reports in. Shown only here, only from the link they hold.
     var js = document.getElementById('keystatus');
