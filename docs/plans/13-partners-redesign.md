@@ -123,7 +123,10 @@ from the pairing seed (an ask replaces them).
 
 ## Questions for Logan (next)
 
-1. Unlock codes read aloud (from the pairing seed) go away; ask-a-partner replaces them. OK?
+1. ~~Unlock codes read aloud go away?~~ DECIDED (2026-11-26): **yes, they go.** Ask a partner replaces them. Logan
+   left it to me ("ur pick"). Why: they need the pairing key, which the rebuild removes, so keeping them would mean
+   rebuilding a second secret just for them. The cost: a partner with no signal can't unlock you. Note it in the
+   release notes.
 2. ~~Mockups next~~: DONE (2026-11-26). An 8-screen clickable prototype (private Design canvas,
    https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco): Partners, Add a partner (code + QR, or email), Sam joined,
    partner join with a code, waiting for the key, the partner's report, the invite email, browser join. Logan: "i think
