@@ -9,11 +9,9 @@ import app.focusfence.dns.InviteLink
 
 /**
  * Opens partner invites in the app instead of the browser, so whoever taps one in a chat app joins as an app partner
- * rather than becoming an email partner by mistake. Two ways in:
- *  - `https://<APP_LINK_HOST>/i/...`: Android App Links, verified against the server's /.well-known/assetlinks.json.
- *    Only the host built into the app (`appLinkHost` in build.gradle.kts) can be verified.
- *  - `focusfence://invite?link=<the invite>`: the "Open in the app" button on any server's invite page, so
- *    self-hosted servers work too.
+ * rather than becoming an email partner by mistake. The way in is the "Open in the app" button on every server's
+ * invite page (`focusfence://invite?link=<the invite>`). Android App Links were left out on purpose (Logan,
+ * 2026-11-25): they verify only hosts built into the app, which would make one server special.
  * Nothing is joined here: the Join dialog opens filled in, and the person still taps OK.
  */
 class LinkActivity : Activity() {
