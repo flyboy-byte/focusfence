@@ -42,7 +42,7 @@ class EmailTest {
         val got = StringBuilder()
         val port = fakeSmtp(got)
         val env = mapOf("FF_SMTP_HOST" to "127.0.0.1", "FF_SMTP_PORT" to "$port", "FF_SMTP_TLS" to "none")
-        val n = LiveNotifier(null, "Focus Fence <ff@example.com>", "none", null) { env[it] }
+        val n = LiveNotifier(null, "Focus Fence <ff@example.com>") { env[it] }
         assertTrue(runBlocking { n.email("sam@example.com", "Focus Fence: hello", "<p>Report ready</p>") })
         val text = got.toString()
         assertTrue(text.contains("RCPT TO:<sam@example.com>"), text)
@@ -54,7 +54,7 @@ class EmailTest {
     fun aDeadSmtpServerIsAFailureNotAnException() {
         val dead = ServerSocket(0).use { it.localPort }
         val env = mapOf("FF_SMTP_HOST" to "127.0.0.1", "FF_SMTP_PORT" to "$dead", "FF_SMTP_TLS" to "none")
-        val n = LiveNotifier(null, "ff@example.com", "none", null) { env[it] }
+        val n = LiveNotifier(null, "ff@example.com") { env[it] }
         assertTrue(!runBlocking { n.email("sam@example.com", "x", "y") })
     }
 }

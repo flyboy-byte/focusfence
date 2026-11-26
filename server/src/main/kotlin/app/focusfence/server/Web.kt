@@ -6,10 +6,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * The partner's web pages: joining with an invite code, and a private report
- * page per partner (the link token is the credential, like a magic link).
- * The report is the same [Digest] the partner app shows, so both partner
- * channels say the same thing. Plain HTML, no scripts.
+ * The partner's web pages: an invite's join page, and a private report page per partner (the link token is the
+ * credential, like a magic link). /static/report.js does what needs the browser's own key: joining, opening the report.
  */
 object Web {
 
@@ -19,26 +17,6 @@ object Web {
 
     fun esc(x: String): String =
         x.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;")
-
-    /**
-     * What the person who just joined sees. It deliberately carries NO token that grants anything: the confirmation
-     * link exists only in the email, so only the owner of the address can confirm it. The one control is "send it
-     * again", keyed by the partner id (which can't confirm, read a report or do anything else).
-     */
-    fun joinPending(partnerId: String, notice: String? = null): String = page(
-        "Check your email",
-        "<h1>Check your email</h1><p>We sent a confirmation link to the address you entered. Open it and press the " +
-            "button to start getting alerts. Until then nothing else is sent to that address, and the request expires in a few days.</p>" +
-            (if (notice != null) "<div class='card'>${esc(notice)}</div>" else "") +
-            "<form method=\"post\" action=\"/join/resend/${esc(partnerId)}\"><button type=\"submit\">Send the email again</button></form>",
-    )
-
-    /** The page behind the emailed confirm link: a button, because confirming must be a deliberate POST. */
-    fun confirmForm(token: String): String = page(
-        "Confirm your email",
-        "<p>Confirm that you want to be this person's accountability partner and get their alerts and weekly report by email.</p>" +
-            "<form method=\"post\" action=\"/confirm/${esc(token)}\"><button type=\"submit\">Yes, confirm</button></form>",
-    )
 
     /** [script] names a page for `/static/report.js` (D-023); pages without it carry no script at all. */
     fun page(title: String, body: String, script: String? = null): String = """<!doctype html>
@@ -76,74 +54,49 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
 .muted{color:#a0a0a8}input{background:#1e1e22;color:inherit;border-color:#444}.ok{color:#6fd08c}.bad{color:#ffb4ab}}
 </style></head><body${if (script != null) " data-page=\"$script\"" else ""}>$body</body></html>"""
 
-    /** The invite opened in a browser on a server that can't send email (journey 4): point to the app instead. */
     const val DEFAULT_PACKAGE = "app.focusfence.accountable"
 
     /**
-     * Filled by report.js on Android: "Open in the Focus Fence app", an intent link to focusfence://invite carrying the
-     * whole invite (its key stays on the phone; an intent isn't a web request). Without the app, it falls back to the
-     * download page.
+     * Plan 13: what an invite opens, from the email (/j/, [link]) or the QR code (/c/, [code]). report.js makes this
+     * browser's key pair and joins, or (on Android) offers the app with the invite in an intent. [owner] null: the invite
+     * isn't valid (expired, used, or never was).
      */
-    private fun openInApp(pkg: String) = "<p id='openapp' data-package='${esc(pkg)}'></p>"
-
-    fun joinNeedsApp(pkg: String = DEFAULT_PACKAGE): String = page(
-        "Join in the Focus Fence app",
-        "<h1>Join in the Focus Fence app</h1>" + openInApp(pkg) + "<p>This server can't send email, so you can't join as an email partner. " +
-            "Install Focus Fence AC on your phone, open <b>Partners → Join with an invite</b>, and paste the whole message " +
-            "you were sent. You'll see the same report there, and alerts arrive as notifications.</p>" +
-            "<p><a href=\"https://github.com/flyboy-byte/focusfence/releases/latest\">Get Focus Fence AC</a></p>" +
-            "<p class='muted'>The invite still works: nothing was used up by opening this page.</p>",
-        "join",
-    )
-
-    fun joinForm(code: String, error: String?, smsAvailable: Boolean, link: String? = null, pkg: String = DEFAULT_PACKAGE): String = page(
-        "Become an accountability partner",
-        buildString {
-            append("<h1>Become an accountability partner</h1>")
-            if (link != null) append(openInApp(pkg))
-            append("<p>Someone asked you to be their accountability partner on Focus Fence. You'll get a weekly report by email and an alert if their protection changes.</p>")
-            if (error != null) append("<p class='bad'>${esc(error)}</p>")
-            // Filled by /static/report.js when the link carried a report key (D-023), so a partner who opened this inside a
-            // chat app can carry the key to the browser they'll read reports in.
-            append("<div id='keystatus' class='muted'></div>")
-            append("<form method='post' action='/join'>")
-            // Opened from the invite link: the link is the invite, so there's no code to type. Keep that link: it's yours.
-            if (link != null) {
-                append("<input type='hidden' name='link' value='${esc(link)}'>")
-                append("<p class='muted'><b>Keep the link you were sent.</b> After you join and confirm your email, it opens the report in any browser.</p>")
-            } else {
-                append("<label>Invite code<br><input name='code' required value='${esc(code)}' autocapitalize='characters'></label>")
-            }
-            append("<label>Your name<br><input name='name' required maxlength='60'></label>")
-            append("<label>Your email<br><input name='email' type='email' required maxlength='120'></label>")
-            if (smsAvailable) {
-                append("<label>Mobile number for text alerts (optional)<br><input name='phone' type='tel' placeholder='+1 555 123 4567'></label>")
-                append("<label><input type='checkbox' name='sms_consent' value='yes'> Text me alerts (not reports). Message rates may apply; reply STOP to opt out.</label>")
-            }
-            append("<p><button type='submit'>Join</button></p></form>")
-        },
-        "join",
-    )
+    fun joinPage(owner: String?, link: String, code: String, pkg: String = DEFAULT_PACKAGE): String {
+        if (owner == null) return page("Invite not valid", "<h1>This invite isn't valid</h1><p>It may have expired (invites last " +
+            "24 hours) or been used already. If you joined with it, open the report from any alert email or from the app. " +
+            "Otherwise ask for a new invite.</p>")
+        return page("See ${owner}'s report", buildString {
+            append("<h1>See ${esc(owner)}'s report</h1>")
+            append("<div id='join' data-link='${esc(link)}' data-code='${esc(code)}' data-package='${esc(pkg)}'>")
+            append("<p class='muted'>This browser becomes one of your devices. It makes its own key, so this server can't read the report.</p>")
+            append("<label>Your name (${esc(owner)} sees this)<br><input id='jname' maxlength='60' autocomplete='name'></label>")
+            append("<p><button type='button' id='jgo'>Join in this browser</button></p>")
+            append("<p id='openapp'></p><p id='jmsg' class='muted'></p></div>")
+            append("<noscript><p class='bad'>Joining needs JavaScript: this browser makes the key that opens the report.</p></noscript>")
+            if (link.isEmpty()) append("<p class='muted'>Joined in a browser by code, you see the report but get no alerts. For alerts, join in the Focus Fence app.</p>")
+        }, "join")
+    }
 
     fun message(title: String, text: String): String =
         page(title, "<h1>${esc(title)}</h1><p>${esc(text)}</p>")
 
     fun partnerPage(
         partner: Store.Partner,
+        owner: String,
         deviceOnline: Boolean,
         lastSeenMs: Long,
-        smsAvailable: Boolean,
         notice: String?,
         ask: Store.UnlockRequest? = null,
-    ): String = page("Focus Fence report", buildString {
+        emailsAlerts: Boolean = false,
+    ): String = page("${owner}'s report", buildString {
         val t = partner.token
-        append("<h1>Focus Fence report</h1>")
+        append("<h1>${esc(owner)}'s report</h1>")
         append("<p class='muted'>For ${esc(partner.name)} · last 7 days · keep this link private, it's your login.</p>")
         if (notice != null) append("<div class='card'>${esc(notice)}</div>")
         // Plan 12 §3: an open "ask a partner" request, answerable without the key or JavaScript.
         val askAction = ask?.let { app.focusfence.dns.GuardPolicy.Action.fromKey(it.action) }
         if (ask != null && askAction != null) append(
-            "<div class='card'><b>They ask for your OK to ${esc(app.focusfence.dns.UnlockAsk.what(askAction))}.</b>" +
+            "<div class='card'><b>${esc(owner)} asks for your OK to ${esc(app.focusfence.dns.UnlockAsk.what(askAction))}.</b>" +
                 "<div class='muted'>Asked ${time(ask.askedMs)}; it lapses ${time(ask.askedMs + app.focusfence.dns.UnlockAsk.LAPSE_MS)}. " +
                 "Approving lets them do only this, for ${app.focusfence.dns.UnlockAsk.GRANT_MS / 60_000} minutes. Without an answer they can still wait it out.</div>" +
                 "<form method='post' action='/p/$t/unlock/${esc(ask.id)}' style='display:inline'><input type='hidden' name='d' value='approve'><button>Approve</button></form> " +
@@ -156,16 +109,22 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
             else "<div class='hero bad-bg'><span class='dot bad-dot'></span><div><b id='seen' data-online='0' data-t='$lastSeenMs'>Silent since ${time(lastSeenMs)}</b>" +
                 "<div class='muted'>Protection may be off, the phone may be off or out of signal, or the app may have been removed.</div></div></div>"
         )
-        // D-023: the report is sealed on the phone; /static/report.js opens it here with the key from the partner's link.
-        append("<div id='report'><p class='muted'>Opening the encrypted report…</p></div>")
-        append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
-        append("<p class='muted'>The phone's owner can see when you last opened this report, not what you looked at.</p>")
-        append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
+        // D-023: the report is sealed on the phone; /static/report.js opens it with this browser's own key.
+        append("<div id='report' data-owner='${esc(owner)}'><p class='muted'>Opening the encrypted report…</p></div>")
+        append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser.</p></noscript>")
+        append("<p class='muted'>${esc(owner)} can see when you last opened this report, not what you looked at. " +
+            "End-to-end encrypted: this server stores the report but cannot read it.</p>")
         // Plan 12 §5: how alerts reach them. The time zone comes from their browser (report.js fills #tz).
+        append("<h2>How alerts reach you</h2>")
+        append("<p>" + when {
+            partner.devices.any { it.kind == Store.KIND_APP } && !emailsAlerts -> "As notifications in the Focus Fence app."
+            emailsAlerts -> "By email to ${esc(mask(partner.email))}."
+            else -> "They don't: you joined in a browser by code. Join in the Focus Fence app to get alerts."
+        } + "</p>")
         val lvl = app.focusfence.dns.AlertPrefs.Level.fromKey(partner.alertLevel)
         fun radio(l: app.focusfence.dns.AlertPrefs.Level, label: String) =
             "<label style='display:block'><input type='radio' name='level' value='${l.key}'${if (l == lvl) " checked" else ""}> $label</label>"
-        append("<h2>How alerts reach you</h2><form method='post' action='/p/$t/prefs'>")
+        append("<form method='post' action='/p/$t/prefs'>")
         append(radio(app.focusfence.dns.AlertPrefs.Level.ALL, "Every alert, as it happens"))
         append(radio(app.focusfence.dns.AlertPrefs.Level.DAILY, "Important ones as they happen; the rest in one message a day, when quiet hours end (7 am without them)"))
         append(radio(app.focusfence.dns.AlertPrefs.Level.IMPORTANT, "Important ones only; the rest stay in this report"))
@@ -176,34 +135,15 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
             hours("from", partner.quietFrom) + " to " + hours("to", partner.quietTo) + "; what came in meanwhile arrives together when they end</label>")
         append("<input type='hidden' name='tz' id='tz' value=''><div class='muted'>Your time zone: <span id='tzname'>${esc(partner.zone)}</span>. Important: the phone going silent, protection turned off, flagged screenshots, requests for your OK, and anything loosened.</div>")
         append("<button>Save</button></form>")
-        // An app partner (no email, D-035) gets alerts in their own app: no texts section.
-        if (partner.email.isNotEmpty()) append("<h2>Text alerts</h2>")
-        if (partner.email.isNotEmpty()) when {
-            !smsAvailable -> append("<p class='muted'>Text alerts aren't set up on this server.</p>")
-            partner.phoneVerified -> append(
-                "<p>Alerts are texted to ${esc(mask(partner.phone.orEmpty()))}.</p>" +
-                    "<form method='post' action='/p/$t/sms/stop'><button>Stop texts</button></form>"
-            )
-            partner.phone != null -> append(
-                "<p>We texted a code to ${esc(mask(partner.phone.orEmpty()))}.</p>" +
-                    "<form method='post' action='/p/$t/sms/verify'><input name='code' inputmode='numeric' maxlength='6' required> <button>Confirm</button></form>"
-            )
-            else -> append(
-                "<form method='post' action='/p/$t/sms'><input name='phone' type='tel' required placeholder='+1 555 123 4567'>" +
-                    "<label><input type='checkbox' name='sms_consent' value='yes' required> Text me alerts. Reply STOP to opt out.</label>" +
-                    "<button>Send code</button></form>"
-            )
-        }
+        // Plan 13: every device that opens this report. The owner sees the same list.
+        append("<h2>Your devices</h2><table>")
+        for (d in partner.devices) append("<tr><td>${esc(d.label)}</td><td class='muted'>${if (d.kind == Store.KIND_APP) "app" else "browser"} · added ${time(d.addedMs)}" +
+            (if (d.sealed == null) " · waiting for the key" else "") + "</td><td>" +
+            (if (partner.devices.size > 1) "<form method='post' action='/p/$t/devices/${esc(d.id)}/remove' style='display:inline'><button style='background:transparent;color:inherit;border:1px solid #bbb'>Remove</button></form>" else "") +
+            "</td></tr>")
+        append("</table><p class='muted'>To read on another device, open this page there: it offers to add that browser.</p>")
         append("<h2>Leave</h2><form method='post' action='/p/$t/leave'><button style='background:#b3261e'>Stop being their partner</button></form>")
     }, "report")
-
-    /** Where a resent key link lands: the script keeps the key from after '#', which never reaches this server. */
-    fun keyPage(): String = page(
-        "Report key",
-        "<h1>Report key</h1><p id='keystatus'>Saving the key in this browser…</p>" +
-            "<p class='muted'>Now open your report from the link in your Focus Fence email. The key stays in this browser; this server never receives it.</p>",
-        "key",
-    )
 
     fun mask(phoneOrEmail: String): String = when {
         '@' in phoneOrEmail -> phoneOrEmail.substringBefore('@').take(2) + "…@" + phoneOrEmail.substringAfter('@')

@@ -11,10 +11,15 @@ package app.focusfence.dns
  * adding the new level's suite and keeping the old ones passing until they fall out of the window.
  */
 object Protocol {
-    const val LEVEL = 1
+    const val LEVEL = 2
     const val WINDOW = 2
+    /**
+     * Below this, nothing is served: level 2 is plan 13's partner rebuild, a deliberate clean cut made while production
+     * was paused (2026-11-26). Level 1's partner paths (pairing mailboxes, keyed invite links, app partners) are gone.
+     */
+    const val FLOOR = 2
     /** The oldest level of the other side this side still supports. */
-    val OLDEST: Int get() = maxOf(1, LEVEL - WINDOW)
+    val OLDEST: Int get() = maxOf(FLOOR, LEVEL - WINDOW)
 
     /** Request header the app sends; response headers the server sends back. */
     const val HEADER_APP = "X-FF-Protocol"

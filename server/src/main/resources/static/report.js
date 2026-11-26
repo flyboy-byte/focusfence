@@ -1,7 +1,8 @@
-// Focus Fence report page (D-023). The phone seals each report slice with a key the server never sees; the key
-// reaches this browser only after the '#' of a link (never sent to a server) and is kept in localStorage. Here we
-// open the slices with WebCrypto AES-GCM and merge them into one 7-day report. All output is built with
-// textContent, never innerHTML: the report text comes from the phone, so it is treated as data.
+// Focus Fence partner pages (D-023, plan 13). The phone seals each report slice with a report key the server never
+// sees. This browser joins as one of the partner's devices: it makes its own P-256 key pair (the private half can't
+// leave this browser, IndexedDB holds it), sends only the public half, and the owner's phone seals the report key to
+// it. Here we open that sealed key, then the slices (WebCrypto AES-GCM), and merge them into one 7-day report. All
+// output is built with textContent, never innerHTML: the report text comes from the phone, so it is treated as data.
 'use strict';
 (function () {
   var STORE = 'ff_report_keys';
@@ -30,11 +31,52 @@
     return e;
   }
 
-  // A key in the address (#k=...) is saved, then removed from the address bar so it isn't bookmarked or shared.
-  var rawHash = location.hash; // the whole invite fragment, for "Open in the app" below
-  var fromHash = new URLSearchParams(location.hash.slice(1)).get('k');
-  var saved = fromHash ? saveKey(fromHash) : false;
-  if (fromHash) history.replaceState(null, '', location.pathname + location.search);
+  // ---- this browser as a partner device (plan 13) ----
+  // One record per report link: { deviceId, priv }, priv a non-extractable ECDH CryptoKey.
+  function idb() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open('ff_devices', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('d'); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+  }
+  function idbDo(mode, fn) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction('d', mode), req = fn(tx.objectStore('d'));
+        tx.oncomplete = function () { res(req && req.result); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  function devGet(token) { return idbDo('readonly', function (st) { return st.get(token); }).catch(function () { return null; }); }
+  function devPut(token, rec) { return idbDo('readwrite', function (st) { return st.put(rec, token); }); }
+  function devDel(token) { return idbDo('readwrite', function (st) { return st.delete(token); }).catch(function () {}); }
+  function b64(buf) { var b = new Uint8Array(buf), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+
+  async function newDeviceKey() {
+    var kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+    return { priv: kp.privateKey, spki: b64(await crypto.subtle.exportKey('spki', kp.publicKey)) };
+  }
+  // dns/Ecies with the "focusfence-key-v1" label: "FFS1" | u16 len | ephemeral SPKI | iv[12] | AES-GCM ciphertext.
+  async function unseal(priv, sealed) {
+    var raw = b64u(sealed);
+    if (raw.length < 6 || String.fromCharCode(raw[0], raw[1], raw[2], raw[3]) !== 'FFS1') throw new Error('not sealed');
+    var n = (raw[4] << 8) | raw[5], eph = raw.slice(6, 6 + n), iv = raw.slice(6 + n, 18 + n), ct = raw.slice(18 + n);
+    var pub = await crypto.subtle.importKey('spki', eph, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    var shared = await crypto.subtle.deriveBits({ name: 'ECDH', public: pub }, priv, 256);
+    var hk = await crypto.subtle.importKey('raw', shared, 'HKDF', false, ['deriveBits']);
+    var k = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: new TextEncoder().encode('focusfence-key-v1') }, hk, 256);
+    var aes = await crypto.subtle.importKey('raw', k, 'AES-GCM', false, ['decrypt']);
+    return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, aes, ct));
+  }
+  function browserLabel() {
+    var u = navigator.userAgent, b = /Edg\//.test(u) ? 'Edge' : /Firefox\//.test(u) ? 'Firefox' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : 'Browser';
+    var os = /Android/.test(u) ? 'Android' : /iPhone|iPad/.test(u) ? 'iPhone' : /Windows/.test(u) ? 'Windows' : /Mac OS/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
+    return os ? b + ' on ' + os : b;
+  }
+  async function errorText(r) { try { var j = await r.json(); if (j && j.error) return String(j.error); } catch (e) {} return 'Something went wrong (' + r.status + '). Try again.'; }
 
   // Plan 12 §5: quiet hours and the daily message use the partner's own time zone, which only the browser knows.
   var tzIn = document.getElementById('tz');
@@ -46,37 +88,36 @@
   }
 
   var page = document.body.getAttribute('data-page');
-  if (page === 'key') {
-    var st = document.getElementById('keystatus');
-    if (st) st.textContent = saved ? 'Key saved in this browser.' : 'No valid key in this link. Ask for the link again.';
-    return;
-  }
   if (page === 'join') {
-    // On Android, offer the app: the whole invite goes to it in an intent (focusfence://invite), never over the
-    // network. Without the app installed, Chrome falls back to the download page.
+    var j = document.getElementById('join');
+    if (!j) return;
+    var link = j.getAttribute('data-link') || '', code = j.getAttribute('data-code') || '';
+    var msg = document.getElementById('jmsg');
+    // On Android, offer the app: the invite goes to it in an intent (focusfence://join), and it joins as an app device.
     var oa = document.getElementById('openapp');
-    if (oa && /Android/i.test(navigator.userAgent) && /[#&]k=/.test(rawHash)) {
-      var invite = location.origin + location.pathname + rawHash;
-      var pkg = (oa.getAttribute('data-package') || '').replace(/[^A-Za-z0-9_.]/g, '');
+    if (oa && /Android/i.test(navigator.userAgent)) {
+      var pkg = (j.getAttribute('data-package') || '').replace(/[^A-Za-z0-9_.]/g, '');
+      var q = 'server=' + encodeURIComponent(location.origin) + (link ? '&link=' + encodeURIComponent(link) : '&code=' + encodeURIComponent(code));
       var a = el('a', 'Open in the Focus Fence app');
-      a.href = 'intent://invite?link=' + encodeURIComponent(invite) + '#Intent;scheme=focusfence;package=' + pkg +
+      a.href = 'intent://join?' + q + '#Intent;scheme=focusfence;package=' + pkg +
         ';S.browser_fallback_url=' + encodeURIComponent('https://github.com/flyboy-byte/focusfence/releases/latest') + ';end';
-      var b = el('b'); b.appendChild(a);
-      oa.appendChild(b);
-      oa.appendChild(el('span', ' Have the app? Join there instead, and alerts arrive as notifications.', 'muted'));
+      var b = el('b'); b.appendChild(a); oa.appendChild(b);
+      oa.appendChild(el('span', ' Have the app? Join there, and alerts arrive as notifications.', 'muted'));
     }
-    // Chat apps open links in their own browser, and the confirmation email often opens in another. Offer the key as a
-    // link the partner can copy into the browser they'll read reports in. Shown only here, only from the link they hold.
-    var js = document.getElementById('keystatus');
-    if (js && saved) {
-      js.appendChild(el('p', 'The key that unlocks the report is saved in this browser. If you will read reports in a different browser (for example, this link opened inside a chat app), copy this link and open it there:'));
-      var inp = el('input');
-      inp.value = location.origin + '/key#k=' + fromHash;
-      inp.readOnly = true;
-      inp.style.width = '100%';
-      inp.addEventListener('focus', function () { inp.select(); });
-      js.appendChild(inp);
-    }
+    var go = document.getElementById('jgo');
+    if (!window.crypto || !crypto.subtle || !window.indexedDB) { go.disabled = true; msg.textContent = 'This browser can\u2019t make the key. Open the link in Chrome, Firefox or Safari.'; return; }
+    go.addEventListener('click', async function () {
+      go.disabled = true; msg.textContent = 'Setting up this browser\u2026';
+      try {
+        var k = await newDeviceKey();
+        var r = await fetch('/v1/join', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-FF-Protocol': '2' },
+          body: JSON.stringify({ link: link, code: code, name: (document.getElementById('jname') || {}).value || '', kind: 'web', label: browserLabel(), publicKeySpki: k.spki }) });
+        if (!r.ok) { msg.textContent = await errorText(r); go.disabled = false; return; }
+        var res = await r.json();
+        await devPut(res.token, { deviceId: res.deviceId, priv: k.priv });
+        location.href = '/p/' + res.token;
+      } catch (e) { msg.textContent = 'Something went wrong. Try again.'; go.disabled = false; }
+    });
     return;
   }
   if (page !== 'report') return;
@@ -351,35 +392,77 @@
   }
 
   var base = location.pathname.replace(/\/$/, '');
-  // Alerts are the plain lines partners are emailed (no key needed); a failure here must not hide the report.
-  var alertsReq = fetch(base + '/alerts', { cache: 'no-store', credentials: 'omit' })
-    .then(function (r) { return r.ok ? r.json() : { alerts: [] }; })
-    .then(function (a) { return (a.alerts || []).filter(function (x) { return x && typeof x.text === 'string' && +x.t > 0; }); })
-    .catch(function () { return []; });
-  fetch(base + '/data', { cache: 'no-store', credentials: 'omit' })
-    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(async function (data) {
-      var serverAlerts = await alertsReq;
-      var reports = data.reports || [];
-      if (!reports.length) {
-        show([el('p', 'No report yet. The phone sends one every hour, once it runs Focus Fence AC 2.11 or newer.', 'muted')]
-          .concat(serverAlerts.length ? [timeline(serverAlerts, [])] : []));
-        return;
-      }
-      var keys = loadKeys();
-      if (!window.crypto || !crypto.subtle) {
-        show([el('p', 'This browser cannot open encrypted reports. Open the link in Chrome, Firefox or Safari.', 'bad')]);
-        return;
-      }
-      var digests = await open(keys, data.deviceId, reports);
-      if (!digests.length) {
-        show([el('p', 'This report is end-to-end encrypted and this browser does not have the key.', 'bad'),
-          el('p', 'Open the Focus Fence link the phone\'s owner sent you (or a "key link" from them). It carries the key and ' +
-            'opens this report in whichever browser it lands in.', 'muted')]);
-        return;
-      }
-      var shots = digests.filter(function (d) { return d.kind === 'shot'; });
-      render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots, serverAlerts);
-    })
-    .catch(function () { show([el('p', 'Could not load the report. Try again later.', 'bad')]); });
+  var token = base.split('/').pop();
+  var owner = box.getAttribute('data-owner') || 'They';
+
+  // This browser's copy of the report key: 'ok' (saved), 'waiting' (the owner's phone hasn't sent it yet), 'none'.
+  async function deviceKey() {
+    var rec = await devGet(token);
+    if (!rec || !rec.deviceId) return 'none';
+    var r = await fetch(base + '/key?d=' + encodeURIComponent(rec.deviceId), { cache: 'no-store', credentials: 'omit' });
+    if (r.status === 404) { await devDel(token); return 'none'; }
+    if (!r.ok) return 'waiting';
+    var k = await r.json();
+    if (!k.ready) return 'waiting';
+    try { saveKey(await unseal(rec.priv, k.sealed)); return 'ok'; } catch (e) { return 'none'; }
+  }
+  var waitedSince = Date.now(), wasWaiting = false;
+  function waiting() {
+    wasWaiting = true;
+    show([el('p', 'Waiting for ' + owner + '\u2019s phone\u2026', ''),
+      el('p', 'You\u2019re in. ' + owner + '\u2019s phone sends this browser the key to the report the next time it checks in, usually within a minute. This page opens the report by itself.', 'muted')]);
+    // Every 20 s for 30 minutes; after that the phone is probably off, and a reload tries again.
+    if (Date.now() - waitedSince < 30 * 60e3) setTimeout(load, 20e3);
+  }
+  function notADevice() {
+    var add = el('button', 'Add this browser'); add.type = 'button';
+    var note = el('p', '', 'muted');
+    add.addEventListener('click', async function () {
+      add.disabled = true; note.textContent = 'Setting up this browser\u2026';
+      try {
+        var k = await newDeviceKey();
+        var r = await fetch(base + '/devices', { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: 'web', label: browserLabel(), publicKeySpki: k.spki }) });
+        if (!r.ok) { note.textContent = await errorText(r); add.disabled = false; return; }
+        await devPut(token, { deviceId: (await r.json()).deviceId, priv: k.priv });
+        waitedSince = Date.now(); load();
+      } catch (e) { note.textContent = 'Something went wrong. Try again.'; add.disabled = false; }
+    });
+    show([el('p', 'This browser isn\u2019t one of your devices yet, so it can\u2019t open the report.', 'bad'),
+      el('p', 'Add it, and ' + owner + '\u2019s phone sends it the key at its next check-in. ' + owner + ' and you are both told a device was added.', 'muted'), add, note]);
+  }
+
+  function load() {
+    // Alerts are the plain lines partners are emailed (no key needed); a failure here must not hide the report.
+    var alertsReq = fetch(base + '/alerts', { cache: 'no-store', credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.json() : { alerts: [] }; })
+      .then(function (a) { return (a.alerts || []).filter(function (x) { return x && typeof x.text === 'string' && +x.t > 0; }); })
+      .catch(function () { return []; });
+    if (!window.crypto || !crypto.subtle || !window.indexedDB) {
+      show([el('p', 'This browser cannot open encrypted reports. Open the link in Chrome, Firefox or Safari.', 'bad')]);
+      return;
+    }
+    // The device key first, every load: after the owner starts a new key, the old one opens only older slices.
+    deviceKey().catch(function () { return 'waiting'; }).then(function (dk) {
+      // The key just arrived: reload once, so the server-drawn parts (the devices list) say so too.
+      if (dk === 'ok' && wasWaiting) { location.reload(); return; }
+      return fetch(base + '/data', { cache: 'no-store', credentials: 'omit' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(async function (data) {
+          var serverAlerts = await alertsReq;
+          var keys = loadKeys();
+          if (!keys.length) return dk === 'none' ? notADevice() : waiting();
+          var reports = data.reports || [];
+          if (!reports.length) {
+            show([el('p', 'No report yet. The phone sends one every hour.', 'muted')].concat(serverAlerts.length ? [timeline(serverAlerts, [])] : []));
+            return;
+          }
+          var digests = await open(keys, data.deviceId, reports);
+          if (!digests.length) return dk === 'none' ? notADevice() : waiting();
+          var shots = digests.filter(function (d) { return d.kind === 'shot'; });
+          render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots, serverAlerts);
+        });
+    }).catch(function () { show([el('p', 'Could not load the report. Try again later.', 'bad')]); });
+  }
+  load();
 })();
