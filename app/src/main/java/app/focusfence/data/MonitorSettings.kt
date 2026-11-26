@@ -77,8 +77,10 @@ object MonitorSettings {
     fun watchedApps(c: Context): Set<String> =
         prefs(c).getStringSet(KEY_WATCHED, emptySet())?.toSet() ?: emptySet()
 
-    fun setWatchedApps(c: Context, apps: Set<String>) =
+    fun setWatchedApps(c: Context, apps: Set<String>) {
         prefs(c).edit().putStringSet(KEY_WATCHED, apps).apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(c)
+    }
 
     /**
      * ALL by default. Someone who picked apps before this setting existed keeps
@@ -93,15 +95,19 @@ object MonitorSettings {
         }
     }
 
-    fun setWatch(c: Context, mode: app.focusfence.dns.WatchScope.Mode, chosen: Set<String>) =
+    fun setWatch(c: Context, mode: app.focusfence.dns.WatchScope.Mode, chosen: Set<String>) {
         prefs(c).edit().putStringSet(KEY_WATCHED, chosen).putString(KEY_WATCH_MODE, mode.name).apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(c)
+    }
 
     /** Apps never captured in ALL mode. */
     fun excludedApps(c: Context): Set<String> =
         prefs(c).getStringSet(KEY_WATCH_EXCLUDED, emptySet())?.toSet() ?: emptySet()
 
-    fun setExcludedApps(c: Context, apps: Set<String>) =
+    fun setExcludedApps(c: Context, apps: Set<String>) {
         prefs(c).edit().putStringSet(KEY_WATCH_EXCLUDED, apps).apply()
+        app.focusfence.monitor.Monitor.checkIntegrityAsync(c)
+    }
 
     /** Base64 SPKI of the partner's P-256 public key; null until the owner sets one. */
     fun partnerKeySpki(c: Context): String? = prefs(c).getString(KEY_PARTNER_KEY, null)?.ifBlank { null }

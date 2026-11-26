@@ -8,6 +8,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchScopeTest {
+    @org.junit.Test
+    fun partnersReadWhichAppsAreWatched() {
+        org.junit.Assert.assertEquals("all apps", WatchScope.describe(WatchScope.Mode.ALL, emptyList(), emptyList()))
+        org.junit.Assert.assertEquals("all apps except Signal", WatchScope.describe(WatchScope.Mode.ALL, emptyList(), listOf("Signal")))
+        org.junit.Assert.assertEquals("all apps except A, B, C and 2 more",
+            WatchScope.describe(WatchScope.Mode.ALL, emptyList(), listOf("E", "D", "C", "B", "A")))
+        org.junit.Assert.assertEquals("only Chrome, Instagram", WatchScope.describe(WatchScope.Mode.CHOSEN, listOf("Instagram", "Chrome"), listOf("x")))
+        org.junit.Assert.assertEquals("no apps", WatchScope.describe(WatchScope.Mode.CHOSEN, emptyList(), emptyList()))
+    }
+
 
     private val skip = setOf("com.android.systemui", "app.focusfence.accountable")
 

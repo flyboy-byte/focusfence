@@ -11,6 +11,8 @@ class IntegrityWordsTest {
         assertEquals("Adult sites list: Block → Report", Digest.alertText(integ("list_adult", "block", "report")))
         assertEquals("Screen-check AI: on → off", Digest.alertText(integ("capture_ai", "true", "false")))
         assertEquals("Screen checks: on → off", Digest.alertText(integ("capture_screenshots", "true", "false")))
+        assertEquals("Apps screen checks watch: all apps → all apps except Signal",
+            Digest.alertText(integ("capture_scope", "all apps", "all apps except Signal")))
         // Keys without a plain name keep the old form.
         assertEquals("private_dns changed: off → hostname", Digest.alertText(integ("private_dns", "off", "hostname")))
     }

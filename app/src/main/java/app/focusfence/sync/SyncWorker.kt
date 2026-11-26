@@ -326,11 +326,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         // there (FF_STALE_MINUTES, about an hour) instead of here after 14 h. The mailbox still carries unlock codes.
         val feed = serverFeed(w, now)
         if (feed != null) {
-            w = feed.first.copy(feedOk = true)
+            w = feed.watch.copy(feedOk = true)
             // Plan 12: important and housekeeping alerts in their own notification categories, so each can be set apart.
-            if (feed.second.first.isNotEmpty()) notify(ctx, w, feed.second.first.joinToString("\n"))
-            if (feed.second.second.isNotEmpty()) notify(ctx, w, feed.second.second.joinToString("\n"), CH_OTHER)
-            w = flushHeld(ctx, w, now)
+            if (feed.important.isNotEmpty()) notify(ctx, w, feed.important.joinToString("\n"))
+            if (feed.other.isNotEmpty()) notify(ctx, w, feed.other.joinToString("\n"), CH_OTHER)
+            w = flushHeld(ctx, w, now, feed.prefs)
         }
         val k = w.keys
         val r = api.get("/v1/mailbox/${k.mailboxId}/msgs?after=${w.after}", mapOf("X-FF-Token" to k.token))
@@ -374,7 +374,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
      * New lines from this partner's server alert feed, and the watch with its cursor moved on. Null when there is no
      * report link or the server doesn't answer (an older server, or offline): the mailbox path then alerts as before.
      */
-    private fun serverFeed(start: SyncStore.Watch, now: Long): Pair<SyncStore.Watch, Pair<List<String>, List<String>>>? {
+    /** One read of a partner's server feed: the watch moved on, what to notify now (by category), and their choices. */
+    private class Feed(val watch: SyncStore.Watch, val important: List<String>, val other: List<String>, val prefs: AlertPrefs.Prefs)
+
+    private fun serverFeed(start: SyncStore.Watch, now: Long): Feed? {
         val (origin, path) = InviteLink.alertsTarget(start.reportUrl) ?: return null
         val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull() ?: return null
         val arr = r.body?.optJSONArray("alerts")
@@ -399,18 +402,18 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val line = "$t\t${text.replace('\n', ' ').replace('\t', ' ')}"
             w = w.copy(serverAlertT = t, alerts = (w.alerts.lines().filter { it.isNotBlank() } + line).takeLast(50).joinToString("\n"))
         }
-        return w to (lines to other)
+        return Feed(w, lines, other, prefs)
     }
 
     private fun feedPrefs(body: org.json.JSONObject?) = AlertPrefs.Prefs(
         AlertPrefs.Level.fromKey(body?.optString("level")), body?.optBoolean("quiet") == true, java.time.ZoneId.systemDefault().id,
+        AlertPrefs.hourOr(body?.optInt("quietFrom", -1), AlertPrefs.QUIET_FROM_HOUR), AlertPrefs.hourOr(body?.optInt("quietTo", -1), AlertPrefs.QUIET_TO_HOUR),
     )
 
     /** Plan 12 §5: held alerts go out as one notification at 7 this phone's time, never inside quiet hours. */
-    private fun flushHeld(ctx: Context, w: SyncStore.Watch, now: Long): SyncStore.Watch {
+    private fun flushHeld(ctx: Context, w: SyncStore.Watch, now: Long, prefs: AlertPrefs.Prefs): SyncStore.Watch {
         val held = w.held.lines().filter { it.isNotBlank() }
         if (held.isEmpty()) return w
-        val prefs = AlertPrefs.Prefs(quiet = true, zone = java.time.ZoneId.systemDefault().id) // the stricter of the two rules
         val day = AlertPrefs.day(prefs, now)
         if (!AlertPrefs.flushDue(prefs, AlertPrefs.hour(prefs, now), day, w.heldDay, true)) return w
         notify(ctx, w, ctx.getString(R.string.partner_held_title, held.size) + "\n" + held.joinToString("\n") { it.substringAfter('\t') }, CH_HELD)

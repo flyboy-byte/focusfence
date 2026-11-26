@@ -53,6 +53,25 @@ class AlertPrefsTest {
     }
 
     @Test
+    fun aPartnerPicksTheirOwnQuietHours() {
+        val late = Prefs(quiet = true, quietFrom = 23, quietTo = 6)
+        assertEquals(Route.NOW, AlertPrefs.route(late, true, 22))
+        assertEquals(Route.HOLD, AlertPrefs.route(late, true, 23))
+        assertEquals(Route.NOW, AlertPrefs.route(late, true, 6))
+        assertTrue(AlertPrefs.flushDue(late, 6, day = 10, lastFlushDay = 9, anyHeld = true))
+        // A daytime window (night shift) works too.
+        val day = Prefs(quiet = true, quietFrom = 9, quietTo = 17)
+        assertEquals(Route.HOLD, AlertPrefs.route(day, true, 12))
+        assertEquals(Route.NOW, AlertPrefs.route(day, true, 20))
+        assertFalse(AlertPrefs.flushDue(day, 12, day = 10, lastFlushDay = 9, anyHeld = true))
+        assertTrue(AlertPrefs.flushDue(day, 17, day = 10, lastFlushDay = 9, anyHeld = true))
+        // The same hour twice is no quiet hours, never "always quiet"; nonsense hours fall back to 10 pm–7 am.
+        assertEquals(Route.NOW, AlertPrefs.route(Prefs(quiet = true, quietFrom = 5, quietTo = 5), true, 5))
+        assertEquals(Route.HOLD, AlertPrefs.route(Prefs(quiet = true, quietFrom = 99, quietTo = -3), true, 23))
+        assertEquals("10 pm" to "12 am", AlertPrefs.hourLabel(22) to AlertPrefs.hourLabel(0))
+    }
+
+    @Test
     fun hoursAreTheirOwnTimeZone() {
         val t = 1_800_000_000_000L // 2027-01-15 08:00 UTC
         assertEquals(8, AlertPrefs.hour(Prefs(), t))

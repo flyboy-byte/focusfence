@@ -24,6 +24,23 @@ object WatchScope {
     fun watches(pkg: String, mode: Mode, chosen: Set<String>, excluded: Set<String>, alwaysSkip: Set<String>): Boolean =
         pkg !in alwaysSkip && pkg !in excluded && (mode == Mode.ALL || pkg in chosen)
 
+    /**
+     * Which apps screen checks watch, in words for partners ("all apps except Signal"): kept in the integrity trail, so
+     * excluding an app, or watching fewer, is never silent (2026-11-25, Logan: "guarded and told").
+     */
+    fun describe(mode: Mode, chosen: List<String>, excluded: List<String>): String {
+        fun names(l: List<String>): String {
+            val s = l.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
+            return if (s.size <= 3) s.joinToString(", ") else s.take(3).joinToString(", ") + " and ${s.size - 3} more"
+        }
+        return when {
+            mode == Mode.CHOSEN && chosen.isEmpty() -> "no apps"
+            mode == Mode.CHOSEN -> "only " + names(chosen)
+            excluded.isEmpty() -> "all apps"
+            else -> "all apps except " + names(excluded)
+        }
+    }
+
     // android.content.pm.ApplicationInfo.CATEGORY_* (API 26), mirrored so this stays pure.
     private const val CATEGORY_GAME = 0
     private const val CATEGORY_VIDEO = 2
