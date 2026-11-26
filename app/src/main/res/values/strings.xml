@@ -807,4 +807,5 @@
     <string name="grp_left">You left %1$s.</string>
     <string name="grp_partner_note">%1$s sees your report through %2$s. To stop sharing, leave the group.</string>
     <string name="grp_seen_note">You see this report through %1$s. To stop, leave the group.</string>
+    <string name="rule_infra_note">Push notifications, the clock and Android\'s connection check keep working: this rule doesn\'t block them.</string>
 </resources>

@@ -9,7 +9,7 @@ replaced (four public docs still described plan 12's partners two days after pla
 
 | # | Fix | Size | Needs Logan |
 |---|---|---|---|
-| 1 | Issue #18: a google.com rule stops all push notifications | ~1 h | no |
+| 1 | ~~Issue #18: a google.com rule stops all push notifications~~ DONE (2026-11-26) | ~1 h | no |
 | 2 | Docs drift guard in CI | ~1 h | no |
 | 3 | Partner flow test across app and server (JVM) | ~half a day | no |
 | 4 | Emulator smoke test in CI | ~half a day | no |
@@ -18,7 +18,12 @@ replaced (four public docs still described plan 12's partners two days after pla
 | 7 | targetSdk 35 | ~2 h + a phone check | the phone check |
 | 8 | Server lookups by index | only past ~100 devices | parked |
 
-## 1. Issue #18: shared infrastructure under a site rule (~1 h)
+## 1. ~~Issue #18: shared infrastructure under a site rule~~ DONE (2026-11-26)
+
+The DNS side had already shipped in #22 (2026-11-24, `RuleEvaluator.blocks` + `Blocklist.isInfrastructure`, with a
+wider list than below: FCM `googleapis.com` hosts too); only the issue was left open. This pass added the rule editor
+line (`Blocklist.coversInfrastructure`, `infraNote`) and closed #18.
+
 
 A rule on `google.com` blocks `mtalk.google.com` (Firebase Cloud Messaging), so push stops for every app, silently.
 The issue's option 2: rules keep meaning "the whole site", but a short list of shared infrastructure hosts is never
