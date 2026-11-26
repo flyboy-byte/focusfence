@@ -79,16 +79,14 @@ Logan: "how hard to get email and etc links to open in the app … expose some o
 settings". Then: "build both".
 
 - **Invite links open the app:**
-  - `LinkActivity` takes `https://ff.flyboybyte.com/i/…` as a verified App Link. The host is `appLinkHost` in
-    `app/build.gradle.kts`.
-  - It also takes `focusfence://invite?link=…` from the invite page's "Open in the Focus Fence app" button, which
-    `report.js` shows on Android only. It's an `intent://` link carrying the whole invite, and the key never goes over
-    the network. Without the app, it falls back to the release page.
-  - Either way, *Join with an invite* opens filled in, and the person still taps OK. Parsing is
-    `InviteLink.fromOpened`, which accepts partner invites only.
-  - **Server:** `/.well-known/assetlinks.json` is served only when `FF_ANDROID_CERT_SHA256` is set. The release key's
-    fingerprint is `2C:A7:69:A5:23:A0:CF:41:BC:BA:67:AB:AD:C7:1C:5A:BE:5D:AD:DF:EB:13:06:65:F8:53:C8:44:76:09:86:71`.
-  - **Deploy step:** add that line to the live env so the App Link verifies. Without it, the button still works.
+  - On Android, every server's invite page shows "Open in the Focus Fence app" (`report.js`). It's an `intent://`
+    link to `focusfence://invite` carrying the whole invite, so the key never goes over the network. Without the app,
+    it falls back to the release page.
+  - `LinkActivity` opens *Join with an invite* filled in, and the person still taps OK. `InviteLink.fromOpened`
+    accepts partner invites only.
+  - **Android App Links were built, then removed the same day** (Logan: "Don't make my app the only one that works to
+    open links"). They verify only hosts written into the app, which would make one server special. Every server
+    works the same way now.
   - Report links (`/p/…`) still open in the browser on purpose: email partners read there, and app partners open
     theirs from the app.
 - **Notification categories,** each settable in Android's own settings:

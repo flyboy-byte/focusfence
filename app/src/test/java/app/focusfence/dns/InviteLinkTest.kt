@@ -53,10 +53,10 @@ class InviteLinkTest {
     }
 
     @Test
-    fun anInviteOpensFromAnAppLinkOrTheOpenInTheAppButton() {
+    fun anInviteOpensFromTheOpenInTheAppButton() {
         val secret = "s".repeat(32)
         val invite = "https://ff.example.com/i/$secret#k=${"k".repeat(43)}&p=pair_1"
-        assertEquals(invite, InviteLink.fromOpened(invite))
+        assertNull("no server's links open the app by themselves", InviteLink.fromOpened(invite))
         val button = "focusfence://invite?link=" + java.net.URLEncoder.encode(invite, "UTF-8")
         assertEquals(invite, InviteLink.fromOpened(button))
         assertNull(InviteLink.fromOpened("focusfence://invite?link=" + java.net.URLEncoder.encode("https://evil.example/whatever", "UTF-8")))

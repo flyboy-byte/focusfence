@@ -15,10 +15,6 @@ android {
         targetSdk = 34
         versionCode = 49
         versionName = "2.25.0-accountable"
-        // The one server whose invite links open straight in the app (App Links, verified by its
-        // /.well-known/assetlinks.json). Other servers' invite pages offer an "Open in the app" button instead.
-        // A fork with its own server changes this line.
-        manifestPlaceholders["appLinkHost"] = "ff.flyboybyte.com"
     }
 
     // Release signing is driven by environment variables so the keystore and

@@ -145,20 +145,14 @@
             android:name=".monitor.AutoShareNoteReceiver"
             android:exported="false" />
 
-        <!-- Partner invites open in the app (LinkActivity): App Links for the built-in host, and the invite page's
-             "Open in the app" button (focusfence://invite) for any other server. -->
+        <!-- Partner invites open in the app (LinkActivity) through the invite page's "Open in the app" button
+             (focusfence://invite). It works the same on every server: no server is built into the app. -->
         <activity
             android:name=".LinkActivity"
             android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@android:style/Theme.NoDisplay">
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="${appLinkHost}" android:pathPrefix="/i/" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

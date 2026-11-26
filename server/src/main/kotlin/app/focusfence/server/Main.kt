@@ -85,14 +85,8 @@ class Config(
     /** Which peers may set X-Forwarded-For (the reverse proxy in front of us). */
     val trustedProxy: (String) -> Boolean = TrustedProxies.LOOPBACK,
     val now: () -> Long = System::currentTimeMillis,
-    /** The app the invite page's "Open in the app" button targets, and /.well-known/assetlinks.json names. */
+    /** The app the invite page's "Open in the app" button targets (FF_ANDROID_PACKAGE; only a fork changes it). */
     val androidPackage: String = Web.DEFAULT_PACKAGE,
-    /**
-     * SHA-256 fingerprints of the app's signing certificate (FF_ANDROID_CERT_SHA256, comma-separated, AA:BB:…). Set,
-     * they let Android open this server's invite links straight in the app; only the server built into the app
-     * (`appLinkHost`) can use it. Empty: no assetlinks.json, and the invite page's button still works.
-     */
-    val androidCerts: List<String> = emptyList(),
 )
 
 @Serializable data class EnrollRequest(val publicKeySpki: String)
@@ -165,8 +159,6 @@ fun main(args: Array<String>) {
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
         androidPackage = env("FF_ANDROID_PACKAGE")?.trim()?.takeIf { it.matches(Regex("[A-Za-z0-9_.]{3,100}")) } ?: Web.DEFAULT_PACKAGE,
-        androidCerts = env("FF_ANDROID_CERT_SHA256").orEmpty().split(',').map { it.trim().uppercase() }
-            .filter { it.matches(Regex("([0-9A-F]{2}:){31}[0-9A-F]{2}")) },
         staleMs = (env("FF_STALE_MINUTES") ?: "60").toLong() * 60_000,
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
@@ -336,15 +328,6 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }
-        // Android App Links: lets the app open this server's invite links itself (LinkActivity). Only when configured.
-        get("/.well-known/assetlinks.json") {
-            if (cfg.androidCerts.isEmpty()) return@get call.respond(HttpStatusCode.NotFound)
-            val certs = cfg.androidCerts.joinToString(",") { "\"$it\"" }
-            call.respondText(
-                """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"${cfg.androidPackage}","sha256_cert_fingerprints":[$certs]}}]""",
-                ContentType.Application.Json,
-            )
-        }
         get("/v1/version") {
             call.respond(VersionResponse(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, serverVersion))
         }
