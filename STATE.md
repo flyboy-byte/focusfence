@@ -2,11 +2,8 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
-> **PAUSED for the partner redesign (2026-11-26, Logan):** production is on hold while one partner system is designed
-> and tested ([`docs/plans/13-partners-redesign.md`](docs/plans/13-partners-redesign.md)). The live server was wiped the
-> same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS). The new system shipped in
-> 3.0/3.1 (server 2.1.0) and Logan has tried it on two phones, so sync works again; the pause stays until he lifts it.
-> The filter itself was never affected.
+> **Production resumed (2026-11-26, Logan lifted the partner-redesign pause).** Plan 13 partners and plan 14 groups shipped
+> in 3.0/3.1 and were tried on two phones. Next: more real use and testing of partners and groups before new features.
 >
 > **Plan 14 groups released (2026-11-26): app 3.1.0, server 2.1.0 live, not yet tried on phones.** Up to 6 phones that
 > all see each other, as partner pairs both ways ([`docs/plans/14-groups.md`](docs/plans/14-groups.md)). A phone that joins a
@@ -53,7 +50,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v3.1.2-accountable` (2026-11-26, code 54): invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
+| Latest release | `v3.1.3-accountable` (2026-11-26, code 55): plan 15 fixes (rule editor says push keeps working under a google.com rule, lint triage, screenshot checker lets go of a stopped accessibility service). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels
 
