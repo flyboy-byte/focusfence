@@ -2,13 +2,15 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
-> **Where it stands (2026-11-25 late, app 2.25.0 + server 1.2.0, live main-4b27613):** the filter is in daily use and
-> in good shape. Today shipped (most not yet seen on a phone): accounts simplified to one partner invite (D-035, 📱 two
-> phones); 60 min silence alerts with a reconnect explanation (D-036); automatic blurred screenshots (D-037) gated by a
-> NudeNet body check, with lingerie/swimwear "suggestive" report-only (D-038, licence now **AGPL-3.0**); Block lists with
-> adult and bypass as core lists (D-039); first-time journeys: 5-step onboarding, adult blocked by default, self-host
-> path, SMTP, guarded Leave this server (plan 10, D-040); app/server protocol window held by CI (D-041); Feedback & bug
-> reports in Settings. **Next:** Logan's clean-install test on the second phone, then [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next.
+> **Where it stands (2026-11-25 night, app 2.26.0 + server 1.3.0, live 1.3.0):** the filter is in daily use. 2.21–2.25
+> (silence alerts, blurred auto-shots with the NudeNet check, Block lists, first-time journeys, protocol window) and
+> today's partner work in 2.26 ([`docs/plans/12-partners.md`](docs/plans/12-partners.md)) are **built and tested, almost
+> none of it seen on a phone yet**. 2.26 adds: a leaving partner is never silent; "looked 2 h ago"; ask a partner for an OK
+> instead of waiting; partner alert levels and their own quiet hours; one path for app partners; an "Open in the app"
+> button on invite pages (same on every server); four partner notification categories; partners told when screen-check
+> apps are excluded; logging for requests, sync errors and partner alert decisions. **Next:** install 2.26 on both phones,
+> then the two-phone test (plan 12 §0) and the clean-install check (plan 10 §1). Parked: replies, partner guide, push,
+> F-Droid (plan 11).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
@@ -36,7 +38,7 @@ real phones; groups and strict mode pass their tests but haven't been field-test
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.25.0-accountable` (2026-11-25, code 49). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: no tagged release since `server-v1.0.1`; the live box runs `main` at 7edb093 (2026-11-25, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
+| Latest release | `v2.26.0-accountable` (2026-11-25, code 50). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v1.3.0`, live on the box since 2026-11-26 02:33 UTC (`/v1/version` says 1.3.0, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
 
 ## Verification levels
 
