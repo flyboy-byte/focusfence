@@ -138,17 +138,20 @@ high-risk notices in one category within 10 minutes write an urgent `svc block r
 category, never by site name. Without the accessibility service partners are never told (prefetch would cause false
 alerts). `dns/BlockHistory` builds the owner's Block history page (sites vs trackers) from the activity log.
 
-### Accounts and partners (D-035)
+### Partners and groups (D-042, plans 13 and 14)
 
-Every phone on a server is enrolled (`sync/Accountability.ensureEnrolled`, a P-256 `DeviceKey`): with the server's
-enrollment code, or with a partner invite as the credential (`X-FF-Invite`). One partner invite serves every kind of
-partner: `/i/SECRET#k=REPORT_KEY&p=PAIRING_KEY` (built by `dns/InviteLink`, which also parses whatever is pasted into
-*Join with an invite*, including the admin page's People message). In a browser it's an email partner; in the app,
-`Accountability.join` enrolls, calls `/v1/invites/accept`, and stores the partner's own `/p/{token}` report link, which
-`PartnerReportActivity` opens in a WebView: the same page and sealed data an email partner reads. The owner's pairing
-stays `pending` until `resolvePending` sees which way its invite went. Alerts and unlock codes still use the pairing
-mailbox (`dns/Pairing`); only enrolled phones may open a new mailbox (signed request). Groups (`GroupSync`, up to 4)
-carry an enroll-only server invite so members enroll too.
+One kind of partner: a person with devices (their app, or a browser), each with its own P-256 key. Every phone on a
+server is enrolled (`sync/Accountability.ensureEnrolled`, a `DeviceKey`) with the server's enrollment code, a partner
+token (`X-FF-Partner`: a phone that joined a report) or a group code (`X-FF-Group`). Invites are an 8-character code,
+its QR code (`/c/CODE`) or an emailed link (`/j/SECRET`); whoever uses one first joins (`/v1/join`, unsigned). The
+owner's phone hears of new partner devices in the heartbeat's `seal` list and seals its report key to each one
+(`dns/Ecies`, `INFO_KEY`; `SyncWorker.sealKeys` → `/v1/seal`), so the server relays only ciphertext. On the partner's
+side `sync/PartnerKey` (software key wrapped by a keystore AES key) opens it, `SyncStore.Seen` holds each report, and
+`PartnerReportActivity` opens the server's report page in a WebView with the key in the fragment. Groups (`GroupActivity`,
+`GroupUi`; server `Groups.kt`) are partner pairs made both ways, marked with the group (`Partner.groupIds`); the
+heartbeat's `groupPairs` tells a member which reports to send a device key for (`/v1/groups/key`). Removing or leaving
+makes the owner's phone start a new report key (`rotateKey`). `dns/InviteLink` parses codes, links and the admin
+page's Server message.
 
 ### Screenshot flagging (D-025, D-037, D-038)
 

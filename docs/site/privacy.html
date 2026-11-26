@@ -17,28 +17,27 @@
 <h2>If you add a partner or group (an accountability server)</h2>
 <p>This is off until you enter a server address. Then:</p>
 <ul>
-<li><strong>Whoever runs the server cannot read your activity.</strong> The phone never uploads its activity log. For an email or web partner it builds a summary report on the phone, encrypts it with a key that only you and your partners hold, and uploads only that ciphertext every hour. Your partner's browser decrypts it; the key travels after the <code>#</code> in the link you send them, which browsers never send to a server.</li>
-<li>What the server does see: alert texts about protection changes (for example "Filter turned off", never a site), when the phone checks in, partner email addresses, and the sizes and times of uploads.</li>
-<li>Screenshots are not uploaded: the server receives scores and labels, never the images. If sharing images is added later it will be encrypted to your partner's key so the server cannot read them.</li>
-<li>App-to-app pairing and groups use "blind mailboxes": the server stores only encrypted messages under an identifier it cannot link to a person, and keeps a hash of the access token.</li>
-<li>The server also holds: the report token for each partner, partner email addresses (and phone numbers if SMS is used), and the phone's public key.</li>
+<li><strong>Whoever runs the server cannot read your activity.</strong> The phone never uploads its activity log. It builds a summary report on the phone, encrypts it with a report key, and uploads only that ciphertext, about every 15 minutes. Each device a partner reads on (their app, or a browser) makes its own key pair; your phone seals the report key to that device's public key, so the server passes on only sealed keys it can't open.</li>
+<li>What the server does see: alert texts about protection changes (for example "Filter turned off", never a site), when the phone checks in, who partners whom (the names people give, group names and members), when a partner last opened the report, and the sizes and times of uploads.</li>
+<li>Screenshots: only a flagged one (an exposed body part) or one you send, blurred to 48 px, inside the encrypted report. Never the clear image.</li>
+<li>The server also holds: each partner's report token, each partner device's public key and sealed copy of the report key, the email address of a partner invited by email, and the phone's public key.</li>
 <li>The limit of this: an operator who deliberately changed the server to serve a page that steals the key could get it. It stops an operator from simply reading stored history, not one who attacks their own users. If that matters, run your own server (<a href="server.html">how</a>).</li>
-<li>Mailboxes keep the last 300 messages for at most 30 days. Encrypted report slices are kept for at most 9 days.</li>
-<li>An email address you give for a partner receives a confirmation first and is used only for that partner's alerts and weekly reports. Alerts are rate-limited.</li>
-<li>Email is sent through Resend. SMS, only if the operator switches it on, goes through Twilio or Telnyx.</li>
+<li>Encrypted report slices are kept for at most 9 days, alert texts for 14.</li>
+<li>An email address you give for a partner gets one invite. It stays with that invite until it expires, and is kept for the partner only if they join from that email's link (which proves the address is theirs); it is then used only for that partner's alerts and weekly report. Alerts are rate-limited.</li>
+<li>Email is sent through Resend or the operator's SMTP account.</li>
 </ul>
 
 <h2>What a partner or group member sees</h2>
-<p>A partner sees your reports and alerts. In a group, every member sees every <em>filtered</em> member by default; members who are only partners are not watched. Joining a group does not grant trust: each person approves a new member after comparing a 12-digit fingerprint in person or on a call. Anyone can leave, and loosening actions go through the same friction (delay or partner PIN) you set.</p>
+<p>A partner sees your report and alerts. In a group (up to 6 people) everyone sees everyone's report. Whoever uses an invite or group code joins, with no approval step; you see every partner and their devices in your list, and you're told when someone joins or leaves. Anyone can leave; removing a partner or leaving makes your phone start a new report key, so they can't read on. Loosening actions go through the same friction (delay, your PIN or a partner's PIN) you set.</p>
 
 <h2>Deleting things</h2>
 <ul>
 <li>Settings, Logs and diagnostics, Clear: deletes the local logs (this is itself recorded and partners are told).</li>
 <li>Uninstalling the app deletes everything on the phone. The app is never prevented from being uninstalled.</li>
-<li>Removing a partner or leaving a group stops future sharing. Data already on a server is removed by its operator; ask them.</li>
+<li>Removing a partner or leaving a group stops future sharing (a new report key from then on). Data already on a server is removed by its operator; ask them.</li>
 </ul>
 
 <h2>Who runs the server</h2>
-<p>If you use the server at <code>ff.flyboybyte.com</code>, it is run by Logan Night (GitHub: <code>flyboy-byte</code>) for a small group of people he knows; ask him for anything held about you, or to have it deleted. If you use someone else's server, the person who runs it is the operator: ask them. There is no company, no advertising and no data sold or shared beyond the email and SMS providers named above.</p>
+<p>If you use the server at <code>ff.flyboybyte.com</code>, it is run by Logan Night (GitHub: <code>flyboy-byte</code>) for a small group of people he knows; ask him for anything held about you, or to have it deleted. If you use someone else's server, the person who runs it is the operator: ask them. There is no company, no advertising and no data sold or shared beyond the email provider named above.</p>
 <p class="note">For problems with the app itself, open an issue on the project's repository.</p>
 </main></body></html>
