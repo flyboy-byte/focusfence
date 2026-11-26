@@ -349,8 +349,9 @@ class AccountabilityFragment : Fragment() {
                 text = app.focusfence.dns.InviteLink.showCode(inv.code)
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineMedium)
                 letterSpacing = 0.12f
-                setTextIsSelectable(true)
                 gravity = Gravity.CENTER
+                contentDescription = getString(R.string.acc_code_tap_copy)
+                GroupUi.copyOnTap(this, inv.code)
             })
             box.addView(note(getString(R.string.acc_invite_meta, SyncStore.serverUrl(requireContext()).removePrefix("https://"))).apply { gravity = Gravity.CENTER })
             val email = EditText(requireContext()).apply {
@@ -384,7 +385,7 @@ class AccountabilityFragment : Fragment() {
             }
             dialog.setOnShowListener {
                 dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                    share(getString(R.string.acc_invite_share, inv.qrUrl))
+                    GroupUi.shareCode(requireContext(), getString(R.string.acc_invite_share, inv.qrUrl, app.focusfence.dns.InviteLink.showCode(inv.code)), inv.code, inv.qrUrl)
                 }
                 dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                     val address = email.text.toString().trim()
@@ -433,44 +434,87 @@ class AccountabilityFragment : Fragment() {
      * the server, filled in with this phone's own when it has one; a link opened from the invite page carries its own.
      */
     private fun join(prefill: String? = null) {
-        val linked = prefill?.let { app.focusfence.dns.InviteLink.parse(it) as? app.focusfence.dns.InviteLink.Parsed.Join }
+        val own = SyncStore.serverUrl(requireContext())
         val box = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(8), dp(24), 0)
         }
-        fun field(hint: Int, type: Int, value: String = "") = EditText(requireContext()).apply {
-            setHint(hint); inputType = type; isSingleLine = true; setText(value)
-            box.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        fun input(hint: Int, type: Int, value: String = ""): Pair<com.google.android.material.textfield.TextInputLayout, com.google.android.material.textfield.TextInputEditText> {
+            val layout = com.google.android.material.textfield.TextInputLayout(requireContext(), null, com.google.android.material.R.attr.textInputOutlinedStyle)
+            val edit = com.google.android.material.textfield.TextInputEditText(layout.context).apply { inputType = type; isSingleLine = true; setText(value) }
+            layout.hint = getString(hint)
+            layout.addView(edit)
+            box.addView(layout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            return layout to edit
         }
-        if (linked != null) box.addView(note(getString(R.string.acc_join_from_link, linked.server.removePrefix("https://"))))
-        val code = if (linked == null) field(R.string.acc_join_code, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) else null
-        val server = if (linked == null) field(R.string.acc_join_server, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI,
-            SyncStore.serverUrl(requireContext()).removePrefix("https://")) else null
-        val name = field(R.string.acc_join_name, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS)
+        // One box for whatever they were given: a code (the dash is added as you type), a /c/ or /j/ link, a whole
+        // shared message, or the admin page's Server message. The server box shows only when a bare code needs one.
+        val (codeBox, code) = input(R.string.acc_join_code, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, prefill.orEmpty())
+        codeBox.helperText = getString(R.string.acc_join_code_help)
+        val (serverBox, server) = input(R.string.acc_join_server, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI, own.removePrefix("https://"))
+        val (_, name) = input(R.string.acc_join_name, android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS,
+            SyncStore.ownerName(requireContext()))
         name.filters = arrayOf(android.text.InputFilter.LengthFilter(60))
-        if (linked == null) {
-            box.addView(note(getString(R.string.acc_join_scan)))
-            // The camera app reads the QR code and opens its /c/ page, whose button comes back here with the code
-            // filled in. No scanner of our own: no camera permission, nothing to maintain.
-            box.addView(MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                setText(R.string.acc_scan_qr)
-                setOnClickListener {
-                    runCatching { startActivity(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)) }
-                        .onFailure { Toast.makeText(requireContext(), R.string.acc_no_camera, Toast.LENGTH_LONG).show() }
-                }
-            })
+        fun refresh() {
+            val t = code.text?.toString().orEmpty()
+            val parsed = app.focusfence.dns.InviteLink.parse(t)
+            val bare = parsed == null && app.focusfence.dns.InviteLink.normalizeCode(t).length == 8
+            serverBox.visibility = if (bare && own.isBlank()) View.VISIBLE else View.GONE
+            codeBox.helperText = when (parsed) {
+                is app.focusfence.dns.InviteLink.Parsed.Join -> getString(R.string.acc_join_from_link, parsed.server.removePrefix("https://"))
+                is app.focusfence.dns.InviteLink.Parsed.Server -> getString(R.string.acc_join_is_server, parsed.server.removePrefix("https://"))
+                else -> getString(R.string.acc_join_code_help)
+            }
         }
+        var formatting = false
+        code.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(e: android.text.Editable?) {
+                if (formatting || e == null) return
+                val t = e.toString()
+                // Only something that looks like a code being typed is reformatted (XXXX-XXXX); links and messages stay.
+                if (t.length <= 10 && t.all { it.isLetterOrDigit() || it == '-' || it == ' ' }) {
+                    val n = t.uppercase().filter { it.isLetterOrDigit() }.take(8)
+                    val f = if (n.length > 4) n.substring(0, 4) + "-" + n.substring(4) else n
+                    if (f != t) { formatting = true; e.replace(0, e.length, f); formatting = false }
+                }
+                refresh()
+            }
+        })
+        refresh()
+        val buttons = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(8), 0, 0) }
+        buttons.addView(MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            setText(R.string.acc_paste)
+            setOnClickListener {
+                val clip = requireContext().getSystemService(android.content.ClipboardManager::class.java)?.primaryClip
+                clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(requireContext())?.toString()?.trim()?.let { code.setText(it); code.setSelection(code.text?.length ?: 0) }
+            }
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+        // The camera app reads the QR code and opens its /c/ page, whose button comes back here with the code filled
+        // in. No scanner of our own: no camera permission, nothing to maintain.
+        buttons.addView(MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            setText(R.string.acc_scan_qr)
+            setOnClickListener {
+                runCatching { startActivity(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)) }
+                    .onFailure { Toast.makeText(requireContext(), R.string.acc_no_camera, Toast.LENGTH_LONG).show() }
+            }
+        })
+        box.addView(buttons)
+        box.addView(note(getString(R.string.acc_join_scan)))
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.acc_watch_add)
             .setView(box)
             .setPositiveButton(R.string.acc_join) { _, _ ->
                 val ctx = requireContext().applicationContext
-                val text = prefill ?: code?.text.toString()
-                val srv = server?.text?.toString().orEmpty()
+                val text = code.text?.toString().orEmpty().trim()
+                val srv = if (serverBox.visibility == View.VISIBLE) server.text?.toString().orEmpty() else own
                 val me = name.text.toString()
                 // One code box for both kinds (plan 14): a group's code gets its own confirmation, with who's in it.
+                val parsed = app.focusfence.dns.InviteLink.parse(text)
+                val linked = parsed as? app.focusfence.dns.InviteLink.Parsed.Join
                 val bare = linked?.code?.takeIf { it.isNotEmpty() }
-                    ?: app.focusfence.dns.InviteLink.normalizeCode(text).takeIf { it.length == 8 && linked == null }
+                    ?: app.focusfence.dns.InviteLink.normalizeCode(text).takeIf { it.length == 8 && parsed == null }
                 val groupServer = linked?.server ?: srv
                 if (bare != null) {
                     background({ runCatching { Accountability.lookup(ctx, bare, groupServer) }.getOrNull() }) { found ->
@@ -548,10 +592,6 @@ class AccountabilityFragment : Fragment() {
             .setPositiveButton(android.R.string.ok) { _, _ -> onOk(input.text.toString().ifBlank { "Partner" }) }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
-    }
-
-    private fun share(text: String) {
-        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
     }
 
     private fun note(text: String) = TextView(requireContext()).apply {

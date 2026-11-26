@@ -2,4 +2,6 @@
 <paths>
     <!-- Only the export staging directory is shareable; the live logs are not. -->
     <cache-path name="export" path="export/" />
+    <!-- An invite's QR code picture, shared from Add a partner / a group's code. -->
+    <cache-path name="share" path="share/" />
 </paths>

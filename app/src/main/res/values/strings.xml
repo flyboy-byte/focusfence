@@ -447,7 +447,7 @@
     <string name="acc_email_title">See your report</string>
     <string name="acc_email_hint">Add someone with a code or a QR code, or email them an invite. They open your report in the Focus Fence app or a browser.</string>
     <string name="acc_invite">Add a partner</string>
-    <string name="acc_invite_share">Be my accountability partner on Focus Fence: %1$s</string>
+    <string name="acc_invite_share">Be my accountability partner on Focus Fence. Open %1$s, or in the app go to Partners → Join with a code and type %2$s.</string>
     <string name="acc_share">Share</string>
     <string name="acc_watch_title">Reports you see</string>
     <string name="acc_watch_hint">Someone asked you to be their partner? Type the code from their phone, or scan its QR code with your camera.</string>
@@ -748,7 +748,12 @@
     <string name="acc_invite_email_row">Invite to %1$s</string>
     <string name="acc_invite_ends">Not used yet · ends in %1$d h</string>
     <string name="acc_join">Join</string>
-    <string name="acc_join_code">Code (8 characters, dash optional)</string>
+    <string name="acc_join_code">Code or link</string>
+    <string name="acc_join_code_help">8 characters, dash optional. A link or a whole pasted message works too.</string>
+    <string name="acc_join_is_server">A server\'s enrollment message: joining connects this phone to %1$s.</string>
+    <string name="acc_paste">Paste</string>
+    <string name="acc_code_copied">Code copied</string>
+    <string name="acc_code_tap_copy">Tap the code to copy it</string>
     <string name="acc_join_server">Server (under the code on their phone)</string>
     <string name="acc_join_scan">Or scan their QR code with your camera, then tap the link it shows: the page opens this app.</string>
     <string name="acc_scan_qr">Scan a QR code</string>
@@ -777,7 +782,7 @@
     <string name="grp_name_hint">Group name (everyone sees it)</string>
     <string name="grp_code_howto">Each person opens Focus Fence → Partners → Join with a code, then types or scans this.</string>
     <string name="grp_code_meta">Works for %1$d more · ends in 24 hours · on %2$s</string>
-    <string name="grp_share">Join my accountability group \"%1$s\" on Focus Fence: %2$s</string>
+    <string name="grp_share">Join my accountability group \"%1$s\" on Focus Fence. Open %2$s, or in the app go to Partners → Join with a code and type %3$s.</string>
     <string name="grp_member_joined">%1$s joined %2$s</string>
     <string name="grp_confirm_title">Join %1$s?</string>
     <string name="grp_confirm_text">%1$s.\n\nJoining means all of them see your report, and you see theirs.</string>

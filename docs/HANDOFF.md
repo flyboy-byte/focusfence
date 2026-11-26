@@ -5,7 +5,7 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 ## Where it stands
 
-- **Live:** app `v3.1.1-accountable` (code 53; 3.1.0 had groups) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
+- **Live:** app `v3.1.2-accountable` (code 54; 3.1.0 had groups) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
   `/etc/ffbackend/env.bak-20261126-1539`, `/var/backups/ffbackend-data-pre2.1.0-20261126-1539.tgz`; logged in the VPS
   hardening log.
 - **Logan's first 3.0.0 test:** "I love it, it was quick and seem less". Found: the second phone said "Not set up" though
@@ -38,4 +38,4 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 ## Parked (don't build unless Logan asks)
 
 Replies to alerts, a partner guide page (closed PR #108), push (notes in plan 12), the partner UI options (plan 12),
-F-Droid (plan 11), SMS (Twilio scope). Removing someone from a group (plan 14: not in v1).
+F-Droid (plan 11), SMS (Twilio scope). Removing someone from a group (plan 14: not in v1). An outside API (plan 16, scoped only).
