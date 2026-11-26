@@ -33,8 +33,8 @@ answer (batched), build in small PRs ranked by value, and mark a section done wh
 | 4 | Replies to alerts | A partner answers an alert; the owner sees the answer in the app | parked: Logan's "random things to add" list (below) |
 | 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | built 🧪 (PR pending), not yet on a phone |
 | 6 | Faster alerts for app partners | An urgent alert reaches an app partner in under a minute without Google services | parked (Logan); research Ever Accountable / Accountable2You first |
-| 7 | Owner's partner list and keys | Each partner's status (pending / active / last seen); a new report key that cuts off old links | after 2 |
-| 8 | One path | Alerts and unlock codes off the pairing mailbox, onto the server route | after 3 |
+| 7 | Owner's partner list and keys | Each partner's status (pending / active / last seen); a new report key that cuts off old links | status done with §2; key reset skipped (Logan), reason below |
+| 8 | One path | Alerts and digests to app partners only through the server feed once their app reads it | built 🧪 (PR pending), not yet on a phone |
 
 Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever Logan has the second phone handy.
 
@@ -72,6 +72,35 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 ## Notes per section
 
 Notes are added here as each section runs.
+
+### 7. Key reset: skipped (Logan, 2026-11-25: "Skip it and document it")
+
+- **The idea:** "Make a new report key", so that a leaked partner link stops opening the report.
+- **Why skipped:**
+  - Removing a partner already deletes their `/p/{token}` on the server, so their link dies.
+  - Remove and re-invite covers a leaked link.
+  - A new key would reach nobody automatically: the server never sees it (D-023), so the owner would have to send
+    every partner a fresh link by hand.
+- Partner status in the list (pending / in the app / email, looked when) is done by §2.
+- Revisit only if a leaked link without a removable partner ever happens.
+
+### 8. One path (built 2026-11-25)
+
+- **Correction to the table's first wording:** unlock codes never travelled through the mailbox. They are TOTP-style
+  codes computed on both phones from the pairing seed (`Pairing.code`). What doubled up was **alerts and the 6-hour
+  digest**, which the owner's phone still posted to the mailbox while the partner's app read the server feed.
+- **How the owner's phone learns:** the server records when an app partner's app reads `/p/{token}/alerts`
+  (`AppPartner.lastFeedMs`, written at most hourly), and `/v1/partners/list` says `readsFeed`.
+  `Accountability.learnViaServer` asks, once per sync, only while some invite pairing is still unknown, and marks it
+  `viaServer` for good.
+- **What changes for that pairing:** `sendToPartner` posts nothing more to its mailbox. The partner's app sets
+  `Watch.feedOk` the first time the feed answers. After that, its old 14-hour mailbox silence check is off, since the
+  server decides silence for these.
+- **Still via the mailbox, on purpose:**
+  - pairings made with a pairing key rather than an invite (no server link);
+  - partners whose app has never read the feed (older app or server);
+  - the "you were removed" message (`removePairing`), because the removed partner's feed link is gone by then;
+  - groups (`GroupSync`), untouched.
 
 ### 5. Partner settings (built 2026-11-25)
 

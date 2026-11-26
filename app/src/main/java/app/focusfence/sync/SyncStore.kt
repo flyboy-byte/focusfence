@@ -142,6 +142,11 @@ object SyncStore {
         /** D-035: the invite this pairing went out with; [pending] until a phone takes it. Nothing is sent while pending. */
         val inviteId: String = "",
         val pending: Boolean = false,
+        /**
+         * Plan 12 §8: their app reads the server's alert feed, which already carries everything partners hear. Alerts
+         * and digests then stop going through this pairing's mailbox (one path). Learned once from the server, kept.
+         */
+        val viaServer: Boolean = false,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -165,6 +170,8 @@ object SyncStore {
         /** Plan 12 §5: alerts held for quiet hours or the daily message ("t\ttext" per line), and the day last sent. */
         val held: String = "",
         val heldDay: Long = 0,
+        /** Plan 12 §8: the server feed has answered at least once; its owner's phone then stops using the mailbox. */
+        val feedOk: Boolean = false,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -179,6 +186,7 @@ object SyncStore {
             boxReady = m["box"] == true,
             inviteId = m["invite"] as? String ?: "",
             pending = m["pending"] == true,
+            viaServer = m["via_server"] == true,
         )
     }.sortedBy { it.createdMs }
 
@@ -188,7 +196,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to p.code, "name" to p.name, "created" to p.createdMs,
                 "digest_at" to p.lastDigestMs, "alert_seq" to p.alertSeq, "box" to p.boxReady,
-                "invite" to p.inviteId, "pending" to p.pending,
+                "invite" to p.inviteId, "pending" to p.pending, "via_server" to p.viaServer,
             )),
         ).commit()
     }
@@ -211,6 +219,7 @@ object SyncStore {
             serverAlertT = m["server_alert_t"] as? Long ?: 0,
             held = m["held"] as? String ?: "",
             heldDay = m["held_day"] as? Long ?: 0,
+            feedOk = m["feed_ok"] == true,
         )
     }.sortedBy { it.addedMs }
 
@@ -220,7 +229,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
                 "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
-                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay,
+                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay, "feed_ok" to w.feedOk,
             )),
         ).commit()
     }

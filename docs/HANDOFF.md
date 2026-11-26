@@ -105,7 +105,7 @@ here). If this and `STATE.md` disagree, `STATE.md` wins._
    `/etc/ffbackend/env`, it says 240), then release the app. Still to measure: an unplugged night; sync CPU after the
    15 min report uploads.
 1. ~~**Report freshness**~~ — built on the branch: the open slice is re-sent every sync (~15 min).
-2. **Alerts to app partners** poll every 15 min; silence is flagged after 14 h. Consider server push and a shorter
+2. ~~**Alerts to app partners**~~ — moved on by plan 12 (`docs/plans/12-partners.md`, 2026-11-25): leaving, seen, ask-a-partner, alert levels and quiet hours, one path; push parked. Was: poll every 15 min; silence is flagged after 14 h. Consider server push and a shorter
    silence window. Alerts and unlock codes still use the pairing mailbox; the report no longer does. Moving them onto
    the server route (the server already knows the pair) would leave one path.
 3. **Internet DNS** is solid in daily use (Logan). The 2026-11-24 export still showed 8.9% forward failures, 673

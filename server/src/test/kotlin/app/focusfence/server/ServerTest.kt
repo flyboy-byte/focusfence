@@ -436,9 +436,12 @@ class ServerTest {
         }
         assertEquals(0L, list().partners.single().lastViewMs)
         // The page itself (what a mail scanner fetches) and the app's alert checks aren't a look; the report data is.
+        assertFalse(list().app.single().readsFeed)
         http.get("/p/$emailToken")
         http.get("/p/$appToken/alerts")
         assertEquals(0L to 0L, list().let { it.partners.single().lastViewMs to it.app.single().lastViewMs })
+        // Plan 12 §8: that alert check tells the owner's phone this partner's app reads the feed.
+        assertTrue(list().app.single().readsFeed)
         http.get("/p/$emailToken/data")
         val first = list().partners.single().lastViewMs
         assertEquals(clock - 1_000, first)

@@ -16,7 +16,7 @@ object Accountability {
     class Invite(val link: String, val expiresMs: Long)
     /** [lastViewMs]: when they last opened the report (plan 12 §2); 0 never, -1 the server doesn't say (older than 1.3). */
     class Partner(val id: String, val name: String, val email: String, val sms: Boolean, val inviteId: String = "", val lastViewMs: Long = -1)
-    class AppPartner(val id: String, val name: String, val inviteId: String, val lastViewMs: Long = -1)
+    class AppPartner(val id: String, val name: String, val inviteId: String, val lastViewMs: Long = -1, val readsFeed: Boolean = false)
     class Partners(val email: List<Partner>, val app: List<AppPartner>)
 
     private fun api(ctx: Context): Api {
@@ -173,6 +173,17 @@ object Accountability {
     private const val PENDING_MS = 25 * 3_600_000L
 
     /**
+     * Plan 12 §8: asks the server which app partners' apps already read the alert feed, until every invite pairing is
+     * known to. One signed request per sync while any is unknown; none after.
+     */
+    fun learnViaServer(ctx: Context) {
+        val unknown = SyncStore.ownPairings(ctx).filter { !it.pending && !it.viaServer && it.inviteId.isNotEmpty() }
+        if (unknown.isEmpty() || SyncStore.deviceId(ctx) == null) return
+        val app = partners(ctx).app
+        for (p in unknown) if (app.any { it.inviteId == p.inviteId && it.readsFeed }) SyncStore.saveOwn(ctx, p.copy(viaServer = true))
+    }
+
+    /**
      * Leaves the server (journey 3): partners are told first, while the phone can still reach them, then the enrollment
      * is dropped. Callers put this behind the LEAVE_SERVER guard. [movingTo] names the new server, if any.
      */
@@ -223,7 +234,7 @@ object Accountability {
             },
             (0 until (app?.length() ?: 0)).map { i ->
                 val p = app!!.getJSONObject(i)
-                AppPartner(p.getString("id"), p.getString("name"), p.optString("inviteId"), p.optLong("lastViewMs", -1))
+                AppPartner(p.getString("id"), p.getString("name"), p.optString("inviteId"), p.optLong("lastViewMs", -1), p.optBoolean("readsFeed"))
             },
         )
     }

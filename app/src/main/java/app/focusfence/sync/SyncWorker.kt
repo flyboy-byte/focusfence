@@ -80,6 +80,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             }
             try {
                 Accountability.resolvePending(ctx)
+                Accountability.learnViaServer(ctx)
             } catch (e: Exception) {
                 error = error ?: "invites: ${e.javaClass.simpleName}: ${e.message}"
             }
@@ -265,6 +266,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
     // ---- app-to-app: this phone → its partners -------------------------------
 
     private fun sendToPartner(ctx: Context, api: Api, start: SyncStore.OwnPairing, now: Long) {
+        // Plan 12 §8: their app reads the server feed, which carries the same alerts (and their report replaces the
+        // digest), so the mailbox would only send everything twice. Removal still tells them through it (removePairing).
+        if (start.viaServer) return
         var p = start
         val k = p.keys
         if (!p.boxReady) {
@@ -324,7 +328,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         // there (FF_STALE_MINUTES, about an hour) instead of here after 14 h. The mailbox still carries unlock codes.
         val feed = serverFeed(w, now)
         if (feed != null) {
-            w = feed.first
+            w = feed.first.copy(feedOk = true)
             if (feed.second.isNotEmpty()) notify(ctx, w, feed.second.joinToString("\n"))
             w = flushHeld(ctx, w, now)
         }
@@ -357,7 +361,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         if (newAlerts.isNotEmpty()) notify(ctx, w, newAlerts.joinToString("\n"))
         // Their phone sends a digest every few hours; long silence is itself news.
         val quietFor = now - maxOf(w.lastMsgMs, w.addedMs)
-        if (feed == null && !w.staleNotified && w.lastMsgMs > 0 && quietFor > STALE_AFTER_MS) {
+        // Once the feed has worked, the owner's phone stops posting here (plan 12 §8): a quiet mailbox then means
+        // nothing, and a feed that failed this once is not silence. The server decides silence for those.
+        if (feed == null && !w.feedOk && !w.staleNotified && w.lastMsgMs > 0 && quietFor > STALE_AFTER_MS) {
             notify(ctx, w, ctx.getString(R.string.partner_stale_alert, quietFor / 3_600_000))
             w = w.copy(staleNotified = true)
         }
