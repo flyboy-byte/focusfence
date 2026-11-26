@@ -5,9 +5,7 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 ## Where it stands
 
-- **Live:** app `v3.1.2-accountable` (code 54; 3.1.0 had groups) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
-  `/etc/ffbackend/env.bak-20261126-1539`, `/var/backups/ffbackend-data-pre2.1.0-20261126-1539.tgz`; logged in the VPS
-  hardening log.
+- **Live:** app `v3.1.2-accountable` (code 54; 3.1.0 had groups) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups taken first; paths in the VPS hardening log.
 - **Logan's first 3.0.0 test:** "I love it, it was quick and seem less". Found: the second phone said "Not set up" though
   it got reports. Fixed in 3.1.0 (PR #123): joining a report enrolls the phone on that server with its partner token
   (`X-FF-Partner`, one phone per partner). Logan's model: two kinds of phone, on a server or not.

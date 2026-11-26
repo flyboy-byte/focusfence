@@ -57,7 +57,7 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | ✅ | **An on-phone record** of lookups, apps and protection changes | Exported only when you choose |
 | ✅ | **Screenshot checks** with on-device AI | Optional; a second model (NudeNet) must find an exposed body part before anything counts as porn |
 | ✅ | **Updates itself** from GitHub releases | Shows what's new, installs when you tap |
-| 🧪 | **Partners** by code, QR code or email invite | Tried once on two phones: "quick and seem less". They read your report in the app or a browser |
+| 🧪 | **Partners** by code, QR code or email invite | Tried on two phones: "quick and seem less". They read your report in the app or a browser |
 | 🧪 | **Alerts** when protection loosens or the phone goes silent | Filter off, adult list set to Report, screen checks off, leaving the server; silence within about an hour |
 | 🧪 | **Encrypted report**, about 15 minutes fresh | Status, needs-attention, one timeline, day-by-day bars, app and site tables |
 | 🧪 | **Strict mode** | A wait, your own PIN, or a PIN a partner holds, before loosening anything |
@@ -65,7 +65,7 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | 🧪 | **Flagged screenshots to partners** | Automatic, blurred to 48 px at most, with a note from you |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
-| 🚧 | **Groups** of up to 6, everyone sees everyone | Built and tested on the server; not yet run on phones |
+| 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
 | ❌ | Hiding apps from reports; explicit on-screen text in reports; removing one person from a group | Planned or parked: [`docs/roadmap.md`](docs/roadmap.md) |
 
 ---
