@@ -364,6 +364,66 @@ class ServerTest {
     }
 
     @Test
+    fun anyOnePartnerAnswersAnAskAndTheFirstAnswerCounts() = run { http ->
+        val id = http.enroll()
+        suspend fun ask(key: String): HttpResponse {
+            clock += 1_000
+            return http.postJson("/v1/unlock/ask", """{"deviceId":"$id","t":$clock,"signature":"${sign(Integrity.requestMessage("unlock", id, clock, key))}","kind":"$key"}""")
+        }
+        suspend fun status(): UnlockStatus? {
+            clock += 1_000
+            val body = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}"}"""
+            return json.decodeFromString(HeartbeatResponse.serializer(), http.postJson("/v1/heartbeat", body).bodyAsText()).unlock
+        }
+        val bundle = app.focusfence.dns.GuardPolicy.Action.LOOSEN_BUNDLE.key
+        assertEquals(HttpStatusCode.Conflict, ask(bundle).status, "nobody to ask yet")
+        val emailToken = http.joinConfirmed(id)
+        val appToken = "t".repeat(32)
+        store.updateDevice(id) { it.appPartners = listOf(Store.AppPartner("ap1", "other-phone", "Sam", clock, token = appToken)) }
+        notifier.emails.clear()
+        assertEquals(HttpStatusCode.BadRequest, ask("guard_nonsense").status)
+        clock += 1_000
+        val forged = """{"deviceId":"$id","t":$clock,"signature":"${sign(Integrity.requestMessage("unlock", id, clock, "guard_vpn_off"))}","kind":"$bundle"}"""
+        assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/unlock/ask", forged).status, "signed for another action")
+
+        val first = json.decodeFromString(UnlockStatus.serializer(), ask(bundle).bodyAsText())
+        assertEquals("pending", first.state)
+        assertEquals(1, notifier.emails.count { it.second.contains("your OK is asked") && it.third.contains("loosen a filter bundle") })
+        assertTrue(store.device(id)!!.alerts.last().text.startsWith("The phone's owner asks for your OK to loosen a filter bundle."))
+        // Asking again while it's open doesn't tell anyone twice.
+        assertEquals(first.id, json.decodeFromString(UnlockStatus.serializer(), ask(bundle).bodyAsText()).id)
+        assertEquals(1, notifier.emails.count { it.second.contains("your OK is asked") })
+        assertTrue(http.get("/p/$emailToken").bodyAsText().contains("They ask for your OK to loosen a filter bundle."))
+        assertEquals("pending", status()!!.state)
+
+        // The app partner approves; the email partner's later answer is too late.
+        val ok = http.submitForm("/p/$appToken/unlock/${first.id}", Parameters.build { append("d", "approve") })
+        assertEquals("/p/$appToken?unlock=approved", ok.headers["Location"])
+        val late = http.submitForm("/p/$emailToken/unlock/${first.id}", Parameters.build { append("d", "deny") })
+        assertEquals("/p/$emailToken?unlock=late", late.headers["Location"])
+        val approved = status()!!
+        assertEquals("approved" to "Sam", approved.state to approved.by)
+        // Everyone hears the answer (the feed; emails to one address are spaced a minute apart).
+        assertEquals("Sam approved: loosen a filter bundle, for the next 15 minutes.", store.device(id)!!.alerts.last().text)
+        assertTrue(!http.get("/p/$emailToken").bodyAsText().contains("They ask for your OK"), "answered: no card")
+
+        // A new ask, denied by the email partner.
+        val vpn = app.focusfence.dns.GuardPolicy.Action.TURN_OFF_VPN.key
+        val second = json.decodeFromString(UnlockStatus.serializer(), ask(vpn).bodyAsText())
+        assertTrue(second.id != first.id)
+        assertEquals("/p/$emailToken?unlock=denied", http.submitForm("/p/$emailToken/unlock/${second.id}", Parameters.build { append("d", "deny") }).headers["Location"])
+        assertEquals("denied", status()!!.state)
+
+        // One nobody answers lapses, and can't be answered after.
+        val third = json.decodeFromString(UnlockStatus.serializer(), ask(bundle).bodyAsText())
+        clock += app.focusfence.dns.UnlockAsk.LAPSE_MS + 1
+        assertEquals("lapsed", status()!!.state)
+        assertEquals("/p/$appToken?unlock=late", http.submitForm("/p/$appToken/unlock/${third.id}", Parameters.build { append("d", "approve") }).headers["Location"])
+        clock += app.focusfence.dns.UnlockAsk.GRANT_MS
+        assertNull(status(), "old requests stop riding on the heartbeat")
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L

@@ -104,6 +104,10 @@ class DigestTest {
         assertEquals("Strict mode: unlock requested (wait_min=10)", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "unlock_requested", "detail" to "wait_min=10")))
         assertEquals("Strict mode: unlocked with a code (partner_code)", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "unlocked", "detail" to "partner_code")))
         assertEquals("Strict mode turned off", Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "disabled")))
+        assertEquals("Strict mode: changed with a partner's OK: loosen a filter bundle",
+            Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "partner_approval_used", "detail" to "loosen_bundle")))
+        // The server tells partners about the ask and the answer itself; the phone's own records of them stay quiet.
+        assertEquals(null, Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "partner_approved", "detail" to "loosen_bundle by=Sam")))
         assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "strict", "state" to "relocked")))
         assertNull(Digest.alertText(mapOf("type" to "svc", "comp" to "vpn", "state" to "stop", "detail" to "restart")))
     }

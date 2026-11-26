@@ -542,6 +542,16 @@
     <string name="partner_channel_name">Partner alerts</string>
     <string name="partner_alert_title">%1$s — Focus Fence</string>
     <string name="owner_notice_title">Your partners changed</string>
+    <string name="ask_answer_title">A partner answered</string>
+    <string name="ask_offer">Ask your partners for an OK to %1$s? Any one of them can approve it from their report, and then you can do just this for 15 minutes. If nobody answers, you can still wait.</string>
+    <string name="ask_button">Ask a partner</string>
+    <string name="ask_other_ways">Other ways</string>
+    <string name="ask_sent">Asked. You\'ll get a notification when a partner answers.</string>
+    <string name="ask_waiting">Waiting for a partner\'s OK to %1$s (asked %2$d min ago). You\'ll get a notification when one answers.</string>
+    <string name="ask_no_server">Join a server first: partners answer from their report.</string>
+    <string name="ask_no_partner">You have no partner to ask yet.</string>
+    <string name="ask_server_old">Your server is too old for this. Ask whoever runs it to update.</string>
+    <string name="ask_failed">Couldn\'t ask (HTTP %1$d). Try again, or wait instead.</string>
     <string name="partner_stale_alert">No report from their phone for %1$d hours. Protection may be off, or the app removed.</string>
     <string name="report_unlock_title">Unlock code</string>
     <string name="report_unlock_hint">If they ask, this code unlocks anything they\'ve set to need a partner PIN. Changes in %1$d min.</string>
