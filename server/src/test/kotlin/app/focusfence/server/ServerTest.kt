@@ -331,6 +331,39 @@ class ServerTest {
     }
 
     @Test
+    fun aPartnerLeavingTellsTheOwnerAndTheOthers() = run { http ->
+        val id = http.enroll()
+        http.joinConfirmed(id)
+        val email = store.device(id)!!.partners.single()
+        val token = "t".repeat(32)
+        store.updateDevice(id) { it.appPartners = listOf(Store.AppPartner("ap1", "other-phone", "Sam", clock, token = token)) }
+        notifier.emails.clear()
+        suspend fun heartbeat(after: Long = 0): HeartbeatResponse {
+            clock += 1_000
+            val body = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}","noticesAfter":$after}"""
+            return json.decodeFromString(HeartbeatResponse.serializer(), http.postJson("/v1/heartbeat", body).bodyAsText())
+        }
+        assertTrue(heartbeat().notices.isEmpty())
+
+        // The app partner leaves: the owner hears it at the next check-in, and the email partner still watching is told.
+        clock += 60_000
+        assertEquals(HttpStatusCode.OK, http.post("/p/$token/leave").status)
+        assertTrue(store.device(id)!!.appPartners.isEmpty())
+        val n = heartbeat().notices.single()
+        assertEquals("Sam stopped being your accountability partner.", n.text)
+        assertTrue(heartbeat(after = n.t).notices.isEmpty(), "a notice comes back once the phone has it")
+        assertEquals(1, notifier.emails.count { it.first == email.email && it.second.contains("a partner left") })
+        assertTrue(store.device(id)!!.alerts.any { it.text == "Sam stopped being an accountability partner for this phone." })
+
+        // The last partner leaving: the owner is still told; there is nobody else to tell.
+        notifier.emails.clear()
+        clock += 60_000
+        assertEquals(HttpStatusCode.OK, http.post("/p/${email.token}/leave").status)
+        assertEquals(2, heartbeat().notices.size)
+        assertTrue(notifier.emails.isEmpty())
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L

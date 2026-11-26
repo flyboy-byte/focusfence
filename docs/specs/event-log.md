@@ -48,7 +48,7 @@ export.
 
 | `comp` | `state` values |
 |---|---|
-| `partner` | `server_enrolled`, `invite_created`, `partner_removed` (detail: name), `pairing_created` / `pairing_removed` (detail: name) |
+| `partner` | `server_enrolled`, `invite_created`, `partner_removed` (detail: name), `pairing_created` / `pairing_removed` (detail: name), `partner_left` (detail: the server's plain-words notice; a partner removed themselves, plan 12), `server_left` |
 | `vpn` | `start` (detail: rule count, exclusions, ad list, always-on), `stop` (`user` or `restart`), `stop_refused` (strict), `revoked`, `destroyed`, `establish_failed`, `health` (detail: `ok`/`offline`/`degraded`/`upstream_down`/`silent`/`bypassed`/`lockdown`, `fail_pct`, `was`) |
 | `a11y` | `connected` (detail: scope), `destroyed` |
 | `app` | `process_start` (detail: boot count, version), `updated` (from/to) |

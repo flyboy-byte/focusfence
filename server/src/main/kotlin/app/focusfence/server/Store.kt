@@ -100,6 +100,11 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
          * the same things as email partners, as fast. Alert lines only, the text emails already carry (D-023).
          */
         var alerts: List<AlertEntry> = emptyList(),
+        /**
+         * Things the owner's own phone should hear about (plan 12): a partner who left, so nobody believes they're
+         * still watched. Read back in the heartbeat response; kept like [alerts].
+         */
+        var ownerNotices: List<AlertEntry> = emptyList(),
     )
 
     @Serializable
@@ -250,6 +255,10 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         updateDevice(id) { d ->
             d.alerts = (d.alerts + lines.map { AlertEntry(now, it) }).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
         }
+    }
+
+    fun addOwnerNotice(id: String, text: String, now: Long) = updateDevice(id) { d ->
+        d.ownerNotices = (d.ownerNotices + AlertEntry(now, text)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
     }
 
     @Serializable

@@ -8,8 +8,10 @@ import android.text.format.DateUtils
 import androidx.appcompat.app.AppCompatActivity
 import app.focusfence.databinding.ActivityPartnerReportBinding
 import app.focusfence.dns.Digest
+import app.focusfence.dns.InviteLink
 import app.focusfence.dns.LogJson
 import app.focusfence.dns.Pairing
+import app.focusfence.sync.Api
 import app.focusfence.sync.Sync
 import app.focusfence.sync.SyncStore
 import app.focusfence.sync.SyncWorker
@@ -67,6 +69,11 @@ class PartnerReportActivity : AppCompatActivity() {
             MaterialAlertDialogBuilder(this)
                 .setMessage(getString(R.string.acc_remove) + " " + w.name + "?")
                 .setPositiveButton(R.string.acc_remove) { _, _ ->
+                    // Plan 12: tell the server first, so the owner and their other partners hear that this partner left.
+                    // Best effort: offline, the server isn't told and still lists this partner.
+                    InviteLink.leaveTarget(w.reportUrl)?.let { (origin, path) ->
+                        Thread { runCatching { Api(origin).post(path, org.json.JSONObject()) } }.start()
+                    }
                     SyncStore.removeWatch(this, w)
                     Sync.schedule(this)
                     finish()

@@ -42,6 +42,10 @@ object InviteLink {
         return m.groupValues[1] to "/p/${m.groupValues[2]}/alerts"
     }
 
+    /** Where an app partner says they're leaving (plan 12), so the owner and the other partners are told. */
+    fun leaveTarget(reportUrl: String): Pair<String, String>? =
+        alertsTarget(reportUrl)?.let { (origin, path) -> origin to path.removeSuffix("/alerts") + "/leave" }
+
     private val REPORT = Regex("""(https://[A-Za-z0-9.-]+(?::\d+)?)/p/([A-Za-z0-9_-]{20,})/?""")
 
     /** The partner invite as the inviting phone shares it. */

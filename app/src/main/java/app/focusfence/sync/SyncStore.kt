@@ -104,6 +104,10 @@ object SyncStore {
     }
 
     fun lastHeartbeat(context: Context): Long = prefs(context).getLong(KEY_HEARTBEAT, 0)
+
+    /** The newest owner notice (plan 12: a partner left) this phone has shown; the heartbeat asks only for newer ones. */
+    fun ownerNoticeT(context: Context): Long = prefs(context).getLong("owner_notice_t", 0)
+    fun setOwnerNoticeT(context: Context, t: Long) { prefs(context).edit().putLong("owner_notice_t", t).apply() }
     fun lastOk(context: Context): Long = prefs(context).getLong(KEY_OK, 0)
     fun lastError(context: Context): String? = prefs(context).getString(KEY_ERROR, null)
 

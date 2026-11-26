@@ -541,6 +541,7 @@
     <string name="acc_watch_status">Last report %1$s</string>
     <string name="partner_channel_name">Partner alerts</string>
     <string name="partner_alert_title">%1$s — Focus Fence</string>
+    <string name="owner_notice_title">Your partners changed</string>
     <string name="partner_stale_alert">No report from their phone for %1$d hours. Protection may be off, or the app removed.</string>
     <string name="report_unlock_title">Unlock code</string>
     <string name="report_unlock_hint">If they ask, this code unlocks anything they\'ve set to need a partner PIN. Changes in %1$d min.</string>

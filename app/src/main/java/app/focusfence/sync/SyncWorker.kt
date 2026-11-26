@@ -19,6 +19,7 @@ import app.focusfence.PartnerReportActivity
 import app.focusfence.R
 import app.focusfence.data.EventLog
 import app.focusfence.dns.InviteLink
+import app.focusfence.dns.LogEvents
 import app.focusfence.dns.B64
 import app.focusfence.dns.Digest
 import app.focusfence.dns.LogJson
@@ -169,6 +170,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             put("t", now)
             put("lastSeq", seq)
             put("signature", DeviceKey.sign("heartbeat|$deviceId|$now|$seq".toByteArray()))
+            put("noticesAfter", SyncStore.ownerNoticeT(ctx))
             // After a long gap, the phone's own account of it for partners ("no internet; protection stayed on").
             if (gap != null) {
                 put("gap", gap)
@@ -176,7 +178,46 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             }
         })
         if (r.code != 200) throw IllegalStateException("heartbeat HTTP ${r.code}")
+        ownerNotices(ctx, r.body?.optJSONArray("notices"))
         return true
+    }
+
+    /** Plan 12: what the server says the owner should know (a partner left). Logged, and one notification each. */
+    private fun ownerNotices(ctx: Context, arr: org.json.JSONArray?) {
+        if (arr == null) return
+        var last = SyncStore.ownerNoticeT(ctx)
+        for (i in 0 until arr.length()) {
+            val n = arr.optJSONObject(i) ?: continue
+            val t = n.optLong("t")
+            val text = n.optString("text").takeIf { it.isNotBlank() }?.take(300) ?: continue
+            if (t <= last) continue
+            EventLog.activity(LogEvents.service(t, "partner", "partner_left", text), urgent = true)
+            notifyOwner(ctx, t, text)
+            last = t
+        }
+        SyncStore.setOwnerNoticeT(ctx, last)
+    }
+
+    private fun notifyOwner(ctx: Context, t: Long, text: String) {
+        val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL, ctx.getString(R.string.partner_channel_name), NotificationManager.IMPORTANCE_HIGH)
+        )
+        val open = PendingIntent.getActivity(
+            ctx, 0x0e1f, Intent(ctx, app.focusfence.AccountabilityActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        nm.notify(
+            (t % Int.MAX_VALUE).toInt(),
+            NotificationCompat.Builder(ctx, CHANNEL)
+                .setSmallIcon(R.drawable.ic_shield)
+                .setContentTitle(ctx.getString(R.string.owner_notice_title))
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build(),
+        )
     }
 
     /** [GapAccount] for the time since the last check-in that got through, if that was long ago. */
