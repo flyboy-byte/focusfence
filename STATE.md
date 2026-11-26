@@ -2,6 +2,11 @@
 
 > **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
 
+> **PAUSED for the partner redesign (2026-11-26, Logan):** production is on hold while one partner system is designed
+> and tested ([`docs/plans/13-partners-redesign.md`](docs/plans/13-partners-redesign.md)). The live server was wiped the
+> same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS), so both phones show sync
+> errors until the new system ships. The filter itself is unaffected.
+
 > **Where it stands (2026-11-25 night, app 2.26.0 + server 1.3.0, live 1.3.0):** the filter is in daily use. 2.21–2.25
 > (silence alerts, blurred auto-shots with the NudeNet check, Block lists, first-time journeys, protocol window) and
 > today's partner work in 2.26 ([`docs/plans/12-partners.md`](docs/plans/12-partners.md)) are **built and tested, almost
