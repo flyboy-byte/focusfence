@@ -77,6 +77,18 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         }, "join")
     }
 
+    /** Plan 14: a group code's QR opens this. Groups are phones only (every member is watched), so no browser join. */
+    fun groupJoinPage(name: String, members: List<String>, server: String, code: String, pkg: String = DEFAULT_PACKAGE): String =
+        page("Join ${name}", buildString {
+            append("<h1>Join ${esc(name)}</h1>")
+            append("<p>${esc(members.joinToString(", "))}. Everyone in the group sees each other's report.</p>")
+            val q = "server=" + java.net.URLEncoder.encode(server, "UTF-8") + "&code=" + java.net.URLEncoder.encode(code, "UTF-8")
+            val fallback = java.net.URLEncoder.encode("https://github.com/flyboy-byte/focusfence/releases/latest", "UTF-8")
+            append("<p><b><a href='${esc("intent://join?$q#Intent;scheme=focusfence;package=${pkg.filter { it.isLetterOrDigit() || it == '.' || it == '_' }};S.browser_fallback_url=$fallback;end")}'>Open in the Focus Fence app</a></b></p>")
+            append("<p class='muted'>A group is joined from the app on your phone. No app yet? The link above gets it. Or type ")
+            append("<b>${esc(code.chunked(4).joinToString("-"))}</b> under Partners → Join with a code.</p>")
+        })
+
     fun message(title: String, text: String): String =
         page(title, "<h1>${esc(title)}</h1><p>${esc(text)}</p>")
 

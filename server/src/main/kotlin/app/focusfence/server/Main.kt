@@ -97,7 +97,7 @@ class Config(
 @Serializable data class InviteInfo(val id: String, val expiresMs: Long, val email: String)
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val invites: List<InviteInfo> = emptyList())
 /** A partner device waiting for the report key. [firstDevice]: this partner had none yet, so they just joined. */
-@Serializable data class SealTarget(val partnerId: String, val deviceId: String, val name: String, val kind: String, val label: String, val publicKeySpki: String, val firstDevice: Boolean)
+@Serializable data class SealTarget(val partnerId: String, val deviceId: String, val name: String, val kind: String, val label: String, val publicKeySpki: String, val firstDevice: Boolean, val groupName: String = "")
 @Serializable data class SealRequest(val deviceId: String, val t: Long, val signature: String, val partnerDeviceId: String, val keyId: String, val sealed: String)
 @Serializable data class BatchRequest(
     val deviceId: String,
@@ -152,6 +152,10 @@ val serverVersion: String by lazy {
     val invitesOpen: Int = 0,
     /** A partner left or removed a device: start a new report key and seal it to the rest. */
     val rotateKey: Boolean = false,
+    /** Plan 14: reports a group lets this phone read, waiting for its device key. */
+    val groupPairs: List<GroupPair> = emptyList(),
+    /** Someone is joining one of this phone's groups: check in every minute. */
+    val groupsBusy: Boolean = false,
 )
 @Serializable data class UnlockStatus(val id: String, val action: String, val state: String, val by: String, val askedMs: Long, val decidedMs: Long)
 
@@ -239,7 +243,7 @@ fun newInviteCode(): String = buildString { repeat(8) { append(CODE_ALPHABET[ran
 fun normalizeCode(s: String): String =
     s.uppercase().filter { it.isLetterOrDigit() }.replace('O', '0').replace('I', '1').replace('L', '1')
 
-private fun newToken(): String = ByteArray(24).also { random.nextBytes(it) }
+internal fun newToken(): String = ByteArray(24).also { random.nextBytes(it) }
     .let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
 
 
@@ -286,8 +290,10 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         }
     }
     val alerts = Alerts(store, notifier, cfg)
+    val groups = Groups(store, cfg)
     val joinLimiter = RateLimiter(10, 3_600_000, cfg.now)
     val enrollLimiter = RateLimiter(5, 3_600_000, cfg.now)
+    val credEnrollLimiter = RateLimiter(30, 3_600_000, cfg.now)
     val inviteLimiter = RateLimiter(10, 3_600_000, cfg.now) // per owner phone
     val inviteEmailLimiter = RateLimiter(1, 3_600_000, cfg.now) // per address: an invite email is unasked-for mail
     val inviteEmailGlobal = RateLimiter(cfg.inviteEmailDailyCap, 24 * 3_600_000L, cfg.now)
@@ -332,14 +338,19 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
-            if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
             // Every app user on this server is enrolled, partners too: being someone's partner is a credential (one phone
             // per partner token), so a partner's phone can be watched later without an enrollment code. Browsers don't enroll.
             var needsCode = cfg.enrollToken != null || enrollCodes.any()
             val asPartner = call.request.headers["X-FF-Partner"].orEmpty().take(64).takeIf { it.length >= 20 }
                 ?.let { store.partnerByToken(it) }
                 ?.takeIf { (_, p) -> p.enrolledDeviceId.isEmpty() || store.device(p.enrolledDeviceId) == null }
-            if (asPartner != null) needsCode = false
+            // Plan 14: a group code too, since every member must be a phone on this server.
+            val withGroup = call.request.headers["X-FF-Group"]?.let { groups.lookup(it) }?.takeIf { it.members.size < Groups.MAX_MEMBERS }
+            if (asPartner != null || withGroup != null) needsCode = false
+            // A group meeting puts six phones behind one Wi-Fi address: enrolling with a partner or group credential has its
+            // own, looser limit; the strict one guards enrollment codes and open servers.
+            val limiter = if (asPartner != null || withGroup != null) credEnrollLimiter else enrollLimiter
+            if (!limiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
             if (needsCode) {
                 val got = call.request.headers["X-FF-Enroll"].orEmpty()
                 val boot = cfg.enrollToken?.let { java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(it).toByteArray()) } ?: false
@@ -368,7 +379,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val email = req.email.trim().lowercase().take(120)
             if (email.isNotEmpty() && !EMAIL.matches(email)) return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("That email address doesn't look right."))
             if (email.isNotEmpty() && !notifier.emailAvailable) return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("This server can't send email. Use the code instead."))
-            if (device.partners.size >= cfg.maxPartnersPerDevice) return@post call.respond(HttpStatusCode.Conflict,
+            if (device.partners.count { it.chosen } >= cfg.maxPartnersPerDevice || device.partners.size >= Groups.MAX_WATCHERS) return@post call.respond(HttpStatusCode.Conflict,
                 ErrorResponse("You already have ${cfg.maxPartnersPerDevice} partners, the most a phone can have."))
             if (!inviteLimiter.allow(device.id)) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many invites. Try again in an hour."))
             val now = cfg.now()
@@ -428,11 +439,62 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!signedOk(device, "unlink", req.t, pid, req.signature)) return@post call.unauthorized()
             val removed = device.partners.firstOrNull { it.id == pid }
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("unknown partner"))
+            // Plan 14: a group made this pair, so it goes when one of you leaves that group, not here.
+            if (removed.groupIds.isNotEmpty()) return@post call.respond(HttpStatusCode.Conflict,
+                ErrorResponse("${removed.name} is in a group with you. To stop sharing, leave ${groups.groupName(removed).ifEmpty { "the group" }}."))
             if (removed.email.isNotEmpty()) alerts.emailOne(removed, "you were removed as a partner",
                 listOf("${ownerName(device)} removed you as their accountability partner. You won't get further reports."))
             forget(device.id, pid)
             partnerJournal.info("unlink dev={} partner={}", device.id.take(8), pid.take(8))
             call.respond(OkResponse())
+        }
+
+        // ---- groups (plan 14) ------------------------------------------------
+        suspend fun ApplicationCall.group(action: String, extra: (GroupRequest) -> String, block: suspend (GroupRequest, Store.Device) -> Unit) {
+            val req = receive<GroupRequest>()
+            val device = store.device(req.deviceId) ?: return unknownDevice()
+            if (!signedOk(device, action, req.t, extra(req), req.signature)) return unauthorized()
+            try { block(req, device) } catch (e: GroupError) { respond(HttpStatusCode.fromValue(e.status), ErrorResponse(e.message.orEmpty())) }
+        }
+        post("/v1/groups/create") {
+            call.group("group_create", { it.name }) { req, d ->
+                if (full()) return@group call.serverFull()
+                val r = groups.create(d, clean(req.name, 40), clean(req.label, 40))
+                partnerJournal.info("group create dev={} group={}", d.id.take(8), r.groupId.take(8))
+                call.respond(r)
+            }
+        }
+        post("/v1/groups/code") { call.group("group_code", { it.groupId }) { req, d -> call.respond(groups.newCode(d, req.groupId)) } }
+        post("/v1/groups/join") {
+            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many tries. Try again in an hour."))
+            call.group("group_join", { normalizeCode(it.code) }) { req, d ->
+                val g = groups.join(d, req.code, clean(req.label, 40))
+                partnerJournal.info("group join dev={} group={} size={}", d.id.take(8), g.id.take(8), g.members.size)
+                call.respond(groups.list(d).groups.first { it.id == g.id })
+            }
+        }
+        post("/v1/groups/leave") {
+            call.group("group_leave", { it.groupId }) { req, d ->
+                groups.leave(d, req.groupId)
+                partnerJournal.info("group leave dev={} group={}", d.id.take(8), req.groupId.take(8))
+                call.respond(OkResponse())
+            }
+        }
+        post("/v1/groups/list") { call.group("groups", { "" }) { _, d -> call.respond(groups.list(d)) } }
+        post("/v1/groups/level") { call.group("group_level", { "${it.groupId}|${it.level}" }) { req, d -> groups.setLevel(d, req.groupId, req.level); call.respond(OkResponse()) } }
+        post("/v1/groups/key") {
+            call.group("group_key", { "${it.ownerDeviceId}|${it.partnerId}|${Integrity.sha256(it.publicKeySpki)}" }) { req, d ->
+                if (!keyOk(req.publicKeySpki)) return@group call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad key"))
+                call.respond(GroupKeyResponse(groups.addKey(d, req.ownerDeviceId, req.partnerId, req.publicKeySpki, clean(req.label, 40))))
+            }
+        }
+        // The app's one code box: says whether a code is a group's or a partner invite, and whose, before joining.
+        post("/v1/codes/lookup") {
+            if (!joinLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("Too many tries. Try again in an hour."))
+            val code = normalizeCode(call.receive<LookupRequest>().code)
+            groups.lookup(code)?.let { g -> return@post call.respond(LookupResponse("group", g.name, g.members.map { it.name }, g.members.size >= Groups.MAX_MEMBERS)) }
+            store.inviteByHash(Integrity.sha256(code), cfg.now())?.let { (owner, _) -> return@post call.respond(LookupResponse("invite", ownerName(owner))) }
+            call.respond(HttpStatusCode.NotFound, ErrorResponse("That code isn't valid. It may have expired or been used already; ask for a new one."))
         }
 
         // Plan 13: the report key, sealed by the phone to one partner device's public key. Ciphertext only.
@@ -519,7 +581,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val ask = d.unlockRequest?.takeIf { now - it.askedMs < app.focusfence.dns.UnlockAsk.LAPSE_MS + app.focusfence.dns.UnlockAsk.GRANT_MS }
             val seal = if (keyId.isEmpty()) emptyList() else d.partners.flatMap { p ->
                 p.devices.filter { it.sealed == null || it.keyId != keyId }.map { pd ->
-                    SealTarget(p.id, pd.id, p.name, pd.kind, pd.label, pd.publicKeySpki, firstDevice = !p.ready)
+                    SealTarget(p.id, pd.id, p.name, pd.kind, pd.label, pd.publicKeySpki, firstDevice = !p.ready, groupName = groups.groupName(p))
                 }
             }
             call.respond(HeartbeatResponse(
@@ -528,6 +590,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 seal = seal,
                 invitesOpen = d.invites.count { it.expiresMs > now },
                 rotateKey = d.rotateKey,
+                groupPairs = groups.pending(d.id),
+                groupsBusy = groups.busy(d.id),
             ))
         }
 
@@ -582,7 +646,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             store.updateDevice(owner.id) { d ->
                 when {
                     d.invites.none { it.id == inv.id } -> refusal = "That invite was just used."
-                    d.partners.size >= cfg.maxPartnersPerDevice -> refusal = "They already have the most partners a phone can have."
+                    d.partners.count { it.chosen } >= cfg.maxPartnersPerDevice || d.partners.size >= Groups.MAX_WATCHERS -> refusal = "They already have the most partners a phone can have."
                     else -> {
                         val name = clean(req.name, 60).ifEmpty { "Partner" }
                         val p = Store.Partner(java.util.UUID.randomUUID().toString(), name, newToken(), now,
@@ -608,6 +672,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         }
         get("/c/{code}") {
             val code = normalizeCode(call.parameters["code"].orEmpty().take(20))
+            groups.lookup(code)?.let { g -> return@get call.respondText(Web.groupJoinPage(g.name, g.members.map { it.name }, cfg.publicUrl, code, cfg.androidPackage), ContentType.Text.Html) }
             val found = code.takeIf { it.length == 8 }?.let { store.inviteByHash(Integrity.sha256(it), cfg.now()) }
             call.respondText(Web.joinPage(found?.let { ownerName(it.first) }, link = "", code = code, pkg = cfg.androidPackage),
                 ContentType.Text.Html, if (found == null) HttpStatusCode.NotFound else HttpStatusCode.OK)
@@ -748,6 +813,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/p/{token}/leave") {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@post call.respond(HttpStatusCode.NotFound)
+            if (partner.groupIds.isNotEmpty()) return@post call.respondText(Web.message("In a group",
+                "You see this report through a group. To stop, leave the group in the Focus Fence app."), ContentType.Text.Html, HttpStatusCode.Conflict)
             forget(device.id, partner.id)
             // Leaving is never silent (plan 12): the owner's phone hears it at its next check-in, and everyone still
             // watching is told, so a partner quietly dropping off can't leave the owner believing they're watched.

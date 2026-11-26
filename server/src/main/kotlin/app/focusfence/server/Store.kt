@@ -22,6 +22,7 @@ class Store(private val root: File) {
 
     init {
         File(root, "devices").mkdirs()
+        File(root, "groups").mkdirs()
     }
 
     /**
@@ -39,6 +40,7 @@ class Store(private val root: File) {
         /** Set only when they joined through the emailed link, so the address is proven theirs. Empty: alerts go to their app. */
         var email: String = "",
         var devices: List<PartnerDevice> = emptyList(),
+        /** The invite they joined with: a partner of the owner's own choosing. Empty for a pair made only by a group. */
         val inviteId: String = "",
         /** Plan 12 §2: when they last opened the report (its data, fetched by the page's script). The owner sees it. */
         var lastViewMs: Long = 0,
@@ -53,7 +55,16 @@ class Store(private val root: File) {
         var lastFlushDay: Long = 0,
         /** The phone this partner's token enrolled (one per partner), so a partner's own phone is on the server too. */
         var enrolledDeviceId: String = "",
+        /** Plan 14: the member phone this pair reads from, and the groups that made it. Kept while any reason remains. */
+        var memberDeviceId: String = "",
+        var groupIds: List<String> = emptyList(),
     ) {
+        /** The owner chose this partner (an invite), not only a group. */
+        val chosen: Boolean get() = inviteId.isNotEmpty()
+
+        /** This partner is the reading side of [deviceId]'s phone (by a group, or that phone enrolled with their token). */
+        fun isPhone(deviceId: String) = memberDeviceId == deviceId || enrolledDeviceId == deviceId
+
         fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone, quietFrom, quietTo)
 
         /** At least one of their devices has the report key: they can read it, and their answers to asks count. */
@@ -140,6 +151,27 @@ class Store(private val root: File) {
         val state: String = app.focusfence.dns.UnlockAsk.PENDING, val by: String = "", val decidedMs: Long = 0,
     )
 
+    /**
+     * Plan 14: a group is a set of member phones that all watch each other. Each member is an ordinary partner on every
+     * other member's phone ([Partner.groupIds]); the group itself only says who belongs and holds its one open code.
+     */
+    @Serializable
+    data class Group(
+        val id: String,
+        var name: String,
+        var members: List<GroupMember> = emptyList(),
+        var codeHash: String = "",
+        var codeExpiresMs: Long = 0,
+        val createdMs: Long = 0,
+        /** Last code made or member joined: keys are being handed round, so members check in every minute for a while. */
+        var lastChangeMs: Long = 0,
+    ) {
+        fun codeOpen(now: Long) = codeHash.isNotEmpty() && codeExpiresMs > now
+    }
+
+    @Serializable
+    data class GroupMember(val deviceId: String, var name: String, val joinedMs: Long)
+
     /** [kind] tells the owner's phone what a notice is about ("left", "device", "joined", "reply"); free text otherwise. */
     @Serializable
     data class AlertEntry(val t: Long, val text: String, val important: Boolean = true, val kind: String = "")
@@ -201,9 +233,40 @@ class Store(private val root: File) {
         return File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }.orEmpty().sumOf { it.length() }
     }
 
+    // ---- groups (plan 14) ----
+
+    private fun groupFile(id: String) = File(root, "groups/$id.json")
+
+    fun group(id: String): Group? {
+        if (!SAFE_ID.matches(id)) return null
+        return groupFile(id).takeIf { it.exists() }?.let { runCatching { json.decodeFromString(Group.serializer(), it.readText()) }.getOrNull() }
+    }
+
+    fun saveGroup(g: Group) = synchronized(lock("g:" + g.id)) { writeAtomic(groupFile(g.id), json.encodeToString(Group.serializer(), g)) }
+
+    fun <T> updateGroup(id: String, block: (Group) -> T): T? = synchronized(lock("g:$id")) {
+        val g = group(id) ?: return null
+        val r = block(g)
+        if (g.members.isEmpty()) groupFile(id).delete() else saveGroup(g)
+        r
+    }
+
+    fun allGroups(): List<Group> =
+        File(root, "groups").listFiles { f -> f.name.endsWith(".json") }
+            ?.mapNotNull { runCatching { json.decodeFromString(Group.serializer(), it.readText()) }.getOrNull() }
+            ?: emptyList()
+
+    fun groupsOf(deviceId: String): List<Group> = allGroups().filter { g -> g.members.any { it.deviceId == deviceId } }
+
+    /** The group whose open code hashes to [hash]. */
+    fun groupByCode(hash: String, now: Long): Group? = allGroups().firstOrNull {
+        it.codeOpen(now) && java.security.MessageDigest.isEqual(it.codeHash.toByteArray(), hash.toByteArray())
+    }
+
     /** Removes a device and everything stored for it. Only the admin page calls this. */
     fun deleteDevice(id: String): Boolean = synchronized(lock(id)) {
         if (!SAFE_ID.matches(id) || !deviceFile(id).exists()) return false
+        for (g in groupsOf(id)) updateGroup(g.id) { it.members = it.members.filter { m -> m.deviceId != id } }
         deviceFile(id).delete(); recordsFile(id).delete()
         File(root, "devices").listFiles { f -> f.name.startsWith("$id.") }?.forEach { it.delete() }
         true
