@@ -6,6 +6,17 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Changed
+- feat/groups (`55119f0`, [#125](https://github.com/flyboy-byte/focusfence/pull/125))
+- A phone that joins a report is on that server too (`2554ebe`, [#123](https://github.com/flyboy-byte/focusfence/pull/123))
+### Docs
+- plan 14, groups on the plan 13 partners (Logan's answers) (`a7d5062`, [#124](https://github.com/flyboy-byte/focusfence/pull/124))
+- handoff after 3.0.0 and server 2.0.0 (`ddf6e8b`, [#122](https://github.com/flyboy-byte/focusfence/pull/122))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.0.0-accountable
+
 ### Fixed
 - **partners:** a report you see can always be removed from its menu, a dead report link says so, and 'protection was off' names the days (`23d8071`, [#113](https://github.com/flyboy-byte/focusfence/pull/113))
 ### Changed
@@ -18,6 +29,7 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - plan 13, one partner system (design stage); production paused, server wiped (`12d43de`, [#114](https://github.com/flyboy-byte/focusfence/pull/114))
 - partner UI options logged for later (plan 12) (`b98e3d6`, [#112](https://github.com/flyboy-byte/focusfence/pull/112))
 ### Maintenance
+- release 3.0.0 (`d773dee`, [#121](https://github.com/flyboy-byte/focusfence/pull/121))
 - **server:** drop SMS and mailbox settings from .env.example (plan 13) (`2e9b2cc`, [#120](https://github.com/flyboy-byte/focusfence/pull/120))
 
 _Undo any line with `git revert <commit>`._

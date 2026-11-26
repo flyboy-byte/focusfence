@@ -1,41 +1,39 @@
-# Handoff (2026-11-26): plan 13 released, not yet tried on a phone
+# Handoff (2026-11-26): groups released, not yet tried on phones
 
-Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/13-partners-redesign.md` (design, Logan's
-answers, the build table) and `DECISIONS.md` D-042.
+Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/14-groups.md` (Logan's answers, build
+table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 ## Where it stands
 
-- **Production is paused.** The live server (1.3.0) was wiped on 2026-11-26 at 03:33 UTC (admin login and codes kept;
-  backup `/var/backups/ffbackend-data-20261126.tgz`, root-only). Both phones show sync errors: expected.
-- **Plan 13 is built** on `feat/partners-v2-server` (PR to main). One kind of partner; invites by code, QR code or email;
-  each partner device gets the report key sealed to its own key by the owner's phone; protocol level 2 with a floor of 2,
-  so level-1 apps get 426. Old partner data is deleted at start on both sides.
-- **Released 2026-11-26:** app `v3.0.0-accountable` (code 51) and `server-v2.0.0`, deployed 04:37 UTC (backups and log in
-  the VPS hardening log). Phones enrolled before the wipe get "unknown device" and reopen Server: a new enrollment code
-  is needed (admin page → People).
-- **Prototype (design canvas, all 8 screens):** https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco. Logan: "i think i
-  like that". The screen files were only in a session scratchpad; read them back with Artifact `read` and `path`.
+- **Live:** app `v3.1.0-accountable` (code 52) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
+  `/etc/ffbackend/env.bak-20261126-1539`, `/var/backups/ffbackend-data-pre2.1.0-20261126-1539.tgz`; logged in the VPS
+  hardening log.
+- **Logan's first 3.0.0 test:** "I love it, it was quick and seamless". Found: the second phone said "Not set up" though
+  it got reports. Fixed in 3.1.0 (PR #123): joining a report enrolls the phone on that server with its partner token
+  (`X-FF-Partner`, one phone per partner). Logan's model: two kinds of phone, on a server or not.
+- **Groups (plan 14, PR #125):** up to 6, anyone with the code, all mutual, several per phone (4 max), 20 watchers per
+  phone. Pairs both ways; a pair two groups (or a group and an invite) made is one pair. Group pairs aren't removed one at
+  a time: leaving the group is how.
+- **Accounts:** none, decided (Logan: "Keep without accounts for now").
+- **Prototype canvas (13 screens, groups are 9–13):** https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco. Logan: "Those
+  look great".
 
 ## Tested
 
-| What | How | Result |
-|---|---|---|
-| Server | `./gradlew -p server test` (54, incl. `CompatLevel2Test`) | pass |
-| App | `testDebugUnitTest assembleDebug lint` | pass, 0 lint errors |
-| Crypto interop | Java `Ecies` seals, browser WebCrypto code (copied from `report.js`) opens | pass |
-| Browser end to end | headless Chrome, local server, a Node script as the owner's phone | join by code → waiting → key sealed → report opens; second browser offered "Add this browser" |
-| App on a phone | — | **not done** (no emulator here) |
+| What | Result |
+|---|---|
+| Server tests (59, incl. `GroupsTest` ×4, `CompatLevel2Test`) | pass |
+| App `testDebugUnitTest assembleDebug lint` | pass, 0 lint errors |
+| Live `/v1/version` | protocol 2, oldest 2, server 2.1.0 |
+| Groups on phones | **not done** |
 
 ## Next, in order
 
-1. ~~Merge, release server 2.0.0 and app 3.0.0~~ DONE (2026-11-26).
-2. Logan tests on both phones:
-   - add a partner by code and by email;
-   - join from the second phone;
-   - open the report in a browser;
-   - remove and leave.
+1. Logan tests on both phones: update; Pixel Partners → Start a group; second phone Join with a code or scan; each sees
+   the other's report within ~2 min; leave on one, both stop.
+2. Fix what that finds; unpause production after a good test.
 
 ## Parked (don't build unless Logan asks)
 
 Replies to alerts, a partner guide page (closed PR #108), push (notes in plan 12), the partner UI options (plan 12),
-F-Droid (plan 11), SMS (Twilio scope). Groups are back as plan 14 (2026-11-26).
+F-Droid (plan 11), SMS (Twilio scope). Removing someone from a group (plan 14: not in v1).
