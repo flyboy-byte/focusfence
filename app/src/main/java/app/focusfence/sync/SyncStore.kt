@@ -162,6 +162,9 @@ object SyncStore {
         val reportUrl: String = "",
         /** Server time of the newest alert already shown from the server feed (/p/{token}/alerts). */
         val serverAlertT: Long = 0,
+        /** Plan 12 §5: alerts held for quiet hours or the daily message ("t\ttext" per line), and the day last sent. */
+        val held: String = "",
+        val heldDay: Long = 0,
     ) {
         val keys: Pairing.Keys by lazy { Pairing.derive(Pairing.decode(code)!!) }
     }
@@ -206,6 +209,8 @@ object SyncStore {
             staleNotified = m["stale"] == true,
             reportUrl = m["report_url"] as? String ?: "",
             serverAlertT = m["server_alert_t"] as? Long ?: 0,
+            held = m["held"] as? String ?: "",
+            heldDay = m["held_day"] as? Long ?: 0,
         )
     }.sortedBy { it.addedMs }
 
@@ -215,7 +220,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "code" to w.code, "name" to w.name, "added" to w.addedMs, "after" to w.after,
                 "last_msg" to w.lastMsgMs, "digest" to w.digest, "alerts" to w.alerts, "stale" to w.staleNotified,
-                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT,
+                "report_url" to w.reportUrl, "server_alert_t" to w.serverAlertT, "held" to w.held, "held_day" to w.heldDay,
             )),
         ).commit()
     }

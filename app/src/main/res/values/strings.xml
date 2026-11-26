@@ -544,6 +544,7 @@
     <string name="owner_notice_title">Your partners changed</string>
     <string name="ask_answer_title">A partner answered</string>
     <string name="acc_looked">looked %1$s</string>
+    <string name="partner_held_title">%1$d held for you:</string>
     <string name="acc_not_looked">hasn\'t opened the report yet</string>
     <string name="ask_offer">Ask your partners for an OK to %1$s? Any one of them can approve it from their report, and then you can do just this for 15 minutes. If nobody answers, you can still wait.</string>
     <string name="ask_button">Ask a partner</string>

@@ -18,6 +18,7 @@ import androidx.work.WorkerParameters
 import app.focusfence.PartnerReportActivity
 import app.focusfence.R
 import app.focusfence.data.EventLog
+import app.focusfence.dns.AlertPrefs
 import app.focusfence.dns.InviteLink
 import app.focusfence.dns.LogEvents
 import app.focusfence.dns.B64
@@ -325,6 +326,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         if (feed != null) {
             w = feed.first
             if (feed.second.isNotEmpty()) notify(ctx, w, feed.second.joinToString("\n"))
+            w = flushHeld(ctx, w, now)
         }
         val k = w.keys
         val r = api.get("/v1/mailbox/${k.mailboxId}/msgs?after=${w.after}", mapOf("X-FF-Token" to k.token))
@@ -373,17 +375,39 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         if (r.code != 200 || arr == null) return null
         var w = start
         val lines = ArrayList<String>()
+        // Plan 12 §5: this partner's own choices, in this phone's time zone (absent from an older server: everything).
+        val prefs = feedPrefs(r.body)
+        val hour = AlertPrefs.hour(prefs, now)
         for (i in 0 until arr.length()) {
             val a = arr.optJSONObject(i) ?: continue
             val t = a.optLong("t")
             val text = a.optString("text").takeIf { it.isNotBlank() } ?: continue
             if (t <= w.serverAlertT) continue
             // The first read after an update can return two weeks of history: keep it, but only notify what's recent.
-            if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) lines += text
+            if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) when (AlertPrefs.route(prefs, a.optBoolean("important", true), hour)) {
+                AlertPrefs.Route.NOW -> lines += text
+                AlertPrefs.Route.HOLD -> w = w.copy(held = (w.held.lines().filter { it.isNotBlank() } + "$t\t${text.replace('\n', ' ').replace('\t', ' ')}").takeLast(50).joinToString("\n"))
+                AlertPrefs.Route.SKIP -> Unit
+            }
             val line = "$t\t${text.replace('\n', ' ').replace('\t', ' ')}"
             w = w.copy(serverAlertT = t, alerts = (w.alerts.lines().filter { it.isNotBlank() } + line).takeLast(50).joinToString("\n"))
         }
         return w to lines
+    }
+
+    private fun feedPrefs(body: org.json.JSONObject?) = AlertPrefs.Prefs(
+        AlertPrefs.Level.fromKey(body?.optString("level")), body?.optBoolean("quiet") == true, java.time.ZoneId.systemDefault().id,
+    )
+
+    /** Plan 12 §5: held alerts go out as one notification at 7 this phone's time, never inside quiet hours. */
+    private fun flushHeld(ctx: Context, w: SyncStore.Watch, now: Long): SyncStore.Watch {
+        val held = w.held.lines().filter { it.isNotBlank() }
+        if (held.isEmpty()) return w
+        val prefs = AlertPrefs.Prefs(quiet = true, zone = java.time.ZoneId.systemDefault().id) // the stricter of the two rules
+        val day = AlertPrefs.day(prefs, now)
+        if (!AlertPrefs.flushDue(prefs, AlertPrefs.hour(prefs, now), day, w.heldDay, true)) return w
+        notify(ctx, w, ctx.getString(R.string.partner_held_title, held.size) + "\n" + held.joinToString("\n") { it.substringAfter('\t') })
+        return w.copy(held = "", heldDay = day)
     }
 
     private fun notify(ctx: Context, w: SyncStore.Watch, text: String) {
@@ -434,23 +458,27 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val deviceId = SyncStore.deviceId(ctx) ?: return
             val after = SyncStore.uploadedSeq(ctx)
             val lines = ArrayList<String>()
+            val important = ArrayList<Boolean>()
             var maxSeq = after
             EventLog.scan(EventLog.Channel.ACTIVITY, afterSeq = after) { line ->
                 val seq = EventLog.seqOf(line) ?: return@scan true
                 if (seq <= after) return@scan true
                 if (seq > maxSeq) maxSeq = seq
                 if (line.contains("\"type\":\"integ\"") || line.contains("\"type\":\"svc\"")) {
-                    LogJson.decode(line)?.let(Digest::urgentText)?.let { lines += it }
+                    LogJson.decode(line)?.let { f -> Digest.urgentText(f)?.let { lines += it; important += AlertPrefs.isImportant(f) } }
                 }
                 true
             }
             if (lines.isNotEmpty()) {
                 val sent = lines.takeLast(20)
+                val sentImportant = important.takeLast(20)
                 val joined = sent.joinToString("\n")
                 val r = api.post("/v1/alerts", JSONObject().apply {
                     put("deviceId", deviceId)
                     put("t", now)
                     put("lines", org.json.JSONArray(sent))
+                    // Plan 12 §5: housekeeping lines, so partners who chose fewer alerts get them later or not at all.
+                    put("minor", org.json.JSONArray(sent.indices.filter { !sentImportant[it] }))
                     put("signature", DeviceKey.sign("alerts|$deviceId|$now|${sha256(joined)}".toByteArray()))
                 })
                 if (r.code != 200) throw IllegalStateException("alerts HTTP ${r.code} ${r.body?.optString("error")}")

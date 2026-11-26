@@ -35,6 +35,15 @@
   var saved = fromHash ? saveKey(fromHash) : false;
   if (fromHash) history.replaceState(null, '', location.pathname + location.search);
 
+  // Plan 12 §5: quiet hours and the daily message use the partner's own time zone, which only the browser knows.
+  var tzIn = document.getElementById('tz');
+  if (tzIn) {
+    try {
+      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (zone) { tzIn.value = zone; var tzName = document.getElementById('tzname'); if (tzName) tzName.textContent = zone; }
+    } catch (e) { /* the stored zone stays */ }
+  }
+
   var page = document.body.getAttribute('data-page');
   if (page === 'key') {
     var st = document.getElementById('keystatus');

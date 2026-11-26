@@ -32,26 +32,53 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
         }
     }
 
-    suspend fun toPartners(device: Store.Device, subject: String, lines: List<String>) {
+    /**
+     * [minor] holds the indices of housekeeping lines ([app.focusfence.dns.AlertPrefs.isImportant] false): a partner who
+     * chose fewer alerts gets those in the daily message, or not at all (plan 12 §5).
+     */
+    suspend fun toPartners(device: Store.Device, subject: String, lines: List<String>, minor: Set<Int> = emptySet()) {
         if (lines.isEmpty()) return
         val now = cfg.now()
-        // App partners poll this (/p/{token}/alerts); email and text go out below.
-        store.addAlerts(device.id, lines, now)
-        for (p in device.partners) {
-            if (!p.confirmed) continue
-            val html = "<p>${Web.esc(subject)}</p><ul>" +
-                lines.joinToString("") { "<li>${Web.esc(it)}</li>" } +
-                "</ul><p><a href=\"${link(p)}\">Open the report</a>. If it says the key is missing, open the Focus Fence link the phone's owner sent you instead: that one always works.</p>"
-            if (mayEmail(p.email)) notifier.email(p.email, "Focus Fence: $subject", html)
-            val phone = p.phone
-            if (p.phoneVerified && phone != null && now - p.lastSmsMs >= cfg.smsMinIntervalMs) {
-                val more = if (lines.size > 1) " (+${lines.size - 1} more)" else ""
-                if (notifier.sms(phone, "Focus Fence: ${lines.first()}$more. ${link(p)}")) {
-                    store.updateDevice(device.id) { d ->
-                        d.partners.firstOrNull { it.id == p.id }?.lastSmsMs = now
-                    }
-                }
+        // App partners poll this (/p/{token}/alerts) and apply their own choices; email and text go out below.
+        store.addAlerts(device.id, lines, now, minor)
+        for (partner in device.partners) {
+            if (!partner.confirmed) continue
+            val prefs = partner.prefs()
+            val hour = app.focusfence.dns.AlertPrefs.hour(prefs, now)
+            val routes = lines.indices.map { app.focusfence.dns.AlertPrefs.route(prefs, it !in minor, hour) }
+            val hold = lines.filterIndexed { i, _ -> routes[i] == app.focusfence.dns.AlertPrefs.Route.HOLD }
+            if (hold.isNotEmpty()) store.updateDevice(device.id) { d ->
+                d.partners.firstOrNull { it.id == partner.id }?.let { it.held = (it.held + hold.map { l -> Store.AlertEntry(now, l) }).takeLast(HELD_KEEP) }
             }
+            val sendNow = lines.filterIndexed { i, _ -> routes[i] == app.focusfence.dns.AlertPrefs.Route.NOW }
+            if (sendNow.isNotEmpty()) sendLines(device.id, partner, subject, sendNow, now)
+        }
+    }
+
+    private suspend fun sendLines(deviceId: String, p: Store.Partner, subject: String, lines: List<String>, now: Long) {
+        val html = "<p>${Web.esc(subject)}</p><ul>" +
+            lines.joinToString("") { "<li>${Web.esc(it)}</li>" } +
+            "</ul><p><a href=\"${link(p)}\">Open the report</a>. If it says the key is missing, open the Focus Fence link the phone's owner sent you instead: that one always works.</p>"
+        if (mayEmail(p.email)) notifier.email(p.email, "Focus Fence: $subject", html)
+        val phone = p.phone
+        if (p.phoneVerified && phone != null && now - p.lastSmsMs >= cfg.smsMinIntervalMs) {
+            val more = if (lines.size > 1) " (+${lines.size - 1} more)" else ""
+            if (notifier.sms(phone, "Focus Fence: ${lines.first()}$more. ${link(p)}")) {
+                store.updateDevice(deviceId) { d -> d.partners.firstOrNull { it.id == p.id }?.lastSmsMs = now }
+            }
+        }
+    }
+
+    /** Plan 12 §5: what each partner was holding goes out together, once a day at 7 their time, never inside quiet hours. */
+    private suspend fun flushHeld(d: Store.Device, now: Long) {
+        for (p in d.partners) {
+            if (!p.confirmed || p.held.isEmpty()) continue
+            val prefs = p.prefs()
+            val day = app.focusfence.dns.AlertPrefs.day(prefs, now)
+            if (!app.focusfence.dns.AlertPrefs.flushDue(prefs, app.focusfence.dns.AlertPrefs.hour(prefs, now), day, p.lastFlushDay, true)) continue
+            val lines = p.held.map { "${Web.time(it.t)}: ${it.text}" }
+            store.updateDevice(d.id) { dev -> dev.partners.firstOrNull { it.id == p.id }?.apply { held = emptyList(); lastFlushDay = day } }
+            sendLines(d.id, p, "${lines.size} alert${if (lines.size == 1) "" else "s"} held for you", lines, now)
         }
     }
 
@@ -66,13 +93,14 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
         val silentSince = store.markSeen(deviceId, cfg.now()) ?: return
         val device = store.device(deviceId) ?: return
         val back = "The phone is checking in again after ${minutes(cfg.now() - silentSince)} without a check-in."
-        toPartners(device, "phone is back", listOf(if (account != null) "$back $account" else back))
+        toPartners(device, "phone is back", listOf(if (account != null) "$back $account" else back), minor = setOf(0))
     }
 
     /** One pass of the background checks: silent devices and weekly reports. */
     suspend fun sweep() {
         val now = cfg.now()
         for (d in store.allDevices()) {
+            flushHeld(d, now)
             if (d.partners.any { !it.confirmed && now - it.linkedMs > cfg.unconfirmedTtlMs }) {
                 store.updateDevice(d.id) { dev -> dev.partners = dev.partners.filter { it.confirmed || now - it.linkedMs <= cfg.unconfirmedTtlMs } }
             }
@@ -101,6 +129,9 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
     }
 
     companion object {
+        /** Held alerts per partner: a week of a busy phone still fits; the report has the rest. */
+        const val HELD_KEEP = 50
+
         /** "50 minutes", "3 h 5 min". */
         fun minutes(ms: Long): String {
             val m = ms / 60_000

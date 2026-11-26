@@ -108,7 +108,8 @@ class Config(
 /** Sent with a 409 so the phone can resume from where the server actually is. */
 @Serializable data class CursorResponse(val error: String, val expectedNextSeq: Long, val lastHash: String)
 @Serializable data class ReportRequest(val deviceId: String, val t: Long, val from: Long, val to: Long, val blob: String, val signature: String)
-@Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String)
+/** [minor]: indices of housekeeping lines (plan 12 §5). Unsigned: getting it wrong only changes when a partner hears. */
+@Serializable data class AlertsRequest(val deviceId: String, val t: Long, val lines: List<String>, val signature: String, val minor: List<Int> = emptyList())
 @Serializable data class VersionResponse(val protocol: Int, val oldestApp: Int, val server: String)
 /** The release this server was built from (the tarball's VERSION file), or "dev". */
 val serverVersion: String by lazy {
@@ -118,7 +119,11 @@ val serverVersion: String by lazy {
         java.io.File(jar.parentFile.parentFile, "VERSION").takeIf { it.isFile }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
     }.getOrNull() ?: "dev"
 }
-@Serializable data class AlertFeed(val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>)
+@Serializable data class AlertFeed(
+    val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>,
+    /** Plan 12 §5: this partner's own choices, which their app applies in their phone's time zone. */
+    val level: String = "all", val quiet: Boolean = false,
+)
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(
     val deviceId: String, val t: Long, val lastSeq: Long, val signature: String,
@@ -499,9 +504,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/v1/alerts") {
             val req = call.receive<AlertsRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
-            val lines = req.lines.take(20).map { l -> l.filter { !it.isISOControl() || it == ' ' }.take(300) }.filter { it.isNotBlank() }
+            val kept = req.lines.take(20).mapIndexed { i, l -> l.filter { !it.isISOControl() || it == ' ' }.take(300) to (i in req.minor) }
+                .filter { it.first.isNotBlank() }
+            val lines = kept.map { it.first }
             if (!signedOk(device, "alerts", req.t, Integrity.sha256(req.lines.take(20).joinToString("\n")), req.signature)) return@post call.unauthorized()
-            if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines)
+            if (lines.isNotEmpty()) alerts.toPartners(device, "protection changed", lines, kept.indices.filter { kept[it].second }.toSet())
             call.respond(OkResponse())
         }
 
@@ -680,6 +687,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 call.request.queryParameters["unlock"] == "approved" -> "Approved. They've been told, and so have any other partners."
                 call.request.queryParameters["unlock"] == "denied" -> "You said no. They've been told. They can still wait out the delay."
                 call.request.queryParameters["unlock"] == "late" -> "That request was already answered or has lapsed."
+                call.request.queryParameters["prefs"] == "saved" -> "Saved. Alerts now reach you the way you chose."
                 else -> null
             }
             val ask = device.unlockRequest?.takeIf { app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, cfg.now()) && partner.confirmed }
@@ -705,7 +713,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
             call.response.headers.append("Cache-Control", "no-store")
             call.respond(AlertFeed(cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, cfg.staleMs,
-                if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList()))
+                if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList(),
+                partner.alertLevel, partner.quiet))
         }
 
         // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
@@ -757,6 +766,21 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.respondRedirect("/p/$token")
         }
 
+        // Plan 12 §5: how alerts reach this partner. Their own page sets it; nobody else can.
+        post("/p/{token}/prefs") {
+            val token = call.parameters["token"].orEmpty()
+            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val form = call.receiveParameters()
+            val level = app.focusfence.dns.AlertPrefs.Level.fromKey(form["level"]).key
+            val quiet = form["quiet"] == "on"
+            val zone = app.focusfence.dns.AlertPrefs.cleanZone(form["tz"])
+            store.updateDevice(device.id) { d ->
+                d.partners.firstOrNull { it.id == partner.id }?.apply { alertLevel = level; this.quiet = quiet; if (zone != null) this.zone = zone }
+                d.appPartners = d.appPartners.map { if (it.id == partner.id) it.copy(alertLevel = level, quiet = quiet) else it }
+            }
+            call.respondRedirect("/p/$token?prefs=saved")
+        }
+
         // Plan 12 §3: any one partner answers; the first answer counts.
         post("/p/{token}/unlock/{id}") {
             val token = call.parameters["token"].orEmpty()
@@ -774,7 +798,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val r = answered ?: return@post call.respondRedirect("/p/$token?unlock=late")
             val action = app.focusfence.dns.GuardPolicy.Action.fromKey(r.action)
             if (action != null) store.device(device.id)?.let {
-                alerts.toPartners(it, if (approve) "a partner approved" else "a partner said no", listOf(app.focusfence.dns.UnlockAsk.answerLine(partner.name, approve, action)))
+                alerts.toPartners(it, if (approve) "a partner approved" else "a partner said no", listOf(app.focusfence.dns.UnlockAsk.answerLine(partner.name, approve, action)), minor = setOf(0))
             }
             call.respondRedirect("/p/$token?unlock=${if (approve) "approved" else "denied"}")
         }
@@ -789,7 +813,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             store.addOwnerNotice(device.id, "$who stopped being your accountability partner.", cfg.now())
             store.device(device.id)?.let { d ->
                 if (d.partners.any { it.confirmed } || d.appPartners.isNotEmpty())
-                    alerts.toPartners(d, "a partner left", listOf("$who stopped being an accountability partner for this phone."))
+                    alerts.toPartners(d, "a partner left", listOf("$who stopped being an accountability partner for this phone."), minor = setOf(0))
             }
             call.respondText(Web.message("Done", "You're no longer their accountability partner. They've been told."), ContentType.Text.Html)
         }

@@ -456,6 +456,68 @@ class ServerTest {
     }
 
     @Test
+    fun aPartnersQuietHoursAndDailyMessageFollowTheirOwnClock() = run { http ->
+        val id = http.enroll()
+        val token = http.joinConfirmed(id)
+        val email = store.device(id)!!.partners.single().email
+        val alertsSvc = Alerts(store, notifier, cfg)
+        val h = 3_600_000L
+        // The phone keeps checking in throughout, so the only alerts are the ones sent below.
+        val sweeper = object {
+            suspend fun sweep() { store.updateDevice(id) { it.lastSeenMs = clock }; alertsSvc.sweep() }
+            suspend fun toPartners(d: Store.Device, subject: String, lines: List<String>, minor: Set<Int>) = alertsSvc.toPartners(d, subject, lines, minor)
+        }
+        // 2027-01-15 08:00 UTC is 01:00 in Denver: inside their quiet hours.
+        assertEquals(HttpStatusCode.Found, http.submitForm("/p/$token/prefs", Parameters.build {
+            append("level", "daily"); append("quiet", "on"); append("tz", "America/Denver")
+        }).status)
+        assertEquals("daily" to "America/Denver", store.device(id)!!.partners.single().let { it.alertLevel to it.zone })
+        assertTrue(http.get("/p/$token?prefs=saved").bodyAsText().contains("Saved."))
+        notifier.emails.clear()
+        fun mails() = notifier.emails.filter { it.first == email }
+
+        sweeper.toPartners(store.device(id)!!, "protection changed", listOf("Filter turned off", "Group: Alex joined"), minor = setOf(1))
+        assertTrue(mails().isEmpty(), "nothing at night")
+        assertEquals(2, store.device(id)!!.partners.single().held.size)
+        // The app partners' feed still has both, flagged, with this partner's choices for an app partner to apply.
+        val feed = json.decodeFromString(AlertFeed.serializer(), http.get("/p/$token/alerts").bodyAsText())
+        assertEquals(listOf(true, false), feed.alerts.map { it.important })
+        assertEquals("daily" to true, feed.level to feed.quiet)
+
+        clock += 5 * h // 06:00 Denver: still quiet
+        sweeper.sweep()
+        assertTrue(mails().isEmpty())
+        clock += h // 07:00 Denver: one message with the night's alerts
+        sweeper.sweep()
+        assertEquals(1, mails().size)
+        assertTrue(mails().single().second.contains("2 alerts held for you"))
+        assertTrue(mails().single().third.contains("Filter turned off") && mails().single().third.contains("Group: Alex joined"))
+        sweeper.sweep()
+        assertEquals(1, mails().size, "once")
+
+        // 09:00 Denver: important goes at once, housekeeping waits for tomorrow's message.
+        clock += 2 * h
+        sweeper.toPartners(store.device(id)!!, "protection changed", listOf("Strict mode turned off", "A partner was removed"), minor = setOf(1))
+        assertEquals(2, mails().size)
+        assertTrue(mails().last().third.contains("Strict mode turned off") && !mails().last().third.contains("A partner was removed"))
+        clock += 10 * h
+        sweeper.sweep()
+        assertEquals(2, mails().size, "same day: waits")
+        clock += 12 * h // 07:00 next day
+        sweeper.sweep()
+        assertEquals(3, mails().size)
+        assertTrue(mails().last().third.contains("A partner was removed"))
+
+        // "Important only" drops housekeeping instead of holding it.
+        http.submitForm("/p/$token/prefs", Parameters.build { append("level", "important") })
+        clock += 6 * h // 13:00, quiet hours now off
+        sweeper.toPartners(store.device(id)!!, "phone is back", listOf("The phone is checking in again"), minor = setOf(0))
+        assertTrue(store.device(id)!!.partners.single().held.isEmpty())
+        assertEquals(3, mails().size)
+        assertEquals("America/Denver", store.device(id)!!.partners.single().zone, "a form without a zone keeps the old one")
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L
