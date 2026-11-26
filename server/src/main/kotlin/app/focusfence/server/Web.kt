@@ -148,6 +148,7 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         // D-023: the report is sealed on the phone; /static/report.js opens it here with the key from the partner's link.
         append("<div id='report'><p class='muted'>Opening the encrypted report…</p></div>")
         append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
+        append("<p class='muted'>The phone's owner can see when you last opened this report, not what you looked at.</p>")
         append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
         // An app partner (no email, D-035) gets alerts in their own app: no texts section.
         if (partner.email.isNotEmpty()) append("<h2>Text alerts</h2>")

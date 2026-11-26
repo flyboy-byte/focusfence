@@ -28,11 +28,11 @@ answer (batched), build in small PRs ranked by value, and mark a section done wh
 |---|---|---|---|
 | 0 | Two-phone field test of what's built | Second phone as an app partner: invite → join → first report → first alert → unlock code, and an email partner in a normal browser; findings recorded here | waiting on Logan 📱 |
 | 1 | A partner leaving is never silent | The owner gets a notification and a log record; the other partners are told; an app partner's Remove tells the server; server test | building |
-| 2 | "Seen": owners know partners are looking | The owner sees when each partner last opened the report or an alert | Logan hadn't thought of it (2026-11-25); ask again before building |
+| 2 | "Seen": owners know partners are looking | The owner sees when each partner last opened the report | built 🧪 (PR pending), not yet on a phone |
 | 3 | Approve an unlock from the report page | Email or app partner taps Approve/Deny on a pending request; the phone acts on it within a minute while the screen is on | built 🧪 (PR pending), not yet on a phone |
 | 4 | Replies to alerts | A partner answers an alert; the owner sees the answer in the app | parked: Logan's "random things to add" list (below) |
-| 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | later batch of questions |
-| 6 | Faster alerts for app partners | An urgent alert reaches an app partner in under a minute without Google services | later; UnifiedPush is the candidate |
+| 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | next: all three (urgent only / everything, daily digest, quiet hours) |
+| 6 | Faster alerts for app partners | An urgent alert reaches an app partner in under a minute without Google services | parked (Logan); research Ever Accountable / Accountable2You first |
 | 7 | Owner's partner list and keys | Each partner's status (pending / active / last seen); a new report key that cuts off old links | after 2 |
 | 8 | One path | Alerts and unlock codes off the pairing mailbox, onto the server route | after 3 |
 
@@ -52,6 +52,13 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 - **Seen:** "Hmm never thot of that". Not decided; the default if asked again is a quiet "looked 2 h ago" in the
   Partners list, with no notification.
 - **Replies:** "Interesting… document this for later when I'm looking for random things to add".
+- **Seen, asked again:** yes, quietly: "looked 2 h ago" in the Partners list, no notifications, and the partner page
+  says the owner can see it.
+- **Partner settings:** all three, "different levels of alerts etc is great stuff": urgent only vs everything, a
+  daily digest, and quiet hours.
+- **Push:** "seems like way too much". Parked. If it's ever pursued, first research how Ever Accountable and
+  Accountable2You deliver partner alerts (parity), then decide.
+- **Release:** keep building, release later in a batch.
 
 ## Ideas for later (Logan's "random things to add" list)
 
@@ -65,6 +72,16 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 ## Notes per section
 
 Notes are added here as each section runs.
+
+### 2. Seen (built 2026-11-25)
+
+- **What counts as a look:** a fetch of `/p/{token}/data`, which only the report page's script makes (in a browser or
+  the app partner's WebView). Opening the page HTML (what mail link scanners do) and the app partner's background
+  `/alerts` checks don't count. `Store.markViewed` writes at most every 5 minutes.
+- **Owner side:** `/v1/partners/list` carries `lastViewMs`. Partners shows "looked 2 hours ago" or "hasn't opened the
+  report yet", and nothing on an older server. The partner page says: "The phone's owner can see when you last opened
+  this report, not what you looked at."
+- Test: `ServerTest.theOwnerSeesWhenEachPartnerLastOpenedTheReport`.
 
 ### 1. A partner leaving (built 2026-11-25)
 

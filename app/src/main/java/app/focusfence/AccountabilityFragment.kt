@@ -182,7 +182,9 @@ class AccountabilityFragment : Fragment() {
             return
         }
         for (p in pairings) {
-            val sub = if (p.pending) getString(R.string.acc_pending) else getString(R.string.acc_in_app)
+            val looked = appPartners.firstOrNull { p.inviteId.isNotEmpty() && it.inviteId == p.inviteId }?.lastViewMs
+            val sub = (if (p.pending) getString(R.string.acc_pending) else getString(R.string.acc_in_app)) +
+                if (p.pending) "" else looked(looked)
             c.addView(row(p.name, sub, getString(R.string.acc_remove)) {
                 UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
                     background({ Accountability.removePairing(requireContext(), p) }) { bind() }
@@ -190,13 +192,21 @@ class AccountabilityFragment : Fragment() {
             })
         }
         for (p in emailPartners) {
-            val sub = p.email + if (p.sms) " · " + getString(R.string.acc_sms_on) else ""
+            val sub = p.email + (if (p.sms) " · " + getString(R.string.acc_sms_on) else "") + looked(p.lastViewMs)
             c.addView(row(p.name, sub, getString(R.string.acc_remove)) {
                 UiUtil.guard(requireContext(), GuardPolicy.Action.REMOVE_PARTNER) {
                     background({ Accountability.unlink(requireContext(), p) }) { refreshPartners() }
                 }
             })
         }
+    }
+
+    /** Plan 12 §2: " · looked 2 hours ago", " · hasn't opened the report yet", or nothing when the server can't say. */
+    private fun looked(ms: Long?): String = when {
+        ms == null || ms < 0 -> ""
+        ms == 0L -> " · " + getString(R.string.acc_not_looked)
+        else -> " · " + getString(R.string.acc_looked, android.text.format.DateUtils.getRelativeTimeSpanString(
+            ms, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS))
     }
 
     private fun invite() {

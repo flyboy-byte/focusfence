@@ -58,6 +58,8 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var linkHash: String? = null,
         /** The invite they joined with, so the inviting phone can tell which of its invites went to the web (D-035). */
         val inviteId: String = "",
+        /** Plan 12 §2: when they last opened the report (its data, fetched by the page's script). The owner sees it. */
+        var lastViewMs: Long = 0,
     )
 
     @Serializable
@@ -72,9 +74,11 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val id: String, val deviceId: String, val name: String, val linkedMs: Long, val inviteId: String = "",
         /** Their private report link (/p/{token}), the same page and data an email partner gets (2026-11-25). */
         val token: String = "",
+        /** Plan 12 §2: as [Partner.lastViewMs]. Their app's background alert checks don't count, only opening the report. */
+        val lastViewMs: Long = 0,
     ) {
         /** As the partner pages see them: no email, no texts, always confirmed. */
-        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true)
+        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs)
     }
 
     @Serializable
@@ -266,6 +270,20 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         }
     }
 
+    /**
+     * Plan 12 §2: a partner opened the report. Written at most every [VIEW_EVERY_MS], so a page left open or reloaded
+     * doesn't rewrite the device file each time.
+     */
+    fun markViewed(deviceId: String, partnerId: String, now: Long) {
+        val d = device(deviceId) ?: return
+        val last = d.partners.firstOrNull { it.id == partnerId }?.lastViewMs ?: d.appPartners.firstOrNull { it.id == partnerId }?.lastViewMs ?: return
+        if (now - last < VIEW_EVERY_MS) return
+        updateDevice(deviceId) { dev ->
+            dev.partners.firstOrNull { it.id == partnerId }?.lastViewMs = now
+            dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastViewMs = now) else it }
+        }
+    }
+
     fun addOwnerNotice(id: String, text: String, now: Long) = updateDevice(id) { d ->
         d.ownerNotices = (d.ownerNotices + AlertEntry(now, text)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
     }
@@ -359,6 +377,7 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     companion object {
         const val REPORTS_KEEP = 240
         const val ALERTS_KEEP = 100
+        const val VIEW_EVERY_MS = 5 * 60_000L
         const val ALERTS_MAX_AGE_MS = 14L * 24 * 3_600_000
         const val REPORTS_MAX_AGE_MS = 9L * 24 * 3_600_000
         const val REPORT_MAX_CHARS = 64 * 1024
