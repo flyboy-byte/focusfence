@@ -8,6 +8,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ### Added
 - **partners:** Scan a QR code opens the camera from Join; plan 15 scoped from the repo assessment (`5699a22`, [#130](https://github.com/flyboy-byte/focusfence/pull/130))
+### Changed
+- Share an invite as a QR picture; one join box for code, link or message (`a60b08a`, [#132](https://github.com/flyboy-byte/focusfence/pull/132))
 ### Docs
 - README for 3.1 (partners, groups, what's verified), and the privacy, limits and architecture notes current with plans 13 and 14 (`9131cd6`, [#129](https://github.com/flyboy-byte/focusfence/pull/129))
 
