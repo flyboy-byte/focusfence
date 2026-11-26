@@ -82,11 +82,46 @@ reach them.
 - **Each old path's compat tests are deleted with it.** The level-1 compat suite stays only as long as level 1 is
   served, which it won't be.
 
+## Logan's answers (2026-11-26)
+
+1. **Invites:** all three (email, code, QR code), "but either one is great". **The code is at most 6–8
+   characters.**
+2. **No approval step:** "trust who uses the invite, more permission is clutter". The first device to use an invite
+   becomes that partner.
+3. **Groups:** "kept as the idea, but not enforced". Not in the rebuild. The idea is kept in a scope note, like
+   F-Droid.
+4. **Text alerts:** a scope only, for if Logan moves to Twilio ("that's a commitment"). Not in the rebuild.
+5. **Releases:** normal releases while paused.
+
+## The design, revised by those answers
+
+The owner's phone still hands the report key to each partner device, but **automatically**: no Allow tap.
+
+1. **Invite:**
+   - **Email:** type their address, and the server emails a plain link with no key in it.
+   - **Code:** the app shows a 6–8 character code (e.g. `K7Q4-M2XD`), valid 24 h, used once.
+   - **QR code:** the same code as a QR, for someone in the room or your own second phone.
+2. **Join:**
+   - **Email link** on a phone with the app: opens the app ("Open in the app"), which joins.
+   - **Email link** in a browser: the page joins as a browser device.
+   - **Code or QR:** the partner types or scans it in the app.
+   - Whichever device uses the invite first makes its key pair and sends the public key. The invite is spent.
+3. **The key arrives on its own.** The server tells the owner's phone at its next check-in. While an invite is open,
+   the phone checks every minute for up to 30 minutes, like an ask, so a partner joining in person waits under a
+   minute. The phone seals the report key to the new device and says "Sam joined". The partner's screen shows "Waiting
+   for Logan's phone…" until then.
+4. **More devices for the same partner** (a laptop browser later): "Add a device" on the partner's side gives a
+   one-time code for that same partner, and the key arrives the same way. Email alert links then open the report
+   wherever that partner has a device.
+5. **Trust, as Logan chose:** whoever uses an invite first is trusted. A server operator could therefore add a device
+   to a pending invite. That's accepted, because invites are single-use and short-lived, and the owner sees every
+   partner and device in the list ("Sam · phone · browser").
+
+**What's in the rebuild:** partners (one kind), email/code/QR invites, alert delivery by email or app notification
+with the plan 12 choices, ask a partner, seen, leaving. **Out:** groups, SMS, pairing keys, the mailbox, unlock codes
+from the pairing seed (an ask replaces them).
+
 ## Questions for Logan (next)
 
-1. Invite methods: email, code, QR code. All three, or which?
-2. Approve each partner device on the owner's phone (safest), or trust the first device to use the invite
-   (fewer taps, but the server operator could slip one in)?
-3. Groups (up to 4 phones seeing each other): keep, rebuild on this model, or drop for now?
-4. SMS alerts: keep or drop?
-5. While paused: test builds as GitHub pre-releases so only phones that opt in update, or normal releases?
+1. Unlock codes read aloud (from the pairing seed) go away; ask-a-partner replaces them. OK?
+2. Mockups next: a page of phone screens to look at on the Pixel, or rough sketches in this file?
