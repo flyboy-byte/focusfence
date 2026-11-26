@@ -6,8 +6,19 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Added
+- **partners:** Scan a QR code opens the camera from Join; plan 15 scoped from the repo assessment (`5699a22`, [#130](https://github.com/flyboy-byte/focusfence/pull/130))
+### Docs
+- README for 3.1 (partners, groups, what's verified), and the privacy, limits and architecture notes current with plans 13 and 14 (`9131cd6`, [#129](https://github.com/flyboy-byte/focusfence/pull/129))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.1-accountable
+
 ### Fixed
 - **a11y:** a browser's hidden address bar (video, scrolled toolbar) isn't a miss, and the poll slows (`3bd0926`, [#127](https://github.com/flyboy-byte/focusfence/pull/127))
+### Maintenance
+- release 3.1.1 (`bec112b`, [#128](https://github.com/flyboy-byte/focusfence/pull/128))
 
 _Undo any line with `git revert <commit>`._
 
