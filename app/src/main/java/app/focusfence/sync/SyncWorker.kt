@@ -50,6 +50,12 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             EventLog.init(ctx)
             runCatching { EventLog.flushBlocking() }
             val now = System.currentTimeMillis()
+            // A phone that joined someone's report before 3.0.1 isn't on the server itself yet (two kinds of phone: on a
+            // server or not). Daily at most, so a refusal doesn't knock on every sync.
+            if (SyncStore.deviceId(ctx) == null && now - SyncStore.partnerEnrollTriedMs(ctx) > 86_400_000) {
+                SyncStore.setPartnerEnrollTriedMs(ctx, now)
+                runCatching { Accountability.enrollAsPartner(ctx) }
+            }
             val api = Api(SyncStore.serverUrl(ctx))
             var error: String? = null
             var heartbeat = false

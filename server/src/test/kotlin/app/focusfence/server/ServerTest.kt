@@ -237,6 +237,26 @@ class ServerTest {
     }
 
     @Test
+    fun aPartnersPhoneEnrollsWithItsPartnerTokenOnceWithoutACode() =
+        run(Config(publicUrl = "https://ff.test", enrollToken = "boot-code", now = { clock })) { http ->
+            suspend fun enrollWith(header: String, value: String, k: KeyPair = newKeys()) = http.post("/v1/enroll") {
+                contentType(ContentType.Application.Json); header(P, "2"); header(header, value)
+                setBody("""{"publicKeySpki":"${spki(k)}"}""")
+            }
+            assertEquals(HttpStatusCode.Unauthorized, http.postJson("/v1/enroll", """{"publicKeySpki":"${spki(newKeys())}"}""").status)
+            val r = enrollWith("X-FF-Enroll", "boot-code", keys)
+            val owner = json.decodeFromString(EnrollResponse.serializer(), r.bodyAsText()).deviceId
+            val sam = http.joined(code = http.invite(owner).code)
+            assertEquals(HttpStatusCode.Unauthorized, enrollWith("X-FF-Partner", "x".repeat(30)).status)
+            val ok = enrollWith("X-FF-Partner", sam.token)
+            assertEquals(HttpStatusCode.OK, ok.status)
+            val samPhone = json.decodeFromString(EnrollResponse.serializer(), ok.bodyAsText()).deviceId
+            assertEquals(samPhone, store.device(owner)!!.partners.single().enrolledDeviceId)
+            // One phone per partner: the token can't mint more.
+            assertEquals(HttpStatusCode.Unauthorized, enrollWith("X-FF-Partner", sam.token).status)
+        }
+
+    @Test
     fun anEmailInviteProvesTheAddressAndSendsNothingElseUntilUsed() = run { http ->
         val id = http.enroll()
         val inv = http.invite(id, "Jo@Example.com")

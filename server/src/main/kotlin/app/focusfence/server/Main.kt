@@ -333,8 +333,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         post("/v1/enroll") {
             val req = call.receive<EnrollRequest>()
             if (!enrollLimiter.allow(call.client())) return@post call.respond(HttpStatusCode.TooManyRequests, ErrorResponse("slow down"))
-            // Only a phone being watched enrolls (plan 13: partners join with an invite and need no account here).
+            // Every app user on this server is enrolled, partners too: being someone's partner is a credential (one phone
+            // per partner token), so a partner's phone can be watched later without an enrollment code. Browsers don't enroll.
             var needsCode = cfg.enrollToken != null || enrollCodes.any()
+            val asPartner = call.request.headers["X-FF-Partner"].orEmpty().take(64).takeIf { it.length >= 20 }
+                ?.let { store.partnerByToken(it) }
+                ?.takeIf { (_, p) -> p.enrolledDeviceId.isEmpty() || store.device(p.enrolledDeviceId) == null }
+            if (asPartner != null) needsCode = false
             if (needsCode) {
                 val got = call.request.headers["X-FF-Enroll"].orEmpty()
                 val boot = cfg.enrollToken?.let { java.security.MessageDigest.isEqual(Integrity.sha256(got).toByteArray(), Integrity.sha256(it).toByteArray()) } ?: false
@@ -348,6 +353,9 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, ErrorResponse("enrollment code needed")) else ""
             val created = store.createDevice(req.publicKeySpki, cfg.now())
             if (usedCode.isNotEmpty()) store.updateDevice(created.id) { it.codeId = usedCode }
+            asPartner?.let { (owner, p) ->
+                store.updateDevice(owner.id) { d -> d.partners.firstOrNull { it.id == p.id }?.enrolledDeviceId = created.id }
+            }
             call.respond(EnrollResponse(created.id))
         }
 

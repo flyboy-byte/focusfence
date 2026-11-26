@@ -51,6 +51,8 @@ class Store(private val root: File) {
         /** Alerts waiting for quiet hours to end or for the daily message, oldest first (email only; the app holds its own). */
         var held: List<AlertEntry> = emptyList(),
         var lastFlushDay: Long = 0,
+        /** The phone this partner's token enrolled (one per partner), so a partner's own phone is on the server too. */
+        var enrolledDeviceId: String = "",
     ) {
         fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone, quietFrom, quietTo)
 

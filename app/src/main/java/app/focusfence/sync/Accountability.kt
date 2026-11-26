@@ -33,9 +33,14 @@ object Accountability {
     fun ensureEnrolled(ctx: Context): String {
         SyncStore.deviceId(ctx)?.let { return it }
         val code = SyncStore.enrollCode(ctx)
+        // Being someone's partner on this server is a credential too: no enrollment code needed.
+        val token = SyncStore.seen(ctx).firstOrNull { it.server.trimEnd('/') == SyncStore.serverUrl(ctx).trimEnd('/') && !it.linkGone }?.token
         val r = api(ctx).post(
             "/v1/enroll", JSONObject().put("publicKeySpki", DeviceKey.publicSpkiB64()),
-            if (code.isNotEmpty()) mapOf("X-FF-Enroll" to code) else emptyMap(),
+            buildMap {
+                if (code.isNotEmpty()) put("X-FF-Enroll", code)
+                if (token != null) put("X-FF-Partner", token)
+            },
         )
         val id = r.body?.optString("deviceId").orEmpty()
         check(r.code != 426) { r.body?.optString("error").orEmpty().ifEmpty { "Update Focus Fence: this server needs a newer version." } }
@@ -51,6 +56,20 @@ object Accountability {
         Sync.schedule(ctx)
         Sync.kick(ctx)
         return id
+    }
+
+    /**
+     * There are two kinds of phone, on a server or not: a phone that joined someone's report is on that server too, so
+     * it can be watched later without an enrollment code. Runs after joining, and at sync for phones that joined
+     * before 3.0.1. Never moves a phone that is already on another server.
+     */
+    fun enrollAsPartner(ctx: Context) {
+        if (SyncStore.deviceId(ctx) != null) return
+        val s = SyncStore.seen(ctx).firstOrNull { !it.linkGone } ?: return
+        val own = SyncStore.serverUrl(ctx).trimEnd('/')
+        if (own.isNotEmpty() && own != s.server.trimEnd('/')) return
+        if (own.isEmpty()) SyncStore.setServerUrl(ctx, s.server.trimEnd('/'))
+        ensureEnrolled(ctx)
     }
 
     private fun signed(ctx: Context, action: String, extra: String = ""): JSONObject {
@@ -120,6 +139,7 @@ object Accountability {
             wrappedKey = key.wrapped, owner = owner, addedMs = System.currentTimeMillis(),
         ))
         log("joined", owner)
+        runCatching { enrollAsPartner(ctx) } // best effort: sync tries again
         // The key comes at the owner phone's next check-in, about a minute while their invite was open: look every minute.
         Sync.schedule(ctx)
         Sync.kick(ctx)
