@@ -40,10 +40,14 @@ class PartnerReportActivity : AppCompatActivity() {
     // With the server report on screen, the unlock code (and Remove) are one tap away in the toolbar.
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         if (webShown) menu.add(0, MENU_CODE, 0, R.string.report_unlock_title)
+        // Always in the menu: with the server report on screen the page's own Remove button is out of sight, and a
+        // report whose owner removed you has nothing else to tap (Logan, 2026-11-25: "I can't remove the previous").
+        menu.add(0, MENU_REMOVE, 1, R.string.report_stop_seeing)
         return true
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.itemId == MENU_REMOVE) { binding.removeWatch.performClick(); return true }
         if (item.itemId != MENU_CODE) return super.onOptionsItemSelected(item)
         val w = SyncStore.watch(this, mailbox) ?: return true
         val now = System.currentTimeMillis()
@@ -157,5 +161,6 @@ class PartnerReportActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_MAILBOX = "mailbox"
         private const val MENU_CODE = 1
+        private const val MENU_REMOVE = 2
     }
 }

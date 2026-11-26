@@ -85,6 +85,7 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `err` | `comp=ask`, `what` = `network` or `http_<code>`, `detail` | "Ask a partner" couldn't be sent (409 no partner, 404 server too old) |
 | `svc` | `comp=notify`, `state=channels`, `detail` (`enabled=…,partner_alerts=<importance>,…`) | Whether partner notifications can show, per category; written when it changes (0 = switched off in Android) |
 | `svc` | `comp=partner`, `state=feed_prefs`, `detail` (`Name: level=…,quiet=22-7`) | A partner's own alert choices as their server reports them; written when they change |
+| `svc` | `comp=partner`, `state=link_gone`, `detail` (name) | A report this phone watched no longer exists on its server (404): its owner removed this partner, or left the server. Counter `feed_gone` |
 | `svc` | `comp=partner`, `state=via_server`, `detail` (name) | This phone stopped using the pairing mailbox for that partner: their app reads the server feed (plan 12 §8) |
 | `svc` | `comp=link`, `state=invite_opened` / `not_invite` | The app was opened from an invite page's "Open in the app" button. The link itself is never logged |
 

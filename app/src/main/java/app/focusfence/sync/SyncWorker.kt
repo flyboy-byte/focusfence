@@ -361,9 +361,13 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         var w = start
         // D-035 partners read alerts from the server, like email partners: the same lines, and silence is decided
         // there (FF_STALE_MINUTES, about an hour) instead of here after 14 h. The mailbox still carries unlock codes.
-        val feed = serverFeed(w, now)
+        val read = serverFeed(w, now)
+        // A gone link (404) is news to show in the list, not a feed: the mailbox path below still runs, so the owner's
+        // "you were removed" message there is read.
+        if (read?.gone == true && !w.linkGone) { w = w.copy(linkGone = true); EventLog.diag(LogEvents.service(now, "partner", "link_gone", w.name.take(40))) }
+        val feed = read?.takeIf { !it.gone }
         if (feed != null) {
-            w = feed.watch.copy(feedOk = true)
+            w = feed.watch.copy(feedOk = true, linkGone = false)
             // Plan 12: important and housekeeping alerts in their own notification categories, so each can be set apart.
             if (feed.important.isNotEmpty()) notify(ctx, w, feed.important.joinToString("\n"))
             if (feed.other.isNotEmpty()) notify(ctx, w, feed.other.joinToString("\n"), CH_OTHER)
@@ -412,7 +416,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
      * report link or the server doesn't answer (an older server, or offline): the mailbox path then alerts as before.
      */
     /** One read of a partner's server feed: the watch moved on, what to notify now (by category), and their choices. */
-    private class Feed(val watch: SyncStore.Watch, val important: List<String>, val other: List<String>, val prefs: AlertPrefs.Prefs)
+    private class Feed(val watch: SyncStore.Watch, val important: List<String>, val other: List<String>, val prefs: AlertPrefs.Prefs, val gone: Boolean = false)
 
     private fun serverFeed(start: SyncStore.Watch, now: Long): Feed? {
         val (origin, path) = InviteLink.alertsTarget(start.reportUrl) ?: return null
@@ -420,6 +424,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         perf.count("feed_read")
         val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull()
         val arr = r?.body?.optJSONArray("alerts")
+        if (r?.code == 404) { perf.count("feed_gone"); return Feed(start, emptyList(), emptyList(), AlertPrefs.Prefs(), gone = true) }
         if (r == null || r.code != 200 || arr == null) { perf.count("feed_fail"); return null }
         var w = start
         val lines = ArrayList<String>()

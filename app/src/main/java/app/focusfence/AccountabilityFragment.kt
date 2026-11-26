@@ -240,7 +240,8 @@ class AccountabilityFragment : Fragment() {
             return
         }
         for (w in watches) {
-            val sub = if (w.reportUrl.isNotEmpty()) getString(R.string.acc_watch_status_server)
+            val sub = if (w.linkGone) getString(R.string.acc_watch_gone)
+            else if (w.reportUrl.isNotEmpty()) getString(R.string.acc_watch_status_server)
             else if (w.lastMsgMs == 0L) getString(R.string.acc_watch_status_waiting)
             else getString(R.string.acc_watch_status, DateUtils.getRelativeTimeSpanString(w.lastMsgMs))
             c.addView(row(w.name, sub, getString(R.string.acc_open_report)) {

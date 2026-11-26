@@ -243,7 +243,7 @@ def main():
     if tot["feed_read"]:
         print(f"  partner feed         reads {tot['feed_read']} (failed {tot['feed_fail']}), new {tot['feed_new']}: "
               f"shown {tot['feed_now']}, other {tot['feed_other']}, held {tot['feed_held']}, not shown {tot['feed_skip']}, "
-              f"held sent {tot['feed_flush']}")
+              f"held sent {tot['feed_flush']}, links gone {tot['feed_gone']}")
     sync_errs = [r for r in diag if r["type"] == "err" and r.get("comp") == "sync"]
     if sync_errs:
         print("  sync errors          " + "; ".join(f"{r.get('what')}: {r.get('detail', '')[:60]}" for r in sync_errs[-5:]))
