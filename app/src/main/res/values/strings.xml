@@ -761,4 +761,5 @@
     <string name="owner_device_text">%1$s can now open your report on %2$s too. If that\'s a surprise, remove them under Partners.</string>
     <string name="partners_reset_title">Partners were reset</string>
     <string name="partners_reset_body">This version has a new, simpler partner system, and partners from before don\'t carry over. Add them again under Partners: one code or invite each, nothing to paste.</string>
+    <string name="acc_server_forgot">The server no longer knows this phone (it was reset). Enter an enrollment code under Server to reconnect.</string>
 </resources>

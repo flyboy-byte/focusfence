@@ -7,10 +7,10 @@
 > same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS), so both phones show sync
 > errors until the new system ships. The filter itself is unaffected.
 >
-> **Plan 13 is built (2026-11-26), not released:** one kind of partner, invites by code, QR code or email, no pasting,
+> **Plan 13 is released (2026-11-26): app 3.0.0, server 2.0.0 live, not yet tried on a phone:** one kind of partner, invites by code, QR code or email, no pasting,
 > the report key sealed to each partner device (D-042, protocol level 2, a clean cut). Server and browser are tested end
-> to end; the app passes its tests but hasn't run on a phone. **Next:** release server 2.0.0 and app 3.0.0 together
-> (deploy needs `vps-sudo`), then test on both phones.
+> to end; the app passes its tests but hasn't run on a phone. **Next:** Logan tests on both phones (each re-enrolls with a new
+> enrollment code: the server was wiped).
 
 > **Where it stands (2026-11-25 night, app 2.26.0 + server 1.3.0, live 1.3.0):** the filter is in daily use. 2.21–2.25
 > (silence alerts, blurred auto-shots with the NudeNet check, Block lists, first-time journeys, protocol window) and
@@ -48,7 +48,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v2.26.0-accountable` (2026-11-25, code 50). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v1.3.0`, live on the box since 2026-11-26 02:33 UTC (`/v1/version` says 1.3.0, `FF_STALE_MINUTES=60`), installed with the release `install.sh`. |
+| Latest release | `v3.0.0-accountable` (2026-11-26, code 51): plan 13, one partner system, protocol 2. Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.0.0`, live on the box since 2026-11-26 04:37 UTC (`/v1/version` says protocol 2, oldest app 2, 2.0.0), installed with the release `install.sh`. |
 
 ## Verification levels
 

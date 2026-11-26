@@ -6,6 +6,24 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- **partners:** a report you see can always be removed from its menu, a dead report link says so, and 'protection was off' names the days (`23d8071`, [#113](https://github.com/flyboy-byte/focusfence/pull/113))
+### Changed
+- Plan 13: one partner system (protocol 2, clean cut) (`cd01725`, [#119](https://github.com/flyboy-byte/focusfence/pull/119))
+### Docs
+- plan 13, unlock codes read aloud go away (ask a partner replaces them) (`e1f21d1`, [#118](https://github.com/flyboy-byte/focusfence/pull/118))
+- plan 13 mockups done, Logan likes the prototype (`27c58a1`, [#117](https://github.com/flyboy-byte/focusfence/pull/117))
+- handoff for the redesign pause (`3514717`, [#116](https://github.com/flyboy-byte/focusfence/pull/116))
+- plan 13 with Logan's answers (all three invites, no approval step, groups and SMS scoped only) (`21840cf`, [#115](https://github.com/flyboy-byte/focusfence/pull/115))
+- plan 13, one partner system (design stage); production paused, server wiped (`12d43de`, [#114](https://github.com/flyboy-byte/focusfence/pull/114))
+- partner UI options logged for later (plan 12) (`b98e3d6`, [#112](https://github.com/flyboy-byte/focusfence/pull/112))
+### Maintenance
+- **server:** drop SMS and mailbox settings from .env.example (plan 13) (`2e9b2cc`, [#120](https://github.com/flyboy-byte/focusfence/pull/120))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.26.0-accountable
+
 ### Added
 - **logging:** logs cover today's partner and sync work: requests and failures, sync errors, partner feed decisions, notification categories, asks, links, server journal (`d0a2f46`, [#110](https://github.com/flyboy-byte/focusfence/pull/110))
 - **partners:** partners pick their own quiet hours; partners are told when you change which apps screen checks watch (`61d0d09`, [#109](https://github.com/flyboy-byte/focusfence/pull/109))
@@ -21,6 +39,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - F-Droid scoped as plan 11 (not scheduled) (`7182887`, [#100](https://github.com/flyboy-byte/focusfence/pull/100))
 - README leads with the app's purpose; CONTRIBUTING covers forms, protocol window and licence; STATE current (`2599897`, [#99](https://github.com/flyboy-byte/focusfence/pull/99))
 - handoff after 2.25.0 and server 1.2.0 (`7853202`, [#98](https://github.com/flyboy-byte/focusfence/pull/98))
+### Maintenance
+- release 2.26.0 (server 1.3.0) (`69f930b`, [#111](https://github.com/flyboy-byte/focusfence/pull/111))
 
 _Undo any line with `git revert <commit>`._
 

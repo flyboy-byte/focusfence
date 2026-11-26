@@ -186,6 +186,13 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 put("gapSignature", DeviceKey.sign("gap|$deviceId|$now|${sha256(gap)}".toByteArray()))
             }
         })
+        if (r.code == 404 && r.body?.optString("error") == "unknown device") {
+            // The server no longer knows this phone (reset, or the operator removed it). Forget the enrollment so the
+            // Partners screen opens the Server card to reconnect, instead of failing here at every sync.
+            SyncStore.clearEnrollment(ctx)
+            EventLog.activity(LogEvents.service(now, "partner", "server_forgot", null), urgent = true)
+            throw IllegalStateException(ctx.getString(R.string.acc_server_forgot))
+        }
         if (r.code != 200) throw IllegalStateException("heartbeat HTTP ${r.code}")
         ownerNotices(ctx, r.body?.optJSONArray("notices"))
         unlockAnswer(ctx, r.body?.optJSONObject("unlock"), now)
