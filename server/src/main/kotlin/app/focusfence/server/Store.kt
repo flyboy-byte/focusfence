@@ -138,7 +138,8 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
     )
 
     @Serializable
-    data class AlertEntry(val t: Long, val text: String, val important: Boolean = true)
+    /** [kind] only on owner notices: "" a partner left, "reply" a partner's one-tap reply. */
+    data class AlertEntry(val t: Long, val text: String, val important: Boolean = true, val kind: String = "")
 
     @Serializable
     data class Mailbox(val tokenHash: String, val createdMs: Long, var lastWriteMs: Long = 0, var nextId: Long = 1)
@@ -310,8 +311,8 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         updateDevice(deviceId) { dev -> dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastFeedMs = now) else it } }
     }
 
-    fun addOwnerNotice(id: String, text: String, now: Long) = updateDevice(id) { d ->
-        d.ownerNotices = (d.ownerNotices + AlertEntry(now, text)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
+    fun addOwnerNotice(id: String, text: String, now: Long, kind: String = "") = updateDevice(id) { d ->
+        d.ownerNotices = (d.ownerNotices + AlertEntry(now, text, kind = kind)).filter { now - it.t <= ALERTS_MAX_AGE_MS }.takeLast(ALERTS_KEEP)
     }
 
     @Serializable

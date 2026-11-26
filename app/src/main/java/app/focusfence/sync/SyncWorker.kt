@@ -215,8 +215,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val t = n.optLong("t")
             val text = n.optString("text").takeIf { it.isNotBlank() }?.take(300) ?: continue
             if (t <= last) continue
-            EventLog.activity(LogEvents.service(t, "partner", "partner_left", text), urgent = true)
-            notifyOwner(ctx, t, ctx.getString(R.string.owner_notice_title), text)
+            val reply = n.optString("kind") == "reply"
+            EventLog.activity(LogEvents.service(t, "partner", if (reply) "partner_reply" else "partner_left", text), urgent = true)
+            notifyOwner(ctx, t, ctx.getString(if (reply) R.string.owner_reply_title else R.string.owner_notice_title), text)
             last = t
         }
         SyncStore.setOwnerNoticeT(ctx, last)

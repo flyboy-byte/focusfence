@@ -62,10 +62,14 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 
 ## Ideas for later (Logan's "random things to add" list)
 
-- **Replies to alerts.** Set replies ("All good", "Let's talk", "Call me", "Proud of you"), so nothing personal sits on
+- ~~**Replies to alerts.**~~ Built 2026-11-25 as set replies ("All good", "Let's talk", "Call me when you can",
+  "Proud of you"): `dns/PartnerReply`, `POST /p/{token}/reply` (one per partner every 2 min), an owner notice of kind
+  `reply`, and a "A partner replied" notification (`svc partner partner_reply`). Free text was not built. Originally:
+  set replies ("All good", "Let's talk", "Call me", "Proud of you"), so nothing personal sits on
   the server. Or free text sealed in the partner's browser to the owner's phone key (P-256 `DeviceKey`; `dns/Ecies`
   exists), or both. The owner sees the reply in the app and in its notification.
-- **"How to be a good partner"** page, linked from the welcome email: what each alert means, and how to bring it up
+- ~~**"How to be a good partner"** page~~. Built 2026-11-25: `/guide` (`Web.guide`), linked from the welcome email
+  and every report page. Originally: a page, linked from the welcome email: what each alert means, and how to bring it up
   without shaming.
 - **Excluding apps from reports** (Ever Accountable has it); the exclusion itself is reported to partners.
 

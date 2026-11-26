@@ -549,6 +549,7 @@
     <string name="partner_yours_channel_desc">About your own partners: one stopped being your partner, or one answered when you asked for an OK.</string>
     <string name="partner_alert_title">%1$s — Focus Fence</string>
     <string name="owner_notice_title">Your partners changed</string>
+    <string name="owner_reply_title">A partner replied</string>
     <string name="ask_answer_title">A partner answered</string>
     <string name="acc_looked">looked %1$s</string>
     <string name="link_not_invite">That link isn\'t a Focus Fence invite.</string>

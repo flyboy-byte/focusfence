@@ -530,6 +530,32 @@ class ServerTest {
     }
 
     @Test
+    fun aPartnersOneTapReplyReachesTheOwnersPhone() = run { http ->
+        val id = http.enroll()
+        val token = http.joinConfirmed(id)
+        val name = store.device(id)!!.partners.single().name
+        assertTrue(http.get("/p/$token").bodyAsText().contains("Send them a word"))
+        assertEquals("/p/$token?reply=sent", http.submitForm("/p/$token/reply", Parameters.build { append("r", "talk") }).headers["Location"])
+        assertEquals("/p/$token?reply=wait", http.submitForm("/p/$token/reply", Parameters.build { append("r", "proud") }).headers["Location"])
+        assertEquals(HttpStatusCode.BadRequest, http.submitForm("/p/$token/reply", Parameters.build { append("r", "anything I like") }).status)
+        clock += 1_000
+        val hb = """{"deviceId":"$id","t":$clock,"lastSeq":0,"signature":"${sign(Integrity.requestMessage("heartbeat", id, clock, "0"))}"}"""
+        val n = json.decodeFromString(HeartbeatResponse.serializer(), http.postJson("/v1/heartbeat", hb).bodyAsText()).notices.single()
+        assertEquals("$name: Let's talk" to "reply", n.text to n.kind)
+        clock += app.focusfence.dns.PartnerReply.EVERY_MS
+        assertEquals("/p/$token?reply=sent", http.submitForm("/p/$token/reply", Parameters.build { append("r", "proud") }).headers["Location"])
+    }
+
+    @Test
+    fun thePartnerGuideIsLinkedFromTheWelcomeEmailAndTheReport() = run { http ->
+        assertTrue(http.get("/guide").bodyAsText().contains("Being a good accountability partner"))
+        val id = http.enroll()
+        val token = http.joinConfirmed(id)
+        assertTrue(notifier.emails.any { it.second.contains("you're now an accountability partner") && it.third.contains("/guide") })
+        assertTrue(http.get("/p/$token").bodyAsText().contains("href='/guide'"))
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L

@@ -125,6 +125,35 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         "join",
     )
 
+    /**
+     * "Being a good accountability partner" (plan 12, later list): what each alert means and how to bring it up. Linked
+     * from the welcome email and every report page. Plain words; no names, no data, the same on every server.
+     */
+    fun guide(): String = page("Being a good accountability partner", buildString {
+        append("<h1>Being a good accountability partner</h1>")
+        append("<p>Someone trusted you with this. You don't need to be an expert, and you don't need to watch all the time. ")
+        append("Most of the job is being someone they can be honest with.</p>")
+        append("<h2>What the alerts mean</h2><ul>")
+        append("<li><b>The phone went silent.</b> It hasn't checked in for about an hour. Often that's a dead battery, no signal or the phone switched off. You'll hear when it's back, usually with what happened meanwhile.</li>")
+        append("<li><b>Protection was turned off or loosened.</b> Something that blocks or reports was switched off or set weaker. Sometimes there's a good reason; ask what it was.</li>")
+        append("<li><b>A screenshot was flagged.</b> The phone's own check thought it saw nudity. You get a heavily blurred thumbnail, never a clear image, and the check is sometimes wrong. They may have added a note.</li>")
+        append("<li><b>Repeated blocked tries.</b> Several attempts at a blocked kind of site in a few minutes. It says which kind, never which site.</li>")
+        append("<li><b>They ask for your OK.</b> They want to change a protected setting without waiting. Approve it if it makes sense to you; say no if you'd rather they wait. They can always wait it out, so you can't lock them out.</li>")
+        append("</ul>")
+        append("<h2>Bringing it up</h2><ul>")
+        append("<li>Ask before you assume. \"I saw an alert last night, what happened?\" goes further than an accusation.</li>")
+        append("<li>Talk soon, and in private. A short call the same day beats a long talk a week later.</li>")
+        append("<li>Notice the good weeks too. The report shows quiet stretches; say so.</li>")
+        append("<li>A slip isn't the end of anything. What helps is what they do next, and that you're still there.</li>")
+        append("<li>If it gets heavier than you can carry, it's fine to say so and to suggest someone else they could talk to as well.</li>")
+        append("</ul>")
+        append("<h2>Your part</h2><ul>")
+        append("<li>Open the report now and then. They can see when you last looked, and knowing someone does matters.</li>")
+        append("<li>Choose how alerts reach you on your report page: every alert, a daily message, or quiet hours at night.</li>")
+        append("<li>You can stop being their partner at any time from the bottom of the report page. They'll be told.</li>")
+        append("</ul>")
+    })
+
     fun message(title: String, text: String): String =
         page(title, "<h1>${esc(title)}</h1><p>${esc(text)}</p>")
 
@@ -159,8 +188,14 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         // D-023: the report is sealed on the phone; /static/report.js opens it here with the key from the partner's link.
         append("<div id='report'><p class='muted'>Opening the encrypted report…</p></div>")
         append("<noscript><p class='bad'>The report is end-to-end encrypted and opens with JavaScript in this browser. Alerts still arrive by email.</p></noscript>")
-        append("<p class='muted'>The phone's owner can see when you last opened this report, not what you looked at.</p>")
+        append("<p class='muted'>The phone's owner can see when you last opened this report, not what you looked at. <a href='/guide'>Being a good partner</a></p>")
         append("<p class='muted'>End-to-end encrypted: this server stores the report but cannot read it. The key is in the link the phone's owner sent you; open that link and the report opens, in any browser.</p>")
+        // A one-tap reply: set words only, so nothing personal is stored (PartnerReply).
+        if (partner.confirmed) {
+            append("<h2>Send them a word</h2><form method='post' action='/p/$t/reply'>")
+            for (r in app.focusfence.dns.PartnerReply.Reply.values()) append("<button name='r' value='${r.key}'>${esc(r.text)}</button> ")
+            append("<div class='muted'>It shows on their phone as a notification. Nothing else is sent.</div></form>")
+        }
         // Plan 12 §5: how alerts reach them. The time zone comes from their browser (report.js fills #tz).
         val lvl = app.focusfence.dns.AlertPrefs.Level.fromKey(partner.alertLevel)
         fun radio(l: app.focusfence.dns.AlertPrefs.Level, label: String) =

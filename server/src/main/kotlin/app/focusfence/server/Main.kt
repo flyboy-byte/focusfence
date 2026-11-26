@@ -671,6 +671,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                         "<p>The report is end-to-end encrypted. Open it from the Focus Fence link they sent you: that link carries the " +
                         "key and works in any browser. This one works too in a browser that has opened that link before: " +
                         "<a href=\"${alerts.link(partner)}\">${alerts.link(partner)}</a></p>" +
+                        "<p>New to this? <a href=\"${cfg.publicUrl}/guide\">Being a good accountability partner</a> takes two minutes.</p>" +
                         "<p>You can stop being their partner any time from the bottom of the report page.</p>",
                 )
             }
@@ -691,6 +692,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 call.request.queryParameters["unlock"] == "denied" -> "You said no. They've been told. They can still wait out the delay."
                 call.request.queryParameters["unlock"] == "late" -> "That request was already answered or has lapsed."
                 call.request.queryParameters["prefs"] == "saved" -> "Saved. Alerts now reach you the way you chose."
+                call.request.queryParameters["reply"] == "sent" -> "Sent. It shows on their phone at its next check-in."
+                call.request.queryParameters["reply"] == "wait" -> "You just sent one. Try again in a couple of minutes."
                 else -> null
             }
             val ask = device.unlockRequest?.takeIf { app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, cfg.now()) && partner.confirmed }
@@ -723,6 +726,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
 
         // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
         get("/key") { call.respondText(Web.keyPage(), ContentType.Text.Html) }
+        get("/guide") { call.respondText(Web.guide(), ContentType.Text.Html) }
 
         for (name in listOf("report.js", "admin.js")) get("/static/$name") {
             val js = object {}.javaClass.getResource("/static/$name")?.readText()
@@ -768,6 +772,21 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 }
             }
             call.respondRedirect("/p/$token")
+        }
+
+        // A one-tap reply to the owner (PartnerReply): set words only, at most one per partner every two minutes.
+        val lastReply = java.util.concurrent.ConcurrentHashMap<String, Long>()
+        post("/p/{token}/reply") {
+            val token = call.parameters["token"].orEmpty()
+            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val reply = app.focusfence.dns.PartnerReply.Reply.fromKey(call.receiveParameters()["r"])
+            if (reply == null || !partner.confirmed) return@post call.respond(HttpStatusCode.BadRequest)
+            val now = cfg.now()
+            val last = lastReply[partner.id]
+            if (last != null && now - last < app.focusfence.dns.PartnerReply.EVERY_MS) return@post call.respondRedirect("/p/$token?reply=wait")
+            lastReply[partner.id] = now
+            store.addOwnerNotice(device.id, app.focusfence.dns.PartnerReply.line(partner.name, reply), now, kind = "reply")
+            call.respondRedirect("/p/$token?reply=sent")
         }
 
         // Plan 12 §5: how alerts reach this partner. Their own page sets it; nobody else can.
