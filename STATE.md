@@ -52,7 +52,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v3.1.0-accountable` (2026-11-26, code 52): plan 14 groups, and a phone that joins a report is on that server too. Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC (`/v1/version` says protocol 2, oldest app 2, 2.1.0), installed with the release `install.sh`. |
+| Latest release | `v3.1.1-accountable` (2026-11-26, code 53): a browser's hidden address bar (a video) isn't a miss, and the poll slows to 15 s; 3.1.0 brought plan 14 groups. Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC (`/v1/version` says protocol 2, oldest app 2, 2.1.0), installed with the release `install.sh`. |
 
 ## Verification levels
 

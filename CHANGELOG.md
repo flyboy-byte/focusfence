@@ -6,12 +6,21 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Fixed
+- **a11y:** a browser's hidden address bar (video, scrolled toolbar) isn't a miss, and the poll slows (`3bd0926`, [#127](https://github.com/flyboy-byte/focusfence/pull/127))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.0-accountable
+
 ### Changed
 - feat/groups (`55119f0`, [#125](https://github.com/flyboy-byte/focusfence/pull/125))
 - A phone that joins a report is on that server too (`2554ebe`, [#123](https://github.com/flyboy-byte/focusfence/pull/123))
 ### Docs
 - plan 14, groups on the plan 13 partners (Logan's answers) (`a7d5062`, [#124](https://github.com/flyboy-byte/focusfence/pull/124))
 - handoff after 3.0.0 and server 2.0.0 (`ddf6e8b`, [#122](https://github.com/flyboy-byte/focusfence/pull/122))
+### Maintenance
+- release 3.1.0 (`ab9eeb6`, [#126](https://github.com/flyboy-byte/focusfence/pull/126))
 
 _Undo any line with `git revert <commit>`._
 

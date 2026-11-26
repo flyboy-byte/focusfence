@@ -5,7 +5,7 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 ## Where it stands
 
-- **Live:** app `v3.1.0-accountable` (code 52) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
+- **Live:** app `v3.1.1-accountable` (code 53; 3.1.0 had groups) and `server-v2.1.0`, deployed 2026-11-26 15:39 UTC. Backups
   `/etc/ffbackend/env.bak-20261126-1539`, `/var/backups/ffbackend-data-pre2.1.0-20261126-1539.tgz`; logged in the VPS
   hardening log.
 - **Logan's first 3.0.0 test:** "I love it, it was quick and seem less". Found: the second phone said "Not set up" though
