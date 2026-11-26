@@ -48,5 +48,7 @@ class InviteLinkTest {
         assertNull(InviteLink.alertsTarget("http://ff.example.com/p/$secret"))
         assertNull(InviteLink.alertsTarget("https://ff.example.com/p/short"))
         assertNull(InviteLink.alertsTarget("https://ff.example.com/p/$secret/../../admin"))
+        assertEquals("https://ff.example.com" to "/p/$secret/leave", InviteLink.leaveTarget("https://ff.example.com/p/$secret#k=rk_1"))
+        assertNull(InviteLink.leaveTarget("http://ff.example.com/p/$secret"))
     }
 }

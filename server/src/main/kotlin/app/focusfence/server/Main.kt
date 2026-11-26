@@ -124,7 +124,11 @@ val serverVersion: String by lazy {
     val deviceId: String, val t: Long, val lastSeq: Long, val signature: String,
     /** After a long gap: the phone's account of it ("no internet; protection stayed on"), signed on its own. */
     val gap: String? = null, val gapSignature: String? = null,
+    /** The newest owner notice the phone already has; only newer ones come back. Read cursor, not signed. */
+    val noticesAfter: Long = 0,
 )
+/** Plan 12: owner notices ride on the heartbeat. Older apps read only the status code, so this adds nothing for them. */
+@Serializable data class HeartbeatResponse(val ok: Boolean = true, val notices: List<Store.AlertEntry> = emptyList())
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
 @Serializable data class OkResponse(val ok: Boolean = true)
@@ -443,7 +447,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!signedOk(device, "heartbeat", req.t, req.lastSeq.toString(), req.signature)) return@post call.unauthorized()
             val gap = req.gap?.takeIf { g -> req.gapSignature != null && signedOk(device, "gap", req.t, Integrity.sha256(g), req.gapSignature) }
             alerts.checkedIn(device.id, gap?.filter { !it.isISOControl() }?.take(300))
-            call.respond(OkResponse())
+            call.respond(HeartbeatResponse(notices = store.device(device.id)?.ownerNotices.orEmpty().filter { it.t > req.noticesAfter }))
         }
 
         // D-023: the partner report, sealed on the phone; stored as ciphertext and opened only in the partner's browser.
@@ -719,7 +723,15 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@post call.respond(HttpStatusCode.NotFound)
             store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != partner.id }; d.appPartners = d.appPartners.filter { it.id != partner.id } }
-            call.respondText(Web.message("Done", "You're no longer their accountability partner."), ContentType.Text.Html)
+            // Leaving is never silent (plan 12): the owner's phone hears it at its next check-in, and everyone still
+            // watching is told, so a partner quietly dropping off can't leave the owner believing they're watched.
+            val who = partner.name.ifBlank { "A partner" }
+            store.addOwnerNotice(device.id, "$who stopped being your accountability partner.", cfg.now())
+            store.device(device.id)?.let { d ->
+                if (d.partners.any { it.confirmed } || d.appPartners.isNotEmpty())
+                    alerts.toPartners(d, "a partner left", listOf("$who stopped being an accountability partner for this phone."))
+            }
+            call.respondText(Web.message("Done", "You're no longer their accountability partner. They've been told."), ContentType.Text.Html)
         }
     }
 }
