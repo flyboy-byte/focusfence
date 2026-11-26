@@ -424,6 +424,38 @@ class ServerTest {
     }
 
     @Test
+    fun theOwnerSeesWhenEachPartnerLastOpenedTheReport() = run { http ->
+        val id = http.enroll()
+        val emailToken = http.joinConfirmed(id)
+        val appToken = "t".repeat(32)
+        store.updateDevice(id) { it.appPartners = listOf(Store.AppPartner("ap1", "other-phone", "Sam", clock, token = appToken)) }
+        suspend fun list(): PartnersResponse {
+            clock += 1_000
+            return json.decodeFromString(PartnersResponse.serializer(),
+                http.postJson("/v1/partners/list", """{"deviceId":"$id","t":$clock,"signature":"${sign(Integrity.requestMessage("partners", id, clock))}"}""").bodyAsText())
+        }
+        assertEquals(0L, list().partners.single().lastViewMs)
+        // The page itself (what a mail scanner fetches) and the app's alert checks aren't a look; the report data is.
+        http.get("/p/$emailToken")
+        http.get("/p/$appToken/alerts")
+        assertEquals(0L to 0L, list().let { it.partners.single().lastViewMs to it.app.single().lastViewMs })
+        http.get("/p/$emailToken/data")
+        val first = list().partners.single().lastViewMs
+        assertEquals(clock - 1_000, first)
+        // Reloading within five minutes doesn't rewrite it; later it moves.
+        clock += 60_000
+        http.get("/p/$emailToken/data")
+        assertEquals(first, list().partners.single().lastViewMs)
+        clock += Store.VIEW_EVERY_MS
+        http.get("/p/$emailToken/data")
+        assertTrue(list().partners.single().lastViewMs > first)
+        http.get("/p/$appToken/data")
+        val viewed = clock
+        assertEquals(viewed, list().app.single().lastViewMs)
+        assertTrue(http.get("/p/$emailToken").bodyAsText().contains("can see when you last opened this report"))
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L

@@ -14,8 +14,9 @@ import org.json.JSONObject
 object Accountability {
 
     class Invite(val link: String, val expiresMs: Long)
-    class Partner(val id: String, val name: String, val email: String, val sms: Boolean, val inviteId: String = "")
-    class AppPartner(val id: String, val name: String, val inviteId: String)
+    /** [lastViewMs]: when they last opened the report (plan 12 §2); 0 never, -1 the server doesn't say (older than 1.3). */
+    class Partner(val id: String, val name: String, val email: String, val sms: Boolean, val inviteId: String = "", val lastViewMs: Long = -1)
+    class AppPartner(val id: String, val name: String, val inviteId: String, val lastViewMs: Long = -1)
     class Partners(val email: List<Partner>, val app: List<AppPartner>)
 
     private fun api(ctx: Context): Api {
@@ -218,11 +219,11 @@ object Accountability {
         return Partners(
             (0 until (arr?.length() ?: 0)).map { i ->
                 val p = arr!!.getJSONObject(i)
-                Partner(p.getString("id"), p.getString("name"), p.getString("email"), p.optBoolean("sms"), p.optString("inviteId"))
+                Partner(p.getString("id"), p.getString("name"), p.getString("email"), p.optBoolean("sms"), p.optString("inviteId"), p.optLong("lastViewMs", -1))
             },
             (0 until (app?.length() ?: 0)).map { i ->
                 val p = app!!.getJSONObject(i)
-                AppPartner(p.getString("id"), p.getString("name"), p.optString("inviteId"))
+                AppPartner(p.getString("id"), p.getString("name"), p.optString("inviteId"), p.optLong("lastViewMs", -1))
             },
         )
     }

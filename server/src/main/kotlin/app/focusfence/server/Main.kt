@@ -93,8 +93,8 @@ class Config(
 @Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
 @Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
 @Serializable data class AcceptResponse(val ownerId: String, val ownerName: String, val reportUrl: String = "")
-@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long)
-@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "")
+@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long, val lastViewMs: Long = 0)
+@Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "", val lastViewMs: Long = 0)
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val app: List<AppPartnerInfo> = emptyList())
 @Serializable data class BatchRequest(
     val deviceId: String,
@@ -394,8 +394,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
             if (!signedOk(device, "partners", req.t, "", req.signature)) return@post call.unauthorized()
             call.respond(PartnersResponse(device.partners.map {
-                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed, it.inviteId)
-            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs) }))
+                PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed, it.inviteId, it.lastViewMs)
+            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs, it.lastViewMs) }))
         }
 
         // Unlinking is never silent: the removed partner is told.
@@ -692,6 +692,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val (device, partner) = store.partnerByToken(call.parameters["token"].orEmpty())
                 ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
             call.response.headers.append("Cache-Control", "no-store")
+            // Plan 12 §2: only the page's script fetches this, so a mail scanner opening the link doesn't count as a look.
+            store.markViewed(device.id, partner.id, cfg.now())
             call.respond(ReportData(device.id, partner.name, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs,
                 store.readReports(device.id).filter { cfg.now() - it.to <= cfg.reportEveryMs + 3_600_000L }))
         }
