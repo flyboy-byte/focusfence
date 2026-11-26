@@ -1,4 +1,4 @@
-# Handoff (2026-11-26): plan 13 built, not released
+# Handoff (2026-11-26): plan 13 released, not yet tried on a phone
 
 Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/13-partners-redesign.md` (design, Logan's
 answers, the build table) and `DECISIONS.md` D-042.
@@ -10,7 +10,9 @@ answers, the build table) and `DECISIONS.md` D-042.
 - **Plan 13 is built** on `feat/partners-v2-server` (PR to main). One kind of partner; invites by code, QR code or email;
   each partner device gets the report key sealed to its own key by the owner's phone; protocol level 2 with a floor of 2,
   so level-1 apps get 426. Old partner data is deleted at start on both sides.
-- **Released:** nothing new. Latest is still app `v2.26.0-accountable` and `server-v1.3.0`.
+- **Released 2026-11-26:** app `v3.0.0-accountable` (code 51) and `server-v2.0.0`, deployed 04:37 UTC (backups and log in
+  the VPS hardening log). Phones enrolled before the wipe get "unknown device" and reopen Server: a new enrollment code
+  is needed (admin page → People).
 - **Prototype (design canvas, all 8 screens):** https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco. Logan: "i think i
   like that". The screen files were only in a session scratchpad; read them back with Artifact `read` and `path`.
 
@@ -26,10 +28,8 @@ answers, the build table) and `DECISIONS.md` D-042.
 
 ## Next, in order
 
-1. Merge the PR (after CI).
-2. **Release together**: server first (`server-v2.0.0` tag, then deploy with `vps-sudo`), then app `3.0.0`
-   (`tools/check_protocol.py` refuses an app release until a level-2 server release exists).
-3. Logan tests on both phones:
+1. ~~Merge, release server 2.0.0 and app 3.0.0~~ DONE (2026-11-26).
+2. Logan tests on both phones:
    - add a partner by code and by email;
    - join from the second phone;
    - open the report in a browser;
