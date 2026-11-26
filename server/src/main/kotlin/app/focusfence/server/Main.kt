@@ -85,6 +85,14 @@ class Config(
     /** Which peers may set X-Forwarded-For (the reverse proxy in front of us). */
     val trustedProxy: (String) -> Boolean = TrustedProxies.LOOPBACK,
     val now: () -> Long = System::currentTimeMillis,
+    /** The app the invite page's "Open in the app" button targets, and /.well-known/assetlinks.json names. */
+    val androidPackage: String = Web.DEFAULT_PACKAGE,
+    /**
+     * SHA-256 fingerprints of the app's signing certificate (FF_ANDROID_CERT_SHA256, comma-separated, AA:BB:…). Set,
+     * they let Android open this server's invite links straight in the app; only the server built into the app
+     * (`appLinkHost`) can use it. Empty: no assetlinks.json, and the invite page's button still works.
+     */
+    val androidCerts: List<String> = emptyList(),
 )
 
 @Serializable data class EnrollRequest(val publicKeySpki: String)
@@ -156,6 +164,9 @@ fun main(args: Array<String>) {
     val trusted = TrustedProxies.parse(env("FF_TRUSTED_PROXIES"))
     val cfg = Config(
         publicUrl = (env("FF_PUBLIC_URL") ?: "http://localhost:8080").trimEnd('/'),
+        androidPackage = env("FF_ANDROID_PACKAGE")?.trim()?.takeIf { it.matches(Regex("[A-Za-z0-9_.]{3,100}")) } ?: Web.DEFAULT_PACKAGE,
+        androidCerts = env("FF_ANDROID_CERT_SHA256").orEmpty().split(',').map { it.trim().uppercase() }
+            .filter { it.matches(Regex("([0-9A-F]{2}:){31}[0-9A-F]{2}")) },
         staleMs = (env("FF_STALE_MINUTES") ?: "60").toLong() * 60_000,
         trustedProxy = trusted,
         enrollToken = env("FF_ENROLL_TOKEN")?.takeIf { it.isNotBlank() },
@@ -325,6 +336,15 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
         get("/") { call.respondText("Focus Fence accountability server (prototype)") }
         // For container health checks and uptime monitors: no auth, no data, no store access.
         get("/healthz") { call.respondText("ok") }
+        // Android App Links: lets the app open this server's invite links itself (LinkActivity). Only when configured.
+        get("/.well-known/assetlinks.json") {
+            if (cfg.androidCerts.isEmpty()) return@get call.respond(HttpStatusCode.NotFound)
+            val certs = cfg.androidCerts.joinToString(",") { "\"$it\"" }
+            call.respondText(
+                """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"${cfg.androidPackage}","sha256_cert_fingerprints":[$certs]}}]""",
+                ContentType.Application.Json,
+            )
+        }
         get("/v1/version") {
             call.respond(VersionResponse(app.focusfence.dns.Protocol.LEVEL, app.focusfence.dns.Protocol.OLDEST, serverVersion))
         }
@@ -584,13 +604,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (store.allDevices().none { d -> d.invites.any { it.linkHash == hash && it.expiresMs > now && !it.enrollOnly } }) {
                 return@get call.respondText(Web.message("Not found", "This invite isn't valid. It may have expired; ask for a new one."), ContentType.Text.Html, HttpStatusCode.NotFound)
             }
-            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
-            call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret), ContentType.Text.Html)
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
+            call.respondText(Web.joinForm("", null, notifier.smsAvailable, link = secret, pkg = cfg.androidPackage), ContentType.Text.Html)
         }
 
         get("/join") {
             val code = call.request.queryParameters["code"].orEmpty()
-            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
+            if (!notifier.emailAvailable) return@get call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
             call.respondText(Web.joinForm(code, null, notifier.smsAvailable), ContentType.Text.Html)
         }
 
@@ -598,7 +618,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val form = call.receiveParameters()
             val rawCode = form["code"].orEmpty()
             // Without email the confirmation can never arrive: refuse before the invite is spent.
-            if (!notifier.emailAvailable) return@post call.respondText(Web.joinNeedsApp(), ContentType.Text.Html)
+            if (!notifier.emailAvailable) return@post call.respondText(Web.joinNeedsApp(cfg.androidPackage), ContentType.Text.Html)
             if (!joinLimiter.allow(call.client())) {
                 return@post call.respondText(Web.joinForm(rawCode, "Too many attempts. Try again in an hour.", notifier.smsAvailable),
                     ContentType.Text.Html, HttpStatusCode.TooManyRequests)
@@ -606,7 +626,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val rawLink = form["link"].orEmpty().take(64)
             val linkHash = if (rawLink.length >= 20) Integrity.sha256(rawLink) else ""
             val codeHash = Integrity.sha256(normalizeCode(rawCode))
-            fun again(err: String) = Web.joinForm(rawCode, err, notifier.smsAvailable, link = rawLink.takeIf { linkHash.isNotEmpty() })
+            fun again(err: String) = Web.joinForm(rawCode, err, notifier.smsAvailable, link = rawLink.takeIf { linkHash.isNotEmpty() }, pkg = cfg.androidPackage)
             val name = form["name"].orEmpty().filter { !it.isISOControl() }.trim().take(60)
             val email = form["email"].orEmpty().trim().take(120)
             if (name.isEmpty() || !EMAIL.matches(email)) {

@@ -87,6 +87,10 @@ class AccountabilityFragment : Fragment() {
         super.onResume()
         bind()
         refreshPartners()
+        // An invite opened from a link (LinkActivity): the Join dialog, filled in, once.
+        requireActivity().intent?.let { i ->
+            i.getStringExtra(EXTRA_INVITE)?.let { invite -> i.removeExtra(EXTRA_INVITE); join(invite) }
+        }
     }
 
     override fun onDestroy() {
@@ -246,7 +250,7 @@ class AccountabilityFragment : Fragment() {
     }
 
     /** D-035: one paste box for every invite: a partner's invite link, or the admin page's server message. */
-    private fun join() {
+    private fun join(prefill: String? = null) {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_two_fields, null)
         val text = view.findViewById<EditText>(R.id.field1)
         val name = view.findViewById<EditText>(R.id.field2)
@@ -256,6 +260,7 @@ class AccountabilityFragment : Fragment() {
         text.filters = arrayOf()
         text.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         text.maxLines = 4
+        if (prefill != null) text.setText(prefill)
         name.filters = arrayOf(android.text.InputFilter.LengthFilter(60))
         name.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
         MaterialAlertDialogBuilder(requireContext())
@@ -362,6 +367,8 @@ class AccountabilityFragment : Fragment() {
 
     companion object {
         const val ARG_TAB = "tab"
+        /** An invite's text from [LinkActivity]; opens Join with an invite, filled in. */
+        const val EXTRA_INVITE = "invite"
         fun asTab() = AccountabilityFragment().apply { arguments = Bundle().apply { putBoolean(ARG_TAB, true) } }
     }
 }

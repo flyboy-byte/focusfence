@@ -224,16 +224,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
     private fun notifyOwner(ctx: Context, t: Long, title: String, text: String) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
-        nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, ctx.getString(R.string.partner_channel_name), NotificationManager.IMPORTANCE_HIGH)
-        )
+        channels(ctx, nm)
         val open = PendingIntent.getActivity(
             ctx, 0x0e1f, Intent(ctx, app.focusfence.AccountabilityActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         nm.notify(
             (t % Int.MAX_VALUE).toInt(),
-            NotificationCompat.Builder(ctx, CHANNEL)
+            NotificationCompat.Builder(ctx, CH_YOURS)
                 .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -329,7 +327,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         val feed = serverFeed(w, now)
         if (feed != null) {
             w = feed.first.copy(feedOk = true)
-            if (feed.second.isNotEmpty()) notify(ctx, w, feed.second.joinToString("\n"))
+            // Plan 12: important and housekeeping alerts in their own notification categories, so each can be set apart.
+            if (feed.second.first.isNotEmpty()) notify(ctx, w, feed.second.first.joinToString("\n"))
+            if (feed.second.second.isNotEmpty()) notify(ctx, w, feed.second.second.joinToString("\n"), CH_OTHER)
             w = flushHeld(ctx, w, now)
         }
         val k = w.keys
@@ -374,7 +374,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
      * New lines from this partner's server alert feed, and the watch with its cursor moved on. Null when there is no
      * report link or the server doesn't answer (an older server, or offline): the mailbox path then alerts as before.
      */
-    private fun serverFeed(start: SyncStore.Watch, now: Long): Pair<SyncStore.Watch, List<String>>? {
+    private fun serverFeed(start: SyncStore.Watch, now: Long): Pair<SyncStore.Watch, Pair<List<String>, List<String>>>? {
         val (origin, path) = InviteLink.alertsTarget(start.reportUrl) ?: return null
         val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull() ?: return null
         val arr = r.body?.optJSONArray("alerts")
@@ -384,6 +384,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         // Plan 12 §5: this partner's own choices, in this phone's time zone (absent from an older server: everything).
         val prefs = feedPrefs(r.body)
         val hour = AlertPrefs.hour(prefs, now)
+        val other = ArrayList<String>()
         for (i in 0 until arr.length()) {
             val a = arr.optJSONObject(i) ?: continue
             val t = a.optLong("t")
@@ -391,14 +392,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             if (t <= w.serverAlertT) continue
             // The first read after an update can return two weeks of history: keep it, but only notify what's recent.
             if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) when (AlertPrefs.route(prefs, a.optBoolean("important", true), hour)) {
-                AlertPrefs.Route.NOW -> lines += text
+                AlertPrefs.Route.NOW -> if (a.optBoolean("important", true)) lines += text else other += text
                 AlertPrefs.Route.HOLD -> w = w.copy(held = (w.held.lines().filter { it.isNotBlank() } + "$t\t${text.replace('\n', ' ').replace('\t', ' ')}").takeLast(50).joinToString("\n"))
                 AlertPrefs.Route.SKIP -> Unit
             }
             val line = "$t\t${text.replace('\n', ' ').replace('\t', ' ')}"
             w = w.copy(serverAlertT = t, alerts = (w.alerts.lines().filter { it.isNotBlank() } + line).takeLast(50).joinToString("\n"))
         }
-        return w to lines
+        return w to (lines to other)
     }
 
     private fun feedPrefs(body: org.json.JSONObject?) = AlertPrefs.Prefs(
@@ -412,23 +413,37 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         val prefs = AlertPrefs.Prefs(quiet = true, zone = java.time.ZoneId.systemDefault().id) // the stricter of the two rules
         val day = AlertPrefs.day(prefs, now)
         if (!AlertPrefs.flushDue(prefs, AlertPrefs.hour(prefs, now), day, w.heldDay, true)) return w
-        notify(ctx, w, ctx.getString(R.string.partner_held_title, held.size) + "\n" + held.joinToString("\n") { it.substringAfter('\t') })
+        notify(ctx, w, ctx.getString(R.string.partner_held_title, held.size) + "\n" + held.joinToString("\n") { it.substringAfter('\t') }, CH_HELD)
         return w.copy(held = "", heldDay = day)
     }
 
-    private fun notify(ctx: Context, w: SyncStore.Watch, text: String) {
+    /**
+     * Partner notifications come in four categories, so people can give each its own sound and Do Not Disturb
+     * behaviour in Android's settings. [CHANNEL] keeps its old id, so settings made for "Partner alerts" carry over.
+     */
+    private fun channels(ctx: Context, nm: NotificationManager) {
+        fun ch(id: String, name: Int, desc: Int, importance: Int) =
+            NotificationChannel(id, ctx.getString(name), importance).apply { description = ctx.getString(desc) }
+        nm.createNotificationChannels(listOf(
+            ch(CHANNEL, R.string.partner_channel_name, R.string.partner_channel_desc, NotificationManager.IMPORTANCE_HIGH),
+            ch(CH_OTHER, R.string.partner_other_channel, R.string.partner_other_channel_desc, NotificationManager.IMPORTANCE_DEFAULT),
+            ch(CH_HELD, R.string.partner_held_channel, R.string.partner_held_channel_desc, NotificationManager.IMPORTANCE_DEFAULT),
+            ch(CH_YOURS, R.string.partner_yours_channel, R.string.partner_yours_channel_desc, NotificationManager.IMPORTANCE_HIGH),
+        ))
+    }
+
+    private fun notify(ctx: Context, w: SyncStore.Watch, text: String, channel: String = CHANNEL) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
-        nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, ctx.getString(R.string.partner_channel_name), NotificationManager.IMPORTANCE_HIGH)
-        )
+        channels(ctx, nm)
         val open = PendingIntent.getActivity(
             ctx, w.keys.mailboxId.hashCode(),
             Intent(ctx, PartnerReportActivity::class.java).putExtra(PartnerReportActivity.EXTRA_MAILBOX, w.keys.mailboxId),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         nm.notify(
-            w.keys.mailboxId.hashCode(),
-            NotificationCompat.Builder(ctx, CHANNEL)
+            // One notification per partner per category: an "other" one never replaces an important one.
+            w.keys.mailboxId.hashCode() + listOf(CHANNEL, CH_OTHER, CH_HELD).indexOf(channel).coerceAtLeast(0),
+            NotificationCompat.Builder(ctx, channel)
                 .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle(ctx.getString(R.string.partner_alert_title, w.name))
                 .setContentText(text.lineSequence().first())
@@ -495,6 +510,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         internal fun sha256(s: String): String =
             java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
         private const val CHANNEL = "partner_alerts"
+        private const val CH_OTHER = "partner_other"
+        private const val CH_HELD = "partner_held"
+        private const val CH_YOURS = "partner_yours"
         /** How long a sealed report slice stays open (D-023); it is re-sent at every sync until then. */
         const val REPORT_EVERY_MS = 3_600_000L
         const val DIGEST_EVERY_MS = 6 * 3_600_000L

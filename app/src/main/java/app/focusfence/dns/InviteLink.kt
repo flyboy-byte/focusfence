@@ -48,6 +48,21 @@ object InviteLink {
 
     private val REPORT = Regex("""(https://[A-Za-z0-9.-]+(?::\d+)?)/p/([A-Za-z0-9_-]{20,})/?""")
 
+    /**
+     * The invite inside a link the app was opened with ([app.focusfence.LinkActivity]): an `https://…/i/…` App Link
+     * as is, or the invite page's `focusfence://invite?link=…` button. Null unless it is a partner invite.
+     */
+    fun fromOpened(url: String): String? {
+        val text = when {
+            url.startsWith("https://") -> url
+            url.startsWith("focusfence://invite?") -> url.substringAfter('?').split('&')
+                .firstOrNull { it.startsWith("link=") }?.substringAfter("link=")
+                ?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrNull() }
+            else -> null
+        } ?: return null
+        return text.takeIf { parse(it) is Parsed.Partner }
+    }
+
     /** The partner invite as the inviting phone shares it. */
     fun partnerLink(joinUrl: String, reportKey: String, pairingKey: String): String = "$joinUrl#k=$reportKey&p=$pairingKey"
 }

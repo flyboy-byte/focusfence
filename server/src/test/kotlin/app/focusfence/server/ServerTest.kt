@@ -521,6 +521,23 @@ class ServerTest {
     }
 
     @Test
+    fun assetLinksOnlyWhenConfiguredAndInvitePagesOfferTheApp() {
+        run { http -> assertEquals(HttpStatusCode.NotFound, http.get("/.well-known/assetlinks.json").status) }
+        val cert = (1..32).joinToString(":") { "AB" }
+        run(Config(publicUrl = "https://ff.test", now = { clock }, androidCerts = listOf(cert))) { http ->
+            val r = http.get("/.well-known/assetlinks.json")
+            assertEquals(HttpStatusCode.OK, r.status)
+            val body = r.bodyAsText()
+            assertTrue(body.contains("\"package_name\":\"app.focusfence.accountable\"") && body.contains(cert), body)
+            assertTrue(body.contains("delegate_permission/common.handle_all_urls"))
+            val id = http.enroll()
+            val secret = "s".repeat(32)
+            store.updateDevice(id) { it.invites = listOf(Store.Invite("x", clock + 3_600_000, linkHash = Integrity.sha256(secret), id = "inv1")) }
+            assertTrue(http.get("/i/$secret").bodyAsText().contains("id='openapp' data-package='app.focusfence.accountable'"))
+        }
+    }
+
+    @Test
     fun theOpenReportSliceIsReplacedNotPiledUp() {
         val s = Store(Files.createTempDirectory("ff-slices").toFile())
         val h = 3_600_000L

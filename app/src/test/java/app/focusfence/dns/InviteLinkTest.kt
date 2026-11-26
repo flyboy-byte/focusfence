@@ -51,4 +51,17 @@ class InviteLinkTest {
         assertEquals("https://ff.example.com" to "/p/$secret/leave", InviteLink.leaveTarget("https://ff.example.com/p/$secret#k=rk_1"))
         assertNull(InviteLink.leaveTarget("http://ff.example.com/p/$secret"))
     }
+
+    @Test
+    fun anInviteOpensFromAnAppLinkOrTheOpenInTheAppButton() {
+        val secret = "s".repeat(32)
+        val invite = "https://ff.example.com/i/$secret#k=${"k".repeat(43)}&p=pair_1"
+        assertEquals(invite, InviteLink.fromOpened(invite))
+        val button = "focusfence://invite?link=" + java.net.URLEncoder.encode(invite, "UTF-8")
+        assertEquals(invite, InviteLink.fromOpened(button))
+        assertNull(InviteLink.fromOpened("focusfence://invite?link=" + java.net.URLEncoder.encode("https://evil.example/whatever", "UTF-8")))
+        assertNull(InviteLink.fromOpened("focusfence://elsewhere?link=x"))
+        assertNull(InviteLink.fromOpened("https://ff.example.com/p/$secret"))
+        assertNull(InviteLink.fromOpened("javascript:alert(1)"))
+    }
 }
