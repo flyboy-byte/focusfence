@@ -393,6 +393,11 @@
 
   var base = location.pathname.replace(/\/$/, '');
   var token = base.split('/').pop();
+  // The Focus Fence app opens this page with its own copy of the key after '#' (never sent to a server), and app=1:
+  // it isn't a browser device, so it is never offered "Add this browser".
+  var hashParams = new URLSearchParams(location.hash.slice(1));
+  var appMode = hashParams.get('app') === '1';
+  if (hashParams.get('k')) { saveKey(hashParams.get('k')); history.replaceState(null, '', location.pathname + location.search); }
   var owner = box.getAttribute('data-owner') || 'They';
 
   // This browser's copy of the report key: 'ok' (saved), 'waiting' (the owner's phone hasn't sent it yet), 'none'.
@@ -451,14 +456,14 @@
         .then(async function (data) {
           var serverAlerts = await alertsReq;
           var keys = loadKeys();
-          if (!keys.length) return dk === 'none' ? notADevice() : waiting();
+          if (!keys.length) return dk === 'none' && !appMode ? notADevice() : waiting();
           var reports = data.reports || [];
           if (!reports.length) {
             show([el('p', 'No report yet. The phone sends one every hour.', 'muted')].concat(serverAlerts.length ? [timeline(serverAlerts, [])] : []));
             return;
           }
           var digests = await open(keys, data.deviceId, reports);
-          if (!digests.length) return dk === 'none' ? notADevice() : waiting();
+          if (!digests.length) return dk === 'none' && !appMode ? notADevice() : waiting();
           var shots = digests.filter(function (d) { return d.kind === 'shot'; });
           render(digests.filter(function (d) { return d.kind !== 'shot'; }), shots, serverAlerts);
         });

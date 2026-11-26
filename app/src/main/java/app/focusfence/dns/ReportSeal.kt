@@ -22,6 +22,13 @@ object ReportSeal {
 
     fun newKey(): String = B64.encodeUrl(ByteArray(32).also { SecureRandom().nextBytes(it) })
 
+    /**
+     * Plan 13: which report key this is, without giving it away (the first 12 bytes of its SHA-256, base64url). The
+     * phone sends it with each heartbeat; partner devices sealed to another key are sealed again.
+     */
+    fun keyId(key: String): String =
+        B64.encodeUrl(java.security.MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).copyOf(12))
+
     fun keyBytes(key: String): ByteArray? = runCatching {
         java.util.Base64.getUrlDecoder().decode(key)
     }.getOrNull()?.takeIf { it.size == 32 }

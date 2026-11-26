@@ -19,6 +19,7 @@ class FocusFenceApp : Application() {
         EventLog.init(this)
         logStartup()
         Monitor.checkIntegrityAsync(this)
+        app.focusfence.data.PartnerReset.runOnce(this)
         app.focusfence.sync.Sync.schedule(this)
         app.focusfence.update.Updates.schedule(this)
         app.focusfence.data.ListRefresh.schedule(this)

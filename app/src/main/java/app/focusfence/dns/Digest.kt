@@ -1,9 +1,9 @@
 package app.focusfence.dns
 
 /**
- * The partner-facing summary of a stretch of the activity log, sent app-to-app
- * through the blind mailbox (see [Pairing]). It is built on the phone, from the
- * same records the phone keeps, and only the summary leaves — never raw lines.
+ * The partner-facing summary of a stretch of the activity log: the partner report, sealed with the report key
+ * ([ReportSeal], D-023) and opened on partners' devices. It is built on the phone, from the same records the phone
+ * keeps, and only the summary leaves, never raw lines.
  *
  * Protection comes first on purpose: a quiet report means nothing if filtering
  * was off, so off-time, integrity changes and record gaps lead.
@@ -146,7 +146,6 @@ class Digest(private val fromT: Long) {
 
     companion object {
         const val KIND_DIGEST = "digest"
-        const val KIND_ALERT = "alert"
         private const val TOP = 15
         private const val MAX_EVENTS = 50
 
@@ -264,18 +263,16 @@ class Digest(private val fromT: Long) {
                 comp == "app" && state == "updated" -> "App updated" + detail(f)
                 comp == "log" && state == "cleared" -> "Activity log cleared"
                 comp == "log" && state == "setting" -> "Recording setting changed" + detail(f)
-                comp == "partner" && (state == "partner_removed" || state == "pairing_removed") ->
-                    "A partner was removed" + detail(f)
-                // the group's own change log: joins, leaves, removals, role and visibility changes
+                comp == "partner" && state == "partner_removed" -> "A partner was removed" + detail(f)
+                // Plan 13: who can read the report is never a silent change for the others watching.
+                comp == "partner" && state == "partner_joined" -> "A new partner joined" + detail(f)
+                comp == "partner" && state == "device_added" -> "A partner added a device" + detail(f)
                 comp == "partner" && state == "server_left" ->
                     "This phone is leaving the server" + detail(f) + ". Partners here won't hear from it after this."
                 comp == "partner" && state == "shot_auto_sent" ->
                     "A screenshot was flagged and sent to you blurred" + detail(f) + ". Open the report to see it."
                 comp == "partner" && state == "shot_shared" ->
                     "Shared a blurred screenshot with you" + detail(f) + ". Open the report to see it."
-                comp == "partner" && state == "group_notice" -> "Group: " + ((f["detail"] as? String) ?: "membership changed")
-                comp == "partner" && (state == "group_left" || state == "group_viewers" || state == "group_role" || state == "group_remove") ->
-                    "Group change made on this phone" + detail(f)
                 else -> null
             }
         }
@@ -284,9 +281,6 @@ class Digest(private val fromT: Long) {
 
         private fun detail(f: Map<String, Any?>): String =
             (f["detail"] as? String)?.takeIf { it.isNotBlank() && it != "user" }?.let { " ($it)" } ?: ""
-
-        fun alert(t: Long, text: String): Map<String, Any?> =
-            linkedMapOf("kind" to KIND_ALERT, "v" to 1, "t" to t, "text" to text)
 
         fun pairs(items: List<Pair<String, Long>>): String =
             items.joinToString("\n") { "${it.first.replace('\t', ' ').replace('\n', ' ')}\t${it.second}" }
@@ -299,37 +293,5 @@ class Digest(private val fromT: Long) {
 
         private fun top(m: Map<String, Long>, n: Int): List<Pair<String, Long>> =
             m.entries.sortedByDescending { it.value }.take(n).map { it.key to it.value }
-
-        /** Plain-text rendering for the partner's report screen. */
-        fun render(d: Map<String, Any?>, formatTime: (Long) -> String): String = buildString {
-            val off = d["off_min"] as? Long ?: 0L
-            val missing = d["missing"] as? Long ?: 0L
-            append("${formatTime(d["from"] as? Long ?: 0)} – ${formatTime(d["to"] as? Long ?: 0)}\n\n")
-            append(if (off == 0L) "Protection: on the whole time\n" else "Protection: OFF for $off min\n")
-            if (missing > 0) append("⚠ $missing records missing from the log (deleted or lost)\n")
-            val net = d["net_trouble"] as? Long ?: 0L
-            if (net > 0) append("Bad network $net times (the connection, not the filter)\n")
-            val events = (d["events"] as? String).orEmpty().lines().filter { it.isNotBlank() }
-            if (events.isNotEmpty()) {
-                append("\nChanges:\n")
-                events.forEach { append("• ").append(it).append('\n') }
-            }
-            append("\nLookups ${d["lookups"] ?: 0}, blocked ${d["blocked"] ?: 0}")
-            val flagged = d["flagged_shots"] as? Long ?: 0L
-            if (flagged > 0) append(", flagged screenshots $flagged")
-            append('\n')
-            section("Categories", d["cats"])
-            section("Category sites", d["cat_hosts"])
-            section("App time (min)", d["apps_min"])
-            section("Browser sites", d["sites"])
-            section("Top blocked", d["top_blocked"])
-        }
-
-        private fun StringBuilder.section(title: String, raw: Any?) {
-            val items = parsePairs(raw as? String)
-            if (items.isEmpty()) return
-            append("\n$title:\n")
-            items.forEach { (k, v) -> append("  $k  $v\n") }
-        }
     }
 }

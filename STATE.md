@@ -6,6 +6,11 @@
 > and tested ([`docs/plans/13-partners-redesign.md`](docs/plans/13-partners-redesign.md)). The live server was wiped the
 > same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS), so both phones show sync
 > errors until the new system ships. The filter itself is unaffected.
+>
+> **Plan 13 is built (2026-11-26), not released:** one kind of partner, invites by code, QR code or email, no pasting,
+> the report key sealed to each partner device (D-042, protocol level 2, a clean cut). Server and browser are tested end
+> to end; the app passes its tests but hasn't run on a phone. **Next:** release server 2.0.0 and app 3.0.0 together
+> (deploy needs `vps-sudo`), then test on both phones.
 
 > **Where it stands (2026-11-25 night, app 2.26.0 + server 1.3.0, live 1.3.0):** the filter is in daily use. 2.21–2.25
 > (silence alerts, blurred auto-shots with the NudeNet check, Block lists, first-time journeys, protocol window) and
@@ -28,11 +33,11 @@ below. It is the single place to answer "where are we?" — keep it honest, shor
 **Focus Fence AC** is a free, open-source self-accountability app for Android, benchmarked against
 **Ever Accountable** (EA). The core is the DNS-only filter, which works alone with no account or server. Optional
 layers add an activity log, filter-health detection, settings friction and strict mode, uninstall protection (device admin),
-opt-in text and screenshot capture with an on-device AI, and partners: email/web partners with end-to-end sealed
-reports through a self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23). One invite serves every partner
-(D-035): in a browser it's an email partner, in the app it enrolls and pairs that phone, which then reads the same sealed
-report. Groups of up to four also go through the server. The filter, logs, email alerts and app partners have run on
-real phones; groups and strict mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
+opt-in text and screenshot capture with an on-device AI, and partners with end-to-end sealed reports through a
+self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23). Since plan 13 (D-042, built 2026-11-26, not yet
+released) there is one kind of partner: a person with devices, invited by code, QR code or email, reading the report in
+the Focus Fence app or a browser. The filter, logs and the earlier partner system have run on real phones; plan 13 and
+strict mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
 
 ## Where the code is
 

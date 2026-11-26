@@ -17,7 +17,11 @@ class ProtocolTest {
     }
 
     @Test
-    fun oldestIsNeverBelowOne() {
-        assertEquals(maxOf(1, Protocol.LEVEL - Protocol.WINDOW), Protocol.OLDEST)
+    fun oldestIsNeverBelowTheFloor() {
+        assertEquals(maxOf(Protocol.FLOOR, Protocol.LEVEL - Protocol.WINDOW), Protocol.OLDEST)
+        // Plan 13's clean cut: level 1 (pairing mailboxes, keyed invite links) is never served or spoken again.
+        assertEquals(2, Protocol.OLDEST)
+        // This app against a level-1 server (1.3.0 and older): the server is the side to update.
+        assertEquals(Protocol.Status.SERVER_TOO_OLD, Protocol.check(Protocol.LEVEL, Protocol.OLDEST, 1, 1))
     }
 }

@@ -55,13 +55,12 @@ want one. Each can be skipped.
 | ✅ | A log of lookups, apps and protection changes, kept on the phone |
 | ✅ | Screenshot checks with on-device AI (optional; clear images never leave the phone) |
 | 🧪 | Two-step screenshot check: a whole-picture model, then NudeNet looks for exposed or covered body parts, so faces and skin don't count as porn |
-| ✅ | Email partners with instant alerts |
+| 🧪 | Partners by code, QR code or email invite, nothing to paste: they read your report in the Focus Fence app or a browser, and get alerts as notifications or email |
 | 🧪 | Dead man's switch: partners hear within about an hour if the phone stops checking in, and what happened once it's back |
-| ✅ | One invite for any partner: opened in a browser they get email reports, pasted into Focus Fence on their phone they see the same report in the app |
 | 🧪 | Encrypted partner reports, about 15 minutes fresh: status, needs-attention, one timeline, day-by-day bars, screenshots, sortable app and site tables |
 | 🧪 | Strict mode: a wait, your own PIN, or a partner's code before loosening anything |
 | 🧪 | Partners hear when protection is loosened: filter off, adult list set to Report, screen checks off, leaving the server |
-| 🧪 | Groups of up to four, and partner unlock codes in the partner's app |
+| 🧪 | Ask a partner: one tap asks for an OK instead of waiting out strict mode; any one partner can answer |
 | 🧪 | Flagged screenshots sent to partners automatically, heavily blurred (48 px at most), with a note from you |
 | 🧪 | Suggestive images (lingerie, swimwear) noted in the partner report |
 | 🧪 | Uninstall protection: removing the app takes an extra step, and partners are told |
@@ -124,10 +123,9 @@ The full privacy page is at https://flyboy-byte.github.io/focusfence/privacy.htm
 ## Running your own server
 
 You only need a server for partners. There's no public one: run your own, or join someone's by invite. It's a small
-Kotlin app that stores everything in files and sends email through Resend or any SMTP account (SMS through Twilio or
-Telnyx is optional). Each person on a server is separate unless they link up. Every phone on a server joins by invite:
-the operator makes one for the person being filtered (admin page or `admin codes add`), and their phone makes one for
-each partner.
+Kotlin app that stores everything in files and sends email through Resend or any SMTP account. Each person on a server
+is separate unless they link up. The operator makes an enrollment code for the person being filtered (admin page or
+`admin codes add`), and their phone invites each partner with a code, a QR code or an email.
 
 Install the newest `server-v` release (Docker image or a tarball with a systemd installer). The app and server keep
 working with each other two protocol versions back, and CI holds both to that (D-041).

@@ -78,6 +78,8 @@ dependencies {
     // Background sync to the accountability server / partner mailbox. 2.9.x is the
     // last line that builds against compileSdk 34.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Plan 13: the invite's QR code, drawn on the phone (pure Java, Apache-2.0; encoding only, no camera).
+    implementation("com.google.zxing:core:3.5.3")
 
     // On-device screenshot classifier (optional at runtime: capture works with
     // no model present, it just produces score-less shots). Model is supplied

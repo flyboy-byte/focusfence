@@ -120,8 +120,7 @@ class DigestTest {
         val back = LogJson.decode(LogJson.encode(m))!!
         assertEquals("digest", back["kind"])
         assertEquals(listOf("we\"ird host" to 1L), Digest.parsePairs(back["top_blocked"] as String))
-        val text = Digest.render(back) { it.toString() }
-        assertTrue(text, text.contains("Protection: on the whole time"))
+        assertEquals(0L, back["off_min"])
     }
 
     @Test
@@ -152,7 +151,6 @@ class DigestTest {
         val m = d.build(10_000)
         assertEquals(6L, m["net_trouble"])
         assertEquals("Filter problem: bypassed", m["events"])
-        assertTrue(Digest.render(m) { it.toString() }.contains("Bad network 6 times"))
     }
 
     @Test
