@@ -9,7 +9,7 @@
 >
 > **Plan 14 groups released (2026-11-26): app 3.1.0, server 2.1.0 live, not yet tried on phones.** Up to 6 phones that
 > all see each other, as partner pairs both ways ([`docs/plans/14-groups.md`](docs/plans/14-groups.md)). A phone that joins a
-> report is now on that server too. Logan tried 3.0.0 briefly: "I love it, it was quick and seamless".
+> report is now on that server too. Logan tried 3.0.0 briefly: "I love it, it was quick and seem less".
 >
 > **Plan 13 is released (2026-11-26): app 3.0.0, server 2.0.0:** one kind of partner, invites by code, QR code or email, no pasting,
 > the report key sealed to each partner device (D-042, protocol level 2, a clean cut). Server and browser are tested end
