@@ -12,7 +12,7 @@ replaced (four public docs still described plan 12's partners two days after pla
 | 1 | ~~Issue #18: a google.com rule stops all push notifications~~ DONE (2026-11-26) | ~1 h | no |
 | 2 | ~~Docs drift guard in CI~~ DONE (2026-11-26) | ~1 h | no |
 | 3 | ~~Partner flow test across app and server (JVM)~~ DONE (2026-11-26) | ~half a day | no |
-| 4 | Emulator smoke test in CI | ~half a day | no |
+| 4 | Emulator smoke test in CI | ~half a day | parked (2026-11-26) |
 | 5 | ~~Lint triage (130 warnings)~~ DONE (2026-11-26) | ~1 h | no |
 | 6 | Split the biggest files | as they're touched | no |
 | 7 | targetSdk 35 | ~2 h + a phone check | the phone check |
@@ -62,7 +62,12 @@ The bugs that reach phones live between the two halves (signatures, field names,
 seal → partner opens the key → report decrypts; the same for a group of three. `CompatLevel2Test` covers single calls;
 this covers the sequence. No Android needed.
 
-## 4. Emulator smoke test (~half a day)
+## 4. Emulator smoke test (parked 2026-11-26)
+
+**Parked:** Logan tests every build on two phones before a tag, and that caught the one Android-side partner bug so far
+("second phone not registered"). The cost is half a day plus ~8 min of flaky-prone CI per sync PR. **Build it when:**
+Android-side partner bugs reach a phone more than once, or someone else starts changing `sync/`.
+
 
 What item 3 can't reach: `SyncWorker`, `Accountability`, `PartnerKey` (keystore), the Partners screen.
 `reactivecircus/android-emulator-runner` in a new `smoke.yml` (on PRs touching `sync/` or `server/`), the server started

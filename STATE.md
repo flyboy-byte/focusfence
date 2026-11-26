@@ -4,8 +4,9 @@
 
 > **PAUSED for the partner redesign (2026-11-26, Logan):** production is on hold while one partner system is designed
 > and tested ([`docs/plans/13-partners-redesign.md`](docs/plans/13-partners-redesign.md)). The live server was wiped the
-> same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS), so both phones show sync
-> errors until the new system ships. The filter itself is unaffected.
+> same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS). The new system shipped in
+> 3.0/3.1 (server 2.1.0) and Logan has tried it on two phones, so sync works again; the pause stays until he lifts it.
+> The filter itself was never affected.
 >
 > **Plan 14 groups released (2026-11-26): app 3.1.0, server 2.1.0 live, not yet tried on phones.** Up to 6 phones that
 > all see each other, as partner pairs both ways ([`docs/plans/14-groups.md`](docs/plans/14-groups.md)). A phone that joins a
