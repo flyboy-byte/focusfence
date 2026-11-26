@@ -93,7 +93,7 @@ class Config(
 @Serializable data class InviteResponse(val code: String, val expiresMs: Long, val joinUrl: String, val inviteId: String = "")
 @Serializable data class AcceptRequest(val deviceId: String, val t: Long, val signature: String, val secret: String, val name: String = "")
 @Serializable data class AcceptResponse(val ownerId: String, val ownerName: String, val reportUrl: String = "")
-@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long, val lastViewMs: Long = 0)
+@Serializable data class AppPartnerInfo(val id: String, val name: String, val inviteId: String, val linkedMs: Long, val lastViewMs: Long = 0, val readsFeed: Boolean = false)
 @Serializable data class PartnerInfo(val id: String, val name: String, val email: String, val sms: Boolean, val linkedMs: Long, val confirmed: Boolean = true, val inviteId: String = "", val lastViewMs: Long = 0)
 @Serializable data class PartnersResponse(val partners: List<PartnerInfo>, val app: List<AppPartnerInfo> = emptyList())
 @Serializable data class BatchRequest(
@@ -400,7 +400,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!signedOk(device, "partners", req.t, "", req.signature)) return@post call.unauthorized()
             call.respond(PartnersResponse(device.partners.map {
                 PartnerInfo(it.id, it.name, Web.mask(it.email), it.phoneVerified, it.linkedMs, it.confirmed, it.inviteId, it.lastViewMs)
-            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs, it.lastViewMs) }))
+            }, device.appPartners.map { AppPartnerInfo(it.id, it.name, it.inviteId, it.linkedMs, it.lastViewMs, it.lastFeedMs > 0) }))
         }
 
         // Unlinking is never silent: the removed partner is told.
@@ -712,6 +712,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("not found"))
             val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0
             call.response.headers.append("Cache-Control", "no-store")
+            store.markFeedRead(device.id, partner.id, cfg.now())
             call.respond(AlertFeed(cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, cfg.staleMs,
                 if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList(),
                 partner.alertLevel, partner.quiet))

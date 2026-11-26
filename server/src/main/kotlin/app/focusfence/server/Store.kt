@@ -88,6 +88,11 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         /** Plan 12 §5: as [Partner.alertLevel]; their own app applies them, in their phone's time zone. */
         val alertLevel: String = "all",
         val quiet: Boolean = false,
+        /**
+         * Plan 12 §8: when their app last read the alert feed. Once it has, the owner's phone stops sending them the
+         * same alerts and digest through the pairing mailbox: one path instead of two.
+         */
+        val lastFeedMs: Long = 0,
     ) {
         /** As the partner pages see them: no email, no texts, always confirmed. */
         fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs, alertLevel = alertLevel, quiet = quiet)
@@ -295,6 +300,14 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
             dev.partners.firstOrNull { it.id == partnerId }?.lastViewMs = now
             dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastViewMs = now) else it }
         }
+    }
+
+    /** Plan 12 §8: an app partner's app read its feed. Written at most hourly: only "has it ever" matters. */
+    fun markFeedRead(deviceId: String, partnerId: String, now: Long) {
+        val d = device(deviceId) ?: return
+        val ap = d.appPartners.firstOrNull { it.id == partnerId } ?: return
+        if (now - ap.lastFeedMs < 3_600_000L) return
+        updateDevice(deviceId) { dev -> dev.appPartners = dev.appPartners.map { if (it.id == partnerId) it.copy(lastFeedMs = now) else it } }
     }
 
     fun addOwnerNotice(id: String, text: String, now: Long) = updateDevice(id) { d ->
