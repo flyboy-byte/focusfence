@@ -7,7 +7,11 @@
 > same night (devices, mailboxes, screenshots; admin login and codes kept; backup on the VPS), so both phones show sync
 > errors until the new system ships. The filter itself is unaffected.
 >
-> **Plan 13 is released (2026-11-26): app 3.0.0, server 2.0.0 live, not yet tried on a phone:** one kind of partner, invites by code, QR code or email, no pasting,
+> **Plan 14 groups released (2026-11-26): app 3.1.0, server 2.1.0 live, not yet tried on phones.** Up to 6 phones that
+> all see each other, as partner pairs both ways ([`docs/plans/14-groups.md`](docs/plans/14-groups.md)). A phone that joins a
+> report is now on that server too. Logan tried 3.0.0 briefly: "I love it, it was quick and seem less".
+>
+> **Plan 13 is released (2026-11-26): app 3.0.0, server 2.0.0:** one kind of partner, invites by code, QR code or email, no pasting,
 > the report key sealed to each partner device (D-042, protocol level 2, a clean cut). Server and browser are tested end
 > to end; the app passes its tests but hasn't run on a phone. **Next:** Logan tests on both phones (each re-enrolls with a new
 > enrollment code: the server was wiped).
@@ -48,7 +52,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v3.0.0-accountable` (2026-11-26, code 51): plan 13, one partner system, protocol 2. Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.0.0`, live on the box since 2026-11-26 04:37 UTC (`/v1/version` says protocol 2, oldest app 2, 2.0.0), installed with the release `install.sh`. |
+| Latest release | `v3.1.0-accountable` (2026-11-26, code 52): plan 14 groups, and a phone that joins a report is on that server too. Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC (`/v1/version` says protocol 2, oldest app 2, 2.1.0), installed with the release `install.sh`. |
 
 ## Verification levels
 
