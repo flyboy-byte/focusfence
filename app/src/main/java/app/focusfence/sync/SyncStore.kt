@@ -104,6 +104,9 @@ object SyncStore {
     /** When this phone last made an invite: for 30 minutes after, it checks in every minute so a joiner waits under one. */
     fun inviteMadeMs(context: Context): Long = prefs(context).getLong("invite_made", 0)
     fun setInviteMadeMs(context: Context, t: Long) { prefs(context).edit().putLong("invite_made", t).apply() }
+    /** Last try at enrolling with a partner token from sync, so a refusal is retried daily, not every sync. */
+    fun partnerEnrollTriedMs(context: Context): Long = prefs(context).getLong("partner_enroll_tried", 0)
+    fun setPartnerEnrollTriedMs(context: Context, t: Long) { prefs(context).edit().putLong("partner_enroll_tried", t).apply() }
 
     fun lastReportMs(context: Context): Long = prefs(context).getLong(KEY_LAST_REPORT, 0)
     fun setLastReportMs(context: Context, t: Long) { prefs(context).edit().putLong(KEY_LAST_REPORT, t).apply() }

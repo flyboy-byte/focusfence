@@ -147,6 +147,7 @@ Built after Logan said "keep going". Defaults I picked, each changeable:
 | QR code | Drawn on the phone (zxing core, encode only) | No camera code: the camera app opens the `/c/` page, which offers the app |
 | Partner device key (app) | Software P-256 key, wrapped by a keystore AES key | Keystore ECDH needs Android 12; the app runs from 8 |
 | Bare code typed in the app | Also asks for the server (pre-filled with this phone's) | A code alone doesn't say which server |
+| A partner's own phone (2026-11-26, Logan's first test) | Enrolls on that server when it joins, with its partner token (`X-FF-Partner`, one phone per partner) instead of an enrollment code | Logan: "there is 2 types of users, using the server or not". A partner can be watched later with no code. Browsers don't enroll |
 
 **Verified:**
 - Server: 54 tests including `CompatLevel2Test`.

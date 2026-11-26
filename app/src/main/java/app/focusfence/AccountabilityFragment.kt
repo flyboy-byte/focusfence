@@ -53,6 +53,11 @@ class AccountabilityFragment : Fragment() {
         binding.serverSave.setOnClickListener {
             // Once connected, the server fields fold away behind "Change server": set once, rarely touched.
             if (!editingServer && SyncStore.deviceId(requireContext()) != null) { editingServer = true; bindServer(); return@setOnClickListener }
+            // A phone that only reads others' reports isn't watched itself; this opens the fields to make it watched too.
+            if (!editingServer && partnerOnly()) {
+                if (binding.serverInput.text.isNullOrBlank()) binding.serverInput.setText(SyncStore.seen(requireContext()).first().server)
+                editingServer = true; bindServer(); return@setOnClickListener
+            }
             val url = binding.serverInput.text?.toString().orEmpty().trim().trimEnd('/')
             val code = binding.enrollInput.text?.toString().orEmpty().trim()
             val ctx = requireContext().applicationContext
@@ -125,12 +130,16 @@ class AccountabilityFragment : Fragment() {
 
     private var editingServer = false
 
+    /** Joined someone's report but never connected as a watched phone itself (plan 13: joining doesn't enroll). */
+    private fun partnerOnly(): Boolean =
+        SyncStore.deviceId(requireContext()) == null && SyncStore.seen(requireContext()).isNotEmpty()
+
     private fun bindServer() {
         // Rank: before there's a server nothing else works, so its card leads; once connected it's a status line at
         // the bottom and the partners come first.
         val list = binding.partnersList
         val card = binding.serverCard
-        val connected = SyncStore.deviceId(requireContext()) != null
+        val connected = SyncStore.deviceId(requireContext()) != null || partnerOnly()
         val want = if (connected) list.childCount - 1 else 0
         if (list.indexOfChild(card) != want) {
             list.removeView(card)
@@ -139,18 +148,26 @@ class AccountabilityFragment : Fragment() {
             (list.getChildAt(if (connected) 0 else 1).layoutParams as ViewGroup.MarginLayoutParams).topMargin = if (connected) 0 else dp(12)
             list.requestLayout()
         }
-        val open = editingServer || SyncStore.deviceId(requireContext()) == null
+        val open = editingServer || (SyncStore.deviceId(requireContext()) == null && !partnerOnly())
         val v = if (open) View.VISIBLE else View.GONE
         (binding.serverInput.parent.parent as View).visibility = v
         (binding.enrollInput.parent.parent as View).visibility = v
-        binding.serverSave.setText(if (open) R.string.acc_save else R.string.acc_change_server)
+        binding.serverSave.setText(when {
+            open -> R.string.acc_save
+            partnerOnly() -> R.string.acc_watch_me_too
+            else -> R.string.acc_change_server
+        })
         binding.serverLeave.visibility = if (!open && SyncStore.deviceId(requireContext()) != null) View.VISIBLE else View.GONE
     }
 
     private fun bind() {
         val ok = SyncStore.lastOk(requireContext())
         val configured = SyncStore.deviceId(requireContext()) != null
-        binding.syncStatus.text = if (!configured) {
+        binding.syncStatus.text = if (!configured && partnerOnly()) {
+            val seen = SyncStore.seen(requireContext())
+            resources.getQuantityString(R.plurals.acc_status_partner_only, seen.size, seen.size,
+                seen.map { it.server.removePrefix("https://").trimEnd('/') }.distinct().joinToString())
+        } else if (!configured) {
             getString(R.string.acc_status_none)
         } else {
             getString(

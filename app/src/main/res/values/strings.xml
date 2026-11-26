@@ -436,6 +436,11 @@
     <string name="acc_server_url">Server address (https://…)</string>
     <string name="acc_save">Save</string>
     <string name="acc_status_none">Not set up</string>
+    <plurals name="acc_status_partner_only">
+        <item quantity="one">Opens %1$d report on %2$s. This phone itself isn\'t watched.</item>
+        <item quantity="other">Opens %1$d reports on %2$s. This phone itself isn\'t watched.</item>
+    </plurals>
+    <string name="acc_watch_me_too">Have this phone watched too</string>
     <string name="acc_status">Last sync %1$s%2$s</string>
     <string name="acc_status_never">never</string>
     <string name="acc_status_error">\nLast error: %1$s</string>
