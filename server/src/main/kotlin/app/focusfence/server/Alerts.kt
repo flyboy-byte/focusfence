@@ -12,6 +12,12 @@ import app.focusfence.dns.LogJson
  * per partner so a flapping setting can't run up a provider bill.
  */
 class Alerts(private val store: Store, private val notifier: Notifier, private val cfg: Config) {
+    /**
+     * The service journal (journalctl -u ffbackend): what partners were sent, held or not sent, by short ids and counts
+     * only. Never a name, address or alert text: the operator reads this, and D-023 keeps them out of reports.
+     */
+    private val journal = org.slf4j.LoggerFactory.getLogger("ff.partners")
+
 
     fun link(p: Store.Partner) = "${cfg.publicUrl}/p/${p.token}"
 
@@ -52,6 +58,8 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             }
             val sendNow = lines.filterIndexed { i, _ -> routes[i] == app.focusfence.dns.AlertPrefs.Route.NOW }
             if (sendNow.isNotEmpty()) sendLines(device.id, partner, subject, sendNow, now)
+            journal.info("alert dev={} partner={} now={} held={} skipped={}", device.id.take(8), partner.id.take(8),
+                sendNow.size, hold.size, lines.size - sendNow.size - hold.size)
         }
     }
 
@@ -60,6 +68,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             lines.joinToString("") { "<li>${Web.esc(it)}</li>" } +
             "</ul><p><a href=\"${link(p)}\">Open the report</a>. If it says the key is missing, open the Focus Fence link the phone's owner sent you instead: that one always works.</p>"
         if (mayEmail(p.email)) notifier.email(p.email, "Focus Fence: $subject", html)
+        else journal.info("email throttled partner={}", p.id.take(8))
         val phone = p.phone
         if (p.phoneVerified && phone != null && now - p.lastSmsMs >= cfg.smsMinIntervalMs) {
             val more = if (lines.size > 1) " (+${lines.size - 1} more)" else ""
@@ -78,6 +87,7 @@ class Alerts(private val store: Store, private val notifier: Notifier, private v
             if (!app.focusfence.dns.AlertPrefs.flushDue(prefs, app.focusfence.dns.AlertPrefs.hour(prefs, now), day, p.lastFlushDay, true)) continue
             val lines = p.held.map { "${Web.time(it.t)}: ${it.text}" }
             store.updateDevice(d.id) { dev -> dev.partners.firstOrNull { it.id == p.id }?.apply { held = emptyList(); lastFlushDay = day } }
+            journal.info("held sent dev={} partner={} n={}", d.id.take(8), p.id.take(8), lines.size)
             sendLines(d.id, p, "${lines.size} alert${if (lines.size == 1) "" else "s"} held for you", lines, now)
         }
     }

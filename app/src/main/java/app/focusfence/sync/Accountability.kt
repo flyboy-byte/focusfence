@@ -180,7 +180,10 @@ object Accountability {
         val unknown = SyncStore.ownPairings(ctx).filter { !it.pending && !it.viaServer && it.inviteId.isNotEmpty() }
         if (unknown.isEmpty() || SyncStore.deviceId(ctx) == null) return
         val app = partners(ctx).app
-        for (p in unknown) if (app.any { it.inviteId == p.inviteId && it.readsFeed }) SyncStore.saveOwn(ctx, p.copy(viaServer = true))
+        for (p in unknown) if (app.any { it.inviteId == p.inviteId && it.readsFeed }) {
+            SyncStore.saveOwn(ctx, p.copy(viaServer = true))
+            EventLog.diag(LogEvents.service(System.currentTimeMillis(), "partner", "via_server", p.name))
+        }
     }
 
     /**
@@ -248,8 +251,10 @@ object Accountability {
         val r = try {
             api(ctx).post("/v1/unlock/ask", signed(ctx, "unlock", action.key).put("kind", action.key))
         } catch (e: Exception) {
+            EventLog.diag(LogEvents.error(System.currentTimeMillis(), "ask", "network", e.javaClass.simpleName))
             return friendly(e)
         }
+        if (r.code != 200) EventLog.diag(LogEvents.error(System.currentTimeMillis(), "ask", "http_${r.code}", action.name.lowercase()))
         return when (r.code) {
             200 -> {
                 val b = r.body ?: return ctx.getString(app.focusfence.R.string.ask_failed, r.code)

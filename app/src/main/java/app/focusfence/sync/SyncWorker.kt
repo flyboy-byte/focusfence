@@ -48,6 +48,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         val ctx = applicationContext
         if (!SyncStore.hasWork(ctx)) return Result.success()
         val cpu0 = android.os.Debug.threadCpuTimeNanos()
+        val wall0 = android.os.SystemClock.elapsedRealtime()
         // Periodic and kicked runs can overlap; uploads must not interleave.
         synchronized(LOCK) {
             EventLog.init(ctx)
@@ -59,15 +60,15 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             if (SyncStore.deviceId(ctx) != null) {
                 // Independent steps: a server that predates D-023 (no /v1/reports) must not also stop the heartbeat,
                 // or partners would get a false "phone went silent".
-                for (step in listOf<() -> Unit>(
-                    { heartbeat = heartbeat(ctx, api, now) },
+                for ((name, step) in listOf<Pair<String, () -> Unit>>(
+                    "heartbeat" to { heartbeat = heartbeat(ctx, api, now) },
                     // Shares before alerts: an automatic share logs its partner alert once uploaded, and that alert
                     // should go in this same pass.
-                    { serverShares(ctx, api) },
-                    { serverAlerts(ctx, api, now) },
-                    { serverReport(ctx, api, now) },
+                    "shares" to { serverShares(ctx, api) },
+                    "alerts" to { serverAlerts(ctx, api, now) },
+                    "report" to { serverReport(ctx, api, now) },
                 )) {
-                    try { step() } catch (e: Exception) { error = error ?: "server: ${e.javaClass.simpleName}: ${e.message}" }
+                    try { step() } catch (e: Exception) { error = error ?: "server: ${e.javaClass.simpleName}: ${e.message}"; logStepError(name, e) }
                 }
             }
             // Groups first: a hand-over made now becomes a pairing the loops below can start using this same pass.
@@ -76,6 +77,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                     GroupSync.run(ctx, api, now)
                 } catch (e: Exception) {
                     error = error ?: "group: ${e.javaClass.simpleName}: ${e.message}"
+                    logStepError("group", e)
                 }
             }
             try {
@@ -83,12 +85,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 Accountability.learnViaServer(ctx)
             } catch (e: Exception) {
                 error = error ?: "invites: ${e.javaClass.simpleName}: ${e.message}"
+                logStepError("invites", e)
             }
             for (p in SyncStore.ownPairings(ctx).filter { !it.pending }) {
                 try {
                     sendToPartner(ctx, api, p, now)
                 } catch (e: Exception) {
                     error = error ?: "pairing: ${e.javaClass.simpleName}: ${e.message}"
+                    logStepError("pairing", e)
                 }
             }
             for (w in SyncStore.watches(ctx)) {
@@ -96,12 +100,15 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                     receive(ctx, api, w, now)
                 } catch (e: Exception) {
                     error = error ?: "watch: ${e.javaClass.simpleName}: ${e.message}"
+                    logStepError("watch", e)
                 }
             }
             SyncStore.recordResult(ctx, now, error, heartbeat)
             app.focusfence.monitor.Monitor.perf.count("sync")
             if (error != null) app.focusfence.monitor.Monitor.perf.count("sync_fail")
             app.focusfence.monitor.Monitor.perf.count("sync_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
+            app.focusfence.monitor.Monitor.perf.count("sync_ms", android.os.SystemClock.elapsedRealtime() - wall0)
+            notificationState(ctx)
         }
         // Failures are recorded and retried on the next period; WorkManager's
         // exponential backoff would only delay the next heartbeat further.
@@ -162,6 +169,33 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         }
     }
 
+    /**
+     * A failed sync step goes into the diag log (it used to reach only Settings' "last error"), once per step until its
+     * message changes or six hours pass: a phone offline all night writes a line, not one per sync.
+     */
+    private fun logStepError(step: String, e: Exception) {
+        val what = "${e.javaClass.simpleName}: ${e.message}".take(200)
+        val now = System.currentTimeMillis()
+        val last = lastStepError[step]
+        if (last != null && last.first == what && now - last.second < 6 * 3_600_000L) return
+        lastStepError[step] = what to now
+        EventLog.diag(LogEvents.error(now, "sync", step, what))
+    }
+
+    /**
+     * Whether partner notifications can show at all, logged when it changes: an alert "that never came" is often a
+     * category the person switched off in Android's settings.
+     */
+    private fun notificationState(ctx: Context) {
+        val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
+        val parts = listOf(CHANNEL, CH_OTHER, CH_HELD, CH_YOURS).map { id -> "$id=${nm.getNotificationChannel(id)?.importance ?: "none"}" }
+        val state = "enabled=${nm.areNotificationsEnabled()}," + parts.joinToString(",")
+        val p = ctx.getSharedPreferences("focusfence_sync_diag", Context.MODE_PRIVATE)
+        if (p.getString("notify_state", null) == state) return
+        p.edit().putString("notify_state", state).apply()
+        EventLog.diag(LogEvents.service(System.currentTimeMillis(), "notify", "channels", state))
+    }
+
     /** Same encoding as the server's `Integrity.sha256`: base64url, no padding. */
     private fun heartbeat(ctx: Context, api: Api, now: Long): Boolean {
         val deviceId = SyncStore.deviceId(ctx) ?: return false
@@ -203,7 +237,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
                 "${action.name.lowercase()} by=${a.by}"), urgent = true)
             notifyOwner(ctx, a.decidedMs, ctx.getString(R.string.ask_answer_title), app.focusfence.dns.UnlockAsk.answerLine(a.by, approved, action))
         }
-        if (a.state == app.focusfence.dns.UnlockAsk.PENDING) Sync.kickAfter(ctx, "unlock_${now / 60_000}", 60_000)
+        if (a.state == app.focusfence.dns.UnlockAsk.PENDING) {
+            app.focusfence.monitor.Monitor.perf.count("ask_poll") // the extra once-a-minute syncs while an ask waits
+            Sync.kickAfter(ctx, "unlock_${now / 60_000}", 60_000)
+        }
     }
 
     /** Plan 12: what the server says the owner should know (a partner left). Logged, and one notification each. */
@@ -379,14 +416,17 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
     private fun serverFeed(start: SyncStore.Watch, now: Long): Feed? {
         val (origin, path) = InviteLink.alertsTarget(start.reportUrl) ?: return null
-        val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull() ?: return null
-        val arr = r.body?.optJSONArray("alerts")
-        if (r.code != 200 || arr == null) return null
+        val perf = app.focusfence.monitor.Monitor.perf
+        perf.count("feed_read")
+        val r = runCatching { Api(origin).get("$path?after=${start.serverAlertT}") }.getOrNull()
+        val arr = r?.body?.optJSONArray("alerts")
+        if (r == null || r.code != 200 || arr == null) { perf.count("feed_fail"); return null }
         var w = start
         val lines = ArrayList<String>()
         // Plan 12 §5: this partner's own choices, in this phone's time zone (absent from an older server: everything).
         val prefs = feedPrefs(r.body)
         val hour = AlertPrefs.hour(prefs, now)
+        logFeedPrefs(start, prefs)
         val other = ArrayList<String>()
         for (i in 0 until arr.length()) {
             val a = arr.optJSONObject(i) ?: continue
@@ -394,7 +434,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val text = a.optString("text").takeIf { it.isNotBlank() } ?: continue
             if (t <= w.serverAlertT) continue
             // The first read after an update can return two weeks of history: keep it, but only notify what's recent.
-            if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) when (AlertPrefs.route(prefs, a.optBoolean("important", true), hour)) {
+            perf.count("feed_new")
+            // Why a partner's phone did or didn't show an alert: counted by route (feed_now / _other / _held / _skip).
+            if (start.serverAlertT > 0 || now - t < FIRST_FEED_NOTIFY_MS) when (AlertPrefs.route(prefs, a.optBoolean("important", true), hour).also {
+                perf.count(when (it) { AlertPrefs.Route.NOW -> if (a.optBoolean("important", true)) "feed_now" else "feed_other"; AlertPrefs.Route.HOLD -> "feed_held"; AlertPrefs.Route.SKIP -> "feed_skip" })
+            }) {
                 AlertPrefs.Route.NOW -> if (a.optBoolean("important", true)) lines += text else other += text
                 AlertPrefs.Route.HOLD -> w = w.copy(held = (w.held.lines().filter { it.isNotBlank() } + "$t\t${text.replace('\n', ' ').replace('\t', ' ')}").takeLast(50).joinToString("\n"))
                 AlertPrefs.Route.SKIP -> Unit
@@ -410,12 +454,24 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         AlertPrefs.hourOr(body?.optInt("quietFrom", -1), AlertPrefs.QUIET_FROM_HOUR), AlertPrefs.hourOr(body?.optInt("quietTo", -1), AlertPrefs.QUIET_TO_HOUR),
     )
 
+    /** A partner's own alert choices, logged when they change, so "I didn't get it" can be checked against them. */
+    private fun logFeedPrefs(w: SyncStore.Watch, p: AlertPrefs.Prefs) {
+        val ctx = applicationContext
+        val v = "level=${p.level.key},quiet=${if (p.quiet) "${p.quietFrom}-${p.quietTo}" else "off"}"
+        val sp = ctx.getSharedPreferences("focusfence_sync_diag", Context.MODE_PRIVATE)
+        val key = "feed_prefs_" + w.keys.mailboxId.take(16)
+        if (sp.getString(key, null) == v) return
+        sp.edit().putString(key, v).apply()
+        EventLog.diag(LogEvents.service(System.currentTimeMillis(), "partner", "feed_prefs", "${w.name.take(40)}: $v"))
+    }
+
     /** Plan 12 §5: held alerts go out as one notification at 7 this phone's time, never inside quiet hours. */
     private fun flushHeld(ctx: Context, w: SyncStore.Watch, now: Long, prefs: AlertPrefs.Prefs): SyncStore.Watch {
         val held = w.held.lines().filter { it.isNotBlank() }
         if (held.isEmpty()) return w
         val day = AlertPrefs.day(prefs, now)
         if (!AlertPrefs.flushDue(prefs, AlertPrefs.hour(prefs, now), day, w.heldDay, true)) return w
+        app.focusfence.monitor.Monitor.perf.count("feed_flush")
         notify(ctx, w, ctx.getString(R.string.partner_held_title, held.size) + "\n" + held.joinToString("\n") { it.substringAfter('\t') }, CH_HELD)
         return w.copy(held = "", heldDay = day)
     }
@@ -512,6 +568,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
         internal fun sha256(s: String): String =
             java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
+        private val lastStepError = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
         private const val CHANNEL = "partner_alerts"
         private const val CH_OTHER = "partner_other"
         private const val CH_HELD = "partner_held"

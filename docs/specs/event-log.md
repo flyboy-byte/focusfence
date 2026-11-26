@@ -81,6 +81,12 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `perf` | `win` (window ms) + counters below + `p50`/`p95`/`p99`/`max` resolver latency ms | Right after each `bat` sample, closing the window since the previous one |
 | `err` | `comp`, `what`, `detail`? (≤300 chars) | Non-fatal failures: `ipv6_rejected`, `tun_read`, `interrupt`, monitor exceptions |
 | `svc` | `comp=adlist`, `state=loaded`, `detail` (`n=…,ms=…`) | Ad list loaded after VPN start. Until then ad domains resolve normally |
+| `err` | `comp=sync`, `what` = the step (`heartbeat`, `shares`, `alerts`, `report`, `group`, `invites`, `pairing`, `watch`), `detail` = exception and message | A sync step failed. Once per step until the message changes or 6 h pass |
+| `err` | `comp=ask`, `what` = `network` or `http_<code>`, `detail` | "Ask a partner" couldn't be sent (409 no partner, 404 server too old) |
+| `svc` | `comp=notify`, `state=channels`, `detail` (`enabled=…,partner_alerts=<importance>,…`) | Whether partner notifications can show, per category; written when it changes (0 = switched off in Android) |
+| `svc` | `comp=partner`, `state=feed_prefs`, `detail` (`Name: level=…,quiet=22-7`) | A partner's own alert choices as their server reports them; written when they change |
+| `svc` | `comp=partner`, `state=via_server`, `detail` (name) | This phone stopped using the pairing mailbox for that partner: their app reads the server feed (plan 12 §8) |
+| `svc` | `comp=link`, `state=invite_opened` / `not_invite` | The app was opened from an invite page's "Open in the app" button. The link itself is never logged |
 
 `perf` counters (absent = 0):
 
@@ -106,6 +112,10 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `dns_cpu_us`, `fwd_cpu_us`, `a11y_cpu_us`, `text_cpu_us`, `shot_cpu_us`, `sync_cpu_us`, `sync`, `sync_fail` | Thread-CPU attribution per component (µs), so battery cost can be traced to a part of the app |
 | `text_captured`, `text_empty` | Text captures written / screens with no text |
 | `url_read`, `url_miss`, `url_editing` | Browser address bar read / not found / skipped because the user was typing in it |
+| `http_req`, `http_ms`, `http_4xx`, `http_5xx`, `http_fail_dns` / `_timeout` / `_connect` / `_tls` / `_io` | Every request the app makes to a server (`sync/Api`): count, total time of the answered ones, error answers, and failures by kind. No address or content |
+| `sync_ms` | Wall time of each sync pass (with `sync_cpu_us`, the battery and network cost of a pass) |
+| `ask_poll` | Extra once-a-minute syncs while an "ask a partner" request waits (plan 12) |
+| `feed_read`, `feed_fail`, `feed_new`, `feed_now`, `feed_other`, `feed_held`, `feed_skip`, `feed_flush` | A partner's phone reading the server's alert feed: reads, failed reads, new alerts, and what happened to each (shown as important, shown as other, held for quiet hours or the daily message, not shown by their choice), and held batches sent (plan 12) |
 | `lat_n` | Latencies recorded (percentiles use at most 4096 per window) |
 | `log_dropped` | Log lines that failed to write |
 
