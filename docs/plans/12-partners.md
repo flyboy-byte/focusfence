@@ -29,7 +29,7 @@ answer (batched), build in small PRs ranked by value, and mark a section done wh
 | 0 | Two-phone field test of what's built | Second phone as an app partner: invite → join → first report → first alert → unlock code, and an email partner in a normal browser; findings recorded here | waiting on Logan 📱 |
 | 1 | A partner leaving is never silent | The owner gets a notification and a log record; the other partners are told; an app partner's Remove tells the server; server test | building |
 | 2 | "Seen": owners know partners are looking | The owner sees when each partner last opened the report or an alert | Logan hadn't thought of it (2026-11-25); ask again before building |
-| 3 | Approve an unlock from the report page | Email or app partner taps Approve/Deny on a pending request; the phone acts on it within a minute while the screen is on | next |
+| 3 | Approve an unlock from the report page | Email or app partner taps Approve/Deny on a pending request; the phone acts on it within a minute while the screen is on | built 🧪 (PR pending), not yet on a phone |
 | 4 | Replies to alerts | A partner answers an alert; the owner sees the answer in the app | parked: Logan's "random things to add" list (below) |
 | 5 | Partner settings | A partner chooses what reaches them (urgent only / everything / daily digest, quiet hours) | later batch of questions |
 | 6 | Faster alerts for app partners | An urgent alert reaches an app partner in under a minute without Google services | later; UnifiedPush is the candidate |
@@ -43,6 +43,12 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
 - **Leaving:** the owner and the remaining partners hear about it.
 - **Approve:** any one partner, and an approval skips the wait; Deny cancels the request. With nobody answering, the
   normal 10-minute wait still works.
+- **What an approval opens:** "Prob what was asked. Or if halfway between, we could do that whole app page." Built as
+  the halfway point. An approval covers the `GuardPolicy.Action` that was asked for, for 15 minutes. Those actions are
+  already page-sized ("Loosen a filter bundle", "Unblock an app"); nothing else loosens.
+- **Deny:** the wait keeps running, and the owner sees "Sam said no". A partner can never lock the owner out.
+- **Email partners:** an email saying what's asked, with an Open button to the report page where Approve and Deny
+  sit. App partners get a notification that opens the same page.
 - **Seen:** "Hmm never thot of that". Not decided; the default if asked again is a quiet "looked 2 h ago" in the
   Partners list, with no notification.
 - **Replies:** "Interesting… document this for later when I'm looking for random things to add".
@@ -74,7 +80,7 @@ Notes are added here as each section runs.
   told.
 - Test: `ServerTest.aPartnerLeavingTellsTheOwnerAndTheOthers`.
 
-### 3. Approve an unlock (design notes before the questions)
+### 3. Approve an unlock (built 2026-11-25)
 
 - The phone already signs its requests (P-256 `DeviceKey`). An unlock request would be `POST /v1/unlock/request` with
   the action and its plain-words label. The server stores it on the device, and partners see it on `/p/{token}`
@@ -84,3 +90,22 @@ Notes are added here as each section runs.
 - **Trust:** a self-hosted operator who is also the owner could forge an approval. That's the same trust as today's
   code, whose seed also sits on the owner's phone. Write it down; don't build around it.
 - Expiry: a request lapses after the existing 15-minute window if nobody answers.
+
+**As built:**
+- **Rules:** `dns/UnlockAsk`, compiled by the app and the server. A request lapses after 15 min; an approval covers
+  only the asked `GuardPolicy.Action`, for 15 min; partners read plain words.
+- **Server:**
+  - `POST /v1/unlock/ask`: signed `unlock|id|t|actionKey`; 409 with no partner. Asking again for the same open
+    request doesn't tell anyone twice.
+  - `POST /p/{token}/unlock/{id}`, `d=approve|deny`: the first answer counts, and everyone is told.
+  - The card on `/p/{token}` works without JavaScript or the key. The heartbeat carries `unlock` status.
+- **App:**
+  - `UiUtil.guard` offers "Ask a partner" before the old ways ("Other ways": wait or PIN), wherever the requirement is
+    the timed unlock or the partner PIN and the phone is enrolled.
+  - `ApprovalStore` holds the server's answer; `SyncWorker` checks every minute while the request waits, logs and
+    notifies the answer.
+  - An approved change records `svc strict partner_approval_used`, which partners read as "changed with a partner's
+    OK: loosen a filter bundle".
+- **Not covered:** the seven direct `StrictStore.isLocked` + `showStrictLockedDialog` call sites with no action, which
+  keep only the wait and the code. A server older than this answers 404, and the owner reads "Your server is too old".
+- Tests: `UnlockAskTest`, `DigestTest`, `ServerTest.anyOnePartnerAnswersAnAskAndTheFirstAnswerCounts`.

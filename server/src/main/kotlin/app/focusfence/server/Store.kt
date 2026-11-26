@@ -105,6 +105,15 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
          * still watched. Read back in the heartbeat response; kept like [alerts].
          */
         var ownerNotices: List<AlertEntry> = emptyList(),
+        /** Plan 12 §3: the owner's latest "ask a partner" request, open or answered. One at a time. */
+        var unlockRequest: UnlockRequest? = null,
+    )
+
+    /** [state] as stored; [app.focusfence.dns.UnlockAsk.state] adds "lapsed". [by] is the answering partner's name. */
+    @Serializable
+    data class UnlockRequest(
+        val id: String, val action: String, val askedMs: Long,
+        val state: String = app.focusfence.dns.UnlockAsk.PENDING, val by: String = "", val decidedMs: Long = 0,
     )
 
     @Serializable

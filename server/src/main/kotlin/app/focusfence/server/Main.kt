@@ -128,7 +128,15 @@ val serverVersion: String by lazy {
     val noticesAfter: Long = 0,
 )
 /** Plan 12: owner notices ride on the heartbeat. Older apps read only the status code, so this adds nothing for them. */
-@Serializable data class HeartbeatResponse(val ok: Boolean = true, val notices: List<Store.AlertEntry> = emptyList())
+@Serializable data class HeartbeatResponse(
+    val ok: Boolean = true, val notices: List<Store.AlertEntry> = emptyList(),
+    /** Plan 12 §3: the owner's latest ask-a-partner request, while it can still matter to the phone. */
+    val unlock: UnlockStatus? = null,
+)
+@Serializable data class UnlockStatus(val id: String, val action: String, val state: String, val by: String, val askedMs: Long, val decidedMs: Long)
+
+private fun Store.UnlockRequest.status(now: Long) =
+    UnlockStatus(id, action, app.focusfence.dns.UnlockAsk.state(state, askedMs, now), by, askedMs, decidedMs)
 @Serializable data class ShotRequest(val deviceId: String, val t: Long, val shotId: String, val ciphertextB64: String, val signature: String)
 @Serializable data class ErrorResponse(val error: String)
 @Serializable data class OkResponse(val ok: Boolean = true)
@@ -409,6 +417,25 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             call.respond(OkResponse())
         }
 
+        // Plan 12 §3: the owner asks a partner instead of waiting out the strict lock. Partners are told at once.
+        post("/v1/unlock/ask") {
+            val req = call.receive<SignedRequest>()
+            val action = req.kind?.let(app.focusfence.dns.GuardPolicy.Action::fromKey)
+                ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("unknown action"))
+            val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
+            if (!signedOk(device, "unlock", req.t, action.key, req.signature)) return@post call.unauthorized()
+            if (device.partners.none { it.confirmed } && device.appPartners.isEmpty())
+                return@post call.respond(HttpStatusCode.Conflict, ErrorResponse("no partner to ask yet"))
+            val now = cfg.now()
+            // Asking again for the same thing while it's open doesn't tell partners twice.
+            val open = device.unlockRequest?.takeIf { it.action == action.key && app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, now) }
+            if (open != null) return@post call.respond(open.status(now))
+            val r = Store.UnlockRequest(newToken().take(16), action.key, now)
+            store.updateDevice(device.id) { it.unlockRequest = r }
+            store.device(device.id)?.let { alerts.toPartners(it, "your OK is asked", listOf(app.focusfence.dns.UnlockAsk.askLine(action))) }
+            call.respond(r.status(now))
+        }
+
         post("/v1/batches") {
             val req = call.receive<BatchRequest>()
             val device = store.device(req.deviceId) ?: return@post call.unknownDevice()
@@ -447,7 +474,12 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (!signedOk(device, "heartbeat", req.t, req.lastSeq.toString(), req.signature)) return@post call.unauthorized()
             val gap = req.gap?.takeIf { g -> req.gapSignature != null && signedOk(device, "gap", req.t, Integrity.sha256(g), req.gapSignature) }
             alerts.checkedIn(device.id, gap?.filter { !it.isISOControl() }?.take(300))
-            call.respond(HeartbeatResponse(notices = store.device(device.id)?.ownerNotices.orEmpty().filter { it.t > req.noticesAfter }))
+            val now = store.device(device.id)
+            val ask = now?.unlockRequest?.takeIf { cfg.now() - it.askedMs < app.focusfence.dns.UnlockAsk.LAPSE_MS + app.focusfence.dns.UnlockAsk.GRANT_MS }
+            call.respond(HeartbeatResponse(
+                notices = now?.ownerNotices.orEmpty().filter { it.t > req.noticesAfter },
+                unlock = ask?.status(cfg.now()),
+            ))
         }
 
         // D-023: the partner report, sealed on the phone; stored as ciphertext and opened only in the partner's browser.
@@ -645,9 +677,13 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 call.request.queryParameters["welcome"] != null -> "You're linked. Bookmark this page — it's your private report."
                 call.request.queryParameters["sms"] == "on" -> "Text alerts are on."
                 call.request.queryParameters["sms"] == "bad" -> "That code didn't match. Try again."
+                call.request.queryParameters["unlock"] == "approved" -> "Approved. They've been told, and so have any other partners."
+                call.request.queryParameters["unlock"] == "denied" -> "You said no. They've been told. They can still wait out the delay."
+                call.request.queryParameters["unlock"] == "late" -> "That request was already answered or has lapsed."
                 else -> null
             }
-            call.respondText(Web.partnerPage(partner, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, notifier.smsAvailable, notice),
+            val ask = device.unlockRequest?.takeIf { app.focusfence.dns.UnlockAsk.open(it.state, it.askedMs, cfg.now()) && partner.confirmed }
+            call.respondText(Web.partnerPage(partner, cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, notifier.smsAvailable, notice, ask),
                 ContentType.Text.Html)
         }
 
@@ -717,6 +753,28 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 }
             }
             call.respondRedirect("/p/$token")
+        }
+
+        // Plan 12 §3: any one partner answers; the first answer counts.
+        post("/p/{token}/unlock/{id}") {
+            val token = call.parameters["token"].orEmpty()
+            val (device, partner) = store.partnerByToken(token) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val approve = when (call.receiveParameters()["d"]) { "approve" -> true; "deny" -> false; else -> return@post call.respond(HttpStatusCode.BadRequest) }
+            val now = cfg.now()
+            var answered: Store.UnlockRequest? = null
+            store.updateDevice(device.id) { d ->
+                val r = d.unlockRequest
+                if (partner.confirmed && r != null && r.id == call.parameters["id"] && app.focusfence.dns.UnlockAsk.open(r.state, r.askedMs, now)) {
+                    answered = r.copy(state = if (approve) app.focusfence.dns.UnlockAsk.APPROVED else app.focusfence.dns.UnlockAsk.DENIED, by = partner.name, decidedMs = now)
+                    d.unlockRequest = answered
+                }
+            }
+            val r = answered ?: return@post call.respondRedirect("/p/$token?unlock=late")
+            val action = app.focusfence.dns.GuardPolicy.Action.fromKey(r.action)
+            if (action != null) store.device(device.id)?.let {
+                alerts.toPartners(it, if (approve) "a partner approved" else "a partner said no", listOf(app.focusfence.dns.UnlockAsk.answerLine(partner.name, approve, action)))
+            }
+            call.respondRedirect("/p/$token?unlock=${if (approve) "approved" else "denied"}")
         }
 
         post("/p/{token}/leave") {

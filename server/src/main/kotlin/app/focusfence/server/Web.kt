@@ -123,11 +123,21 @@ table.sort td{padding:6px 12px 6px 0;border-bottom:1px solid #eee;overflow-wrap:
         lastSeenMs: Long,
         smsAvailable: Boolean,
         notice: String?,
+        ask: Store.UnlockRequest? = null,
     ): String = page("Focus Fence report", buildString {
         val t = partner.token
         append("<h1>Focus Fence report</h1>")
         append("<p class='muted'>For ${esc(partner.name)} · last 7 days · keep this link private, it's your login.</p>")
         if (notice != null) append("<div class='card'>${esc(notice)}</div>")
+        // Plan 12 §3: an open "ask a partner" request, answerable without the key or JavaScript.
+        val askAction = ask?.let { app.focusfence.dns.GuardPolicy.Action.fromKey(it.action) }
+        if (ask != null && askAction != null) append(
+            "<div class='card'><b>They ask for your OK to ${esc(app.focusfence.dns.UnlockAsk.what(askAction))}.</b>" +
+                "<div class='muted'>Asked ${time(ask.askedMs)}; it lapses ${time(ask.askedMs + app.focusfence.dns.UnlockAsk.LAPSE_MS)}. " +
+                "Approving lets them do only this, for ${app.focusfence.dns.UnlockAsk.GRANT_MS / 60_000} minutes. Without an answer they can still wait it out.</div>" +
+                "<form method='post' action='/p/$t/unlock/${esc(ask.id)}' style='display:inline'><input type='hidden' name='d' value='approve'><button>Approve</button></form> " +
+                "<form method='post' action='/p/$t/unlock/${esc(ask.id)}' style='display:inline'><input type='hidden' name='d' value='deny'><button>Say no</button></form></div>"
+        )
         // The first thing a partner wants to know, readable without the key or JavaScript.
         append(
             if (deviceOnline) "<div class='hero ok-bg'><span class='dot ok-dot'></span><div><b>Checking in normally</b>" +

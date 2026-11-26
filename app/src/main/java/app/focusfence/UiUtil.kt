@@ -133,7 +133,56 @@ object UiUtil {
      * this at every loosening site in place of a bare strict-lock check.
      */
     fun guard(context: Context, action: app.focusfence.dns.GuardPolicy.Action, onAllowed: () -> Unit) {
-        when (val req = app.focusfence.data.GuardStore.requirement(context, action)) {
+        val req = app.focusfence.data.GuardStore.requirement(context, action)
+        // Plan 12 §3: a partner approved exactly this, less than 15 minutes ago.
+        if (req !is app.focusfence.dns.GuardPolicy.Requirement.Allowed && app.focusfence.data.ApprovalStore.allows(context, action)) {
+            StrictStore.note(context, "partner_approval_used", action.name.lowercase())
+            return onAllowed()
+        }
+        val askable = req is app.focusfence.dns.GuardPolicy.Requirement.TimedUnlock ||
+            (req is app.focusfence.dns.GuardPolicy.Requirement.Pin && req.partner)
+        if (askable && app.focusfence.sync.SyncStore.deviceId(context) != null) {
+            return offerAsk(context, action) { guardWithoutAsking(context, action, req, onAllowed) }
+        }
+        guardWithoutAsking(context, action, req, onAllowed)
+    }
+
+    /** "Ask a partner", or the ways that were there before (wait, PIN). */
+    private fun offerAsk(context: Context, action: app.focusfence.dns.GuardPolicy.Action, otherWays: () -> Unit) {
+        val what = app.focusfence.dns.UnlockAsk.what(action)
+        val waiting = app.focusfence.data.ApprovalStore.waiting(context, action)
+        if (waiting != null) {
+            val mins = ((System.currentTimeMillis() - waiting.askedMs) / 60_000).coerceAtLeast(0)
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.strict_title)
+                .setMessage(context.getString(R.string.ask_waiting, what, mins))
+                .setPositiveButton(android.R.string.ok, null)
+                .setNeutralButton(R.string.ask_other_ways) { _, _ -> otherWays() }
+                .show()
+            return
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.strict_title)
+            .setMessage(context.getString(R.string.ask_offer, what))
+            .setPositiveButton(R.string.ask_button) { _, _ ->
+                val appCtx = context.applicationContext
+                Thread {
+                    val err = app.focusfence.sync.Accountability.askPartner(appCtx, action)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        Toast.makeText(appCtx, err ?: appCtx.getString(R.string.ask_sent), Toast.LENGTH_LONG).show()
+                    }
+                }.start()
+            }
+            .setNeutralButton(R.string.ask_other_ways) { _, _ -> otherWays() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun guardWithoutAsking(
+        context: Context, action: app.focusfence.dns.GuardPolicy.Action,
+        req: app.focusfence.dns.GuardPolicy.Requirement, onAllowed: () -> Unit,
+    ) {
+        when (req) {
             is app.focusfence.dns.GuardPolicy.Requirement.Allowed -> onAllowed()
             is app.focusfence.dns.GuardPolicy.Requirement.TimedUnlock ->
                 // A paired partner can skip the wait with the code shown in their app (checked offline); the wait is

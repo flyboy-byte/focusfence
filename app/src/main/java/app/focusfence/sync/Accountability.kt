@@ -227,6 +227,33 @@ object Accountability {
         )
     }
 
+    /**
+     * Plan 12 §3: asks every partner for an OK to [action]. Null on success, else a sentence for the owner. Blocking;
+     * call off the main thread. The answer arrives with the heartbeat ([SyncWorker]), checked every minute meanwhile.
+     */
+    fun askPartner(ctx: Context, action: app.focusfence.dns.GuardPolicy.Action): String? {
+        if (SyncStore.deviceId(ctx) == null) return ctx.getString(app.focusfence.R.string.ask_no_server)
+        val r = try {
+            api(ctx).post("/v1/unlock/ask", signed(ctx, "unlock", action.key).put("kind", action.key))
+        } catch (e: Exception) {
+            return friendly(e)
+        }
+        return when (r.code) {
+            200 -> {
+                val b = r.body ?: return ctx.getString(app.focusfence.R.string.ask_failed, r.code)
+                app.focusfence.data.ApprovalStore.save(ctx, app.focusfence.data.ApprovalStore.Ask(
+                    b.optString("id"), b.optString("action"), b.optString("state"), b.optString("by"), b.optLong("askedMs"), b.optLong("decidedMs"),
+                ))
+                app.focusfence.data.StrictStore.note(ctx, "partner_asked", action.name.lowercase())
+                Sync.kickAfter(ctx, "unlock_${System.currentTimeMillis() / 60_000}", 60_000)
+                null
+            }
+            409 -> ctx.getString(app.focusfence.R.string.ask_no_partner)
+            404 -> ctx.getString(app.focusfence.R.string.ask_server_old)
+            else -> ctx.getString(app.focusfence.R.string.ask_failed, r.code)
+        }
+    }
+
     /** The server tells the removed partner; unlinking is never silent. */
     fun unlink(ctx: Context, partner: Partner) {
         val r = api(ctx).post("/v1/partners/unlink", signed(ctx, "unlink", partner.id, partner.id))

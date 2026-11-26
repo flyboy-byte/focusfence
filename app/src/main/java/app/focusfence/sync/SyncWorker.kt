@@ -179,7 +179,29 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         })
         if (r.code != 200) throw IllegalStateException("heartbeat HTTP ${r.code}")
         ownerNotices(ctx, r.body?.optJSONArray("notices"))
+        unlockAnswer(ctx, r.body?.optJSONObject("unlock"), now)
         return true
+    }
+
+    /**
+     * Plan 12 §3: the owner's ask-a-partner request as the server has it. A fresh answer is logged and notified; while
+     * it's still waiting, check again in a minute (at most 15 minutes, then it lapses).
+     */
+    private fun unlockAnswer(ctx: Context, o: org.json.JSONObject?, now: Long) {
+        if (o == null) return
+        val a = app.focusfence.data.ApprovalStore.Ask(o.optString("id"), o.optString("action"), o.optString("state"),
+            o.optString("by").take(40), o.optLong("askedMs"), o.optLong("decidedMs"))
+        if (a.id.isEmpty()) return
+        val before = app.focusfence.data.ApprovalStore.save(ctx, a)
+        val action = app.focusfence.dns.GuardPolicy.Action.fromKey(a.action) ?: return
+        val fresh = before == null || before.id != a.id || before.state != a.state
+        if (fresh && (a.state == app.focusfence.dns.UnlockAsk.APPROVED || a.state == app.focusfence.dns.UnlockAsk.DENIED)) {
+            val approved = a.state == app.focusfence.dns.UnlockAsk.APPROVED
+            EventLog.activity(LogEvents.service(now, "strict", if (approved) "partner_approved" else "partner_denied",
+                "${action.name.lowercase()} by=${a.by}"), urgent = true)
+            notifyOwner(ctx, a.decidedMs, ctx.getString(R.string.ask_answer_title), app.focusfence.dns.UnlockAsk.answerLine(a.by, approved, action))
+        }
+        if (a.state == app.focusfence.dns.UnlockAsk.PENDING) Sync.kickAfter(ctx, "unlock_${now / 60_000}", 60_000)
     }
 
     /** Plan 12: what the server says the owner should know (a partner left). Logged, and one notification each. */
@@ -192,13 +214,13 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val text = n.optString("text").takeIf { it.isNotBlank() }?.take(300) ?: continue
             if (t <= last) continue
             EventLog.activity(LogEvents.service(t, "partner", "partner_left", text), urgent = true)
-            notifyOwner(ctx, t, text)
+            notifyOwner(ctx, t, ctx.getString(R.string.owner_notice_title), text)
             last = t
         }
         SyncStore.setOwnerNoticeT(ctx, last)
     }
 
-    private fun notifyOwner(ctx: Context, t: Long, text: String) {
+    private fun notifyOwner(ctx: Context, t: Long, title: String, text: String) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL, ctx.getString(R.string.partner_channel_name), NotificationManager.IMPORTANCE_HIGH)
@@ -211,7 +233,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             (t % Int.MAX_VALUE).toInt(),
             NotificationCompat.Builder(ctx, CHANNEL)
                 .setSmallIcon(R.drawable.ic_shield)
-                .setContentTitle(ctx.getString(R.string.owner_notice_title))
+                .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(open)

@@ -253,6 +253,9 @@ class Digest(private val fromT: Long) {
                     "unlock_open" -> "Strict mode: unlock window opened after the wait"
                     "unlocked" -> "Strict mode: unlocked with a code" + detail(f)
                     "partner_override", "own_pin_override" -> "Strict mode: a protected setting was changed with a code" + detail(f)
+                    // Plan 12 §3: asked, approved and denied are told by the server as they happen; this is the change itself.
+                    "partner_approval_used" -> "Strict mode: changed with a partner's OK: " +
+                        ((f["detail"] as? String)?.let { d -> GuardPolicy.Action.values().firstOrNull { it.name.equals(d, true) }?.let(UnlockAsk::what) } ?: "a protected setting")
                     "disabled" -> "Strict mode turned off"
                     "enabled" -> "Strict mode turned on"
                     else -> null // "relocked": the owner cancelled their own request
