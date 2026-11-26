@@ -184,6 +184,7 @@ class Digest(private val fromT: Long) {
             "capture_screenshots" to "Screen checks",
             "capture_ai" to "Screen-check AI",
             "capture_text" to "On-screen text capture",
+            "capture_scope" to "Apps screen checks watch",
             "list_adult" to "Adult sites list",
             "list_bypass" to "Ways-around-the-filter list",
         )

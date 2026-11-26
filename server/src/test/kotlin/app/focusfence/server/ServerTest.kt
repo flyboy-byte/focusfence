@@ -518,6 +518,19 @@ class ServerTest {
         assertTrue(store.device(id)!!.partners.single().held.isEmpty())
         assertEquals(3, mails().size)
         assertEquals("America/Denver", store.device(id)!!.partners.single().zone, "a form without a zone keeps the old one")
+
+        // Their own hours: 11 pm to 6 am. 23:30 Denver is held; 6 am sends it.
+        http.submitForm("/p/$token/prefs", Parameters.build { append("level", "all"); append("quiet", "on"); append("from", "23"); append("to", "6") })
+        assertEquals(23 to 6, store.device(id)!!.partners.single().let { it.quietFrom to it.quietTo })
+        assertTrue(http.get("/p/$token").bodyAsText().contains("<option value='23' selected>11 pm</option>"))
+        clock += 10 * h + 30 * 60_000 // 23:30 Denver
+        sweeper.toPartners(store.device(id)!!, "protection changed", listOf("Filter turned off"), minor = emptySet())
+        assertEquals(3, mails().size)
+        clock += 6 * h + 30 * 60_000 // 06:00 Denver
+        sweeper.sweep()
+        assertEquals(4, mails().size)
+        assertTrue(mails().last().second.contains("1 alert held for you"))
+        assertEquals(23 to 6, json.decodeFromString(AlertFeed.serializer(), http.get("/p/$token/alerts").bodyAsText()).let { it.quietFrom to it.quietTo })
     }
 
     @Test

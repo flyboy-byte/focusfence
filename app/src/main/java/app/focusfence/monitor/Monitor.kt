@@ -273,6 +273,12 @@ object Monitor {
         // Journey 5 (2026-11-25): with the AI off, screenshots are taken but nothing is ever flagged; and the core
         // lists (adult, bypass) going from Block to Report is a loosening partners should hear about.
         state["capture_ai"] = MonitorSettings.aiEnabled(context).toString()
+        // Which apps are watched: excluding an app is loosening, and partners hear it in words.
+        val pm = context.packageManager
+        fun label(pkg: String) = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+        state["capture_scope"] = app.focusfence.dns.WatchScope.describe(
+            MonitorSettings.watchMode(context), MonitorSettings.watchedApps(context).map(::label), MonitorSettings.excludedApps(context).map(::label),
+        )
         for (b in app.focusfence.dns.Categories.BUNDLES.filter { it.core }) {
             state["list_${b.id}"] = app.focusfence.data.CategoryStore.policy(context, b.id).name.lowercase()
         }

@@ -64,11 +64,13 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         var alertLevel: String = "all",
         var quiet: Boolean = false,
         var zone: String = "UTC",
+        var quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR,
+        var quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
         /** Alerts waiting for quiet hours to end or for the daily message, oldest first. */
         var held: List<AlertEntry> = emptyList(),
         var lastFlushDay: Long = 0,
     ) {
-        fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone)
+        fun prefs() = app.focusfence.dns.AlertPrefs.Prefs(app.focusfence.dns.AlertPrefs.Level.fromKey(alertLevel), quiet, zone, quietFrom, quietTo)
     }
 
     @Serializable
@@ -88,6 +90,8 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         /** Plan 12 §5: as [Partner.alertLevel]; their own app applies them, in their phone's time zone. */
         val alertLevel: String = "all",
         val quiet: Boolean = false,
+        val quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR,
+        val quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
         /**
          * Plan 12 §8: when their app last read the alert feed. Once it has, the owner's phone stops sending them the
          * same alerts and digest through the pairing mailbox: one path instead of two.
@@ -95,7 +99,7 @@ class Store(private val root: File, private val shotBytesPerDevice: Long = SHOT_
         val lastFeedMs: Long = 0,
     ) {
         /** As the partner pages see them: no email, no texts, always confirmed. */
-        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs, alertLevel = alertLevel, quiet = quiet)
+        fun asPartner() = Partner(id, name, "", token, linkedMs, confirmed = true, lastViewMs = lastViewMs, alertLevel = alertLevel, quiet = quiet, quietFrom = quietFrom, quietTo = quietTo)
     }
 
     @Serializable

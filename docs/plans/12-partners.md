@@ -67,7 +67,15 @@ Order: 1 (a bug, small) → 2 → 3 → 4, then 5–8. Section 0 runs whenever L
   exists), or both. The owner sees the reply in the app and in its notification.
 - **"How to be a good partner"** page, linked from the welcome email: what each alert means, and how to bring it up
   without shaming.
-- **Excluding apps from reports** (Ever Accountable has it); the exclusion itself is reported to partners.
+- **Excluding apps from reports.** Logan, 2026-11-25: "if we do this we allow so much customization already … it
+  almost defeats the purpose". Screen checks only, and "guarded and told". So no new kind of exclusion: the existing
+  Screen checks → "All apps, except…" (already behind the capture guard) is now **told**. The integrity trail holds
+  `capture_scope`, and partners read "Apps screen checks watch: all apps → all apps except Signal"
+  (`WatchScope.describe`).
+- **Push (parked).** If it's ever built, the idea most worth checking is that the partner's own Focus Fence keeps one
+  connection open to the server while its protection runs. That needs no Google and no second app. Google push
+  (Firebase) goes against no-Google and F-Droid; UnifiedPush needs a second app. First check how Ever Accountable and
+  Accountable2You do it (not verified).
 
 ## Notes per section
 
@@ -143,7 +151,9 @@ settings". Then: "build both".
   notification at 7).
 - **The owner's phone** sends `minor` indices with `/v1/alerts`. It's unsigned, because a wrong value only changes
   *when* a partner hears.
-- Not done: editable quiet hours; SMS for held alerts (they go by email only).
+- ~~Not done: editable quiet hours~~. Built 2026-11-25: the partner picks the start and end hour on their page
+  (`quietFrom`/`quietTo`, any window, including daytime ones; the same hour twice means none). Held alerts and the
+  daily message go out when quiet hours end. SMS for held alerts is still not done; they go by email only.
 - Tests: `AlertPrefsTest`, `ServerTest.aPartnersQuietHoursAndDailyMessageFollowTheirOwnClock`.
 
 ### 2. Seen (built 2026-11-25)

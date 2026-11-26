@@ -125,6 +125,7 @@ val serverVersion: String by lazy {
     val online: Boolean, val lastSeenMs: Long, val silentAfterMs: Long, val alerts: List<Store.AlertEntry>,
     /** Plan 12 §5: this partner's own choices, which their app applies in their phone's time zone. */
     val level: String = "all", val quiet: Boolean = false,
+    val quietFrom: Int = app.focusfence.dns.AlertPrefs.QUIET_FROM_HOUR, val quietTo: Int = app.focusfence.dns.AlertPrefs.QUIET_TO_HOUR,
 )
 @Serializable data class ReportData(val deviceId: String, val name: String, val online: Boolean, val lastSeenMs: Long, val reports: List<Store.SealedReport>)
 @Serializable data class HeartbeatRequest(
@@ -718,7 +719,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             store.markFeedRead(device.id, partner.id, cfg.now())
             call.respond(AlertFeed(cfg.now() - device.lastSeenMs <= cfg.staleMs, device.lastSeenMs, cfg.staleMs,
                 if (partner.confirmed) device.alerts.filter { it.t > after && it.t >= partner.linkedMs } else emptyList(),
-                partner.alertLevel, partner.quiet))
+                partner.alertLevel, partner.quiet, partner.quietFrom, partner.quietTo))
         }
 
         // Saves a report key sent as a link (new device or cleared browser). The key stays after '#', in the browser.
@@ -778,9 +779,11 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             val level = app.focusfence.dns.AlertPrefs.Level.fromKey(form["level"]).key
             val quiet = form["quiet"] == "on"
             val zone = app.focusfence.dns.AlertPrefs.cleanZone(form["tz"])
+            val from = app.focusfence.dns.AlertPrefs.hourOr(form["from"]?.toIntOrNull(), partner.quietFrom)
+            val to = app.focusfence.dns.AlertPrefs.hourOr(form["to"]?.toIntOrNull(), partner.quietTo)
             store.updateDevice(device.id) { d ->
-                d.partners.firstOrNull { it.id == partner.id }?.apply { alertLevel = level; this.quiet = quiet; if (zone != null) this.zone = zone }
-                d.appPartners = d.appPartners.map { if (it.id == partner.id) it.copy(alertLevel = level, quiet = quiet) else it }
+                d.partners.firstOrNull { it.id == partner.id }?.apply { alertLevel = level; this.quiet = quiet; quietFrom = from; quietTo = to; if (zone != null) this.zone = zone }
+                d.appPartners = d.appPartners.map { if (it.id == partner.id) it.copy(alertLevel = level, quiet = quiet, quietFrom = from, quietTo = to) else it }
             }
             call.respondRedirect("/p/$token?prefs=saved")
         }
