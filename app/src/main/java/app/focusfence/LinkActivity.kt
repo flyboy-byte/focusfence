@@ -18,6 +18,10 @@ class LinkActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val invite = inviteFrom(intent?.data)
+        // Logged without the link itself: it carries the invite secret and the report key.
+        app.focusfence.data.EventLog.init(this)
+        app.focusfence.data.EventLog.diag(app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), "link",
+            if (invite == null) "not_invite" else "invite_opened"))
         if (invite == null) {
             Toast.makeText(this, R.string.link_not_invite, Toast.LENGTH_LONG).show()
         } else {

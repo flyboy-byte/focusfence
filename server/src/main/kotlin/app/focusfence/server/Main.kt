@@ -224,6 +224,9 @@ internal fun clientKey(peer: String, forwardedFor: String?, trusted: (String) ->
 }
 
 private val random = SecureRandom()
+
+/** Partner actions in the service journal, by short ids only (see Alerts' journal). */
+private val partnerJournal = org.slf4j.LoggerFactory.getLogger("ff.partners")
 private const val CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 /** 8 Crockford chars (40 bits), shown XXXX-XXXX. Short enough to text; single use, 24 h, rate-limited. */
@@ -441,6 +444,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             if (open != null) return@post call.respond(open.status(now))
             val r = Store.UnlockRequest(newToken().take(16), action.key, now)
             store.updateDevice(device.id) { it.unlockRequest = r }
+            partnerJournal.info("ask dev={} action={}", device.id.take(8), action.key)
             store.device(device.id)?.let { alerts.toPartners(it, "your OK is asked", listOf(app.focusfence.dns.UnlockAsk.askLine(action))) }
             call.respond(r.status(now))
         }
@@ -785,6 +789,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                 d.partners.firstOrNull { it.id == partner.id }?.apply { alertLevel = level; this.quiet = quiet; quietFrom = from; quietTo = to; if (zone != null) this.zone = zone }
                 d.appPartners = d.appPartners.map { if (it.id == partner.id) it.copy(alertLevel = level, quiet = quiet, quietFrom = from, quietTo = to) else it }
             }
+            partnerJournal.info("prefs dev={} partner={} level={} quiet={}", device.id.take(8), partner.id.take(8), level, if (quiet) "$from-$to" else "off")
             call.respondRedirect("/p/$token?prefs=saved")
         }
 
@@ -802,7 +807,8 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
                     d.unlockRequest = answered
                 }
             }
-            val r = answered ?: return@post call.respondRedirect("/p/$token?unlock=late")
+            val r = answered ?: return@post call.respondRedirect("/p/$token?unlock=late").also { partnerJournal.info("answer late dev={}", device.id.take(8)) }
+            partnerJournal.info("answer dev={} partner={} {}", device.id.take(8), partner.id.take(8), r.state)
             val action = app.focusfence.dns.GuardPolicy.Action.fromKey(r.action)
             if (action != null) store.device(device.id)?.let {
                 alerts.toPartners(it, if (approve) "a partner approved" else "a partner said no", listOf(app.focusfence.dns.UnlockAsk.answerLine(partner.name, approve, action)), minor = setOf(0))
@@ -816,6 +822,7 @@ fun Application.module(store: Store, notifier: Notifier, cfg: Config) {
             store.updateDevice(device.id) { d -> d.partners = d.partners.filter { it.id != partner.id }; d.appPartners = d.appPartners.filter { it.id != partner.id } }
             // Leaving is never silent (plan 12): the owner's phone hears it at its next check-in, and everyone still
             // watching is told, so a partner quietly dropping off can't leave the owner believing they're watched.
+            partnerJournal.info("partner left dev={} partner={}", device.id.take(8), partner.id.take(8))
             val who = partner.name.ifBlank { "A partner" }
             store.addOwnerNotice(device.id, "$who stopped being your accountability partner.", cfg.now())
             store.device(device.id)?.let { d ->

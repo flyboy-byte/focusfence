@@ -25,6 +25,29 @@ class Api(private val base: String) {
     fun get(path: String, headers: Map<String, String> = emptyMap()): Response = call("GET", path, null, headers)
 
     private fun call(method: String, path: String, body: String?, headers: Map<String, String>): Response {
+        // Counted for the export (diag perf): how many requests sync makes, how long they take, and how they fail. One
+        // counter per kind keeps it cheap; nothing about the address or the content is recorded.
+        val perf = app.focusfence.monitor.Monitor.perf
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        perf.count("http_req")
+        return try {
+            callOnce(method, path, body, headers).also { r ->
+                perf.count("http_ms", android.os.SystemClock.elapsedRealtime() - t0)
+                if (r.code !in 200..299) perf.count(if (r.code >= 500) "http_5xx" else "http_4xx")
+            }
+        } catch (e: java.io.IOException) {
+            perf.count(when (e) {
+                is java.net.UnknownHostException -> "http_fail_dns"
+                is java.net.SocketTimeoutException -> "http_fail_timeout"
+                is java.net.ConnectException, is java.net.NoRouteToHostException -> "http_fail_connect"
+                is javax.net.ssl.SSLException -> "http_fail_tls"
+                else -> "http_fail_io"
+            })
+            throw e
+        }
+    }
+
+    private fun callOnce(method: String, path: String, body: String?, headers: Map<String, String>): Response {
         val conn = URL(base + path).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = method

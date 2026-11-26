@@ -220,12 +220,36 @@ def main():
     if tot["url_read"] + tot["url_miss"]:
         print(f"  url read miss        {tot['url_miss'] / (tot['url_read'] + tot['url_miss']):.1%}")
     print(f"  a11y events          {tot['a11y_ev']}  ({tot['a11y_ev'] / span_h:.0f}/h)" if span_h else "")
-    other = {k: v for k, v in tot.items() if k not in ("q", "fwd", "fwd_fail", "fwd_failover", "url_read", "url_miss", "a11y_ev")}
+    shown = ("q", "fwd", "fwd_fail", "fwd_failover", "url_read", "url_miss", "a11y_ev", "http_req", "http_ms", "http_4xx", "http_5xx")
+    if tot["sync_ms"]:
+        shown += ("sync", "sync_fail", "sync_ms", "sync_cpu_us", "ask_poll")
+    other = {k: v for k, v in tot.items() if k not in shown and not k.startswith(("http_fail_", "feed_"))}
     if other:
         print("  other counters       " + ", ".join(f"{k}={v}" for k, v in sorted(other.items())))
     errs = collections.Counter(f"{r.get('comp')}:{r.get('what')}" for r in diag if r["type"] == "err")
     if errs:
         print("  errors               " + ", ".join(f"{k}={v}" for k, v in errs.most_common()))
+    # Partners and sync (2026-11-25): requests, how they fail, and why a partner's phone did or didn't show an alert.
+    if tot["http_req"]:
+        req = tot["http_req"]
+        fails = {k[len("http_fail_"):]: v for k, v in tot.items() if k.startswith("http_fail_")}
+        nfail = sum(fails.values())
+        print(f"  requests             {req}" + (f" ({req / span_h:.0f}/h)" if span_h else "") +
+              f", avg {tot['http_ms'] / max(1, req - nfail):.0f} ms, failed {nfail / req:.1%} {fails or ''}, "
+              f"4xx {tot['http_4xx']}, 5xx {tot['http_5xx']}")
+    if tot["sync_ms"]:
+        print(f"  syncs                {tot['sync']} ({tot['sync_fail']} with an error), avg {tot['sync_ms'] / tot['sync']:.0f} ms, "
+              f"{tot['sync_cpu_us'] / tot['sync'] / 1000:.0f} ms cpu; ask polls {tot['ask_poll']}")
+    if tot["feed_read"]:
+        print(f"  partner feed         reads {tot['feed_read']} (failed {tot['feed_fail']}), new {tot['feed_new']}: "
+              f"shown {tot['feed_now']}, other {tot['feed_other']}, held {tot['feed_held']}, not shown {tot['feed_skip']}, "
+              f"held sent {tot['feed_flush']}")
+    sync_errs = [r for r in diag if r["type"] == "err" and r.get("comp") == "sync"]
+    if sync_errs:
+        print("  sync errors          " + "; ".join(f"{r.get('what')}: {r.get('detail', '')[:60]}" for r in sync_errs[-5:]))
+    notes = [r for r in diag if r["type"] == "svc" and r.get("comp") in ("notify", "partner", "link")]
+    for r in notes[-6:]:
+        print(f"  {r.get('comp')}/{r.get('state'):<14} {r.get('detail', '')}")
     loads = [r for r in diag if r["type"] == "svc" and r.get("comp") == "adlist"]
     if loads:
         print(f"  ad-list loads        {len(loads)}; last: {loads[-1].get('detail')}")
