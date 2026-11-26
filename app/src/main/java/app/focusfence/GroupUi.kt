@@ -37,6 +37,43 @@ object GroupUi {
         }
     }.getOrNull()
 
+    /**
+     * Shares an invite as its QR code picture, with the code printed under it, and a message that works on its own:
+     * the link to tap, or the code to type. Falls back to the message alone if the picture can't be written.
+     */
+    fun shareCode(ctx: Context, message: String, code: String, qrUrl: String) {
+        val send = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, message).setType("text/plain")
+        runCatching {
+            val qr = qr(qrUrl) ?: error("no qr")
+            val pad = 48
+            val out = android.graphics.Bitmap.createBitmap(qr.width + pad * 2, qr.height + pad * 2 + 140, android.graphics.Bitmap.Config.RGB_565)
+            val c = android.graphics.Canvas(out)
+            c.drawColor(android.graphics.Color.WHITE)
+            c.drawBitmap(qr, pad.toFloat(), pad.toFloat(), null)
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.BLACK; textSize = 96f; textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+            }
+            c.drawText(app.focusfence.dns.InviteLink.showCode(code), out.width / 2f, (qr.height + pad + 110).toFloat(), paint)
+            val dir = java.io.File(ctx.cacheDir, "share").apply { mkdirs() }
+            val f = java.io.File(dir, "invite.png")
+            f.outputStream().use { out.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
+            send.setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = android.content.ClipData.newRawUri(null, uri)
+        }
+        ctx.startActivity(Intent.createChooser(send, null))
+    }
+
+    /** The big code on an invite screen: tap to copy it (dash included; typing it without works too). */
+    fun copyOnTap(view: TextView, code: String) {
+        view.setOnClickListener {
+            val cm = view.context.getSystemService(android.content.ClipboardManager::class.java)
+            cm?.setPrimaryClip(android.content.ClipData.newPlainText("Focus Fence code", app.focusfence.dns.InviteLink.showCode(code)))
+            Toast.makeText(view.context, R.string.acc_code_copied, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun levelName(ctx: Context, level: String): String = ctx.getString(when (level) {
         "all" -> R.string.grp_level_all
         "daily" -> R.string.grp_level_daily
@@ -69,8 +106,9 @@ object GroupUi {
             text = app.focusfence.dns.InviteLink.showCode(code.code)
             setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineMedium)
             letterSpacing = 0.12f
-            setTextIsSelectable(true)
             gravity = Gravity.CENTER
+            contentDescription = ctx.getString(R.string.acc_code_tap_copy)
+            copyOnTap(this, code.code)
         })
         box.addView(TextView(ctx).apply {
             text = ctx.getString(R.string.grp_code_meta, spots, SyncStore.serverUrl(ctx).removePrefix("https://"))
@@ -101,8 +139,7 @@ object GroupUi {
         }
         dialog.setOnShowListener {
             dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, ctx.getString(R.string.grp_share, code.name, code.qrUrl)), null))
+                shareCode(ctx, ctx.getString(R.string.grp_share, code.name, code.qrUrl, app.focusfence.dns.InviteLink.showCode(code.code)), code.code, code.qrUrl)
             }
             main.post(poll)
         }

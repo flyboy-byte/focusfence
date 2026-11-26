@@ -38,4 +38,4 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 ## Parked (don't build unless Logan asks)
 
 Replies to alerts, a partner guide page (closed PR #108), push (notes in plan 12), the partner UI options (plan 12),
-F-Droid (plan 11), SMS (Twilio scope). Removing someone from a group (plan 14: not in v1).
+F-Droid (plan 11), SMS (Twilio scope). Removing someone from a group (plan 14: not in v1). An outside API (plan 16, scoped only).
