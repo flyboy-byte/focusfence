@@ -7,7 +7,30 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Added
+- **logging:** logs cover today's partner and sync work: requests and failures, sync errors, partner feed decisions, notification categories, asks, links, server journal (`d0a2f46`, [#110](https://github.com/flyboy-byte/focusfence/pull/110))
+- **partners:** partners pick their own quiet hours; partners are told when you change which apps screen checks watch (`61d0d09`, [#109](https://github.com/flyboy-byte/focusfence/pull/109))
+- **partners:** invite links open in the app; partner notifications split into four categories (`e0c5dd5`, [#106](https://github.com/flyboy-byte/focusfence/pull/106))
+- **partners:** one path: once a partner's app reads the server feed, alerts and digests stop going through the pairing mailbox too (`ec24fdf`, [#105](https://github.com/flyboy-byte/focusfence/pull/105))
+- **partners:** partners choose how alerts reach them: every alert, important now and the rest daily, or important only; quiet hours (`b25fa64`, [#104](https://github.com/flyboy-byte/focusfence/pull/104))
+- **partners:** see when each partner last opened your report (`7ace170`, [#103](https://github.com/flyboy-byte/focusfence/pull/103))
+- **partners:** ask a partner instead of waiting: any one partner approves or says no from their report (`570a244`, [#102](https://github.com/flyboy-byte/focusfence/pull/102))
+- **partners:** a partner who leaves is never silent: the owner and the other partners are told (`8b7e998`, [#101](https://github.com/flyboy-byte/focusfence/pull/101))
+### Fixed
+- **partners:** invite links open the app the same way on every server; no server built into the app (`5488947`, [#107](https://github.com/flyboy-byte/focusfence/pull/107))
+### Docs
+- F-Droid scoped as plan 11 (not scheduled) (`7182887`, [#100](https://github.com/flyboy-byte/focusfence/pull/100))
+- README leads with the app's purpose; CONTRIBUTING covers forms, protocol window and licence; STATE current (`2599897`, [#99](https://github.com/flyboy-byte/focusfence/pull/99))
+- handoff after 2.25.0 and server 1.2.0 (`7853202`, [#98](https://github.com/flyboy-byte/focusfence/pull/98))
+
+_Undo any line with `git revert <commit>`._
+
+## v2.25.0-accountable
+
+### Added
+- journeys 3–5, protocol window (D-041), feedback & bug reports; release 2.25.0 / server 1.2.0 (`973868f`, [#96](https://github.com/flyboy-byte/focusfence/pull/96))
 - first-time journeys 0–2: bug fix, 4-step onboarding, adult blocked by default, self-host path, SMTP (`0a20a5a`, [#94](https://github.com/flyboy-byte/focusfence/pull/94))
+### Fixed
+- **server:** /v1/version reads the installed VERSION file (`4b27613`, [#97](https://github.com/flyboy-byte/focusfence/pull/97))
 
 _Undo any line with `git revert <commit>`._
 
