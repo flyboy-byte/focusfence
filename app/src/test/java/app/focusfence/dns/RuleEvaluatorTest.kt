@@ -177,4 +177,11 @@ class RuleEvaluatorTest {
         assertTrue(RuleEvaluator.blocks(BlockRule("mtalk.google.com"), "mtalk.google.com", now(0)))
         assertFalse(Blocklist.isInfrastructure("altx-mtalk.google.com"))
     }
+
+    @Test
+    fun ruleEditorKnowsWhichRulesCoverInfrastructure() {
+        for (d in listOf("google.com", "googleapis.com", "gstatic.com", "android.com")) assertTrue(d, Blocklist.coversInfrastructure(d))
+        // The host itself is blocked as asked, and unrelated sites say nothing.
+        for (d in listOf("mtalk.google.com", "facebook.com", "le.com")) assertFalse(d, Blocklist.coversInfrastructure(d))
+    }
 }

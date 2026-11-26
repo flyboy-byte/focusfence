@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doAfterTextChanged
 import app.focusfence.data.BlocklistStore
 import app.focusfence.data.StrictStore
 import app.focusfence.databinding.ActivityDomainDetailBinding
@@ -77,6 +78,7 @@ class DomainDetailActivity : AppCompatActivity() {
         }
 
         binding.saveButton.setOnClickListener { save() }
+        binding.domainInput.doAfterTextChanged { updateInfraNote() }
         binding.deleteButton.setOnClickListener { delete() }
 
         val locked = StrictStore.isLocked(this)
@@ -91,6 +93,13 @@ class DomainDetailActivity : AppCompatActivity() {
         if (rule != null) loadRule(rule) else binding.modeAlways.isChecked = true
         updateModeVisibility()
         updateTimeButtons()
+        updateInfraNote()
+    }
+
+    /** #18: a rule on google.com and the like skips push, time and connectivity hosts; say so where it's set. */
+    private fun updateInfraNote() {
+        val domain = editingDomain ?: Blocklist.normalize(binding.domainInput.text?.toString().orEmpty())
+        binding.infraNote.visibility = if (domain != null && Blocklist.coversInfrastructure(domain)) View.VISIBLE else View.GONE
     }
 
     override fun onSupportNavigateUp(): Boolean {

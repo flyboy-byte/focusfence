@@ -176,6 +176,9 @@ object Blocklist {
 
     fun isInfrastructure(qname: String): Boolean = qname in INFRASTRUCTURE || ALT_MTALK.matches(qname)
 
+    /** True if a rule on [domain] would cover one of those hosts, so the rule editor can say they keep working. */
+    fun coversInfrastructure(domain: String): Boolean = INFRASTRUCTURE.any { it.endsWith(".$domain") }
+
     /** True if [qname] equals a blocked domain or is a subdomain of one. */
     fun matches(qname: String, blocked: Set<String>): Boolean {
         if (blocked.isEmpty()) return false
