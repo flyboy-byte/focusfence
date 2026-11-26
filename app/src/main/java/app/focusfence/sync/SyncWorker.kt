@@ -208,8 +208,11 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             EventLog.activity(LogEvents.service(now, "partner", "key_rotated", null), urgent = true)
             Sync.kick(ctx)
         } else sealKeys(ctx, api, r.body?.optJSONArray("seal"), now)
+        groupPairs(ctx, api, r.body?.optJSONArray("groupPairs"), now)
         // While an invite is open, check in every minute for 30 minutes after making it, so a joiner waits under one.
-        if ((r.body?.optInt("invitesOpen") ?: 0) > 0 && now - SyncStore.inviteMadeMs(ctx) < INVITE_FAST_MS) {
+        // A group being joined does the same for every member, so the keys go round within minutes.
+        if (r.body?.optBoolean("groupsBusy") == true ||
+            (r.body?.optInt("invitesOpen") ?: 0) > 0 && now - SyncStore.inviteMadeMs(ctx) < INVITE_FAST_MS) {
             app.focusfence.monitor.Monitor.perf.count("invite_poll")
             Sync.kickAfter(ctx, "invite_${now / 60_000}", 60_000)
         }
@@ -242,13 +245,45 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val label = t.optString("label").take(40)
             val known = resealing(ctx, pdev)
             if (known) continue
-            if (t.optBoolean("firstDevice")) {
+            val group = t.optString("groupName")
+            if (t.optBoolean("firstDevice") && group.isNotEmpty()) {
+                // The group's own notice ("Sam joined Tuesday group") already told the person; this records the key going over.
+                EventLog.activity(LogEvents.service(now, "partner", "partner_joined", "$name ($group)"), urgent = true)
+            } else if (t.optBoolean("firstDevice")) {
                 EventLog.activity(LogEvents.service(now, "partner", "partner_joined", name), urgent = true)
                 notifyOwner(ctx, now + i, ctx.getString(R.string.owner_joined_title, name), ctx.getString(R.string.owner_joined_text, name))
             } else {
                 EventLog.activity(LogEvents.service(now, "partner", "device_added", "$name: $label"), urgent = true)
                 notifyOwner(ctx, now + i, ctx.getString(R.string.owner_device_title, name), ctx.getString(R.string.owner_device_text, name, label))
             }
+        }
+    }
+
+    /**
+     * Plan 14: reports a group lets this phone read. For each, this phone makes a key of its own and sends the public
+     * half; that member's phone seals its report key to it, exactly as for a partner who joined by invite.
+     */
+    private fun groupPairs(ctx: Context, api: Api, arr: org.json.JSONArray?, now: Long) {
+        if (arr == null || arr.length() == 0) return
+        val deviceId = SyncStore.deviceId(ctx) ?: return
+        val label = android.os.Build.MODEL?.take(40).orEmpty().ifEmpty { "Phone" }
+        for (i in 0 until arr.length()) {
+            val g = arr.optJSONObject(i) ?: continue
+            val owner = g.optString("ownerDeviceId"); val pid = g.optString("partnerId"); val token = g.optString("token")
+            if (owner.isEmpty() || pid.isEmpty() || token.isEmpty()) continue
+            val key = PartnerKey.create()
+            val r = api.post("/v1/groups/key", JSONObject().apply {
+                put("deviceId", deviceId); put("t", now); put("ownerDeviceId", owner); put("partnerId", pid)
+                put("publicKeySpki", key.publicSpkiB64); put("label", label)
+                put("signature", DeviceKey.sign("group_key|$deviceId|$now|$owner|$pid|${sha256(key.publicSpkiB64)}".toByteArray()))
+            })
+            val pdev = r.body?.optString("deviceId").orEmpty()
+            if (r.code != 200 || pdev.isEmpty()) { EventLog.diag(LogEvents.error(now, "group", "key_http_${r.code}", pid.take(8))); continue }
+            val name = g.optString("name").take(40).ifEmpty { "A member" }
+            val group = g.optString("groupName").take(40)
+            SyncStore.saveSeen(ctx, SyncStore.Seen(id = pid, server = SyncStore.serverUrl(ctx).trimEnd('/'), token = token, deviceId = pdev,
+                wrappedKey = key.wrapped, owner = name, addedMs = now, group = group))
+            EventLog.activity(LogEvents.service(now, "partner", "group_pair", "$name ($group)"), urgent = true)
         }
     }
 
@@ -286,7 +321,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             val text = n.optString("text").takeIf { it.isNotBlank() }?.take(300) ?: continue
             if (t <= last) continue
             val kind = n.optString("kind")
-            EventLog.activity(LogEvents.service(t, "partner", if (kind == "device") "device_removed" else "partner_left", text), urgent = true)
+            val state = when (kind) { "device" -> "device_removed"; "group_joined" -> "group_member_joined"; "group_left" -> "group_member_left"; else -> "partner_left" }
+            EventLog.activity(LogEvents.service(t, "partner", state, text), urgent = true)
             notifyOwner(ctx, t, ctx.getString(R.string.owner_notice_title), text)
             last = t
         }
@@ -354,6 +390,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         val k = runCatching { api.get("/p/${s.token}/key?d=${s.deviceId}") }.getOrNull()
         when {
             k == null -> Unit
+            // A group pair goes when someone leaves the group, and the group said so: forget it rather than show it as gone.
+            k.code == 404 && s.group.isNotEmpty() -> { SyncStore.removeSeen(ctx, s); EventLog.diag(LogEvents.service(now, "partner", "group_pair_gone", s.owner.take(40))); return }
             k.code == 404 -> if (!s.linkGone) { s = s.copy(linkGone = true); EventLog.diag(LogEvents.service(now, "partner", "link_gone", s.owner.take(40))) }
             k.code == 200 && k.body?.optBoolean("ready") == true && k.body.optString("keyId") != s.keyId -> {
                 val key = runCatching { PartnerKey.open(s.wrappedKey, k.body.optString("sealed")) }

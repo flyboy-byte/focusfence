@@ -1,7 +1,7 @@
 # Plan 14: groups on the plan 13 partners (started 2026-11-26)
 
-**Status:** planned, not built. Mockups done 2026-11-26 (screens 9–13 on the plan 13 canvas,
-https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco), waiting for Logan's look before code.
+**Status:** built 2026-11-26 on `feat/groups`, not released. Mockups (screens 9–13 on the plan 13 canvas,
+https://claude.ai/artifact/QiKPntgDHtLJrGSS3JBLco) approved by Logan: "Those look great".
 
 **Why:** plan 13 cut the old groups (they ran on pairing keys and mailboxes, both gone). Logan, 2026-11-26, after the
 first 3.0.0 test: real groups, not just mutual pairs ("Real groups is the I'm leaning towards"). No user accounts
@@ -58,3 +58,22 @@ About a day of building after the mockups: server (group record, join, leave, ca
 section, start/join/leave, reader keys for group pairs) half a day. Protocol level stays 2 (new endpoints only). Joining
 a group needs the new app; an older member would see the new people as partners but couldn't read their reports, so
 the group code refuses phones below that version.
+
+## Build (2026-11-26)
+
+| Piece | Where |
+|---|---|
+| Group record, members, one open code | `server/.../Store.kt` (`Group`, `groups/` dir), `Partner.memberDeviceId` / `groupIds` |
+| Join, leave, pairs, caps, list, alert level, member keys | `server/.../Groups.kt`; routes `/v1/groups/*`, `/v1/codes/lookup` in `Main.kt` |
+| Heartbeat | `groupPairs` (reports to send a key for), `groupsBusy` (check in every minute), `SealTarget.groupName` |
+| Enrolling | `X-FF-Group: <code>` enrolls a phone with no enrollment code; credentialed enrolls have their own looser rate limit (a meeting is six phones on one Wi-Fi) |
+| QR code | `/c/{code}` shows the group and "Open in the Focus Fence app" (no browser join) |
+| App | `sync/Accountability` (lookup, groups, create, code, join, leave, level), `SyncWorker.groupPairs`, `GroupActivity`, `GroupUi`, Groups card on Partners |
+
+Changes from the plan while building:
+- **Leaving or removing one pair of a group** is refused (409): Remove and Stop seeing say "leave the group" instead.
+- **The older-app guard** wasn't needed: joining uses new endpoints, so only a new app can join.
+
+**Verified:** server tests (59, 4 new in `GroupsTest`: pairs both ways and keys, two groups one pair, six and full,
+enroll by group code and the QR page). App unit tests, assembleDebug and lint pass.
+**Not verified:** on phones. Needs server 2.1.0 deployed before app 3.1.0.

@@ -49,6 +49,11 @@ class PartnerReportActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.removeWatch.setOnClickListener {
             val s = SyncStore.seen(this, seenId) ?: return@setOnClickListener finish()
+            // Plan 14: a group's pair is left with the group, both ways at once, never one report at a time.
+            if (s.group.isNotEmpty()) {
+                MaterialAlertDialogBuilder(this).setMessage(getString(R.string.grp_seen_note, s.group)).setPositiveButton(android.R.string.ok, null).show()
+                return@setOnClickListener
+            }
             MaterialAlertDialogBuilder(this)
                 .setMessage(getString(R.string.report_stop_confirm, s.owner))
                 .setPositiveButton(R.string.report_stop_seeing) { _, _ ->

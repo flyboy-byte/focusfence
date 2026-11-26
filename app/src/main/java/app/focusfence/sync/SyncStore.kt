@@ -169,6 +169,8 @@ object SyncStore {
         val heldDay: Long = 0,
         /** Their server says this report link no longer exists (404): they removed you, or you left elsewhere. */
         val linkGone: Boolean = false,
+        /** Plan 14: the group that made this pair (its name), empty for a partner invite. A group pair that's gone is forgotten. */
+        val group: String = "",
     ) {
         val reportUrl: String get() = "$server/p/$token"
     }
@@ -189,6 +191,7 @@ object SyncStore {
             held = m["held"] as? String ?: "",
             heldDay = m["held_day"] as? Long ?: 0,
             linkGone = m["link_gone"] == true,
+            group = m["group"] as? String ?: "",
         )
     }.sortedBy { it.addedMs }
 
@@ -200,7 +203,7 @@ object SyncStore {
             LogJson.encode(linkedMapOf(
                 "id" to s.id, "server" to s.server, "token" to s.token, "device" to s.deviceId, "wrapped" to s.wrappedKey,
                 "owner" to s.owner, "added" to s.addedMs, "report_key" to s.reportKey, "key_id" to s.keyId,
-                "server_alert_t" to s.serverAlertT, "alerts" to s.alerts, "held" to s.held, "held_day" to s.heldDay, "link_gone" to s.linkGone,
+                "server_alert_t" to s.serverAlertT, "alerts" to s.alerts, "held" to s.held, "held_day" to s.heldDay, "link_gone" to s.linkGone, "group" to s.group,
             )),
         ).commit()
     }

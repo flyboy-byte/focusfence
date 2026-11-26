@@ -142,6 +142,8 @@ of server time.
 | POST | `/v1/enroll` | Register a device key → `deviceId`. Needs `X-FF-Enroll` when codes are on |
 | POST | `/v1/invites` | Signed (extra: the email, or empty). New invite → code, QR link; with `email`, the address is emailed a link |
 | POST | `/v1/invites/cancel` | Signed. Cancel an open invite |
+| POST | `/v1/groups/create`, `/code`, `/join`, `/leave`, `/list`, `/level`, `/key` | Signed. Plan 14 groups: up to 6 phones that all see each other, made as partner pairs both ways. `/key` sends a member's device key for one pair |
+| POST | `/v1/codes/lookup` | Unsigned, rate-limited. Says whether a code is a group's (name, members) or a partner invite |
 | POST | `/v1/partners/list` | Signed. Partners with their devices (and whether each has the current key), open invites |
 | POST | `/v1/partners/unlink` | Signed. Remove a partner — **they are emailed** if they have email; their app finds the link gone |
 | POST | `/v1/seal` | Signed. The report key sealed to one partner device (ciphertext only) |
