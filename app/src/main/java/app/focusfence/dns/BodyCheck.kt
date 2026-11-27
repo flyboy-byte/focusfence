@@ -53,8 +53,27 @@ object BodyCheck {
      */
     const val CONFIRM = 0.40
 
-    /** The body check runs only when the first model's risky score is at least this (rare: ~20 a week). */
-    const val CHECK_FROM = 0.50
+    /**
+     * The body check runs only when the first model's risky score is at least this. 0.50 until 2026-11-27, then 0.30:
+     * in a 9-day export only about 3 screenshots scored between the two, so the cost is a few runs a week, and
+     * middling pictures (covers, thumbnails) get looked at for nudity too.
+     */
+    const val CHECK_FROM = 0.30
+
+    /** A woman in the picture: her face or a female body part, at least this sure. */
+    val FEMALE = setOf(
+        "FACE_FEMALE", "FEMALE_BREAST_EXPOSED", "FEMALE_BREAST_COVERED", "FEMALE_GENITALIA_EXPOSED", "FEMALE_GENITALIA_COVERED",
+    )
+    const val FEMALE_AT = 0.40
+
+    /** Added to a picture's risk score when a woman is in it (the owner's choice, 2026-11-27). Never alone a flag. */
+    const val FEMALE_BOOST = 0.10
+
+    fun female(best: Map<String, Double>): Boolean = best.any { it.key in FEMALE && it.value >= FEMALE_AT }
+
+    /** [score] raised by [FEMALE_BOOST] when [best] shows a woman, at most 1. */
+    fun judged(score: Double, best: Map<String, Double>?): Double =
+        if (best != null && female(best)) minOf(1.0, score + FEMALE_BOOST) else score
 
     /** Best score per label over every anchor. [out] is the model output, laid out [4 + labels][anchors]. */
     fun best(out: FloatArray, anchors: Int): Map<String, Double> {
