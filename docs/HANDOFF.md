@@ -1,4 +1,4 @@
-# Handoff (2026-11-27): plan 17 released as 3.1.5, a privacy fix waiting for 3.1.6
+# Handoff (2026-11-27): 3.1.6 released (detection tuning, flag sensitivity)
 
 Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/17-screen-text-detection.md` and
 `docs/plans/15-repo-health.md` (its 2026-11-27 audit table).
@@ -18,18 +18,23 @@ Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/
 - **Confidence (told to Logan):** matching and the false-alarm guard are high (tests + replay: 1 alert in 9 days); the
   blind-spot fix and hot mode are medium; per-picture checks are medium-low (not on a phone; battery unknown).
 
+## 3.1.6 (2026-11-27, code 58)
+
+An export of 3.1.5 (analysed locally, deleted after) showed the blind-spot fix working (longest unread gap 53 s), a
+password captured from a revealed web field (#164), a story page whose tags weren't listed and whose one recovery word
+silenced it (#165), and covers at 0.41 under every bar (#166, #167). Logan picked Flag sensitivity bars
+0.45 / 0.50 / 0.70 (#168). Don't describe the owner's own browsing in public files: the classifier blocks it.
+
 ## Next, in order
 
-1. **Release 3.1.6** for the #161 privacy fix (ask Logan once; he hasn't said yet).
-2. A log export after a day on 3.1.5/3.1.6. Check: `fg_recovered` (the blind-spot fix fires), `region_runs`,
-   `region_ms`, `region_src_*`, `shot_hot`, `text_hot`, `text_deep`, `text_alerts`, battery per screen-on hour (was
-   10.6 %/h device, 59 s CPU/h app). Unzip into the scratchpad, replay with a throwaway test that is deleted, and put only
-   counts in the repo: the auto-mode classifier blocked a commit that named apps from the export.
+1. Logan retests the same kind of page on 3.1.6 (ask once), then an export. Check `flag_context`, `flag_suggestive`,
+   `body_female`, `body_runs`, `text_secret_skipped`, `text_alerts`, battery.
+2. If covers scored under 0.25 still slip by: run the body check on every picture while in context (more battery,
+   only in those 3-minute windows). Offered, not asked for.
 3. Logan's open check from 3.1.4: every screen on the Pixel (bars, keyboard).
 4. Audit items still open (plan 15): A3 pin `docker/login-action`, A4 Dependabot security updates (Logan's call), A5
-   toolchain (Kotlin 1.9 / Ktor 2 / TFLite 2.14), A6 crop coordinates on scaled displays.
-5. Then Logan wants all of: F-Droid (plan 11), partner polish (guide page, replies, removing one group member) and push,
-   **but more real testing of partners and groups first**. Ask which to start before building any.
+   toolchain, A6 crop coordinates on scaled displays.
+5. Then F-Droid (plan 11), partner polish, push: ask which first, after more real testing.
 
 ## Parked (don't build unless Logan asks)
 
