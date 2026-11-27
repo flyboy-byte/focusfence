@@ -245,6 +245,10 @@
     <string name="monitor_level_standard">Standard (~every 90 s)</string>
     <string name="monitor_level_high">High (~every 45 s)</string>
     <string name="monitor_retention">What to keep</string>
+    <string name="monitor_sensitivity">Flag sensitivity</string>
+    <string name="monitor_sens_strict">Strict: suggestive pictures from 45%</string>
+    <string name="monitor_sens_standard">Standard: suggestive pictures from 50%</string>
+    <string name="monitor_sens_relaxed">Relaxed: suggestive pictures from 70%</string>
     <string name="monitor_retain_score">Score only (no images)</string>
     <string name="monitor_retain_flagged">Flagged images only</string>
     <string name="monitor_retain_all">All sampled images</string>

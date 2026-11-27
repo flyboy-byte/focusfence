@@ -111,6 +111,20 @@ class MonitoringFragment : Fragment() {
             }
         }
 
+        val sens = app.focusfence.dns.Sensitivity.values()
+        binding.sensitivityDropdown.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1,
+            sens.map { getString(sensitivityLabel(it)) }))
+        binding.sensitivityDropdown.setOnItemClickListener { _, _, pos, _ ->
+            val chosen = sens[pos]
+            // Less strict is a loosening: guarded, so a partner can require their PIN (GuardPolicy).
+            if (MonitorSettings.sensitivity(requireContext()).loosensTo(chosen)) {
+                bind()
+                UiUtil.guard(requireContext(), GuardPolicy.Action.LOWER_SENSITIVITY) { MonitorSettings.setSensitivity(requireContext(), chosen); bind() }
+            } else {
+                MonitorSettings.setSensitivity(requireContext(), chosen)
+            }
+        }
+
         binding.partnerKeySaveButton.setOnClickListener { savePartnerKey() }
     }
 
@@ -208,6 +222,7 @@ class MonitoringFragment : Fragment() {
         binding.aiSwitch.isChecked = MonitorSettings.aiEnabled(requireContext()) && ScreenCapture.available
         binding.levelDropdown.setText(getString(levelLabel(MonitorSettings.level(requireContext()))), false)
         binding.retentionDropdown.setText(getString(retentionLabel(MonitorSettings.retention(requireContext()))), false)
+        binding.sensitivityDropdown.setText(getString(sensitivityLabel(MonitorSettings.sensitivity(requireContext()))), false)
         binding.watchedAppsButton.text = getString(
             R.string.monitor_watching,
             app.focusfence.dns.WatchScope.describe(
@@ -241,6 +256,12 @@ class MonitoringFragment : Fragment() {
         CapturePolicy.Level.LOW -> R.string.monitor_level_low
         CapturePolicy.Level.STANDARD -> R.string.monitor_level_standard
         CapturePolicy.Level.HIGH -> R.string.monitor_level_high
+    }
+
+    private fun sensitivityLabel(s: app.focusfence.dns.Sensitivity) = when (s) {
+        app.focusfence.dns.Sensitivity.STRICT -> R.string.monitor_sens_strict
+        app.focusfence.dns.Sensitivity.STANDARD -> R.string.monitor_sens_standard
+        app.focusfence.dns.Sensitivity.RELAXED -> R.string.monitor_sens_relaxed
     }
 
     private fun retentionLabel(m: Classification.RetentionMode) = when (m) {

@@ -22,6 +22,7 @@ object MonitorSettings {
     const val KEY_LEVEL = "mon_level"
     const val KEY_RETENTION = "mon_retention"
     const val KEY_THRESHOLD = "mon_threshold"
+    const val KEY_SENSITIVITY = "mon_sensitivity"
     const val KEY_REVIEW_ON = "mon_review_on"
     const val KEY_REVIEW_PCT = "mon_review_pct"
     const val KEY_WATCHED = "mon_watched_apps"
@@ -71,8 +72,22 @@ object MonitorSettings {
     fun reviewPercent(c: Context) = prefs(c).getInt(KEY_REVIEW_PCT, app.focusfence.dns.ReviewPolicy.DEFAULT_PERCENT)
     fun setReviewPercent(c: Context, pct: Int) = prefs(c).edit().putInt(KEY_REVIEW_PCT, pct).apply()
 
-    fun threshold(c: Context): Double =
-        prefs(c).getString(KEY_THRESHOLD, null)?.toDoubleOrNull() ?: Classification.DEFAULT_THRESHOLD
+    /** The picture bar for partner flags, from the owner's [app.focusfence.dns.Sensitivity]. */
+    fun threshold(c: Context): Double = sensitivity(c).threshold
+
+    fun sensitivity(c: Context): app.focusfence.dns.Sensitivity =
+        app.focusfence.dns.Sensitivity.fromName(prefs(c).getString(KEY_SENSITIVITY, null))
+
+    /** Saves [s] and records the change, urgent so partners hear of a loosening at once (Digest). */
+    fun setSensitivity(c: Context, s: app.focusfence.dns.Sensitivity) {
+        val from = sensitivity(c)
+        if (from == s) return
+        prefs(c).edit().putString(KEY_SENSITIVITY, s.name).apply()
+        app.focusfence.data.EventLog.activity(
+            app.focusfence.dns.LogEvents.service(System.currentTimeMillis(), "monitor", "sensitivity",
+                app.focusfence.dns.Sensitivity.detail(from, s)), urgent = true,
+        )
+    }
 
     fun watchedApps(c: Context): Set<String> =
         prefs(c).getStringSet(KEY_WATCHED, emptySet())?.toSet() ?: emptySet()

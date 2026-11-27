@@ -370,6 +370,8 @@ object ScreenCapture {
         val why: String? = when {
             confirmed != null -> "body"
             judged != null && flagPolicy.contextFlag(pkg, judged, suggestive, now) -> "context"
+            // The owner's sensitivity (dns/Sensitivity): a suggestive picture at or over its bar is a flag.
+            judged != null && suggestive && judged >= MonitorSettings.threshold(context) -> "suggestive"
             body != null -> null
             verdict?.flagged == true -> flagPolicy.onRawHit(pkg, verdict.score, now)?.name?.lowercase()
             else -> null
