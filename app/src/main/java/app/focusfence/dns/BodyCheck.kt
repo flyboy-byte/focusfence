@@ -49,9 +49,10 @@ object BodyCheck {
 
     /**
      * A detection this sure confirms. NudeNet's own default keeps boxes from 0.2; 0.4 is stricter because a false
-     * confirm now sends a picture. Untuned: on Logan's five false alarms the highest explicit score was 0.11.
+     * confirm now sends a picture. On the five false alarms the highest explicit score was 0.11, so 0.40 was lowered
+     * to 0.30 on 2026-11-27 (still well clear of them).
      */
-    const val CONFIRM = 0.40
+    const val CONFIRM = 0.30
 
     /**
      * The body check runs only when the first model's risky score is at least this. 0.50 until 2026-11-27, then 0.30:

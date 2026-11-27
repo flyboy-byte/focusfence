@@ -59,6 +59,10 @@ Same day: the body check runs from 0.30 instead of 0.50 (`BodyCheck.CHECK_FROM`;
 between them), and a woman in the picture (`BodyCheck.FEMALE`, at least 0.40) adds 0.10 to its score for the context
 bar (`FEMALE_BOOST`, counter `body_female`, the owner's choice). The boost never makes a flag on its own.
 
+Same day, flag sensitivity (`dns/Sensitivity`, the owner's numbers): Strict 0.45, Standard 0.50 (default), Relaxed 0.70.
+A suggestive picture at or over the bar is a partner flag (`flag_suggestive`); before, suggestive was report-only.
+`BodyCheck.CONFIRM` 0.40 → 0.30 (the five false alarms peaked at 0.11). Less strict is a guarded loosening.
+
 ## Options, cheapest first
 
 | Option | What it does | Cost | Notes |

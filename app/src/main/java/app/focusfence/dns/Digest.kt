@@ -170,6 +170,8 @@ class Digest(private val fromT: Long) {
             }
             // Report-only for its first week (2026-11-25): in the report, never an instant alert.
             if (comp == "monitor" && state == "suggestive") return false
+            // Stricter is routine; less strict goes out at once.
+            if (comp == "monitor" && state == "sensitivity") return Sensitivity.loosened(f["detail"] as? String)
             return true
         }
 
@@ -242,6 +244,11 @@ class Digest(private val fromT: Long) {
                 comp == "block" && state == "partner_alerts_on" -> "Turned partner alerts for repeated blocked tries back on"
                 comp == "monitor" && state == "text" ->
                     "Explicit words on screen" + ((f["detail"] as? String)?.takeIf { it.isNotBlank() }?.let { " in $it" } ?: "")
+                comp == "monitor" && state == "sensitivity" -> {
+                    val to = Sensitivity.fromName((f["detail"] as? String).orEmpty().substringAfter("to=", "").substringBefore(','))
+                    "Screen check sensitivity set to " + to.name.lowercase().replaceFirstChar { it.uppercase() } +
+                        if (Sensitivity.loosened(f["detail"] as? String)) " (less strict)" else ""
+                }
                 comp == "monitor" && state == "suggestive" ->
                     "Suggestive image (lingerie or swimwear)" + ((f["detail"] as? String)?.takeIf { it.isNotBlank() }?.let { " in $it" } ?: "")
                 comp == "block" && state == "repeated" -> {

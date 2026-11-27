@@ -33,7 +33,7 @@ class BodyCheckTest {
 
     @Test
     fun justUnderTheBarIsNotEnough() {
-        assertNull(BodyCheck.confirm(BodyCheck.best(output(Triple("MALE_GENITALIA_EXPOSED", 0, 0.39f)), anchors)))
+        assertNull(BodyCheck.confirm(BodyCheck.best(output(Triple("MALE_GENITALIA_EXPOSED", 0, 0.29f)), anchors)))
     }
 
     @Test
