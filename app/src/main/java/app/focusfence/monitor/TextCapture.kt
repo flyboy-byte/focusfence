@@ -13,7 +13,7 @@ import app.focusfence.dns.UrlDeduper
  * de-duplicated so the same screen isn't logged repeatedly.
  *
  * Scope is the owner's chosen watched apps only, and only while the capture
- * indicator is showing. Password fields are skipped. Like screenshots, this is
+ * indicator is showing. Password fields are skipped, revealed ones too (`dns/SecretFields`). Like screenshots, this is
  * self-accountability data, visible to the person via the indicator.
  */
 object TextCapture {
@@ -66,14 +66,21 @@ object TextCapture {
         val maxChars = if (deep) DEEP_TEXT_CHARS else MAX_TEXT_CHARS
         if (deep) Monitor.perf.count("text_deep")
 
+        var lastPiece: String? = null
         fun walk(node: AccessibilityNodeInfo?) {
             if (node == null || visited >= maxNodes || sb.length >= maxChars) return
             visited++
-            if (!node.isPassword) {
+            // A revealed web password box isn't isPassword any more: also skip editable fields labelled as secrets.
+            val secret = app.focusfence.dns.SecretFields.skip(
+                node.isPassword, node.isEditable, node.hintText, node.contentDescription, node.viewIdResourceName, lastPiece,
+            )
+            if (secret) Monitor.perf.count("text_secret_skipped")
+            if (!secret) {
                 val t = node.text?.toString()?.trim()
                 if (!t.isNullOrEmpty()) {
                     if (sb.isNotEmpty()) sb.append(" · ")
                     sb.append(t)
+                    lastPiece = t
                 }
                 // Plan 17: images, video tiles and buttons carry their words here (a thumbnail's title, a post's alt
                 // text), often with no text node at all.
