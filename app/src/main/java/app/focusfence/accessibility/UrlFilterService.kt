@@ -479,7 +479,9 @@ class UrlFilterService : AccessibilityService() {
             val now = SystemClock.uptimeMillis()
             if (lastTextCaptureAt == 0L || now - lastTextCaptureAt >= TEXT_INTERVAL_MS) {
                 lastTextCaptureAt = now
-                TextCapture.capture(this, pkg, rootInActiveWindow)
+                if (TextCapture.capture(this, pkg, rootInActiveWindow) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    ScreenCapture.onRiskyText(this, pkg)
+                }
             }
         }
         Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)

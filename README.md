@@ -63,10 +63,11 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | 🧪 | **Strict mode** | A wait, your own PIN, or a PIN a partner holds, before loosening anything |
 | 🧪 | **Ask a partner** | One tap asks for an OK instead of waiting out strict mode; any one partner can answer |
 | 🧪 | **Flagged screenshots to partners** | Automatic, blurred to 48 px at most, with a note from you |
+| 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters; clear hits alert partners and start a screenshot check |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
-| ❌ | Hiding apps from reports; explicit on-screen text in reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |
+| ❌ | Hiding apps from reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |
 
 ---
 
