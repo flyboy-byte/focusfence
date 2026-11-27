@@ -1,5 +1,7 @@
 package app.focusfence.dns
 
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -54,5 +56,19 @@ class FlagPolicyTest {
         val p = FlagPolicy()
         assertNull(p.onRawHit("browser", 0.80, 10 * min))
         assertNull(p.onRawHit("browser", 0.80, 9 * min))
+    }
+
+    @Test
+    fun alertLevelWordsLowerThePictureBar() {
+        val p = FlagPolicy()
+        assertFalse(p.contextFlag("browser", 0.41, false, min))      // no words yet
+        p.noteStrongSignal("browser", 0)
+        assertTrue(p.inContext("browser", min))
+        assertTrue(p.contextFlag("browser", 0.41, false, min))       // a cover at 0.41 next to explicit words
+        assertTrue(p.contextFlag("browser", 0.10, true, min))        // found suggestive
+        assertFalse(p.contextFlag("browser", 0.20, false, min))      // still needs a real score
+        assertFalse(p.contextFlag("photos", 0.41, false, min))       // other app
+        assertFalse(p.contextFlag("browser", 0.41, false, 10 * min)) // stale
+        assertFalse(FlagPolicy().apply { noteSignal("browser", 0) }.inContext("browser", min)) // weak words don't count
     }
 }

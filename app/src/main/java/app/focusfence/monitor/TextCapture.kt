@@ -125,7 +125,10 @@ object TextCapture {
         }
         // Plan 17: clearly explicit words alert partners (Digest.alertText), like a flagged screenshot.
         val now = System.currentTimeMillis()
-        if (app.focusfence.dns.RiskTerms.alertable(text, terms) && now - (lastAlert[pkg] ?: 0L) >= ALERT_EVERY_MS) {
+        val alertable = app.focusfence.dns.RiskTerms.alertable(text, terms)
+        // Plan 17: pictures shown with these words are judged at a lower bar (FlagPolicy.inContext).
+        if (alertable) ScreenCapture.flagPolicy.noteStrongSignal(pkg, now)
+        if (alertable && now - (lastAlert[pkg] ?: 0L) >= ALERT_EVERY_MS) {
             lastAlert[pkg] = now
             Monitor.perf.count("text_alerts")
             val detail = app.focusfence.dns.RiskTerms.alertDetail(terms, app.focusfence.UiUtil.appLabel(context, pkg))

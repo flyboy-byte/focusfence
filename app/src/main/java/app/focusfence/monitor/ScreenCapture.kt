@@ -318,7 +318,10 @@ object ScreenCapture {
         val clfMs = android.os.SystemClock.elapsedRealtime() - clfStart
         val wholeVerdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
         // Plan 17 piece 5: each picture on screen (or three squares) on its own, so a small one is seen at full detail.
-        val regions = if (scores != null) checkRegions(context, bitmap, boxes, wholeVerdict?.score ?: 0.0) else null
+        // Plan 17: right after alert-level words in this app, pictures face lower bars (FlagPolicy.inContext).
+        val inContext = flagPolicy.inContext(pkg, now)
+        val bodyFrom = if (inContext) app.focusfence.dns.FlagPolicy.CONTEXT_CHECK_FROM else app.focusfence.dns.BodyCheck.CHECK_FROM
+        val regions = if (scores != null) checkRegions(context, bitmap, boxes, wholeVerdict?.score ?: 0.0, bodyFrom) else null
         val verdict = regions?.best?.takeIf { it.score > (wholeVerdict?.score ?: 0.0) } ?: wholeVerdict
         sameStreak = 0
         if (scores != null && hash != null) {
@@ -340,7 +343,7 @@ object ScreenCapture {
         // D-038: a risky screenshot gets a second look from NudeNet, which finds exposed body parts instead of judging
         // the whole picture (faces and skin fooled the first model). A partner flag, and so an automatic send, needs it
         // to find one. Only if it can't run do the old FlagPolicy rules decide. The owner's review copy is not affected.
-        val needBody = scores != null && (wholeVerdict?.flagged == true || (wholeVerdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM)
+        val needBody = scores != null && (wholeVerdict?.flagged == true || (wholeVerdict?.score ?: 0.0) >= bodyFrom)
         val wholeBody = if (needBody) {
             val b0 = android.os.SystemClock.elapsedRealtime()
             NudeDetector.detect(context, bitmap).also {
@@ -360,8 +363,11 @@ object ScreenCapture {
                 EventLog.activity(LogEvents.service(now, "monitor", "suggestive", app.focusfence.UiUtil.appLabel(context, pkg)))
             }
         }
+        val suggestive = bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE
         val why: String? = when {
-            body != null -> if (confirmed != null) "body" else null
+            confirmed != null -> "body"
+            verdict != null && flagPolicy.contextFlag(pkg, verdict.score, suggestive, now) -> "context"
+            body != null -> null
             verdict?.flagged == true -> flagPolicy.onRawHit(pkg, verdict.score, now)?.name?.lowercase()
             else -> null
         }
@@ -452,7 +458,7 @@ object ScreenCapture {
      * risky on its own (the same gate as the whole screen). Cost: one MobileNet run per region (~85 ms on a Pixel 9),
      * at most [app.focusfence.dns.ImageRegions.MAX]; counters `region_*`.
      */
-    private fun checkRegions(context: android.content.Context, bitmap: Bitmap, boxes: List<app.focusfence.dns.ImageRegions.Box>, whole: Double): RegionResult? {
+    private fun checkRegions(context: android.content.Context, bitmap: Bitmap, boxes: List<app.focusfence.dns.ImageRegions.Box>, whole: Double, bodyFrom: Double): RegionResult? {
         val picked = app.focusfence.dns.ImageRegions.pick(bitmap.width, bitmap.height, boxes, whole)
         if (picked.isEmpty()) return null
         val threshold = MonitorSettings.threshold(context)
@@ -467,7 +473,7 @@ object ScreenCapture {
                 val v = classifier.classify(crop)?.let { Classification.riskVerdict(it, threshold) } ?: return@forEachIndexed
                 Monitor.perf.count("region_runs")
                 if (best == null || v.score > best!!.score) { best = v; bestAt = i }
-                if (v.flagged || v.score >= app.focusfence.dns.BodyCheck.CHECK_FROM) {
+                if (v.flagged || v.score >= bodyFrom) {
                     bodyRuns++
                     Monitor.perf.count("region_body_runs")
                     body = app.focusfence.dns.ImageRegions.mergeBody(body, NudeDetector.detect(context, crop))
