@@ -50,7 +50,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
-| Latest release | `v3.1.3-accountable` (2026-11-26, code 55): plan 15 fixes (rule editor says push keeps working under a google.com rule, lint triage, screenshot checker lets go of a stopped accessibility service). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
+| Latest release | `v3.1.4-accountable` (2026-11-27, code 56): targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels
 

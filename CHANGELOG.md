@@ -6,12 +6,26 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Docs
+- HANDOFF, targetSdk 35 steps 1-3 merged, phone check next (`4a4cdfc`, [#146](https://github.com/flyboy-byte/focusfence/pull/146))
+- move superseded docs to docs/archive; new docs index; STATE points at HANDOFF (`3ed1155`, [#142](https://github.com/flyboy-byte/focusfence/pull/142))
+- groups tried on phones in the README; VPS backup paths out of public docs (`fca5876`, [#141](https://github.com/flyboy-byte/focusfence/pull/141))
+### Maintenance
+- targetSdk 35, screens padded for Android 15's edge-to-edge (plan 15 item 7, step 3) (`b4cdfce`, [#145](https://github.com/flyboy-byte/focusfence/pull/145))
+- library updates on compileSdk 35 (plan 15 item 7, step 2) (`6a6a54e`, [#144](https://github.com/flyboy-byte/focusfence/pull/144))
+- compileSdk 35, AGP 8.7.3 (plan 15 item 7, step 1) (`e6407de`, [#143](https://github.com/flyboy-byte/focusfence/pull/143))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.3-accountable
+
 ### Fixed
 - **rules:** the rule editor says push and time keep working under a google.com rule; closes #18 (`beaf806`, [#135](https://github.com/flyboy-byte/focusfence/pull/135))
 ### Docs
 - park plan 15 item 4 with its trigger; STATE pause note no longer claims sync errors (`096579a`, [#139](https://github.com/flyboy-byte/focusfence/pull/139))
 - handoff after 3.1.2 (`ac465d9`, [#134](https://github.com/flyboy-byte/focusfence/pull/134))
 ### Maintenance
+- release 3.1.3; production pause lifted (`0f502ef`, [#140](https://github.com/flyboy-byte/focusfence/pull/140))
 - **lint:** triage 130 warnings to a baseline of 37 (plan 15 item 5) (`f22ac0f`, [#138](https://github.com/flyboy-byte/focusfence/pull/138))
 - **server:** the partner flow end to end with the app's own crypto (plan 15 item 3) (`48ffe86`, [#137](https://github.com/flyboy-byte/focusfence/pull/137))
 - fail when a public doc names a removed feature (plan 15 item 2) (`e03cb9e`, [#136](https://github.com/flyboy-byte/focusfence/pull/136))
