@@ -28,11 +28,12 @@ object RiskTerms {
             "brazzers", "chaturbate", "stripchat", "livejasmin", "bongacams", "camsoda", "eporner", "motherless",
             "nhentai", "rule34", "rule 34", "manyvids", "gonewild",
             // Words and phrases with no innocent everyday meaning.
-            "porn", "porno", "hentai", "camgirl", "sexcam", "blowjob", "handjob", "creampie", "cumshot", "gangbang",
+            "porno", "hentai", "camgirl", "sexcam", "blowjob", "handjob", "creampie", "cumshot", "gangbang",
             "deepthroat", "milf", "nudes", "sex video", "sex tape", "sex chat",
         ) + weak(
             // Explicit, but also used as labels, jokes or slang: two of these, or one with a strong word.
-            "nsfw", "xxx", "boobs", "tits", "pussy", "horny", "nude", "nsfl",
+            // "porn" itself is here: in a real export every sighting of it was about quitting it, none was porn.
+            "porn", "nsfw", "xxx", "boobs", "tits", "pussy", "horny", "nude", "nsfl",
         ),
         "gambling" to strong(
             "casino", "sportsbook", "blackjack", "roulette", "draftkings", "fanduel", "bet365", "parlay",
@@ -95,6 +96,22 @@ object RiskTerms {
         }
         return out
     }
+
+    /**
+     * Words that mean the screen is about *quitting* or *detecting* porn: recovery apps and their pages, accountability
+     * emails, chats about this kind of app. In a real export these were on every screen that named porn. A screen with
+     * one is still recorded and still checked by a screenshot, but never alerts. Words porn sites also use ("partner
+     * sites", "filter", "ad blocker", "flagged") are left out on purpose, so they can't hide a real hit.
+     */
+    private val RECOVERY = Regex(
+        "(?i)(?<![\\p{L}])(quit(ting)?|accountab\\w*|addict\\w*|recover\\w*|sobriety|relapse\\w*|detectors?|classifiers?|nudenet|" +
+            "struggl\\w*|nofap|covenant eyes|focus fence)(?![\\p{L}])"
+    )
+
+    fun aboutQuitting(text: String): Boolean = RECOVERY.containsMatchIn(normalize(text))
+
+    /** Partners are alerted for [text]: [strong] words, and the screen isn't about quitting ([aboutQuitting]). */
+    fun alertable(text: String, hits: Map<String, List<String>>): Boolean = strong(hits) && !aboutQuitting(text)
 
     /** Clear enough to alert partners: a strong adult word, or two different weak ones on one screen. */
     fun strong(hits: Map<String, List<String>>): Boolean {

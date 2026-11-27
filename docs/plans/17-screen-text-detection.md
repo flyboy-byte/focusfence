@@ -18,6 +18,7 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 | 1 | Matching: disguises (look-alike digits and symbols, spaced letters, Unicode, accents, invisible characters), plurals, about 30 more sites and words; strong vs weak words; read `contentDescription` too | ~2 h |
 | 2 | Alert: a strong hit (a strong adult word, or two different weak ones) writes an urgent `svc monitor text` record, at most one per app per 10 min; partners get "Explicit words on screen in <app>: <words>" | ~2 h |
 | 3 | A strong text hit starts a screenshot check right away, so the image models see the same screen | ~1 h |
+| 5 | Check each picture on screen on its own (image views' bounds from the accessibility tree; 3 squares when none) | ~half a day |
 | 4 | Why the screenshot missed it: needs a log export from the phone (analysed locally only, never posted). Likely causes to check: screenshots off for that app, the image only text (the models judge pictures, not words), a score under the owner's threshold, or `FlagPolicy` holding it back | after an export |
 
 ## Done
@@ -33,6 +34,17 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Piece 3** (2026-11-27): any adult word on screen calls `ScreenCapture.onRiskyText`, which checks that screen with
   the image models now (`trigger=text`, counter `shot_text`), where screenshots already run for the app, at most once
   per 15 s.
+
+## What a real export showed (2026-11-27, analysed locally, never posted)
+
+Counts only; the export itself stays off the repo.
+
+| Finding | Done |
+|---|---|
+| Every on-screen "porn" was about quitting or detecting it, none was porn. Pieces 1-2 as first merged would have alerted 47 times in 9 days | `porn` is weak; a screen with quitting or recovery words (`RiskTerms.aboutQuitting`) is recorded but never alerts. Replayed: 1 alert in 9 days |
+| Small pictures can't be seen: the whole screen is shrunk to 224 / 320 px, and NudeNet only runs on a risky whole-screen score | Piece 5 |
+| Most screens are never captured: about one shot every 1.6-2.5 min per app (Standard is a 90 s mean) | Piece 3 (words trigger a shot); more later |
+| Screenshot checks are cheap: about 84 ms per model run, about 6 s CPU per screen-on hour | Leaves room for piece 5 |
 
 ## Not doing
 
