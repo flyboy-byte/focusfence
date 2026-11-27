@@ -64,9 +64,10 @@ class RiskTermsTest {
     @Test
     fun explicitWordsAlertPartners() {
         val hits = RiskTerms.find("Hot MILFs · watch p0rn free · online casino")
-        assertEquals("milf, porn in Chrome", RiskTerms.alertDetail(hits, "Chrome"))
+        assertEquals(listOf("milf", "porn"), hits["adult"]) // in the sealed report
         val f = LogEvents.service(1, "monitor", "text", RiskTerms.alertDetail(hits, "Chrome"))
-        assertEquals("Explicit words on screen: milf, porn in Chrome", Digest.urgentText(f))
+        // The alert passes the server readable: the app, never the words (they can be site names).
+        assertEquals("Explicit words on screen in Chrome", Digest.urgentText(f))
         assertTrue(AlertPrefs.isImportant(f))
     }
 

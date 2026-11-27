@@ -164,9 +164,13 @@ object RiskTerms {
         return adult.any { byWord[it]?.strong == true } || adult.size >= 2
     }
 
-    /** The partner alert's detail: "porn, milf in Chrome", adult words only (the same words the report already shows). */
-    fun alertDetail(hits: Map<String, List<String>>, app: String): String =
-        hits["adult"].orEmpty().joinToString(", ") + " in " + app
+    /**
+     * The partner alert's detail: the app only. Alert text passes through the server readable (only the report is
+     * sealed), and the privacy page promises it never names a site, so the words themselves stay in the encrypted
+     * report's tables.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun alertDetail(hits: Map<String, List<String>>, app: String): String = app
 
     /** "adult:nsfw,porn;gambling:casino" for a log field. */
     fun encode(hits: Map<String, List<String>>): String =

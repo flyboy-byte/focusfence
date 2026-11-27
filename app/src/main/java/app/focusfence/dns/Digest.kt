@@ -240,7 +240,8 @@ class Digest(private val fromT: Long) {
                 comp == "admin" -> "Managed mode: $state" + detail(f)
                 comp == "block" && state == "partner_alerts_off" -> "Turned off partner alerts for repeated blocked tries"
                 comp == "block" && state == "partner_alerts_on" -> "Turned partner alerts for repeated blocked tries back on"
-                comp == "monitor" && state == "text" -> "Explicit words on screen: " + (f["detail"] as? String).orEmpty()
+                comp == "monitor" && state == "text" ->
+                    "Explicit words on screen" + ((f["detail"] as? String)?.takeIf { it.isNotBlank() }?.let { " in $it" } ?: "")
                 comp == "monitor" && state == "suggestive" ->
                     "Suggestive image (lingerie or swimwear)" + ((f["detail"] as? String)?.takeIf { it.isNotBlank() }?.let { " in $it" } ?: "")
                 comp == "block" && state == "repeated" -> {
