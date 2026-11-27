@@ -69,4 +69,18 @@ class RiskTermsTest {
         assertEquals("Explicit words on screen: milf, porn in Chrome", Digest.urgentText(f))
         assertTrue(AlertPrefs.isImportant(f))
     }
+
+    @Test
+    fun screensAboutQuittingNeverAlert() {
+        // Made-up screens of the kinds a real export showed: every "porn" there was about quitting it.
+        for (t in listOf(
+            "App store · Quit Porn: daily tracker · Install",
+            "Stop watching porn. Accountability software that works",
+            "Day 12 of recovery from porn addiction",
+            "How the open-source porn detector scores nsfw and hentai labels",
+        )) assertFalse(t, RiskTerms.alertable(t, RiskTerms.find(t)))
+        assertFalse(RiskTerms.alertable("porn", RiskTerms.find("porn"))) // one weak word
+        val real = "Hot MILFs near you · free pornhub premium · Partner sites · Disable your ad blocker"
+        assertTrue(RiskTerms.alertable(real, RiskTerms.find(real)))
+    }
 }

@@ -92,7 +92,7 @@ object TextCapture {
         }
         // Plan 17: clearly explicit words alert partners (Digest.alertText), like a flagged screenshot.
         val now = System.currentTimeMillis()
-        if (app.focusfence.dns.RiskTerms.strong(terms) && now - (lastAlert[pkg] ?: 0L) >= ALERT_EVERY_MS) {
+        if (app.focusfence.dns.RiskTerms.alertable(text, terms) && now - (lastAlert[pkg] ?: 0L) >= ALERT_EVERY_MS) {
             lastAlert[pkg] = now
             Monitor.perf.count("text_alerts")
             val detail = app.focusfence.dns.RiskTerms.alertDetail(terms, app.focusfence.UiUtil.appLabel(context, pkg))
