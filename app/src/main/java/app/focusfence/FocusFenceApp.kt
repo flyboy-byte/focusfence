@@ -46,6 +46,7 @@ class FocusFenceApp : Application() {
             private var started = 0
             private var rotating = false
             override fun onActivityStarted(a: Activity) {
+                app.focusfence.ui.EdgeToEdge.pad(a)
                 if (started++ == 0 && !rotating) app.focusfence.update.Updates.launched()
                 rotating = false
             }
