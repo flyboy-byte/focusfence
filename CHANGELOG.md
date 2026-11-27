@@ -6,11 +6,31 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Added
+- **monitor:** a screenshot every 10 s while an app is hot (plan 17, piece 7) (`6b3bf47`, [#156](https://github.com/flyboy-byte/focusfence/pull/156))
+- **monitor:** screen text matched by a word index with phrases; deeper reads after a flag (plan 17, piece 6) (`b1e71f9`, [#155](https://github.com/flyboy-byte/focusfence/pull/155))
+- **monitor:** check each picture on screen on its own (plan 17, piece 5) (`057fe59`, [#154](https://github.com/flyboy-byte/focusfence/pull/154))
+- **monitor:** adult words on screen start a screenshot check (plan 17, piece 3) (`0544c76`, [#151](https://github.com/flyboy-byte/focusfence/pull/151))
+- **monitor:** explicit words on screen alert partners (plan 17, piece 2) (`1315568`, [#150](https://github.com/flyboy-byte/focusfence/pull/150))
+- **monitor:** screen-text words see through disguises; more sites and words (plan 17, piece 1) (`03e5a4e`, [#149](https://github.com/flyboy-byte/focusfence/pull/149))
+### Fixed
+- **a11y:** notice the app in front when Android sends no event (plan 17) (`1f28aeb`, [#158](https://github.com/flyboy-byte/focusfence/pull/158))
+- **monitor:** screens about quitting porn never alert; porn alone is weak (plan 17) (`a3f69b6`, [#153](https://github.com/flyboy-byte/focusfence/pull/153))
+### Docs
+- HANDOFF, plan 17 state (`15a2ae5`, [#157](https://github.com/flyboy-byte/focusfence/pull/157))
+- HANDOFF, plan 17 pieces 1-3 (`fccdccb`, [#152](https://github.com/flyboy-byte/focusfence/pull/152))
+- 3.1.4 released, phone check open; plan 11 AGP version (`c32149d`, [#148](https://github.com/flyboy-byte/focusfence/pull/148))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.4-accountable
+
 ### Docs
 - HANDOFF, targetSdk 35 steps 1-3 merged, phone check next (`4a4cdfc`, [#146](https://github.com/flyboy-byte/focusfence/pull/146))
 - move superseded docs to docs/archive; new docs index; STATE points at HANDOFF (`3ed1155`, [#142](https://github.com/flyboy-byte/focusfence/pull/142))
 - groups tried on phones in the README; VPS backup paths out of public docs (`fca5876`, [#141](https://github.com/flyboy-byte/focusfence/pull/141))
 ### Maintenance
+- release 3.1.4 (`861ff1c`, [#147](https://github.com/flyboy-byte/focusfence/pull/147))
 - targetSdk 35, screens padded for Android 15's edge-to-edge (plan 15 item 7, step 3) (`b4cdfce`, [#145](https://github.com/flyboy-byte/focusfence/pull/145))
 - library updates on compileSdk 35 (plan 15 item 7, step 2) (`6a6a54e`, [#144](https://github.com/flyboy-byte/focusfence/pull/144))
 - compileSdk 35, AGP 8.7.3 (plan 15 item 7, step 1) (`e6407de`, [#143](https://github.com/flyboy-byte/focusfence/pull/143))
