@@ -47,7 +47,7 @@ it's for, the filter, screen checks, strict mode, and a partner.
 
 ## What works
 
-What's in daily use, versus built and tested but barely used, versus not yet run on a phone.
+✅ in daily use or checked in a real log · 🧪 built and tested, barely used on a phone · ❌ not built.
 
 | | Feature | Notes |
 |---|---|---|
@@ -58,9 +58,9 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | ✅ | **An on-phone record** of lookups, apps and protection changes | Exported only when you choose |
 | ✅ | **Screenshot checks** with on-device AI | Optional; two models, so faces and skin alone don't count. [How it decides](#screen-checks) |
 | ✅ | **No blind spots after switching apps** | Checked in a real log: longest unread stretch 53 s (it was 10 min before 3.1.5) |
+| ✅ | **Updates itself** from GitHub releases | Shows what's new, installs when you tap |
 | 🧪 | **Small pictures checked on their own** | Each picture on screen (up to 3) gets the models' full detail; after anything risky, that app is checked every 10 s for 2 minutes |
 | 🧪 | **Flag sensitivity**: Strict, Standard, Relaxed | Making it less strict waits, or needs a partner's PIN, and partners are told |
-| ✅ | **Updates itself** from GitHub releases | Shows what's new, installs when you tap |
 | 🧪 | **Partners** by code, QR code or email invite | Tried on two phones: "quick and seem less". They read your report in the app or a browser |
 | 🧪 | **Alerts** when protection loosens or the phone goes silent | Filter off, adult list set to Report, screen checks off, leaving the server; silence within about an hour |
 | 🧪 | **Encrypted report**, about 15 minutes fresh | Status, needs-attention, one timeline, day-by-day bars, app and site tables |
