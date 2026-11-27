@@ -103,7 +103,10 @@ rewrite: when a change touches one, move the part it touches out first (`Main.kt
 
 ## 7. targetSdk 35 (~2 h + a phone check)
 
-Step 1 done (2026-11-27): compileSdk 35, AGP 8.5.2 → 8.7.3 (Gradle 8.9 already). Next: library updates, then targetSdk.
+Step 1 done (2026-11-27): compileSdk 35, AGP 8.5.2 → 8.7.3 (Gradle 8.9 already). Step 2 done: the newest lines that
+build on compileSdk 35 (core 1.15, activity 1.10, work 2.10, material 1.13, recyclerview 1.4, constraintlayout 2.2.2);
+material 1.13 no longer re-exports `colorPrimary`/`colorError`, so those come from `androidx.appcompat.R`. Newer lines
+need compileSdk 36 (baseline). Next: targetSdk 35.
 
 
 Not needed for GitHub installs; needed for F-Droid (plan 11) or Play. `work-runtime` is pinned at 2.9.x by compileSdk 34.

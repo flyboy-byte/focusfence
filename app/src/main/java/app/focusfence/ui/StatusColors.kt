@@ -22,7 +22,7 @@ object StatusColors {
     fun goodContainerMuted(v: View) = ColorUtils.setAlphaComponent(onGoodContainer(v), 0xC0)
 
     /** A check icon or headline that means "working". */
-    fun good(v: View) = attr(v, M.attr.colorPrimary)
+    fun good(v: View) = attr(v, androidx.appcompat.R.attr.colorPrimary)
 
     /** An alert icon or title that means "needs you". */
     fun warn(v: View) = attr(v, M.attr.colorTertiary)
