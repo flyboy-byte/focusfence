@@ -35,6 +35,12 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   the image models now (`trigger=text`, counter `shot_text`), where screenshots already run for the app, at most once
   per 15 s.
 
+- **Piece 5** (2026-11-27): `ScreenCapture.pictureBoxes` reads image and video views' bounds before each shot;
+  `dns/ImageRegions.pick` keeps up to 3 (at least 160 px a side, under 60% of the screen, no nested duplicates), or 3
+  squares down the screen when there are none and the whole screen scored at least 0.10. Each is classified on its own,
+  NudeNet runs on any that is risky alone, and the best result counts. Log field `regions`, counters `region_*`.
+  Not yet on a phone: check `region_ms` and the battery in the next export.
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.

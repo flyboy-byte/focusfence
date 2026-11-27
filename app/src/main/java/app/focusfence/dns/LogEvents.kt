@@ -137,6 +137,8 @@ object LogEvents {
         same: Boolean? = null,
         /** D-038: the body-part check's result when it ran ("none found" or "FEMALE_BREAST_EXPOSED 82%"). */
         body: String? = null,
+        /** Plan 17: pictures checked on their own ("n=2,src=pictures,best=porn:0.812@0,body=1"). */
+        regions: String? = null,
     ): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_SHOT, "pkg" to pkg, "score" to score, "label" to label, "kept" to kept).apply {
             if (shotId != null) put("id", shotId)
@@ -147,6 +149,7 @@ object LogEvents {
             if (trigger != null) put("trigger", trigger)
             if (same != null) put("same", same)
             if (body != null) put("body", body)
+            if (regions != null) put("regions", regions)
         }
 
     /** The owner's verdict on a reviewed screenshot; [shotT] is that capture's `t`. Feeds threshold tuning. */

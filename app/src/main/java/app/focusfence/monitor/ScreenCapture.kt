@@ -178,8 +178,34 @@ object ScreenCapture {
         }
         nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random(), sameStreak)
         Monitor.perf.count("shot_req")
-        requestScreenshot(service, pkg, trigger)
+        val boxes = runCatching { pictureBoxes(service) }.getOrDefault(emptyList())
+        requestScreenshot(service, pkg, trigger, boxes)
     }
+
+    /**
+     * Plan 17 piece 5: where the pictures and videos are on screen, from the accessibility tree, so each can be checked
+     * on its own ([app.focusfence.dns.ImageRegions]). A bounded walk, like text capture's; on the main thread, before
+     * the screenshot, so the bounds match what it shows.
+     */
+    private fun pictureBoxes(service: AccessibilityService): List<app.focusfence.dns.ImageRegions.Box> {
+        val root = service.rootInActiveWindow ?: return emptyList()
+        val out = ArrayList<app.focusfence.dns.ImageRegions.Box>()
+        val r = android.graphics.Rect()
+        var visited = 0
+        fun walk(n: android.view.accessibility.AccessibilityNodeInfo?) {
+            if (n == null || visited >= MAX_PICTURE_NODES || out.size >= 30) return
+            visited++
+            if (n.isVisibleToUser && app.focusfence.dns.ImageRegions.isPictureClass(n.className)) {
+                n.getBoundsInScreen(r)
+                out += app.focusfence.dns.ImageRegions.Box(r.left, r.top, r.right, r.bottom)
+            }
+            for (i in 0 until n.childCount) walk(n.getChild(i))
+        }
+        walk(root)
+        Monitor.perf.count("region_nodes", visited.toLong())
+        return out
+    }
+    private const val MAX_PICTURE_NODES = 400
 
     /** Which raw hits become partner flags; text capture feeds it adult-word sightings. */
     internal val flagPolicy = app.focusfence.dns.FlagPolicy()
@@ -203,12 +229,12 @@ object ScreenCapture {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun requestScreenshot(service: AccessibilityService, pkg: String, trigger: String) {
+    private fun requestScreenshot(service: AccessibilityService, pkg: String, trigger: String, boxes: List<app.focusfence.dns.ImageRegions.Box>) {
         try {
             service.takeScreenshot(Display.DEFAULT_DISPLAY, worker, object : AccessibilityService.TakeScreenshotCallback {
                 override fun onSuccess(result: AccessibilityService.ScreenshotResult) {
                     try {
-                        process(service, pkg, result, trigger)
+                        process(service, pkg, result, trigger, boxes)
                     } finally {
                         inFlight.set(false)
                     }
@@ -239,19 +265,19 @@ object ScreenCapture {
 
     /** Runs on the capture worker. */
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun process(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
+    private fun process(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String, boxes: List<app.focusfence.dns.ImageRegions.Box>) {
         // CPU attribution: this whole pipeline (copy, scale, AI, encrypt) runs on
         // the capture worker thread, so thread CPU time is exactly its cost.
         val cpu0 = android.os.Debug.threadCpuTimeNanos()
         try {
-            processInner(context, pkg, result, trigger)
+            processInner(context, pkg, result, trigger, boxes)
         } finally {
             Monitor.perf.count("shot_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun processInner(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String) {
+    private fun processInner(context: android.content.Context, pkg: String, result: AccessibilityService.ScreenshotResult, trigger: String, boxes: List<app.focusfence.dns.ImageRegions.Box>) {
         val bitmap = hardwareToSoftware(result) ?: run {
             Monitor.perf.count("shot_decode_fail")
             return
@@ -281,7 +307,10 @@ object ScreenCapture {
         val clfCpu0 = android.os.Debug.threadCpuTimeNanos()
         val scores = classifier.classify(bitmap)
         val clfMs = android.os.SystemClock.elapsedRealtime() - clfStart
-        val verdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
+        val wholeVerdict = scores?.let { Classification.riskVerdict(it, MonitorSettings.threshold(context)) }
+        // Plan 17 piece 5: each picture on screen (or three squares) on its own, so a small one is seen at full detail.
+        val regions = if (scores != null) checkRegions(context, bitmap, boxes, wholeVerdict?.score ?: 0.0) else null
+        val verdict = regions?.best?.takeIf { it.score > (wholeVerdict?.score ?: 0.0) } ?: wholeVerdict
         sameStreak = 0
         if (scores != null && hash != null) {
             lastHash = hash
@@ -302,14 +331,15 @@ object ScreenCapture {
         // D-038: a risky screenshot gets a second look from NudeNet, which finds exposed body parts instead of judging
         // the whole picture (faces and skin fooled the first model). A partner flag, and so an automatic send, needs it
         // to find one. Only if it can't run do the old FlagPolicy rules decide. The owner's review copy is not affected.
-        val needBody = scores != null && (verdict?.flagged == true || (verdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM)
-        val body = if (needBody) {
+        val needBody = scores != null && (wholeVerdict?.flagged == true || (wholeVerdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM)
+        val wholeBody = if (needBody) {
             val b0 = android.os.SystemClock.elapsedRealtime()
             NudeDetector.detect(context, bitmap).also {
                 Monitor.perf.count("body_runs")
                 Monitor.perf.count("body_ms", android.os.SystemClock.elapsedRealtime() - b0)
             }
         } else null
+        val body = app.focusfence.dns.ImageRegions.mergeBody(wholeBody, regions?.body)
         val bodyResult = body?.let(app.focusfence.dns.BodyCheck::classify)
         val confirmed = bodyResult?.takeIf { it.kind == app.focusfence.dns.BodyCheck.Kind.NUDITY }?.let { it.part!! to it.score }
         // Suggestive (lingerie, swimwear): captured, report-only for now. A line in the partner report, no alert, no picture.
@@ -392,10 +422,52 @@ object ScreenCapture {
                 ms = if (scores != null) clfMs else null,
                 trigger = trigger,
                 body = bodySummary,
+                regions = regions?.summary,
             )
         )
         if (flagged) Monitor.perf.count("shot_flagged")
         app.focusfence.data.CaptureStats.recordShot(context, System.currentTimeMillis(), pkg, verdict?.label, verdict?.score, flagged)
+    }
+
+    private class RegionResult(val best: Classification.Verdict?, val body: Map<String, Double>?, val summary: String)
+
+    /**
+     * Runs the first model on each region from [app.focusfence.dns.ImageRegions.pick], and NudeNet on any that is
+     * risky on its own (the same gate as the whole screen). Cost: one MobileNet run per region (~85 ms on a Pixel 9),
+     * at most [app.focusfence.dns.ImageRegions.MAX]; counters `region_*`.
+     */
+    private fun checkRegions(context: android.content.Context, bitmap: Bitmap, boxes: List<app.focusfence.dns.ImageRegions.Box>, whole: Double): RegionResult? {
+        val picked = app.focusfence.dns.ImageRegions.pick(bitmap.width, bitmap.height, boxes, whole)
+        if (picked.isEmpty()) return null
+        val threshold = MonitorSettings.threshold(context)
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        var best: Classification.Verdict? = null
+        var bestAt = -1
+        var body: Map<String, Double>? = null
+        var bodyRuns = 0
+        picked.forEachIndexed { i, b ->
+            val crop = runCatching { Bitmap.createBitmap(bitmap, b.left, b.top, b.width, b.height) }.getOrNull() ?: return@forEachIndexed
+            try {
+                val v = classifier.classify(crop)?.let { Classification.riskVerdict(it, threshold) } ?: return@forEachIndexed
+                Monitor.perf.count("region_runs")
+                if (best == null || v.score > best!!.score) { best = v; bestAt = i }
+                if (v.flagged || v.score >= app.focusfence.dns.BodyCheck.CHECK_FROM) {
+                    bodyRuns++
+                    Monitor.perf.count("region_body_runs")
+                    body = app.focusfence.dns.ImageRegions.mergeBody(body, NudeDetector.detect(context, crop))
+                }
+            } finally {
+                if (crop !== bitmap) crop.recycle()
+            }
+        }
+        Monitor.perf.count("region_ms", android.os.SystemClock.elapsedRealtime() - t0)
+        val src = if (boxes.isNotEmpty() && picked != app.focusfence.dns.ImageRegions.tiles(bitmap.width, bitmap.height)) "pictures" else "tiles"
+        Monitor.perf.count("region_src_$src")
+        val b = best
+        val summary = "n=${picked.size},src=$src" +
+            (b?.let { ",best=${it.label}:${"%.3f".format(java.util.Locale.ROOT, it.score)}@$bestAt" } ?: "") +
+            (if (bodyRuns > 0) ",body=$bodyRuns" else "")
+        return RegionResult(b, body, summary)
     }
 
     private fun ensureClassifier(context: android.content.Context) {
