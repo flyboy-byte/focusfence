@@ -7,7 +7,7 @@ is [`../CLAUDE.md`](../CLAUDE.md). Why things are the way they are: [`../DECISIO
 |---|---|
 | [`HANDOFF.md`](HANDOFF.md) | The latest session's handoff: what's live, what's next, what's parked. Read after `STATE.md`. |
 | [`architecture.md`](architecture.md) | How the app works as built, and why the non-obvious parts are that way. |
-| [`plans/`](plans) | One file per piece of work, numbered. Current: 13 partners, 14 groups, 15 repo health, 16 outside API (parked), 11 F-Droid, 12 partner options. Older plans are dated history. |
+| [`plans/`](plans) | One file per piece of work, numbered. Current: 17 screen text and screenshots, 15 repo health, 13 partners, 14 groups, 16 outside API (parked), 11 F-Droid, 12 partner options. Older plans are dated history. |
 | [`specs/`](specs) | Formats and behaviour that code must match: `event-log.md` (the logs), `bundles.md` (block lists), `friction-tiers.md` (strict mode levels). `accountability-architecture.md` and `device-owner.md` are historical. |
 | [`site/`](site) | The public pages (privacy, limits, server), published to GitHub Pages. |
 | [`research/`](research) | Dated research notes; `ai-detection.md` and `ui-design.md` are still referred to. |

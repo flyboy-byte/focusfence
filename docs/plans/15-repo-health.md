@@ -121,3 +121,19 @@ accessibility service. Logan checks every screen on the Pixel.
 
 `partnerByToken`, `inviteByHash` and the group lookups read every device or group file per request. Fine under the
 100-device cap. If the cap is raised: an in-memory token → device index rebuilt at start and updated on writes.
+
+## Audit, 2026-11-27 (after 3.1.5)
+
+Secrets, personal data and signing files: none tracked (`git grep` for keys, home paths, email addresses; no keystore,
+`.env` or `local.properties` in git). Secret scanning and push protection are on; Dependabot reports 0 alerts.
+
+| # | Finding | State |
+|---|---|---|
+| A1 | 3.1.5's screen-text alert carried the matched words (can be site names) in alert text, which the server can read; the privacy page promises "never a site" | **Fixed** in #161 (alert names the app only); ships in the next release |
+| A2 | `android.yml` had no `permissions:` (default token); `release.yml`, which holds the signing key, used `softprops/action-gh-release@v2` by tag | **Fixed**: `contents: read`; that action pinned to a commit |
+| A3 | Other actions are by major tag (`actions/*`, `gradle/actions`, `docker/*`); `server-release.yml` logs in to a registry | Open, low: pin `docker/login-action` next time that file is touched |
+| A4 | Dependabot *security updates* are off (alerts are on) | Open: Logan's call (repo setting) |
+| A5 | Toolchain is aging: Kotlin 1.9.24, Ktor 2.3.13 (server), TensorFlow Lite 2.14. Newer AndroidX lines need compileSdk 36, AGP 8.9-9.1 and Kotlin 2 | Open: one upgrade plan when there's a reason (F-Droid, a CVE, or a library we need) |
+| A6 | Picture crops assume screenshot pixels equal screen coordinates (true on the Pixel 9); not checked on a scaled display | Open: watch the next export's `regions` field |
+| A7 | 3.1.5 not yet seen on a phone; picture checks' battery cost unknown | Open: next export |
+| A8 | STATE.md's status block was two days stale (still "groups not tried", "plan 13 not released") | **Fixed** with this audit |
