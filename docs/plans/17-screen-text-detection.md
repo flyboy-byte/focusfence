@@ -27,6 +27,9 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   words, plurals; a word only inside a longer hit isn't counted twice; hits are recorded as the plain word.
   `RiskTerms.strong` for piece 2. Tests in `RiskTermsTest` (innocent text: "naked eye", Sussex, Milford, Titanic,
   "rule 3 of 4").
+- **Piece 2** (2026-11-27): a strong hit writes `svc monitor text` (detail `porn, milf in Chrome`, urgent), at most
+  one per app per 10 min (`TextCapture.ALERT_EVERY_MS`); `Digest.alertText` → "Explicit words on screen: …", an
+  important alert. Counter `text_alerts`. Gambling words stay report-only.
 
 ## Not doing
 
