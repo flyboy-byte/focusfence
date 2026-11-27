@@ -60,4 +60,13 @@ class RiskTermsTest {
         assertTrue(RiskTerms.strong(RiskTerms.find("NSFW boobs")))     // two weak words together
         assertFalse(RiskTerms.strong(emptyMap()))
     }
+
+    @Test
+    fun explicitWordsAlertPartners() {
+        val hits = RiskTerms.find("Hot MILFs · watch p0rn free · online casino")
+        assertEquals("milf, porn in Chrome", RiskTerms.alertDetail(hits, "Chrome"))
+        val f = LogEvents.service(1, "monitor", "text", RiskTerms.alertDetail(hits, "Chrome"))
+        assertEquals("Explicit words on screen: milf, porn in Chrome", Digest.urgentText(f))
+        assertTrue(AlertPrefs.isImportant(f))
+    }
 }

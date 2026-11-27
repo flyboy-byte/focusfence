@@ -103,6 +103,10 @@ object RiskTerms {
         return adult.any { byWord[it]?.strong == true } || adult.size >= 2
     }
 
+    /** The partner alert's detail: "porn, milf in Chrome", adult words only (the same words the report already shows). */
+    fun alertDetail(hits: Map<String, List<String>>, app: String): String =
+        hits["adult"].orEmpty().joinToString(", ") + " in " + app
+
     /** "adult:nsfw,porn;gambling:casino" for a log field. */
     fun encode(hits: Map<String, List<String>>): String =
         hits.entries.joinToString(";") { "${it.key}:${it.value.joinToString(",")}" }

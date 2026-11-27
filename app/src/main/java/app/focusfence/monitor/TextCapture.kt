@@ -1,5 +1,6 @@
 package app.focusfence.monitor
 
+import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
 import app.focusfence.data.EventLog
 import app.focusfence.dns.LogEvents
@@ -20,20 +21,24 @@ object TextCapture {
     private const val MAX_NODES = 400
     private const val MAX_TEXT_CHARS = 2000
 
-    private val deduper = UrlDeduper()
+    /** Plan 17: at most one partner alert per app in this long, however many screens of the same page scroll past. */
+    private const val ALERT_EVERY_MS = 10 * 60_000L
 
-    fun capture(pkg: String, root: AccessibilityNodeInfo?) {
+    private val deduper = UrlDeduper()
+    private val lastAlert = HashMap<String, Long>()
+
+    fun capture(context: Context, pkg: String, root: AccessibilityNodeInfo?) {
         if (root == null) return
         // CPU attribution: tree walks are the costly part of text capture.
         val cpu0 = android.os.Debug.threadCpuTimeNanos()
         try {
-            captureInner(pkg, root)
+            captureInner(context, pkg, root)
         } finally {
             Monitor.perf.count("text_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         }
     }
 
-    private fun captureInner(pkg: String, root: AccessibilityNodeInfo) {
+    private fun captureInner(context: Context, pkg: String, root: AccessibilityNodeInfo) {
         val sb = StringBuilder()
         var visited = 0
 
@@ -83,6 +88,14 @@ object TextCapture {
             terms.keys.forEach { Monitor.perf.count("text_term_$it") }
             // Adult words on screen corroborate a middling image score in this app (dns/FlagPolicy).
             if ("adult" in terms) ScreenCapture.flagPolicy.noteSignal(pkg, System.currentTimeMillis())
+        }
+        // Plan 17: clearly explicit words alert partners (Digest.alertText), like a flagged screenshot.
+        val now = System.currentTimeMillis()
+        if (app.focusfence.dns.RiskTerms.strong(terms) && now - (lastAlert[pkg] ?: 0L) >= ALERT_EVERY_MS) {
+            lastAlert[pkg] = now
+            Monitor.perf.count("text_alerts")
+            val detail = app.focusfence.dns.RiskTerms.alertDetail(terms, app.focusfence.UiUtil.appLabel(context, pkg))
+            EventLog.activity(LogEvents.service(now, "monitor", "text", detail), urgent = true)
         }
         EventLog.activity(
             LogEvents.text(
