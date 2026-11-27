@@ -9,7 +9,7 @@ Fence. disc-tracker (Expo, merged 2026-11-25) and drag-tree (on F-Droid, reprodu
 
 ## Verdict
 
-**Medium-sized, and no part of it blocks.** The build is the easy kind: plain Gradle (AGP 8.5.2, Kotlin 1.9.24,
+**Medium-sized, and no part of it blocks.** The build is the easy kind: plain Gradle (AGP 8.7.3 since 2026-11-27, Kotlin 1.9.24,
 Gradle 8.9, JDK 17), only `google()` and `mavenCentral()`, no Play Services or Firebase, R8 off, no Expo step. The
 work is in policy: the self-updater, the store text, the app ID and signing with our own key.
 

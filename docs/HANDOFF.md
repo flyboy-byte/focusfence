@@ -29,8 +29,8 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 
 1. Production pause lifted. Logan tried 3.1.2; 3.1.3 released with plan 15 items 1, 2, 3, 5 (item 4 parked).
 2. Plan 15 item 7, targetSdk 35: steps 1-3 merged 2026-11-27 (#143 compileSdk 35 + AGP 8.7.3, #144 libraries,
-   #145 targetSdk 35 + `ui/EdgeToEdge`). Not run on a phone yet. Step 4: a 3.1.4 build, and Logan checks every screen
-   on the Pixel (bars not overlapping, keyboard not covering a field). Tag only on his say-so.
+   #145 targetSdk 35 + `ui/EdgeToEdge`). Released as 3.1.4 (code 56, 2026-11-27). Step 4 open: Logan checks every screen on
+   the Pixel (bars not overlapping, keyboard not covering a field). targetSdk 35 also clears one F-Droid prerequisite.
 3. After that, Logan wants all of: F-Droid (plan 11), partner polish (guide page, replies, removing one group member) and
    push, **but more real testing of partners and groups first**. Ask which to start before building any.
 
