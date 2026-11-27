@@ -21,6 +21,25 @@ object TextCapture {
     private const val MAX_NODES = 400
     private const val MAX_TEXT_CHARS = 2000
 
+    // Plan 17: after adult words or a risky screenshot in an app, read it deeper and more often for a while, so the
+    // rest of the page (below a long feed's first 400 nodes) and what scrolls in next are seen too.
+    private const val DEEP_NODES = 2000
+    private const val DEEP_TEXT_CHARS = 8000
+    const val HOT_MS = 2 * 60_000L
+    const val HOT_INTERVAL_MS = 5_000L
+    private val hotUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** [pkg] showed something risky: deep, frequent reads for [HOT_MS]. Called from the screenshot worker too. */
+    fun markHot(pkg: String, now: Long = System.currentTimeMillis()) {
+        if ((hotUntil[pkg] ?: 0L) <= now) Monitor.perf.count("text_hot")
+        hotUntil[pkg] = now + HOT_MS
+    }
+
+    fun isHot(pkg: String, now: Long = System.currentTimeMillis()) = (hotUntil[pkg] ?: 0L) > now
+
+    /** How long to wait between reads of [pkg]: [normalMs], or [HOT_INTERVAL_MS] while it is hot. */
+    fun intervalMs(pkg: String, normalMs: Long): Long = if (isHot(pkg)) HOT_INTERVAL_MS else normalMs
+
     /** Plan 17: at most one partner alert per app in this long, however many screens of the same page scroll past. */
     private const val ALERT_EVERY_MS = 10 * 60_000L
 
@@ -42,9 +61,13 @@ object TextCapture {
     private fun captureInner(context: Context, pkg: String, root: AccessibilityNodeInfo): Boolean {
         val sb = StringBuilder()
         var visited = 0
+        val deep = isHot(pkg)
+        val maxNodes = if (deep) DEEP_NODES else MAX_NODES
+        val maxChars = if (deep) DEEP_TEXT_CHARS else MAX_TEXT_CHARS
+        if (deep) Monitor.perf.count("text_deep")
 
         fun walk(node: AccessibilityNodeInfo?) {
-            if (node == null || visited >= MAX_NODES || sb.length >= MAX_TEXT_CHARS) return
+            if (node == null || visited >= maxNodes || sb.length >= maxChars) return
             visited++
             if (!node.isPassword) {
                 val t = node.text?.toString()?.trim()
@@ -64,13 +87,13 @@ object TextCapture {
         }
         walk(root)
         Monitor.perf.count("text_nodes", visited.toLong())
-        if (visited >= MAX_NODES) Monitor.perf.count("text_truncated")
+        if (visited >= maxNodes) Monitor.perf.count("text_truncated")
 
         if (sb.isEmpty()) {
             Monitor.perf.count("text_empty")
             return false
         }
-        val text = sb.toString().take(MAX_TEXT_CHARS)
+        val text = sb.toString().take(maxChars)
         // Dedup keyed by a short digest so near-identical screens collapse.
         if (!deduper.accept(pkg, "text", text.hashCode().toString())) return false
         Monitor.perf.count("text_captured")
@@ -88,7 +111,10 @@ object TextCapture {
             Monitor.perf.count("text_term_hits")
             terms.keys.forEach { Monitor.perf.count("text_term_$it") }
             // Adult words on screen corroborate a middling image score in this app (dns/FlagPolicy).
-            if ("adult" in terms) ScreenCapture.flagPolicy.noteSignal(pkg, System.currentTimeMillis())
+            if ("adult" in terms) {
+                ScreenCapture.flagPolicy.noteSignal(pkg, System.currentTimeMillis())
+                markHot(pkg)
+            }
         }
         // Plan 17: clearly explicit words alert partners (Digest.alertText), like a flagged screenshot.
         val now = System.currentTimeMillis()
