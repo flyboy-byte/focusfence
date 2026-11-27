@@ -103,4 +103,27 @@ class RiskTermsTest {
         val msEach = (System.nanoTime() - t0) / 20 / 1_000_000.0
         assertTrue("took $msEach ms", msEach < 50)
     }
+
+    @Test
+    fun writtenPornIsSeen() {
+        val tags = "Top picks · Some Story cover · sissy · 1200 reads · Another Story cover · forced feminization · 900 reads"
+        assertTrue(RiskTerms.alertable(tags, RiskTerms.find(tags)))
+        val prose = "She moaned as his cock pressed in, and she came, an orgasm shaking her"
+        assertTrue(RiskTerms.alertable(prose, RiskTerms.find(prose)))
+        // One story word alone, or everyday uses, stay quiet.
+        assertFalse(RiskTerms.strong(RiskTerms.find("Don't be such a sissy, it's only a spider")))
+        assertFalse(RiskTerms.strong(RiskTerms.find("The rooster, or cock, crowed at dawn")))
+        assertTrue(RiskTerms.find("Summa cum laude graduate").keys.isNotEmpty()) // listed, but weak: needs company
+        assertFalse(RiskTerms.strong(RiskTerms.find("Summa cum laude graduate")))
+    }
+
+    @Test
+    fun quittingWordsOnlyCoverNearbyWords() {
+        val recovery = "Day 30 without porn. Quitting porn and nsfw subs was the hardest thing; recovery is real."
+        assertFalse(RiskTerms.alertable(recovery, RiskTerms.find(recovery)))
+        // A long story that mentions struggling once, far from the explicit tags, still alerts.
+        val filler = (1..60).joinToString(" ") { "word$it" }
+        val story = "He struggled with the weights at the gym. $filler smut · erotica"
+        assertTrue(RiskTerms.alertable(story, RiskTerms.find(story)))
+    }
 }
