@@ -164,7 +164,16 @@ object ScreenCapture {
         schedule()
     }
 
+    /**
+     * Plan 17: while [pkg] is hot (adult words or a risky picture in the last [TextCapture.HOT_MS]), a screenshot
+     * every [HOT_SHOT_MS] instead of the level's 1-2 minutes, so what comes next on that page is seen too.
+     */
+    private fun hotCap(pkg: String?, due: Long): Long =
+        if (pkg != null && TextCapture.isHot(pkg)) minOf(due, System.currentTimeMillis() + HOT_SHOT_MS) else due
+    private const val HOT_SHOT_MS = 10_000L
+
     private fun schedule() {
+        nextDueAt = hotCap(lastForeground, nextDueAt)
         main.removeCallbacks(tick)
         val delay = (nextDueAt - System.currentTimeMillis()).coerceAtLeast(1_000L)
         main.postDelayed(tick, delay)
@@ -176,7 +185,7 @@ object ScreenCapture {
             Monitor.perf.count("shot_busy")
             return
         }
-        nextDueAt = CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random(), sameStreak)
+        nextDueAt = hotCap(pkg, CapturePolicy.nextDueAt(System.currentTimeMillis(), MonitorSettings.level(service), Math.random(), sameStreak))
         Monitor.perf.count("shot_req")
         val boxes = runCatching { pictureBoxes(service) }.getOrDefault(emptyList())
         requestScreenshot(service, pkg, trigger, boxes)
@@ -359,7 +368,11 @@ object ScreenCapture {
         val flagged = why != null
         // Plan 17: a risky picture makes text capture read this app deeper and more often for a while.
         if (flagged || (verdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM ||
-            bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE) TextCapture.markHot(pkg, now)
+            bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE) {
+            TextCapture.markHot(pkg, now)
+            Monitor.perf.count("shot_hot")
+            main.post { if (foregroundWatched && lastForeground == pkg) schedule() }
+        }
         when {
             why != null -> Monitor.perf.count("flag_$why")
             verdict?.flagged == true -> Monitor.perf.count("flag_held")
