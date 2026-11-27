@@ -2,17 +2,17 @@
 
 > **What comes next, in order:** [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next. Plans: [`docs/plans/`](docs/plans); docs index: [`docs/README.md`](docs/README.md).
 
-> **Where it stands (2026-11-27): app 3.1.5, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
-> two phones. 3.1.4 moved to targetSdk 35. 3.1.5 is plan 17, screen text and screenshots: a word index that sees through
-> disguises, partner alerts with a guard for pages about quitting, each picture on screen checked on its own, faster and
-> deeper checks after anything risky, and a fix for a 10-minute blind spot after leaving Focus Fence (Logan's Brave miss).
-> None of 3.1.5 has been seen working on a phone yet. **Next:** a day of use, then a log export to check it
-> ([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
+> **Where it stands (2026-11-27): app 3.1.6, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
+> two phones. 3.1.5 (plan 17) was checked on a phone: the blind-spot fix works (longest unread gap 53 s). 3.1.6: secret
+> fields never read, written erotica matched, pictures next to explicit words flagged at a lower bar, body check from
+> 0.30 with a small boost when a woman is in the picture, and Flag sensitivity (Strict / Standard / Relaxed, less strict
+> guarded). None of 3.1.6 seen on a phone yet. **Next:** a test on the same kind of page, then an export
+([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
 
-_Last updated: 2026-11-27 (3.1.5). Update this file in the same commit as any change that moves an item below. It is the
+_Last updated: 2026-11-27 (3.1.6). Update this file in the same commit as any change that moves an item below. It is the
 single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -35,7 +35,7 @@ strict mode passes its tests but hasn't been field-tested. The repo went public 
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
 | Tests | about 308 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every PR |
-| Latest release | `v3.1.5-accountable` (2026-11-27, code 57): plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
+| Latest release | `v3.1.6-accountable` (2026-11-27, code 58): secret fields skipped, erotica words, quitting guard by distance, pictures next to explicit words flagged, body check from 0.30 with a female boost, Flag sensitivity. 3.1.5: plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels
 

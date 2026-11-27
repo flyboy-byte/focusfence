@@ -7,6 +7,23 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 ## Unreleased
 
 ### Added
+- **monitor:** flag sensitivity Strict/Standard/Relaxed; suggestive pictures can flag (`0950abe`, [#168](https://github.com/flyboy-byte/focusfence/pull/168))
+- **monitor:** body check from 0.30; a woman in the picture adds 0.10 (plan 17) (`a640df3`, [#167](https://github.com/flyboy-byte/focusfence/pull/167))
+- **monitor:** flag pictures shown next to explicit words (plan 17) (`d4cb8ac`, [#166](https://github.com/flyboy-byte/focusfence/pull/166))
+- **monitor:** match written erotica; quitting words only cover nearby words (plan 17) (`894ec39`, [#165](https://github.com/flyboy-byte/focusfence/pull/165))
+### Fixed
+- **monitor:** never read revealed password and other secret fields (`1fc13ea`, [#164](https://github.com/flyboy-byte/focusfence/pull/164))
+- **monitor:** screen-text alerts name the app, never the words (plan 17) (`8a9d5f2`, [#161](https://github.com/flyboy-byte/focusfence/pull/161))
+### Docs
+- HANDOFF for 2026-11-27 (3.1.5, privacy fix pending release) (`42bd9a9`, [#163](https://github.com/flyboy-byte/focusfence/pull/163))
+- README, STATE, CLAUDE.md and privacy page current with 3.1.5; downloads badge; CI permissions; 2026-11-27 audit (`03af212`, [#162](https://github.com/flyboy-byte/focusfence/pull/162))
+- HANDOFF, 3.1.5 released (`8fd9297`, [#160](https://github.com/flyboy-byte/focusfence/pull/160))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.5-accountable
+
+### Added
 - **monitor:** a screenshot every 10 s while an app is hot (plan 17, piece 7) (`6b3bf47`, [#156](https://github.com/flyboy-byte/focusfence/pull/156))
 - **monitor:** screen text matched by a word index with phrases; deeper reads after a flag (plan 17, piece 6) (`b1e71f9`, [#155](https://github.com/flyboy-byte/focusfence/pull/155))
 - **monitor:** check each picture on screen on its own (plan 17, piece 5) (`057fe59`, [#154](https://github.com/flyboy-byte/focusfence/pull/154))
@@ -20,6 +37,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - HANDOFF, plan 17 state (`15a2ae5`, [#157](https://github.com/flyboy-byte/focusfence/pull/157))
 - HANDOFF, plan 17 pieces 1-3 (`fccdccb`, [#152](https://github.com/flyboy-byte/focusfence/pull/152))
 - 3.1.4 released, phone check open; plan 11 AGP version (`c32149d`, [#148](https://github.com/flyboy-byte/focusfence/pull/148))
+### Maintenance
+- release 3.1.5 (`e18e938`, [#159](https://github.com/flyboy-byte/focusfence/pull/159))
 
 _Undo any line with `git revert <commit>`._
 
