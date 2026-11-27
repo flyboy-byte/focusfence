@@ -44,7 +44,7 @@ class WeekChartView @JvmOverloads constructor(context: Context, attrs: Attribute
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (values.isEmpty()) return
-        val primary = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary)
+        val primary = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary)
         val soft = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSecondaryContainer)
         val textColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant)
         textPaint.color = textColor

@@ -192,7 +192,7 @@ class HomeFragment : Fragment() {
         val container = if (good) StatusColors.goodContainer(v) else attr(com.google.android.material.R.attr.colorErrorContainer)
         val onContainer = if (good) StatusColors.onGoodContainer(v) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
         val muted = if (good) StatusColors.goodContainerMuted(v) else attr(com.google.android.material.R.attr.colorOnErrorContainer)
-        val accent = if (good) attr(com.google.android.material.R.attr.colorPrimary) else attr(com.google.android.material.R.attr.colorError)
+        val accent = if (good) attr(androidx.appcompat.R.attr.colorPrimary) else attr(androidx.appcompat.R.attr.colorError)
         val onAccent = if (good) attr(com.google.android.material.R.attr.colorOnPrimary) else attr(com.google.android.material.R.attr.colorOnError)
         b.heroCard.setCardBackgroundColor(container)
         b.heroTitle.setTextColor(onContainer)
@@ -229,7 +229,7 @@ class HomeFragment : Fragment() {
         fun attr(a: Int) = com.google.android.material.color.MaterialColors.getColor(b.strictCard, a)
         val on = state !is StrictLock.State.Off
         b.strictIcon.setColorFilter(
-            attr(if (on) com.google.android.material.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant)
+            attr(if (on) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant)
         )
         when (state) {
             is StrictLock.State.Off -> {
