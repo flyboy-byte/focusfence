@@ -56,8 +56,8 @@ object BodyCheck {
 
     /**
      * The body check runs only when the first model's risky score is at least this. 0.50 until 2026-11-27, then 0.30:
-     * in a 9-day export only about 3 screenshots scored between the two, so the cost is a few runs a week, and
-     * middling pictures (covers, thumbnails) get looked at for nudity too.
+     * very few screenshots score between the two, so the cost is small, and middling pictures (covers, thumbnails) get
+     * looked at for nudity too.
      */
     const val CHECK_FROM = 0.30
 
@@ -67,7 +67,7 @@ object BodyCheck {
     )
     const val FEMALE_AT = 0.40
 
-    /** Added to a picture's risk score when a woman is in it (the owner's choice, 2026-11-27). Never alone a flag. */
+    /** Added to a picture's risk score when a woman is in it (2026-11-27). Never alone a flag. */
     const val FEMALE_BOOST = 0.10
 
     fun female(best: Map<String, Double>): Boolean = best.any { it.key in FEMALE && it.value >= FEMALE_AT }

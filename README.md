@@ -105,9 +105,8 @@ Optional, and only in the apps you pick. Everything below runs on the phone; a c
 - **Context counts:** for 3 minutes after explicit words in an app, its pictures are looked at from 25% and flag from
   35%, so covers and thumbnails on such a page are caught with the text. A woman in the picture adds a little to its
   score; it never flags on its own.
-- **Tuned on real use:** word and score changes are replayed against a real log on the phone owner's computer before
-  they ship (9 days of screens: 3 text alerts, 1 of them false). Logs never go in this repo; the reasoning, with
-  counts only, is in [`docs/research/ai-detection.md`](docs/research/ai-detection.md) and
+- **Tuned on real use:** word and score changes are replayed against a real log, on the log owner's own computer,
+  before they ship. Logs never go in this repo; the reasoning is in [`docs/research/ai-detection.md`](docs/research/ai-detection.md) and
   [`docs/plans/17-screen-text-detection.md`](docs/plans/17-screen-text-detection.md).
 
 ---

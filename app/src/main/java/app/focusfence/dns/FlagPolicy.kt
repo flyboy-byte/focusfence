@@ -15,7 +15,7 @@ package app.focusfence.dns
  * Plan 17, context: right after words clear enough to alert partners ([RiskTerms.alertable]) in an app, its pictures
  * are judged at a lower bar ([inContext]): the body check runs from [CONTEXT_CHECK_FROM], and a picture at
  * [CONTEXT_FLAG] or found suggestive is a flag ([contextFlag]). Pictures shown next to explicit text can score well
- * under the usual bars (0.41 "sexy" in one case) and should be flagged along with the text.
+ * under the usual bars and should be flagged along with the text.
  *
  * Pure and clock-free (the caller passes `now`), so it is tested on the JVM. Costs nothing at runtime: a
  * couple of map lookups per classified screenshot. The owner's review screen is separate and unchanged.

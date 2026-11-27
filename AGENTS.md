@@ -95,9 +95,12 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
   stay possible but never silent.
 - **Capture must stay visible.** Screen/text capture always shows the on-device indicator. No
   hidden monitoring.
-- Treat log exports as private data: analyse them locally, never send them anywhere. Public files (code, docs, tests,
-  PRs) get counts only: no app names, captured text, or descriptions of what the owner was viewing. The auto-mode
-  classifier has blocked commits that did.
+- Treat log exports as private data: analyse them locally, never send them anywhere.
+- **The repo is public, and this is an app about porn.** Code, comments, docs, tests, commits, PR bodies and release
+  notes describe what the app does and why, in general terms. Never: what the owner (or anyone) viewed, when, or in
+  which app; their words about misses or temptations; which settings reflect their personal preferences; alert or flag
+  counts from a real phone; test strings modelled on a real page (make them up). Don't quote a real case even as a
+  bad example.
 
 ## Pull requests: awareness, not rules
 

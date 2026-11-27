@@ -1,7 +1,7 @@
 # Plan 17: screen-text detection that catches more, and tells partners (2026-11-27)
 
-**Status:** pieces 1-3 built (2026-11-27); piece 4 waits for a log export. Logan, 2026-11-27: on-screen text detection "misses things", and the screenshot check should
-have caught the same screen. When explicit text is clearly on screen: report it **and alert** partners.
+**Status:** pieces 1-3 built (2026-11-27); piece 4 waits for a log export. Goal (2026-11-27): catch more explicit text on screen, and have the screenshot check look at
+the same screens. When explicit text is clearly on screen: report it **and alert** partners.
 
 ## How it worked before (3.1.4)
 
@@ -45,15 +45,15 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Piece 6** (2026-11-27, Logan: phrases with an index that's still fast; read deeper after a flag): `RiskTerms`
   is a word index now. The screen is split into words, each disguise is undone per word (look-alikes, `*` for a
   vowel, plurals, runs of single letters), and every 1-3 word run is one hash lookup, so the lists can grow without
-  costing more. Words run together ("porn hub") count only when one of them is listed. A real export's 7,418 screens
-  replayed at about 0.16 ms each, with 1 alert in 9 days. After adult words or a risky screenshot (`TextCapture.markHot`), that
+  costing more. Words run together ("porn hub") count only when one of them is listed. Replayed at about 0.16 ms a
+  screen. After adult words or a risky screenshot (`TextCapture.markHot`), that
   app is read every 5 s for 2 min, up to 2,000 nodes and 8,000 characters instead of 400 and 2,000 (counters
   `text_hot`, `text_deep`).
 
 - **Piece 7** (2026-11-27): while an app is hot, a screenshot every 10 s instead of the level's 1-2 minutes
   (`ScreenCapture.hotCap`, counter `shot_hot`). A risky shot keeps it hot.
 
-- **Fix: lost foreground** (2026-11-27). In the export, after leaving Focus Fence for a browser, nothing was
+- **Fix: lost foreground** (2026-11-27). After leaving Focus Fence for another app, nothing was
   read for 10 minutes (no text, no screenshots, no ticks), because Android sent no window event for the app that came
   back. While the front app is one we don't read, the service now asks which app is in front every 15 s
   (`UrlFilterService.watchingAnything`, `frontChanged`, counter `fg_recovered`), and a change found that way also
@@ -62,7 +62,7 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Written erotica and the quitting guard** (2026-11-27, after 3.1.5). Story and fanfiction sites name their
   content with tags and story words the lists didn't hold, and one recovery word anywhere on a long page silenced it.
   Added strong erotica words and weak story words (two needed); a quitting word now only cancels adult words within 40
-  words of it (`RiskTerms.QUIT_REACH`). Replayed locally: 3 alerts in 9 days of screens, 1 of them a false alarm.
+  words of it (`RiskTerms.QUIT_REACH`). Checked by a local replay before merging.
 - **Secret fields** (2026-11-27): a revealed web password box isn't `isPassword`; `dns/SecretFields` skips editable
   fields labelled as secrets.
 
@@ -75,7 +75,7 @@ Counts only; the export itself stays off the repo.
 
 | Finding | Done |
 |---|---|
-| Every on-screen "porn" was about quitting or detecting it, none was porn. Pieces 1-2 as first merged would have alerted 47 times in 9 days | `porn` is weak; a screen with quitting or recovery words (`RiskTerms.aboutQuitting`) is recorded but never alerts. Replayed: 1 alert in 9 days |
+| The bare word "porn" mostly appears on recovery pages, news and chats about apps like this one; pieces 1-2 as first merged alerted far too often | `porn` is weak; quitting or recovery words nearby (`RiskTerms.aboutQuitting`, `QUIT_REACH`) stop the alert |
 | Small pictures can't be seen: the whole screen is shrunk to 224 / 320 px, and NudeNet only runs on a risky whole-screen score | Piece 5 |
 | Most screens are never captured: about one shot every 1.6-2.5 min per app (Standard is a 90 s mean) | Piece 3 (words trigger a shot); more later |
 | Screenshot checks are cheap: about 84 ms per model run, about 6 s CPU per screen-on hour | Leaves room for piece 5 |
