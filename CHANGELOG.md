@@ -6,6 +6,13 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Docs
+- HANDOFF, 3.1.6 released (`8052eba`, [#170](https://github.com/flyboy-byte/focusfence/pull/170))
+
+_Undo any line with `git revert <commit>`._
+
+## v3.1.6-accountable
+
 ### Added
 - **monitor:** flag sensitivity Strict/Standard/Relaxed; suggestive pictures can flag (`0950abe`, [#168](https://github.com/flyboy-byte/focusfence/pull/168))
 - **monitor:** body check from 0.30; a woman in the picture adds 0.10 (plan 17) (`a640df3`, [#167](https://github.com/flyboy-byte/focusfence/pull/167))
@@ -18,6 +25,8 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 - HANDOFF for 2026-11-27 (3.1.5, privacy fix pending release) (`42bd9a9`, [#163](https://github.com/flyboy-byte/focusfence/pull/163))
 - README, STATE, CLAUDE.md and privacy page current with 3.1.5; downloads badge; CI permissions; 2026-11-27 audit (`03af212`, [#162](https://github.com/flyboy-byte/focusfence/pull/162))
 - HANDOFF, 3.1.5 released (`8fd9297`, [#160](https://github.com/flyboy-byte/focusfence/pull/160))
+### Maintenance
+- release 3.1.6 (`c94f3f2`, [#169](https://github.com/flyboy-byte/focusfence/pull/169))
 
 _Undo any line with `git revert <commit>`._
 
