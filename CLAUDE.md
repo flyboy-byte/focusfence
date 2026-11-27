@@ -15,7 +15,7 @@ websites via a DNS-only `VpnService` and keeps a local activity/diagnostics log.
 no account, no server. Allowed DNS is relayed to the network's own resolver (DoH to public resolvers as
 fallback). Optional accountability layers sync to a self-hostable Kotlin/Ktor server in `server/`, which
 stores partner reports sealed on the phone (D-023); logs otherwise leave the phone only via user-initiated
-export. `applicationId app.focusfence.accountable`, namespace still `app.focusfence`. `minSdk 26`, `compileSdk`/`targetSdk 34`, JDK 17.
+export. `applicationId app.focusfence.accountable`, namespace still `app.focusfence`. `minSdk 26`, `compileSdk 35`, `targetSdk 34`, JDK 17.
 
 ## Commands
 

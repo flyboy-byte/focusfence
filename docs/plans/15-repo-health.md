@@ -103,6 +103,9 @@ rewrite: when a change touches one, move the part it touches out first (`Main.kt
 
 ## 7. targetSdk 35 (~2 h + a phone check)
 
+Step 1 done (2026-11-27): compileSdk 35, AGP 8.5.2 → 8.7.3 (Gradle 8.9 already). Next: library updates, then targetSdk.
+
+
 Not needed for GitHub installs; needed for F-Droid (plan 11) or Play. `work-runtime` is pinned at 2.9.x by compileSdk 34.
 Raise compileSdk/targetSdk to 35, then WorkManager 2.10, and check Android 15 changes that bite this app: edge-to-edge
 by default (every screen's insets), foreground service types for the VPN, and background activity starts from the

@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "app.focusfence"
-    compileSdk = 34
+    compileSdk = 35
 
     // Plan 15: the warnings triaged on 2026-11-26 (kept on purpose, or waiting for targetSdk 35) live in the baseline,
     // so lint's report shows only new ones. Regenerate with ./gradlew updateLintBaseline after fixing one.
