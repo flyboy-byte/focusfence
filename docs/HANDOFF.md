@@ -31,8 +31,9 @@ table), `docs/plans/13-partners-redesign.md` and `DECISIONS.md` D-042.
 2. Plan 15 item 7, targetSdk 35: steps 1-3 merged 2026-11-27 (#143 compileSdk 35 + AGP 8.7.3, #144 libraries,
    #145 targetSdk 35 + `ui/EdgeToEdge`). Released as 3.1.4 (code 56, 2026-11-27). Step 4 open: Logan checks every screen on
    the Pixel (bars not overlapping, keyboard not covering a field). targetSdk 35 also clears one F-Droid prerequisite.
-3. Plan 17 (screen-text detection, Logan 2026-11-27: "misses things", screenshot should have caught it too):
-   pieces 1-3 merged (#149-#151), not released. Piece 4 needs a log export to see why the screenshot missed.
+3. Plan 17 (screen text and screenshots, Logan 2026-11-27): pieces 1-3, 5-7 and the false-alarm fix merged
+   (#149-#151, #153-#156), not released, not on a phone. A local replay of a real export drove the tuning (counts in
+   the plan). Next: release, then a new export to check `region_ms`, `shot_hot`, `text_hot` and battery.
 4. After that, Logan wants all of: F-Droid (plan 11), partner polish (guide page, replies, removing one group member) and
    push, **but more real testing of partners and groups first**. Ask which to start before building any.
 
