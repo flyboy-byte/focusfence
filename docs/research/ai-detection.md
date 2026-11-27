@@ -16,8 +16,7 @@ built unless `STATE.md` says so._
 
 ## The first real flag was a false positive
 
-2026-11-20 10:21, Ente Photos: `porn=0.824, neutral=0.075, drawings=0.054, hentai=0.027,
-sexy=0.020`. The owner confirmed it had no nudity.
+A photo with no nudity scored `porn=0.824, neutral=0.075, drawings=0.054, hentai=0.027, sexy=0.020`.
 
 What that tells us:
 
@@ -33,33 +32,25 @@ What that tells us:
 - A single 82% score is **not** evidence. One image is not a measured false-positive rate.
   We need tens to hundreds of reviewed flags before we tune anything with confidence.
 
-## Data from the 2026-11-23 export (122 h, 1,056 screenshots, 812 scored)
+## What the first exports taught (2026-11-23)
 
-Top labels: neutral 665, drawings 138, porn 8, sexy 1. Every screenshot at 50% or above (8) and what `dns/FlagPolicy` does with it:
-
-| When | App | Label, score | Old rule | New rule |
-|---|---|---|---|---|
-| 11-20 08:21 | Ente Photos | porn 0.82 | flagged | held (lone hit) |
-| 11-20 16:03 | Ente Photos | porn 0.86 | flagged | held |
-| 11-22 06:52 | Ente Photos | sexy 0.81 | flagged | held; the owner answered **ok** (not a problem) at 06:53, the only `rev` answer so far |
-| 11-22 11:57 to 12:09 | Brave | porn 0.51, 0.70, 0.95 | one flag at 0.95 | flagged (strong); sustained run |
-| 11-22 17:04 | Ente Photos | porn 0.72 | flagged | held |
-
-Four of five old flags were a photo-gallery app, one confirmed false by the owner. No evidence was kept for any of them (`shot_no_partner_key` 5: no partner key set). One reviewed answer is still not a rate: keep collecting `rev` answers before retuning, and record why in this file when thresholds change.
+A lone high score in a photo-gallery app is the typical false alarm; `dns/FlagPolicy` holds lone hits and keeps
+sustained runs. One reviewed answer is still not a rate: keep collecting `rev` answers before retuning, and record why in
+this file when thresholds change.
 
 ## Context bar after explicit words (2026-11-27, plan 17)
 
-Pictures shown next to explicit text should be flagged along with it, but can score well under the bars (0.41 "sexy"
-in one case, under the body check's 0.50). Since then, for 3 minutes after words clear enough to alert
+Pictures shown next to explicit text should be flagged along with it, but can score well under the body check's 0.50.
+Since then, for 3 minutes after words clear enough to alert
 partners in an app (`RiskTerms.alertable`), its screenshots run the body check from 0.25 and a picture at 0.35, or one
 found suggestive, is a flag (`FlagPolicy.CONTEXT_CHECK_FROM`, `CONTEXT_FLAG`; counter `flag_context`). Untuned. Bounded
-by how rare alert-level words are: 3 such screens in 9 days of a real export.
+by how rare alert-level words are.
 
-Same day: the body check runs from 0.30 instead of 0.50 (`BodyCheck.CHECK_FROM`; about 3 screenshots in 9 days scored
-between them), and a woman in the picture (`BodyCheck.FEMALE`, at least 0.40) adds 0.10 to its score for the context
-bar (`FEMALE_BOOST`, counter `body_female`, the owner's choice). The boost never makes a flag on its own.
+Same day: the body check runs from 0.30 instead of 0.50 (`BodyCheck.CHECK_FROM`; very few screenshots score
+between them, so it costs little), and a woman in the picture (`BodyCheck.FEMALE`, at least 0.40) adds 0.10 to its score for the context
+bar (`FEMALE_BOOST`, counter `body_female`). The boost never makes a flag on its own.
 
-Same day, flag sensitivity (`dns/Sensitivity`, the owner's numbers): Strict 0.45, Standard 0.50 (default), Relaxed 0.70.
+Same day, flag sensitivity (`dns/Sensitivity`): Strict 0.45, Standard 0.50 (default), Relaxed 0.70.
 A suggestive picture at or over the bar is a partner flag (`flag_suggestive`); before, suggestive was report-only.
 `BodyCheck.CONFIRM` 0.40 → 0.30 (the five false alarms peaked at 0.11). Less strict is a guarded loosening.
 

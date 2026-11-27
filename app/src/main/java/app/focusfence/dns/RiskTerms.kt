@@ -31,11 +31,11 @@ object RiskTerms {
             "porno", "hentai", "camgirl", "sexcam", "blowjob", "handjob", "creampie", "cumshot", "gangbang",
             "deepthroat", "milf", "nudes", "sex video", "sex tape", "sex chat", "free porn", "porn video", "send nudes",
             "nude pics", "naked pics", "dick pic", "cam girl", "cam show",
-            // Written porn: erotica sites and fanfiction tags (plan 17, a story site's fetish tags were missed).
+            // Written porn: erotica sites and fanfiction tags (plan 17).
             "smut", "erotica", "forced feminization", "sissification", "sissy hypno",
         ) + weak(
             // Explicit, but also used as labels, jokes or slang: two of these, or one with a strong word.
-            // "porn" itself is here: in a real export every sighting of it was about quitting it, none was porn.
+            // "porn" itself is here: the word alone turns up on recovery pages, news and chats about this app.
             "porn", "nsfw", "xxx", "boobs", "tits", "pussy", "horny", "nude", "nsfl",
             // Words of explicit stories; each has an everyday or clinical use, so two are needed.
             "sissy", "erotic", "cock", "cum", "clit", "orgasm", "masturbate", "masturbating",

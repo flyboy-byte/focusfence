@@ -106,7 +106,7 @@ class RiskTermsTest {
 
     @Test
     fun writtenPornIsSeen() {
-        val tags = "Top picks · Some Story cover · sissy · 1200 reads · Another Story cover · forced feminization · 900 reads"
+        val tags = "Chapter list · smut · Part 2 · nsfw"
         assertTrue(RiskTerms.alertable(tags, RiskTerms.find(tags)))
         val prose = "She moaned as his cock pressed in, and she came, an orgasm shaking her"
         assertTrue(RiskTerms.alertable(prose, RiskTerms.find(prose)))

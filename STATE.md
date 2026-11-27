@@ -75,8 +75,8 @@ without evidence.
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
 | Plan 17 (3.1.5): lost-foreground fix (`UrlFilterService.watchingAnything`) | 📱 | 2026-11-27 export, 4 h on 3.1.5: longest unread gap in a watched app 53 s (was 10 min), `fg_recovered` 7. |
-| Plan 17 (3.1.5): screen-text word index (`RiskTerms`, disguises, phrases), text alerts (app only, never the words), each picture checked on its own (`ImageRegions`), hot mode | 🧪 | Per-picture checks ran on a phone (24 runs, ~55 ms each); no explicit words came up on 3.1.5, so alerts and hot mode haven't fired yet. Replay of a real export: 3 alerts in 9 days (2 real, 1 false) after 3.1.6's word changes. |
-| 3.1.6: secret fields skipped (`SecretFields`), erotica words, quitting guard by distance, pictures next to explicit words at a lower bar (`FlagPolicy.inContext`), body check from 0.30 with `FEMALE_BOOST`, Flag sensitivity (`Sensitivity`) | 🧪 | From a 3.1.5 export where a test page didn't alert and its covers scored 0.41. Unit tests only. Watch `flag_context`, `flag_suggestive`, `body_female`, `body_runs`, `text_secret_skipped`. |
+| Plan 17 (3.1.5): screen-text word index (`RiskTerms`, disguises, phrases), text alerts (app only, never the words), each picture checked on its own (`ImageRegions`), hot mode | 🧪 | Per-picture checks ran on a phone (~55 ms each). Matching checked by unit tests and a local replay. |
+| 3.1.6: secret fields skipped (`SecretFields`), erotica words, quitting guard by distance, pictures next to explicit words at a lower bar (`FlagPolicy.inContext`), body check from 0.30 with `FEMALE_BOOST`, Flag sensitivity (`Sensitivity`) | 🧪 | Unit tests only. Watch `flag_context`, `flag_suggestive`, `body_female`, `body_runs`, `text_secret_skipped`. |
 | AI flag policy (`dns/FlagPolicy`): a raw hit is reported/kept for a partner only if score ≥ 0.90, or a 2nd hit in the same app within 3 min, or ≥ 0.75 with adult words on screen in that app | 🧪 | Added 2026-11-23, 7 JVM tests, not on a phone. Untuned guesses; owner review screen unaffected. Diag counters `flag_strong/persistent/corroborated/held`. Since D-038 these rules decide only when NudeNet can't run; see the AI flagging row and 3.1.6. Don't retune without recording why (`docs/research/ai-detection.md`). |
 | On-device AI flagging (optional, off by default) | 📱 | **2026-11-25 (2.22.0, 🧪): a partner flag needs NudeNet to find an exposed body part (D-038).** The GantMan model alone flagged video-call faces at 65–83%, a family photo and a hand with a chip; NudeNet found nothing exposed on all five. Not tested on real explicit content or on a phone yet; watch `body_runs`/`body_ms` and the review cards' "body check" line. **First real flag 2026-11-20 was a false positive:** a photo with no nudity scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
@@ -127,7 +127,7 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
    unplugged-night export; if gaps grow, a longer window at night.
 4. **The AI's accuracy is unmeasured.** Flags need NudeNet to find a body part (D-038), which ended the known false
    alarms, but the bars (3.1.6: body check from 0.30, nudity from 0.30, Flag sensitivity 0.45/0.50/0.70) are untuned
-   on real explicit content. Pictures the first model scores low (a cover at 0.13) are never checked. It only flags,
+   on real explicit content. Pictures the first model scores low are never checked. It only flags,
    never blocks. History: `docs/research/ai-detection.md`.
 5. **Always-on VPN is easy to lose.** Turning the VPN off and on from the system switch switched Always-on off (2026-11-20 export). The integrity trail records it. **Since 2026-11-23 (unreleased, 🧪)** the app also reminds the owner when the VPN starts with Always-on off: one notification per 12 h that opens VPN settings (`dns/AlwaysOnNudge`, diag counter `always_on_nudge`).
 
@@ -147,8 +147,8 @@ tier (end-to-end sealed reports, D-023), licence (AGPL-3.0 since 2026-11-25, D-0
 The ordered list is [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next; each piece of work is a plan in `docs/plans/`.
 Short version (2026-11-27):
 
-1. A test of 3.1.6 on the kind of page that was missed, then a log export (analysed locally, counts only in the repo).
-2. If low-scoring covers still slip by: the body check on every picture while words are on screen (battery cost only
+1. Real use of 3.1.6, then a log export (analysed locally; nothing from it in the repo).
+2. If low-scoring pictures still slip by: the body check on every picture while words are on screen (battery cost only
    in those windows).
 3. Field-test partners and groups on two phones; open audit items in plan 15 (A3-A6).
 4. Then, Logan's call on order: F-Droid (plan 11), partner polish, push.
