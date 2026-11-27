@@ -31,10 +31,14 @@ object RiskTerms {
             "porno", "hentai", "camgirl", "sexcam", "blowjob", "handjob", "creampie", "cumshot", "gangbang",
             "deepthroat", "milf", "nudes", "sex video", "sex tape", "sex chat", "free porn", "porn video", "send nudes",
             "nude pics", "naked pics", "dick pic", "cam girl", "cam show",
+            // Written porn: erotica sites and fanfiction tags (plan 17, a story site's fetish tags were missed).
+            "smut", "erotica", "forced feminization", "sissification", "sissy hypno",
         ) + weak(
             // Explicit, but also used as labels, jokes or slang: two of these, or one with a strong word.
             // "porn" itself is here: in a real export every sighting of it was about quitting it, none was porn.
             "porn", "nsfw", "xxx", "boobs", "tits", "pussy", "horny", "nude", "nsfl",
+            // Words of explicit stories; each has an everyday or clinical use, so two are needed.
+            "sissy", "erotic", "cock", "cum", "clit", "orgasm", "masturbate", "masturbating",
         ),
         "gambling" to strong(
             "casino", "sportsbook", "blackjack", "roulette", "draftkings", "fanduel", "bet365", "parlay",
@@ -120,9 +124,11 @@ object RiskTerms {
      * Category → matched words (as listed, distinct, at most 5, in the order they appear), only categories with a
      * hit. The longest phrase at each place wins, so "online casino" isn't also "casino".
      */
-    fun find(text: String): Map<String, List<String>> {
-        val w = words(text)
-        val found = LinkedHashMap<String, LinkedHashSet<String>>()
+    fun find(text: String): Map<String, List<String>> = collect(scan(words(text)))
+
+    /** Each hit as (word index, category, term), longest phrase first at each place. */
+    private fun scan(w: List<Pair<Int, String>>): List<Triple<Int, String, Term>> {
+        val out = ArrayList<Triple<Int, String, Term>>()
         var i = 0
         while (i < w.size) {
             var matched = 0
@@ -132,12 +138,18 @@ object RiskTerms {
                 // show" must not become onlyfans.
                 val joined = if (n > 1 && parts.any { it in INDEX }) INDEX[plain(parts.joinToString(""))] else null
                 val hit = INDEX[parts.joinToString(" ")] ?: joined ?: continue
-                found.getOrPut(hit.first) { LinkedHashSet() } += hit.second.word
+                out += Triple(i, hit.first, hit.second)
                 matched = n
                 break
             }
             i += maxOf(matched, 1)
         }
+        return out
+    }
+
+    private fun collect(hits: List<Triple<Int, String, Term>>): Map<String, List<String>> {
+        val found = LinkedHashMap<String, LinkedHashSet<String>>()
+        for ((_, cat, t) in hits) found.getOrPut(cat) { LinkedHashSet() } += t.word
         return found.mapValues { it.value.take(5) }.filterValues { it.isNotEmpty() }
     }
 
@@ -154,8 +166,25 @@ object RiskTerms {
 
     fun aboutQuitting(text: String): Boolean = RECOVERY.containsMatchIn(normalize(text))
 
-    /** Partners are alerted for [text]: [strong] words, and the screen isn't about quitting ([aboutQuitting]). */
-    fun alertable(text: String, hits: Map<String, List<String>>): Boolean = strong(hits) && !aboutQuitting(text)
+    /** A quitting word cancels adult words only this many words away: a long story that says "struggled" once isn't a recovery page. */
+    private const val QUIT_REACH = 40
+    private val QUIT_WORD = Regex("quit(ting)?|accountab\\w*|addict\\w*|recover\\w*|sobriety|relapse\\w*|detectors?|classifiers?|nudenet|struggl\\w*|nofap")
+    private val QUIT_PAIRS = setOf("covenant" to "eyes", "focus" to "fence")
+
+    /**
+     * Partners are alerted for [text]: [strong] words, counting only those not within [QUIT_REACH] words of a quitting
+     * or recovery word, so a page about quitting porn stays quiet and a story page with one stray "struggled" doesn't.
+     */
+    fun alertable(text: String, hits: Map<String, List<String>>): Boolean {
+        if (!strong(hits)) return false
+        if (!aboutQuitting(text)) return true
+        val w = words(text)
+        val quits = w.indices.filter { i ->
+            QUIT_WORD.matches(w[i].second) || (i + 1 < w.size && (w[i].second to w[i + 1].second) in QUIT_PAIRS)
+        }
+        val far = scan(w).filter { (i, _, _) -> quits.none { q -> kotlin.math.abs(q - i) <= QUIT_REACH } }
+        return strong(collect(far))
+    }
 
     /** Clear enough to alert partners: a strong adult word, or two different weak ones on one screen. */
     fun strong(hits: Map<String, List<String>>): Boolean {

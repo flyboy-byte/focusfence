@@ -59,6 +59,13 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   (`UrlFilterService.watchingAnything`, `frontChanged`, counter `fg_recovered`), and a change found that way also
   restarts the screenshot timer.
 
+- **Written erotica and the quitting guard** (2026-11-27, after 3.1.5). Story and fanfiction sites name their
+  content with tags and story words the lists didn't hold, and one recovery word anywhere on a long page silenced it.
+  Added strong erotica words and weak story words (two needed); a quitting word now only cancels adult words within 40
+  words of it (`RiskTerms.QUIT_REACH`). Replayed locally: 3 alerts in 9 days of screens, 1 of them a false alarm.
+- **Secret fields** (2026-11-27): a revealed web password box isn't `isPassword`; `dns/SecretFields` skips editable
+  fields labelled as secrets.
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.
