@@ -1,6 +1,6 @@
 # State of the project
 
-> **What comes next, in order:** [`docs/roadmap.md`](docs/roadmap.md) (2026-11-23).
+> **What comes next, in order:** [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next. Plans: [`docs/plans/`](docs/plans); docs index: [`docs/README.md`](docs/README.md).
 
 > **Production resumed (2026-11-26, Logan lifted the partner-redesign pause).** Plan 13 partners and plan 14 groups shipped
 > in 3.0/3.1 and were tried on two phones. Next: more real use and testing of partners and groups before new features.
@@ -153,7 +153,7 @@ tier (end-to-end sealed reports, D-023), licence (AGPL-3.0 since 2026-11-25, D-0
 
 ## Next steps, in order
 
-The ordered list lives in [`docs/roadmap.md`](docs/roadmap.md); the near-term list is in `docs/HANDOFF.md` → Next.
+The ordered list is `docs/HANDOFF.md` → Next; each piece of work is a plan in `docs/plans/`. (The old roadmap is in `docs/archive/`.)
 Short version (2026-11-25, agreed with Logan: "the filter is pretty good; needs lots of work on accountability
 mechanics and networking"):
 

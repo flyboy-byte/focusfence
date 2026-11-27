@@ -3,8 +3,8 @@
 **Engine:** Claude (high-reasoning Claude Code session — executed per `docs/reasoning-prompts.md`
 R2; no web access used, only this repo's docs and source)
 **Date:** 2026-08-17
-**Inputs read:** `docs/parked.md`, `DECISIONS.md`, `docs/work/README.md` (board),
-`docs/work/NEXT.md`, and the shipped code the verdicts depend on:
+**Inputs read:** `docs/parked.md`, `DECISIONS.md`, `docs/archive/work/README.md` (board),
+`docs/archive/work/NEXT.md`, and the shipped code the verdicts depend on:
 `dns/RuleEvaluator.kt`, `dns/Blocklist.kt` (`blockReason`, `BlockRule` incl. the W7 commitment
 mode), `accessibility/UrlFilterService.kt` (the `blocksApp` call site), `data/` stores,
 `docs/benchmarks/README.md` (W13 results).

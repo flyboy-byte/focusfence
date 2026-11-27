@@ -3,12 +3,12 @@
 **Engine:** Claude (Claude Code session with live web access — executed directly per `NEXT.md`
 §"Research items", not via a browser deep-research session)
 **Date:** 2026-08-17
-**Feeds:** W11 (go/no-go), `docs/risks.md` §Legal, D-016/W14 (category-list sourcing)
+**Feeds:** W11 (go/no-go), `docs/archive/risks.md` §Legal, D-016/W14 (category-list sourcing)
 **Sourcing method:** primary sources only — LICENSE files fetched raw from each project's own
 repository or official site, list headers fetched from the live list endpoints, plus each
 project's own FAQ/readme statements. Every fetch below was performed live on 2026-08-17. No claim
 below rests on a blog post or on model priors.
-**Not legal advice** — same caveat `docs/risks.md` already carries. This is careful reading of
+**Not legal advice** — same caveat `docs/archive/risks.md` already carries. This is careful reading of
 license text, not a lawyer's opinion.
 
 ---
@@ -203,7 +203,7 @@ exactly.
 3. **List sizes are about to jump.** OISD big alone is 269,111 entries versus the 98,950 the W13
    benchmark measured. The R2 re-audit's follow-up (re-run scenario 3 with the combined W11
    list) gets more load-bearing, not less.
-4. **`docs/risks.md`** §Legal's "the terms have not actually been read" is no longer true —
+4. **`docs/archive/risks.md`** §Legal's "the terms have not actually been read" is no longer true —
    updated to cite this file.
 
 ## New questions surfaced

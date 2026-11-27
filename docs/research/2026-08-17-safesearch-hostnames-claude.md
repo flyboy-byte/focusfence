@@ -3,7 +3,7 @@
 **Engine:** Claude (Claude Code session with live web access — executed directly per `NEXT.md`
 §"Research items")
 **Date:** 2026-08-17
-**Feeds:** W14 part 2 (`docs/work/W14-adult-content-category.md`), P-002 (`docs/parked.md`),
+**Feeds:** W14 part 2 (`docs/archive/work/W14-adult-content-category.md`), P-002 (`docs/parked.md`),
 D-016
 **Sourcing method:** Google's own admin documentation (support.google.com), AdGuard Home's
 actual shipped source and rule files (raw from `AdguardTeam/AdGuardHome` master), and live DNS

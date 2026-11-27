@@ -3,8 +3,8 @@
 **Engine:** Claude (high-reasoning Claude Code session — executed per `docs/reasoning-prompts.md`
 R1, not a web-research item; no external facts below, only reasoning over this repo's own docs)
 **Date:** 2026-08-17
-**Inputs read:** `CLAUDE.md`, `DECISIONS.md` (O-002), `docs/infrastructure.md`,
-`docs/work/W4-release-signing.md`, `docs/work/W5-release-workflow.md`,
+**Inputs read:** `CLAUDE.md`, `DECISIONS.md` (O-002), `docs/archive/infrastructure.md`,
+`docs/archive/work/W4-release-signing.md`, `docs/archive/work/W5-release-workflow.md`,
 `docs/signing-key-custody.md`, `docs/research/2026-08-15-signing-key-custody-prior-art-claude.md`
 **Feeds:** O-002. **This document is decision support, not a decision.** O-002 stays open until
 @sidewinderzz adopts, amends, or rejects the draft text at the bottom. Nothing here authorizes
