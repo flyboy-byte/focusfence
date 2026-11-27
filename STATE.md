@@ -7,7 +7,7 @@
 > fields never read, written erotica matched, pictures next to explicit words flagged at a lower bar, body check from
 > 0.30 with a small boost when a woman is in the picture, and Flag sensitivity (Strict / Standard / Relaxed, less strict
 > guarded). None of 3.1.6 seen on a phone yet. **Next:** a test on the same kind of page, then an export
-([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
+> ([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
