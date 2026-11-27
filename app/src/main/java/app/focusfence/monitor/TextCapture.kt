@@ -27,18 +27,19 @@ object TextCapture {
     private val deduper = UrlDeduper()
     private val lastAlert = HashMap<String, Long>()
 
-    fun capture(context: Context, pkg: String, root: AccessibilityNodeInfo?) {
-        if (root == null) return
+    /** Reads [pkg]'s screen; true when adult words were on it (the caller then checks a screenshot, plan 17). */
+    fun capture(context: Context, pkg: String, root: AccessibilityNodeInfo?): Boolean {
+        if (root == null) return false
         // CPU attribution: tree walks are the costly part of text capture.
         val cpu0 = android.os.Debug.threadCpuTimeNanos()
-        try {
+        return try {
             captureInner(context, pkg, root)
         } finally {
             Monitor.perf.count("text_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         }
     }
 
-    private fun captureInner(context: Context, pkg: String, root: AccessibilityNodeInfo) {
+    private fun captureInner(context: Context, pkg: String, root: AccessibilityNodeInfo): Boolean {
         val sb = StringBuilder()
         var visited = 0
 
@@ -67,11 +68,11 @@ object TextCapture {
 
         if (sb.isEmpty()) {
             Monitor.perf.count("text_empty")
-            return
+            return false
         }
         val text = sb.toString().take(MAX_TEXT_CHARS)
         // Dedup keyed by a short digest so near-identical screens collapse.
-        if (!deduper.accept(pkg, "text", text.hashCode().toString())) return
+        if (!deduper.accept(pkg, "text", text.hashCode().toString())) return false
         Monitor.perf.count("text_captured")
         // Second detection path: sites named on screen, checked against the bundles.
         val hits = app.focusfence.dns.Signals.categorize(
@@ -106,5 +107,6 @@ object TextCapture {
                 terms = terms.takeIf { it.isNotEmpty() }?.let(app.focusfence.dns.RiskTerms::encode),
             )
         )
+        return "adult" in terms
     }
 }

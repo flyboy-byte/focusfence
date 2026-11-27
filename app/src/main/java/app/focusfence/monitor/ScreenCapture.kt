@@ -124,6 +124,24 @@ object ScreenCapture {
         capture(service, pkg, "event")
     }
 
+    /**
+     * Plan 17: adult words were just read on screen in [pkg]. Check the same screen with the image models now instead
+     * of at the next random time, so a picture next to the words isn't scrolled away first. Only where screenshots
+     * already run for that app, and not more than once per [TEXT_SHOT_GAP_MS].
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun onRiskyText(service: AccessibilityService, pkg: String) {
+        if (pkg != lastForeground || !foregroundWatched) return
+        if (!MonitorSettings.screenshotsEnabled(service)) return
+        val now = System.currentTimeMillis()
+        if (now - lastTextShotAt < TEXT_SHOT_GAP_MS) return
+        lastTextShotAt = now
+        Monitor.perf.count("shot_text")
+        capture(service, pkg, "text")
+    }
+    private var lastTextShotAt = 0L
+    private const val TEXT_SHOT_GAP_MS = 15_000L
+
     @RequiresApi(Build.VERSION_CODES.R)
     private fun onTimer() {
         val svc = service ?: return

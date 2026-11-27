@@ -40,7 +40,7 @@ export.
 | `enforce` | `action` (`app_home`, `section_back`, `block_screen`, `block_notify`), `pkg`, `host`?, `path`? | The accessibility service enforced a rule (`block_screen` / `block_notify`: the browser in front showed a DNS-blocked site, so the full blocked screen opened or the notification was posted, per Settings → Filtering) |
 | `text` | `pkg`, `text` (visible on-screen text, length-capped, passwords skipped), `hits`? (`host:cat,cat;…` — sites named on screen that match a bundle), `terms`? (`cat:word,word;…` — risky words, `RiskTerms`), `cat`? | Experimental text capture, watched apps only, while the capture indicator shows |
 | `rev` | `shot_t`, `pkg`, `label`, `pct`, `verdict` (`ok` real hit / `wrong` not a problem) | The owner's answer on a review screenshot (Monitoring → Review); feeds threshold tuning, never changes partner reports |
-| `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`), `same`? (screen unchanged since the last scored capture; AI skipped, previous verdict reused) | Experimental screenshot capture: one classified screenshot |
+| `shot` | `pkg`, `score`?, `label`?, `kept` (bool), `id`? (if an encrypted image was retained), `model`?, `scores`? (every label, `label=0.000,…`), `flagged`?, `ms`? (inference), `trigger`? (`timer`/`event`/`text`: adult words were just read on that screen, plan 17), `same`? (screen unchanged since the last scored capture; AI skipped, previous verdict reused) | Experimental screenshot capture: one classified screenshot |
 | `svc` | `comp`, `state`, `detail`? | Component lifecycle (table below) |
 | `integ` | `key`, `value`, `was` (null = first observation) | An observed protection state changed (table below). Always flushed immediately. |
 
@@ -106,6 +106,7 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `fwd_unprotected` | `protect()` failed |
 | `tun_write_fail` | Reply couldn't be written to the tunnel |
 | `a11y_ev` | Accessibility events delivered (the battery-relevant number) |
+| `shot_text` | Screenshot checks started by adult words on screen (plan 17) |
 | `shot`, `shot_flagged`, `shot_fail`, `shot_decode_fail`, `shot_save_fail`, `shot_no_partner_key` | Screenshots captured / flagged / failures at each stage |
 | `shot_req`, `shot_timer`, `shot_busy`, `shot_timer_left_app`, `shot_fail_c<code>` | Capture requests (and how many came from the timer), skipped while one was in flight, timer stopped because another app was in front, failures by Android error code (2 no permission, 6 app blocks screenshots) |
 | `clf`, `clf_ms`, `clf_cpu_us`, `clf_load_ms`, `clf_load_fail`, `clf_top_<label>`, `clf_risk_b<0-9>` | AI: inferences, wall and CPU time, model load, winning label counts, risk-score deciles (threshold tuning) |

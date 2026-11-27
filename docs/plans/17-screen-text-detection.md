@@ -1,6 +1,6 @@
 # Plan 17: screen-text detection that catches more, and tells partners (2026-11-27)
 
-**Status:** in progress. Logan, 2026-11-27: on-screen text detection "misses things", and the screenshot check should
+**Status:** pieces 1-3 built (2026-11-27); piece 4 waits for a log export. Logan, 2026-11-27: on-screen text detection "misses things", and the screenshot check should
 have caught the same screen. When explicit text is clearly on screen: report it **and alert** partners.
 
 ## How it worked before (3.1.4)
@@ -30,6 +30,9 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Piece 2** (2026-11-27): a strong hit writes `svc monitor text` (detail `porn, milf in Chrome`, urgent), at most
   one per app per 10 min (`TextCapture.ALERT_EVERY_MS`); `Digest.alertText` → "Explicit words on screen: …", an
   important alert. Counter `text_alerts`. Gambling words stay report-only.
+- **Piece 3** (2026-11-27): any adult word on screen calls `ScreenCapture.onRiskyText`, which checks that screen with
+  the image models now (`trigger=text`, counter `shot_text`), where screenshots already run for the app, at most once
+  per 15 s.
 
 ## Not doing
 
