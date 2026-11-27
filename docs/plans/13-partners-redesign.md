@@ -3,7 +3,7 @@
 **Status:** built on branch `feat/partners-v2-server` (2026-11-26), not released. **Production is paused** (Logan, 2026-11-26: "hard pause the whole app and go through some
 iterations and testing with updates before we start back into production"). The live server was wiped the same night
 (devices, mailboxes, screenshots; the admin login and enrollment codes kept; root-only backup
-`/var/backups/ffbackend-data-20261126.tgz` on the VPS). No code until Logan has seen mockups.
+a backup on the VPS). No code until Logan has seen mockups.
 
 **Why:** Logan, after testing 2.26 on two phones: "its such a convolution of email vs app and routes for both all mixed
 and shitty ui", "dont require stupid pasting", "figure out the perfect setup, then fully enforce the new protocol
