@@ -167,7 +167,7 @@ private reporting ([`SECURITY.md`](SECURITY.md)).
 
 ## Building
 
-JDK 17 or 21 and the Android SDK (platform 34).
+JDK 17 or 21 and the Android SDK (platform 35).
 
 ```sh
 ./gradlew testDebugUnitTest assembleDebug lint   # app
