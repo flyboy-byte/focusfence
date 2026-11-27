@@ -7,12 +7,29 @@ Humans are welcome to read it too.
 1. [`STATE.md`](STATE.md) — what's built, what's verified, what's next.
 2. [`CLAUDE.md`](CLAUDE.md) — architecture and invariants (despite the name, it applies to every agent).
 3. The spec for whatever you're touching in [`docs/specs/`](docs/specs/).
-4. [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next for work in progress, and [`docs/plans/10-first-time-journeys.md`](docs/plans/10-first-time-journeys.md)
-   for the first-time-user pass.
+4. [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next for work in progress, and the plan for the area you touch in
+   [`docs/plans/`](docs/plans/) (17 is screen text and screenshots, 15 repo health, 13/14 partners and groups).
 
 ## What changed lately (for agents; the full list is [`CHANGELOG.md`](CHANGELOG.md))
 
-Read these before touching partners, the server, updates or block notices. Newest first.
+Read these before touching partners, the server, updates, block notices or screen checks. Newest first.
+
+- **3.1.6 (2026-11-27):** screen-check tuning from a real export. `dns/SecretFields` (a revealed web password box isn't
+  `isPassword`); erotica words in `RiskTerms`, quitting words cancel only adult words within 40 words; for 3 min after
+  alert-level words, pictures face lower bars (`FlagPolicy.inContext`); body check from 0.30, `BodyCheck.FEMALE_BOOST`;
+  Flag sensitivity (`dns/Sensitivity`, Strict 0.45 / Standard 0.50 / Relaxed 0.70, guarded `LOWER_SENSITIVITY`), and
+  suggestive pictures at the bar now flag. Text alerts name the app only: alert text is server-readable.
+- **3.1.5 (2026-11-27):** plan 17: `RiskTerms` word index (disguises, phrases), text alerts, screenshot on adult words,
+  each picture checked on its own (`dns/ImageRegions`), hot mode (`TextCapture.markHot`), and a fix for a blind spot
+  after leaving Focus Fence (`UrlFilterService.watchingAnything`).
+- **3.1.4 (2026-11-27):** targetSdk/compileSdk 35, AGP 8.7.3; Android 15 edge-to-edge handled once in `ui/EdgeToEdge`.
+  Newer AndroidX lines need compileSdk 36.
+- **3.1.0–3.1.3 / server 2.1.0 (2026-11-26):** plan 14 groups (partner pairs both ways, `Partner.groupIds`), QR invites,
+  one join box, slower address-bar poll during video, plan 15 fixes.
+- **3.0.0 / server 2.0.0 (2026-11-26):** plan 13, D-042: one kind of partner, a person with devices, each with its own
+  P-256 key; the phone seals its report key to each device (`/v1/seal`), the server relays only ciphertext.
+- **2.26.0 / server 1.3.0 (2026-11-25):** partners choose how alerts reach them and their quiet hours, ask-a-partner
+  unlocks, leaving is never silent.
 
 - **2.25.0 / server 1.2.0 (2026-11-25):** plan 10 first-time journeys (5-step onboarding, adult blocked by default,
   self-host path, SMTP, guarded Leave this server, no-email invites, loosening alerts); protocol window D-041;
@@ -78,7 +95,9 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
   stay possible but never silent.
 - **Capture must stay visible.** Screen/text capture always shows the on-device indicator. No
   hidden monitoring.
-- Treat log exports as private data: analyse them locally, never send them anywhere.
+- Treat log exports as private data: analyse them locally, never send them anywhere. Public files (code, docs, tests,
+  PRs) get counts only: no app names, captured text, or descriptions of what the owner was viewing. The auto-mode
+  classifier has blocked commits that did.
 
 ## Pull requests: awareness, not rules
 
@@ -147,6 +166,9 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 | Sockets from the VPN app without binding | Bind to the underlying `Network` (or `protect()`) so they can't loop into the tunnel. |
 | Strict Private DNS + our VPN | Lookups skip the tunnel entirely. `VpnHealth` reports `bypassed`. |
 | Shutting down an executor in `stopVpn()` | The service restarts; a dead executor throws. |
+| Trusting `isPassword` | A web form's password box loses it once "show password" is tapped. `dns/SecretFields`. |
+| Waiting for a window event to know the front app | Android sometimes sends none when the app underneath comes back. `UrlFilterService.watchingAnything` polls. |
+| One guard word silencing a page | A long page mentions anything once. Guards in `RiskTerms` work by distance (`QUIT_REACH`). |
 | Assuming a 🧪 feature works | See the Incidents table in `STATE.md`. |
 
 ## Releases

@@ -9,12 +9,16 @@ Thanks for looking. Focus Fence AC is small and run by two people, so a few habi
   enforced against the phone's owner (they can always turn things off; partners are told).
 - For anything bigger than a bug fix, open an issue first so we can say whether it fits. There are forms for bug
   reports, feature requests and feedback; the app's Settings → Feedback & bug reports fills in versions.
-- The repository is public: never paste logs, log exports or screenshots into an issue or PR.
+- The repository is public: never paste logs, log exports or screenshots into an issue or PR. Log exports hold
+  everything the phone recorded; describe a problem in your own words, or as counts.
+- Detection changes (word lists, score bars) come with a reason: a case it missed or a false alarm, written up in
+  [`docs/research/ai-detection.md`](docs/research/ai-detection.md) or the plan, without private details. Thresholds
+  aren't retuned quietly.
 - Security problems go through private reporting, not issues: see [`SECURITY.md`](SECURITY.md).
 
 ## Building
 
-JDK 17 or 21 and the Android SDK (platform 34).
+JDK 17 or 21 and the Android SDK (platform 35).
 
 ```sh
 ./gradlew testDebugUnitTest assembleDebug lint   # app

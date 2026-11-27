@@ -9,8 +9,8 @@ trust when protection changes. It can block anything else you choose too.
 ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
 ![root](https://img.shields.io/badge/root-not%20needed-lightgrey)
 
-[Install](#install) · [What works](#what-works) · [Partners and groups](#partners-and-groups) ·
-[How it works](#how-it-works) · [Privacy](#privacy) · [Your own server](#running-your-own-server) · [Building](#building)
+[Install](#install) · [What works](#what-works) · [Screen checks](#screen-checks) ·
+[Partners and groups](#partners-and-groups) · [How it works](#how-it-works) · [Privacy](#privacy) · [Your own server](#running-your-own-server) · [Building](#building)
 
 ---
 
@@ -56,8 +56,10 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | ✅ | **Block lists** | Adult and bypass lists always on; extra lists for ads, malware, scams, gambling, social and piracy |
 | ✅ | **Block apps** | Sends them back to the home screen |
 | ✅ | **An on-phone record** of lookups, apps and protection changes | Exported only when you choose |
-| ✅ | **Screenshot checks** with on-device AI | Optional; a second model (NudeNet) must find an exposed body part before anything counts as porn |
+| ✅ | **Screenshot checks** with on-device AI | Optional; two models, so faces and skin alone don't count. [How it decides](#screen-checks) |
+| ✅ | **No blind spots after switching apps** | Checked in a real log: longest unread stretch 53 s (it was 10 min before 3.1.5) |
 | 🧪 | **Small pictures checked on their own** | Each picture on screen (up to 3) gets the models' full detail; after anything risky, that app is checked every 10 s for 2 minutes |
+| 🧪 | **Flag sensitivity**: Strict, Standard, Relaxed | Making it less strict waits, or needs a partner's PIN, and partners are told |
 | ✅ | **Updates itself** from GitHub releases | Shows what's new, installs when you tap |
 | 🧪 | **Partners** by code, QR code or email invite | Tried on two phones: "quick and seem less". They read your report in the app or a browser |
 | 🧪 | **Alerts** when protection loosens or the phone goes silent | Filter off, adult list set to Report, screen checks off, leaving the server; silence within about an hour |
@@ -65,11 +67,48 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | 🧪 | **Strict mode** | A wait, your own PIN, or a PIN a partner holds, before loosening anything |
 | 🧪 | **Ask a partner** | One tap asks for an OK instead of waiting out strict mode; any one partner can answer |
 | 🧪 | **Flagged screenshots to partners** | Automatic, blurred to 48 px at most, with a note from you |
-| 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, and knows phrases. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting never alerts |
+| 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, knows phrases and written erotica. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting doesn't alert. Password and code fields are never read |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
 | ❌ | Hiding apps from reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |
+
+---
+
+## Screen checks
+
+Optional, and only in the apps you pick. Everything below runs on the phone; a clear screenshot never leaves it.
+
+```
+ screenshot ─► whole screen + up to 3 pictures ─► MobileNet: how risky?
+                                                       │
+                           risky enough to look closer ┘
+                                      ▼
+                NudeNet: exposed body part? covered (lingerie, swimwear)?
+                                      │
+   exposed ──────────────────────────►├─► partner flag: blurred picture,
+   covered, at your sensitivity ─────►┤   after a 10-min note window
+   risky, next to explicit words ────►┘
+
+ screen text ─► word index ─► explicit? ─► alert (app name only),
+                                           look closer for 3 min
+```
+
+| Flag sensitivity | A suggestive picture flags from | Nudity flags |
+|---|---|---|
+| Strict | 45% | always |
+| **Standard** (default) | 50% | always |
+| Relaxed | 70% | always |
+
+- **Why two models:** the first one alone called faces on video calls "porn" at 65-83%. A flag now needs the second
+  one to find something.
+- **Context counts:** for 3 minutes after explicit words in an app, its pictures are looked at from 25% and flag from
+  35%, so covers and thumbnails on such a page are caught with the text. A woman in the picture adds a little to its
+  score; it never flags on its own.
+- **Tuned on real use:** word and score changes are replayed against a real log on the phone owner's computer before
+  they ship (9 days of screens: 3 text alerts, 1 of them false). Logs never go in this repo; the reasoning, with
+  counts only, is in [`docs/research/ai-detection.md`](docs/research/ai-detection.md) and
+  [`docs/plans/17-screen-text-detection.md`](docs/plans/17-screen-text-detection.md).
 
 ---
 
@@ -127,7 +166,8 @@ accessibility service, because DNS only sees the domain name. Architecture in de
 | The report key | Sealed on your phone to each partner device's own public key; the server relays it sealed |
 | Alerts ("filter turned off", "phone went silent") | Through the server, so it can notify partners. Never a site name |
 | Explicit words on screen | The words stay in the encrypted report; the alert says only which app ("Explicit words on screen in Chrome") |
-| Screenshots | Only flagged ones (an exposed body part), or one you send; blurred to 48 px, never the clear image |
+| Screenshots | Only flagged ones ([how](#screen-checks)), or one you send; blurred to 48 px, never the clear image |
+| Password, PIN and code fields | Never read, even after "show password" |
 
 The server does see who partners whom (names, groups, and email addresses for email invites), the alert text, and when
 your phone checks in. Someone who runs a server and changes its code could serve a page that steals a browser's key;
@@ -142,7 +182,8 @@ https://flyboy-byte.github.io/focusfence/privacy.html.
   lookup can outlast a new rule for a while.
 - Android allows one VPN at a time, so it can't run next to another VPN. Don't turn on "Block connections without
   VPN" for it: that cuts off everything that isn't DNS.
-- The screenshot model is wrong fairly often, especially in photo apps; flags are held back unless strong.
+- The screenshot models judge pictures, not stories: a cover the first model scores very low is never looked at
+  closely. Their accuracy on real explicit content is untested; the bars are reasoned, not measured.
 - Screen checks are samples: a screenshot about every 1.5 minutes per app (faster for 2 minutes after anything risky),
   and on-screen text every 30 seconds. Something seen for a few seconds can be missed.
 - On-screen text is matched against word and phrase lists, not understood. Disguises are caught; new slang isn't until
