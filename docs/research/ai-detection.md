@@ -47,6 +47,14 @@ Top labels: neutral 665, drawings 138, porn 8, sexy 1. Every screenshot at 50% o
 
 Four of five old flags were a photo-gallery app, one confirmed false by the owner. No evidence was kept for any of them (`shot_no_partner_key` 5: no partner key set). One reviewed answer is still not a rate: keep collecting `rev` answers before retuning, and record why in this file when thresholds change.
 
+## Context bar after explicit words (2026-11-27, plan 17)
+
+Pictures shown next to explicit text should be flagged along with it, but can score well under the bars (0.41 "sexy"
+in one case, under the body check's 0.50). Since then, for 3 minutes after words clear enough to alert
+partners in an app (`RiskTerms.alertable`), its screenshots run the body check from 0.25 and a picture at 0.35, or one
+found suggestive, is a flag (`FlagPolicy.CONTEXT_CHECK_FROM`, `CONTEXT_FLAG`; counter `flag_context`). Untuned. Bounded
+by how rare alert-level words are: 3 such screens in 9 days of a real export.
+
 ## Options, cheapest first
 
 | Option | What it does | Cost | Notes |

@@ -167,7 +167,8 @@ AGPL-3.0 (D-038); `tools/convert_nudenet_model.py` rebuilds the model.
 Each picture on screen is also checked on its own (plan 17): `ScreenCapture.pictureBoxes` reads image and video views'
 bounds from the accessibility tree just before the shot, `dns/ImageRegions.pick` keeps up to 3 (or 3 squares when there
 are none and the whole screen scored ≥ 0.10), and the best crop result counts, because a small picture shrunk with the
-whole screen to 224/320 px is invisible to both models.
+whole screen to 224/320 px is invisible to both models. For 3 minutes after alert-level words in an app (`FlagPolicy.inContext`), its
+pictures face lower bars: body check from 0.25, a flag at 0.35 or when suggestive.
 
 ### Screen text (plan 17)
 

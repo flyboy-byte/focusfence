@@ -66,6 +66,9 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Secret fields** (2026-11-27): a revealed web password box isn't `isPassword`; `dns/SecretFields` skips editable
   fields labelled as secrets.
 
+- **Pictures next to explicit words** (2026-11-27): for 3 minutes after alert-level words in an app, the body check runs
+  from 0.25 and a picture at 0.35 or found suggestive is a flag (`FlagPolicy.inContext`, `docs/research/ai-detection.md`).
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.
