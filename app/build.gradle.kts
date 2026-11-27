@@ -18,7 +18,7 @@ android {
         // accountability build installs alongside it, not over it.
         applicationId = "app.focusfence.accountable"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 55
         versionName = "3.1.3-accountable"
     }

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="statsContainer" type="id" />
+    <!-- ui/EdgeToEdge: a screen whose content already pads for the system bars. -->
+    <item name="edge_to_edge_padded" type="id" />
 </resources>
