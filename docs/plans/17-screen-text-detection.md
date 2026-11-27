@@ -52,6 +52,12 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 - **Piece 7** (2026-11-27): while an app is hot, a screenshot every 10 s instead of the level's 1-2 minutes
   (`ScreenCapture.hotCap`, counter `shot_hot`). A risky shot keeps it hot.
 
+- **Fix: lost foreground** (2026-11-27). In the export, after leaving Focus Fence for a browser, nothing was
+  read for 10 minutes (no text, no screenshots, no ticks), because Android sent no window event for the app that came
+  back. While the front app is one we don't read, the service now asks which app is in front every 15 s
+  (`UrlFilterService.watchingAnything`, `frontChanged`, counter `fg_recovered`), and a change found that way also
+  restarts the screenshot timer.
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.

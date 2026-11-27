@@ -82,6 +82,8 @@ class UrlFilterService : AccessibilityService() {
         /** Foreground tick when only text capture needs it. */
         private const val TEXT_POLL_MS = 15_000L
         private const val HIDDEN_SLOW_AFTER = 3
+        /** How often to check which app is in front while it's one we don't read (see watchingAnything). */
+        private const val FG_CHECK_MS = 15_000L
 
         @Volatile
         private var instance: UrlFilterService? = null
@@ -450,7 +452,26 @@ class UrlFilterService : AccessibilityService() {
         lastTextCaptureAt = 0L // a new screen gets its text read right away
         hiddenStreak = 0 // and its address bar polled at the normal pace
         main.removeCallbacks(fgTick)
-        if (tickNeeded(pkg)) onForegroundTick()
+        if (tickNeeded(pkg)) onForegroundTick() else if (watchingAnything()) main.postDelayed(fgTick, FG_CHECK_MS)
+    }
+
+    /**
+     * Plan 17: anything here depends on knowing which app is in front. Android doesn't always send a window event
+     * when the app underneath comes back (leaving Focus Fence for Brave, a real export: 10 minutes with no text and no
+     * screenshots). So while the front app isn't one we read, look every [FG_CHECK_MS] (one binder call).
+     */
+    private fun watchingAnything() = captureText || captureScreenshots || logUrls
+
+    /** The app in front changed without an event: tell the screenshot timer and the tick, as an event would. */
+    private fun frontChanged(active: String) {
+        Monitor.perf.count("fg_recovered")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            app.focusfence.monitor.ScreenCapture.onForeground(
+                this, active,
+                captureScreenshots && app.focusfence.dns.WatchScope.watches(active, watchMode, captureApps, watchExcluded, watchSkip),
+            )
+        }
+        onForegroundChanged(active)
     }
 
     /**
@@ -462,13 +483,16 @@ class UrlFilterService : AccessibilityService() {
     private fun onForegroundTick() {
         main.removeCallbacks(fgTick)
         val pkg = fgPkg ?: return
-        if (!tickNeeded(pkg)) return
         val pm = getSystemService(android.os.PowerManager::class.java)
         if (pm != null && !pm.isInteractive) return
         // Window-state events can be missed; trust what's actually in front.
         val active = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
         if (active != null && active != pkg && active !in overlayPkgs) {
-            onForegroundChanged(active)
+            frontChanged(active)
+            return
+        }
+        if (!tickNeeded(pkg)) {
+            if (watchingAnything()) main.postDelayed(fgTick, FG_CHECK_MS)
             return
         }
         val cpu0 = android.os.Debug.threadCpuTimeNanos()
