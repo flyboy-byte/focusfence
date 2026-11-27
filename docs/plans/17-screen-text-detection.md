@@ -49,6 +49,9 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   app is read every 5 s for 2 min, up to 2,000 nodes and 8,000 characters instead of 400 and 2,000 (counters
   `text_hot`, `text_deep`).
 
+- **Piece 7** (2026-11-27): while an app is hot, a screenshot every 10 s instead of the level's 1-2 minutes
+  (`ScreenCapture.hotCap`, counter `shot_hot`). A risky shot keeps it hot.
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.
