@@ -477,7 +477,7 @@ class UrlFilterService : AccessibilityService() {
         if (logUrls && isBrowser) checkUrl(pkg)
         if (captureText && app.focusfence.dns.WatchScope.watches(pkg, watchMode, captureApps, watchExcluded, watchSkip)) {
             val now = SystemClock.uptimeMillis()
-            if (lastTextCaptureAt == 0L || now - lastTextCaptureAt >= TEXT_INTERVAL_MS) {
+            if (lastTextCaptureAt == 0L || now - lastTextCaptureAt >= TextCapture.intervalMs(pkg, TEXT_INTERVAL_MS)) {
                 lastTextCaptureAt = now
                 if (TextCapture.capture(this, pkg, rootInActiveWindow) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     ScreenCapture.onRiskyText(this, pkg)
@@ -487,7 +487,8 @@ class UrlFilterService : AccessibilityService() {
         Monitor.perf.count("a11y_cpu_us", (android.os.Debug.threadCpuTimeNanos() - cpu0) / 1000)
         // Three polls in a row with the address bar hidden (a video): poll at the
         // slower text pace until it shows again, instead of every 4 s for an hour.
-        val fast = logUrls && isBrowser && hiddenStreak < HIDDEN_SLOW_AFTER
+        // Plan 17: an app that just showed something risky is read every few seconds for a while (TextCapture.HOT_MS).
+        val fast = (logUrls && isBrowser && hiddenStreak < HIDDEN_SLOW_AFTER) || (captureText && TextCapture.isHot(pkg))
         main.postDelayed(fgTick, if (fast) URL_POLL_MS else TEXT_POLL_MS)
     }
 

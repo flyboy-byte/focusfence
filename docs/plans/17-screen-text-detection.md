@@ -41,6 +41,14 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   NudeNet runs on any that is risky alone, and the best result counts. Log field `regions`, counters `region_*`.
   Not yet on a phone: check `region_ms` and the battery in the next export.
 
+- **Piece 6** (2026-11-27, Logan: phrases with an index that's still fast; read deeper after a flag): `RiskTerms`
+  is a word index now. The screen is split into words, each disguise is undone per word (look-alikes, `*` for a
+  vowel, plurals, runs of single letters), and every 1-3 word run is one hash lookup, so the lists can grow without
+  costing more. Words run together ("porn hub") count only when one of them is listed. A real export's 7,418 screens
+  replayed at about 0.16 ms each, with 1 alert in 9 days. After adult words or a risky screenshot (`TextCapture.markHot`), that
+  app is read every 5 s for 2 min, up to 2,000 nodes and 8,000 characters instead of 400 and 2,000 (counters
+  `text_hot`, `text_deep`).
+
 ## What a real export showed (2026-11-27, analysed locally, never posted)
 
 Counts only; the export itself stays off the repo.

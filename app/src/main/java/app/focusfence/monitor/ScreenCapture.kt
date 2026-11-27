@@ -357,6 +357,9 @@ object ScreenCapture {
             else -> null
         }
         val flagged = why != null
+        // Plan 17: a risky picture makes text capture read this app deeper and more often for a while.
+        if (flagged || (verdict?.score ?: 0.0) >= app.focusfence.dns.BodyCheck.CHECK_FROM ||
+            bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE) TextCapture.markHot(pkg, now)
         when {
             why != null -> Monitor.perf.count("flag_$why")
             verdict?.flagged == true -> Monitor.perf.count("flag_held")

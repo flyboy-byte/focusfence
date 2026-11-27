@@ -83,4 +83,23 @@ class RiskTermsTest {
         val real = "Hot MILFs near you · free pornhub premium · Partner sites · Disable your ad blocker"
         assertTrue(RiskTerms.alertable(real, RiskTerms.find(real)))
     }
+
+    @Test
+    fun phrasesFromTheIndex() {
+        assertEquals(listOf("send nudes"), RiskTerms.find("pls s3nd nudes")["adult"])
+        assertEquals(listOf("nude pics"), RiskTerms.find("Nude pics of her")["adult"])
+        assertTrue(RiskTerms.find("Only fans of the show will get this").isEmpty())
+        assertTrue(RiskTerms.find("Bet 365 days of the year · 2026 · rule 3").isEmpty())
+        assertEquals(listOf("rule 34"), RiskTerms.find("rule 34 of anything")["adult"])
+    }
+
+    @Test
+    fun aLongScreenIsFast() {
+        val screen = (1..400).joinToString(" · ") { "Post $it by someone about weather, slots, bets and p0rn-free living" }
+        RiskTerms.find(screen) // warm up
+        val t0 = System.nanoTime()
+        repeat(20) { RiskTerms.find(screen) }
+        val msEach = (System.nanoTime() - t0) / 20 / 1_000_000.0
+        assertTrue("took $msEach ms", msEach < 50)
+    }
 }
