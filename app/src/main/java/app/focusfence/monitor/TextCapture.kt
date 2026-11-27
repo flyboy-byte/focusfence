@@ -46,6 +46,13 @@ object TextCapture {
                     if (sb.isNotEmpty()) sb.append(" · ")
                     sb.append(t)
                 }
+                // Plan 17: images, video tiles and buttons carry their words here (a thumbnail's title, a post's alt
+                // text), often with no text node at all.
+                val d = node.contentDescription?.toString()?.trim()
+                if (!d.isNullOrEmpty() && d != t) {
+                    if (sb.isNotEmpty()) sb.append(" · ")
+                    sb.append(d)
+                }
             }
             for (i in 0 until node.childCount) walk(node.getChild(i))
         }
