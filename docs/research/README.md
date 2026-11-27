@@ -2,7 +2,7 @@
 
 Raw output from external deep-research sessions (Claude.ai / ChatGPT research modes), saved here
 before being merged into the docs that consume them. See
-[`../research-handoff.md`](../research-handoff.md) for the full workflow and the current queue of
+[`../research-handoff.md`](../archive/research-handoff.md) for the full workflow and the current queue of
 open research questions.
 
 File naming: `YYYY-MM-DD-<short-topic-slug>-<engine>.md`. Each file should preserve the exact

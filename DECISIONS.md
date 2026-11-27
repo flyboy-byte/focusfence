@@ -1,6 +1,6 @@
 # DECISIONS
 
-Numbered log of *why*. [`FRAMEWORK.md`](FRAMEWORK.md) carries the status; this carries the reasoning, so it doesn't
+Numbered log of *why*. [`STATE.md`](STATE.md) carries the status; this carries the reasoning, so it doesn't
 have to be re-derived or re-argued.
 
 Format: decision, date, reasoning, and what would reopen it.
@@ -88,7 +88,7 @@ not a CI artifact for the two of us.
 
 **Why it matters beyond packaging:** it changes the standard of proof for the docs. Inaccurate
 README claims stop being stale comments and become claims made to strangers about an app that
-asks for VPN and Accessibility permissions. See `docs/infrastructure.md` R6 and `docs/risks.md`.
+asks for VPN and Accessibility permissions. See `docs/archive/infrastructure.md` R6 and `docs/archive/risks.md`.
 
 ## D-007 — @flyboy-byte decides scope; the original idea is preserved
 
@@ -105,7 +105,7 @@ reviewer's preference, and it has **not** been adopted.
 
 ## D-008 — General FOSS tool, opinionated by one use case
 
-*Decided: 2026-08-14, by @flyboy-byte. Full text in `docs/overview.md` § Product intent.*
+*Decided: 2026-08-14, by @flyboy-byte. Full text in `docs/archive/overview.md` § Product intent.*
 
 Focus Fence is a general-purpose FOSS self-control tool whose philosophy and constraints come
 from a specific power-user/developer use case — not a tool for one person, and not a general
@@ -115,7 +115,7 @@ digital wellbeing app chasing competitor parity.
 "It's for me" overfits every abstraction to one workflow. "General wellbeing app" imports every
 feature a competitor has. The use case sets the constraints; the implementation generalises them.
 
-**Consequence:** feature proposals are judged against the boundary examples in `docs/overview.md`, not
+**Consequence:** feature proposals are judged against the boundary examples in `docs/archive/overview.md`, not
 against a competitor matrix.
 
 ## D-009 — Boundaries are the product; mechanisms are implementation
@@ -126,8 +126,8 @@ The app is not fundamentally an ad blocker, porn blocker, app timer or VPN. The 
 boundary; the app chooses the mechanism.
 
 **Consequence, and it's a real one:** the code has no boundary object. Domains carry four rule
-modes, apps carry none, and the two live in unrelated stores. `docs/approach.md` B2 exists because of this
-decision, and two of the six boundaries in `docs/overview.md` are currently inexpressible.
+modes, apps carry none, and the two live in unrelated stores. `docs/archive/approach.md` B2 exists because of this
+decision, and two of the six boundaries in `docs/archive/overview.md` are currently inexpressible.
 
 ## D-010 — Least invasive mechanism wins; privacy includes not observing
 
@@ -139,7 +139,7 @@ if the other is more powerful. More privilege is not automatically better.
 
 **Consequence:** this is a *test* proposals must pass, and the current code fails it in one place.
 Whole-app blocking is enforced by the accessibility service, which reads browser address bars;
-Shizuku package suspension would enforce harder while observing almost nothing (`docs/approach.md` B7).
+Shizuku package suspension would enforce harder while observing almost nothing (`docs/archive/approach.md` B7).
 Reading address bars remains justified for section rules, where nothing cheaper can see a path.
 
 It also settles HTTPS interception permanently: it is rejected on principle, not on feasibility.
@@ -151,7 +151,7 @@ It also settles HTTPS interception permanently: it is rejected on principle, not
 Four distinct concerns, four distinct layers.
 
 **Consequence:** `DnsVpnService.ruleBlocks()` currently mixes all four — it observes DNS packets,
-evaluates schedules, accrues budgets and synthesises the block answer. `docs/approach.md` B1 splits it.
+evaluates schedules, accrues budgets and synthesises the block answer. `docs/archive/approach.md` B1 splits it.
 This decision also means enforcement mechanisms are pluggable by design, which is what makes B7
 (Shizuku) a swap rather than a rewrite.
 
@@ -177,7 +177,7 @@ holds Android's single VPN slot. The VPN must stay easy to stop.
 
 **Consequence:** currently only half true, and this decision is what makes that a bug rather than
 a limitation. Section rules and app blocking run in the accessibility service and survive; domain
-schedules and budgets are evaluated inside `DnsVpnService` and stop dead. `docs/approach.md` B1 and B4.
+schedules and budgets are evaluated inside `DnsVpnService` and stop dead. `docs/archive/approach.md` B1 and B4.
 
 **Interaction with strict mode:** strict lock refusing `ACTION_STOP` is *not* a violation — it's
 the impulse filter from D-012, and the 10-minute unlock path keeps the owner in control. The line
@@ -190,7 +190,7 @@ is friction, not prevention.
 Longer term the policy/filtering logic should be clean enough for another developer to use or
 extend. But abstractions have to prove their value in the app first.
 
-**Consequence:** B2 designs a boundary model around the six concrete examples in `docs/overview.md`, not
+**Consequence:** B2 designs a boundary model around the six concrete examples in `docs/archive/overview.md`, not
 around a general policy language. Guards the source-model work (B6) from becoming a matcher
 rewrite — audit 03 found the existing `HashSet` adequate at ~100k entries.
 
@@ -431,7 +431,7 @@ Level B ships: the owner picks a flagged screenshot on Review and sends it. It i
 (24 px long edge, blurred; 48 px since the amendment below), never the clear image, even by the owner's choice, because a partner must never hold a
 clear explicit image (roadmap Phase 2) and an owner in a bad moment is exactly when that rule matters. It is sealed
 with the report key (D-023), so the server stores ciphertext only. Level C (automatic sending of the same thumbnail)
-is the eventual step, gated on the false-flag rate and the conditions in `docs/roadmap.md` Phase 2. Level D (a
+is the eventual step, gated on the false-flag rate and the conditions in `docs/archive/roadmap.md` Phase 2. Level D (a
 clear image) stays ruled out.
 
 **Amended 2026-11-24 by @flyboy-byte:** the thumbnail goes to 48 px on the long edge with one blur instead of 24 px

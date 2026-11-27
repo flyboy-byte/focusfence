@@ -3,7 +3,7 @@
 **Engine:** Claude (Claude Code session with live web access — executed directly per `NEXT.md`
 §"Research items")
 **Date:** 2026-08-17
-**Feeds:** W12 (`docs/work/W12-shizuku-enforcement.md`)
+**Feeds:** W12 (`docs/archive/work/W12-shizuku-enforcement.md`)
 **Sourcing method:** primary sources — Shizuku's own README and official user manual
 (shizuku.rikka.app), the Shizuku-API repo README, the AOSP Shell package manifest (the
 authoritative list of what the ADB shell uid may do — Shizuku's README itself points there),

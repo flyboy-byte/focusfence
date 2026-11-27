@@ -1,8 +1,8 @@
 # Suggested sequencing
 
 > **Superseded as an ordering (2026-08-14).** This file was written from external research, before
-> product intent was recorded. That intent now lives in [`../overview.md`](../overview.md), and the
-> ordering that answers to it is [`../approach.md`](../approach.md) (items B1–B8). Where the two
+> product intent was recorded. That intent now lives in [`../overview.md`](../archive/overview.md), and the
+> ordering that answers to it is [`../approach.md`](../archive/approach.md) (items B1–B8). Where the two
 > disagree, `approach.md` wins.
 >
 > Kept because the *analysis* is still good — particularly what's already built, what the platform

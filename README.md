@@ -66,7 +66,7 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
-| ❌ | Hiding apps from reports; explicit on-screen text in reports; removing one person from a group | Planned or parked: [`docs/roadmap.md`](docs/roadmap.md) |
+| ❌ | Hiding apps from reports; explicit on-screen text in reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |
 
 ---
 

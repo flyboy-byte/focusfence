@@ -3,7 +3,7 @@
 **Engine:** Claude (Claude Code session with live web access — executed directly per `NEXT.md`
 §"Research items")
 **Date:** 2026-08-17
-**Feeds:** W10 (`docs/work/W10-app-budgets-usagestats.md`)
+**Feeds:** W10 (`docs/archive/work/W10-app-budgets-usagestats.md`)
 **Sourcing method:** the official Android reference pages, fetched 2026-08-17:
 `UsageStatsManager`, `UsageStats`, `UsageEvents.Event`, `Settings`, `AppOpsManager`
 (all under https://developer.android.com/reference/). Claims not backed by those pages are

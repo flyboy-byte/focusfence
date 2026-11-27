@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# W13 battery/CPU benchmark harness. See docs/work/W13-benchmark-harness.md and
+# W13 battery/CPU benchmark harness. See docs/archive/work/W13-benchmark-harness.md and
 # docs/benchmarks/README.md for the five scenarios, the method, and how to read the output.
 #
 # This script never ships in the app -- it drives an already-installed debug build over adb.

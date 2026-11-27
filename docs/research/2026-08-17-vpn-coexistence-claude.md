@@ -3,7 +3,7 @@
 **Engine:** Claude (Claude Code session with live web access — executed directly per `NEXT.md`
 §"Research items")
 **Date:** 2026-08-17
-**Feeds:** `docs/approach.md` B4, D-013 — confirms a constraint the whole design already assumes
+**Feeds:** `docs/archive/approach.md` B4, D-013 — confirms a constraint the whole design already assumes
 **Sourcing method:** the current `android.net.VpnService` class reference on
 developer.android.com, fetched 2026-08-17. One adjacent claim is labeled as platform knowledge
 rather than quoted doc text.
