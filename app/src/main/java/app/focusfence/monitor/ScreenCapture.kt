@@ -364,9 +364,12 @@ object ScreenCapture {
             }
         }
         val suggestive = bodyResult?.kind == app.focusfence.dns.BodyCheck.Kind.SUGGESTIVE
+        // A woman in the picture rates it a little higher for the context bar (BodyCheck.FEMALE_BOOST).
+        if (body != null && app.focusfence.dns.BodyCheck.female(body)) Monitor.perf.count("body_female")
+        val judged = verdict?.let { app.focusfence.dns.BodyCheck.judged(it.score, body) }
         val why: String? = when {
             confirmed != null -> "body"
-            verdict != null && flagPolicy.contextFlag(pkg, verdict.score, suggestive, now) -> "context"
+            judged != null && flagPolicy.contextFlag(pkg, judged, suggestive, now) -> "context"
             body != null -> null
             verdict?.flagged == true -> flagPolicy.onRawHit(pkg, verdict.score, now)?.name?.lowercase()
             else -> null

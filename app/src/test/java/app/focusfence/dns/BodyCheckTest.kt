@@ -69,4 +69,16 @@ class BodyCheckTest {
         assertEquals("Suggestive image (lingerie or swimwear) in Instagram", Digest.alertText(f))
         assertNull(Digest.urgentText(f))
     }
+
+    @Test
+    fun aWomanInThePictureRatesItSlightlyHigher() {
+        val woman = mapOf("FACE_FEMALE" to 0.62, "FACE_MALE" to 0.05)
+        val man = mapOf("FACE_MALE" to 0.70, "FACE_FEMALE" to 0.10)
+        org.junit.Assert.assertEquals(0.51, BodyCheck.judged(0.41, woman), 1e-9)
+        org.junit.Assert.assertEquals(0.41, BodyCheck.judged(0.41, man), 1e-9)
+        org.junit.Assert.assertEquals(0.41, BodyCheck.judged(0.41, null), 1e-9) // body check didn't run
+        org.junit.Assert.assertEquals(1.0, BodyCheck.judged(0.95, woman), 1e-9)
+        // Never a nudity finding on its own.
+        org.junit.Assert.assertEquals(BodyCheck.Kind.NONE, BodyCheck.classify(woman).kind)
+    }
 }

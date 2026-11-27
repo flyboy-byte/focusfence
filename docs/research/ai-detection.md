@@ -55,6 +55,10 @@ partners in an app (`RiskTerms.alertable`), its screenshots run the body check f
 found suggestive, is a flag (`FlagPolicy.CONTEXT_CHECK_FROM`, `CONTEXT_FLAG`; counter `flag_context`). Untuned. Bounded
 by how rare alert-level words are: 3 such screens in 9 days of a real export.
 
+Same day: the body check runs from 0.30 instead of 0.50 (`BodyCheck.CHECK_FROM`; about 3 screenshots in 9 days scored
+between them), and a woman in the picture (`BodyCheck.FEMALE`, at least 0.40) adds 0.10 to its score for the context
+bar (`FEMALE_BOOST`, counter `body_female`, the owner's choice). The boost never makes a flag on its own.
+
 ## Options, cheapest first
 
 | Option | What it does | Cost | Notes |
