@@ -9,7 +9,7 @@
 <table>
 <tr><th>Layer</th><th>Observes</th><th>Stays</th></tr>
 <tr><td>Accessibility</td><td>Browser address bars and the foreground app, to enforce section rules and blocked apps.</td><td>On the phone, in the local log.</td></tr>
-<tr><td>Text capture</td><td>Visible text in the apps you chose to watch (up to 2,000 characters per screen, password fields skipped), to look for risky words.</td><td>The text itself is written to the activity log on the phone. The log is never uploaded; a partner sees only the summary, end-to-end encrypted.</td></tr>
+<tr><td>Text capture</td><td>Visible text and image descriptions in the apps you chose to watch (up to 2,000 characters per screen, 8,000 for two minutes after something risky; password fields skipped), to look for risky words.</td><td>The text itself is written to the activity log on the phone. The log is never uploaded; a partner sees only the summary, end-to-end encrypted, including the risky words found. Clearly explicit words also send an alert that names only the app ("Explicit words on screen in Chrome"), never the words.</td></tr>
 <tr><td>Screenshots + on-device AI</td><td>Periodic screenshots, scored by a model that runs on the phone. A visible indicator is always shown while capture is on.</td><td>The image never leaves the phone today. Only the score, label and app name go into the activity log. Risky ones can be kept for your own review (deleted after 7 days); a flagged one is kept only if you paste a partner key, encrypted to it, and still stays on the phone. Sending images to partners is not built yet.</td></tr>
 <tr><td>Usage access</td><td>Which app is in the foreground and for how long.</td><td>On the phone.</td></tr>
 </table>
@@ -18,7 +18,7 @@
 <p>This is off until you enter a server address. Then:</p>
 <ul>
 <li><strong>Whoever runs the server cannot read your activity.</strong> The phone never uploads its activity log. It builds a summary report on the phone, encrypts it with a report key, and uploads only that ciphertext, about every 15 minutes. Each device a partner reads on (their app, or a browser) makes its own key pair; your phone seals the report key to that device's public key, so the server passes on only sealed keys it can't open.</li>
-<li>What the server does see: alert texts about protection changes (for example "Filter turned off", never a site), when the phone checks in, who partners whom (the names people give, group names and members), when a partner last opened the report, and the sizes and times of uploads.</li>
+<li>What the server does see: alert texts about protection changes and what was flagged (for example "Filter turned off" or "Explicit words on screen in Chrome", never a site or the words), when the phone checks in, who partners whom (the names people give, group names and members), when a partner last opened the report, and the sizes and times of uploads.</li>
 <li>Screenshots: only a flagged one (an exposed body part) or one you send, blurred to 48 px, inside the encrypted report. Never the clear image.</li>
 <li>The server also holds: each partner's report token, each partner device's public key and sealed copy of the report key, the email address of a partner invited by email, and the phone's public key.</li>
 <li>The limit of this: an operator who deliberately changed the server to serve a page that steals the key could get it. It stops an operator from simply reading stored history, not one who attacks their own users. If that matters, run your own server (<a href="server.html">how</a>).</li>

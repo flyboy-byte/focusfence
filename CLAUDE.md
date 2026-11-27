@@ -63,7 +63,7 @@ Three enforcement layers, each covering what the others cannot:
 Everything in `dns/` is deliberately free of Android types (`Blocklist`/`BlockRule`, `Dns`,
 `Packets`, `UrlFilter`, `UsageTracker`, `StrictLock`, `StatsCodec`, `HostsParser`, and the
 logging core `LogJson`, `LogEvents`, `Battery`, `AppTimeline`, `LogSummary`, and `Categories`, `Pin`, `Ecies`, `CapturePolicy`, `Classification`, `GuardPolicy`, `VpnHealth`, `BlockTriage`, `UpdateCheck`, `AppTime`,
-`CaptureStatus`, `BlockHistory`, `InviteLink`, `AutoShare`, `GapAccount`, `BodyCheck`) so it can be
+`CaptureStatus`, `BlockHistory`, `InviteLink`, `AutoShare`, `GapAccount`, `BodyCheck`, `RiskTerms`, `ImageRegions`) so it can be
 unit-tested on the JVM. Keep new decision logic there and let the service/UI supply clocks,
 timestamps and context. `data/` holds the Android-side SharedPreferences wrappers.
 
@@ -163,6 +163,23 @@ swimwear) make it "suggestive" instead: report-only, a `svc monitor suggestive` 
 decides as before. A flag queues the 48 px blurred thumbnail for partners after a 10 min note window
 (`ShareQueue.enqueue(auto = true)`, `monitor/AutoShareNotice`). NudeNet is AGPL-3.0, which is why the project is
 AGPL-3.0 (D-038); `tools/convert_nudenet_model.py` rebuilds the model.
+
+Each picture on screen is also checked on its own (plan 17): `ScreenCapture.pictureBoxes` reads image and video views'
+bounds from the accessibility tree just before the shot, `dns/ImageRegions.pick` keeps up to 3 (or 3 squares when there
+are none and the whole screen scored ≥ 0.10), and the best crop result counts, because a small picture shrunk with the
+whole screen to 224/320 px is invisible to both models.
+
+### Screen text (plan 17)
+
+`monitor/TextCapture` reads watched apps' text and content descriptions every 30 s from the foreground tick. `dns/RiskTerms`
+is a word index: words are normalized (NFKC, accents, invisible characters), disguises undone per word (look-alike
+digits, `*` for a vowel, plurals, spaced letters) and every 1-3 word run is one hash lookup, so lists can grow cheaply.
+A strong hit (`RiskTerms.alertable`: a strong word or two weak ones, and not a page about quitting, `aboutQuitting`)
+writes an urgent `svc monitor text` record whose detail is **the app only**: alert text is server-readable, so the words
+stay in the sealed report. Adult words or a risky screenshot make the app *hot* (`TextCapture.markHot`, 2 min): text
+every 5 s and deeper, screenshots every 10 s (`ScreenCapture.hotCap`). Tuned on a real export replayed locally; never
+commit export content. `UrlFilterService.watchingAnything` re-checks the front app every 15 s while it's one we don't
+read, because Android doesn't always send a window event when the app underneath comes back.
 
 ### Protocol versions (D-041)
 

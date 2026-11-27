@@ -4,6 +4,7 @@ Accountability for porn on Android. It blocks adult sites, can check the screen 
 trust when protection changes. It can block anything else you choose too.
 
 [![release](https://img.shields.io/github/v/release/flyboy-byte/focusfence?label=release)](../../releases/latest)
+[![downloads](https://img.shields.io/github/downloads/flyboy-byte/focusfence/total?label=downloads)](../../releases)
 ![license](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84)
 ![root](https://img.shields.io/badge/root-not%20needed-lightgrey)
@@ -56,6 +57,7 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | ✅ | **Block apps** | Sends them back to the home screen |
 | ✅ | **An on-phone record** of lookups, apps and protection changes | Exported only when you choose |
 | ✅ | **Screenshot checks** with on-device AI | Optional; a second model (NudeNet) must find an exposed body part before anything counts as porn |
+| 🧪 | **Small pictures checked on their own** | Each picture on screen (up to 3) gets the models' full detail; after anything risky, that app is checked every 10 s for 2 minutes |
 | ✅ | **Updates itself** from GitHub releases | Shows what's new, installs when you tap |
 | 🧪 | **Partners** by code, QR code or email invite | Tried on two phones: "quick and seem less". They read your report in the app or a browser |
 | 🧪 | **Alerts** when protection loosens or the phone goes silent | Filter off, adult list set to Report, screen checks off, leaving the server; silence within about an hour |
@@ -63,7 +65,7 @@ What's in daily use, versus built and tested but barely used, versus not yet run
 | 🧪 | **Strict mode** | A wait, your own PIN, or a PIN a partner holds, before loosening anything |
 | 🧪 | **Ask a partner** | One tap asks for an OK instead of waiting out strict mode; any one partner can answer |
 | 🧪 | **Flagged screenshots to partners** | Automatic, blurred to 48 px at most, with a note from you |
-| 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters; clear hits alert partners and start a screenshot check |
+| 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, and knows phrases. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting never alerts |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
@@ -124,6 +126,7 @@ accessibility service, because DNS only sees the domain name. Architecture in de
 | Partner report | Encrypted on the phone; the server stores ciphertext it can't open |
 | The report key | Sealed on your phone to each partner device's own public key; the server relays it sealed |
 | Alerts ("filter turned off", "phone went silent") | Through the server, so it can notify partners. Never a site name |
+| Explicit words on screen | The words stay in the encrypted report; the alert says only which app ("Explicit words on screen in Chrome") |
 | Screenshots | Only flagged ones (an exposed body part), or one you send; blurred to 48 px, never the clear image |
 
 The server does see who partners whom (names, groups, and email addresses for email invites), the alert text, and when
@@ -140,6 +143,10 @@ https://flyboy-byte.github.io/focusfence/privacy.html.
 - Android allows one VPN at a time, so it can't run next to another VPN. Don't turn on "Block connections without
   VPN" for it: that cuts off everything that isn't DNS.
 - The screenshot model is wrong fairly often, especially in photo apps; flags are held back unless strong.
+- Screen checks are samples: a screenshot about every 1.5 minutes per app (faster for 2 minutes after anything risky),
+  and on-screen text every 30 seconds. Something seen for a few seconds can be missed.
+- On-screen text is matched against word and phrase lists, not understood. Disguises are caught; new slang isn't until
+  it's added.
 - YouTube and Twitch ads come from the same servers as the videos, so DNS blocking can't remove them.
 - You can always turn it off. If you have partners, they'll hear about it.
 

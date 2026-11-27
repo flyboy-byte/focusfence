@@ -2,33 +2,18 @@
 
 > **What comes next, in order:** [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next. Plans: [`docs/plans/`](docs/plans); docs index: [`docs/README.md`](docs/README.md).
 
-> **Production resumed (2026-11-26, Logan lifted the partner-redesign pause).** Plan 13 partners and plan 14 groups shipped
-> in 3.0/3.1 and were tried on two phones. Next: more real use and testing of partners and groups before new features.
->
-> **Plan 14 groups released (2026-11-26): app 3.1.0, server 2.1.0 live, not yet tried on phones.** Up to 6 phones that
-> all see each other, as partner pairs both ways ([`docs/plans/14-groups.md`](docs/plans/14-groups.md)). A phone that joins a
-> report is now on that server too. Logan tried 3.0.0 briefly: "I love it, it was quick and seem less".
->
-> **Plan 13 is released (2026-11-26): app 3.0.0, server 2.0.0:** one kind of partner, invites by code, QR code or email, no pasting,
-> the report key sealed to each partner device (D-042, protocol level 2, a clean cut). Server and browser are tested end
-> to end; the app passes its tests but hasn't run on a phone. **Next:** Logan tests on both phones (each re-enrolls with a new
-> enrollment code: the server was wiped).
-
-> **Where it stands (2026-11-25 night, app 2.26.0 + server 1.3.0, live 1.3.0):** the filter is in daily use. 2.21–2.25
-> (silence alerts, blurred auto-shots with the NudeNet check, Block lists, first-time journeys, protocol window) and
-> today's partner work in 2.26 ([`docs/plans/12-partners.md`](docs/plans/12-partners.md)) are **built and tested, almost
-> none of it seen on a phone yet**. 2.26 adds: a leaving partner is never silent; "looked 2 h ago"; ask a partner for an OK
-> instead of waiting; partner alert levels and their own quiet hours; one path for app partners; an "Open in the app"
-> button on invite pages (same on every server); four partner notification categories; partners told when screen-check
-> apps are excluded; logging for requests, sync errors and partner alert decisions. **Next:** install 2.26 on both phones,
-> then the two-phone test (plan 12 §0) and the clean-install check (plan 10 §1). Parked: replies, partner guide, push,
-> F-Droid (plan 11).
+> **Where it stands (2026-11-27): app 3.1.5, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
+> two phones. 3.1.4 moved to targetSdk 35. 3.1.5 is plan 17, screen text and screenshots: a word index that sees through
+> disguises, partner alerts with a guard for pages about quitting, each picture on screen checked on its own, faster and
+> deeper checks after anything risky, and a fix for a 10-minute blind spot after leaving Focus Fence (Logan's Brave miss).
+> None of 3.1.5 has been seen working on a phone yet. **Next:** a day of use, then a log export to check it
+> ([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
 
-_Last updated: 2026-11-25 (2.20.0). Update this file in the same commit as any change that moves an item
-below. It is the single place to answer "where are we?" — keep it honest, short, and dated._
+_Last updated: 2026-11-27 (3.1.5). Update this file in the same commit as any change that moves an item below. It is the
+single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
 
@@ -36,10 +21,10 @@ below. It is the single place to answer "where are we?" — keep it honest, shor
 **Ever Accountable** (EA). The core is the DNS-only filter, which works alone with no account or server. Optional
 layers add an activity log, filter-health detection, settings friction and strict mode, uninstall protection (device admin),
 opt-in text and screenshot capture with an on-device AI, and partners with end-to-end sealed reports through a
-self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23). Since plan 13 (D-042, built 2026-11-26, not yet
-released) there is one kind of partner: a person with devices, invited by code, QR code or email, reading the report in
-the Focus Fence app or a browser. The filter, logs and the earlier partner system have run on real phones; plan 13 and
-strict mode pass their tests but haven't been field-tested. The repo went public on 2026-11-24 (D-027).
+self-hostable server (live at `ff.flyboybyte.com` since 2026-11-23). Since plan 13 (D-042, released in 3.0, 2026-11-26)
+there is one kind of partner: a person with devices, invited by code, QR code or email, reading the report in the Focus
+Fence app or a browser; groups of up to 6 came in 3.1. The filter, logs, partners and groups have run on real phones;
+strict mode passes its tests but hasn't been field-tested. The repo went public on 2026-11-24 (D-027).
 
 ## Where the code is
 
@@ -49,7 +34,7 @@ strict mode pass their tests but haven't been field-tested. The repo went public
 | Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR (squash-only, branches auto-deleted). `main` is the default branch. |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | 302 app JVM unit tests + 51 server tests; CI runs both on every PR |
+| Tests | about 308 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every PR |
 | Latest release | `v3.1.5-accountable` (2026-11-27, code 57): plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels
@@ -89,6 +74,7 @@ without evidence.
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
+| Plan 17 (3.1.5): screen-text word index, text alerts (app only, never the words), quitting-page guard, pictures checked on their own, hot mode, lost-foreground fix | 🧪 | Unit tests and a local replay of a real export (7,418 screens: 1 alert in 9 days). Not seen on a phone; next export checks `fg_recovered`, `region_*`, `shot_hot`, `text_hot` |
 | AI flag policy (`dns/FlagPolicy`): a raw hit is reported/kept for a partner only if score ≥ 0.90, or a 2nd hit in the same app within 3 min, or ≥ 0.75 with adult words on screen in that app | 🧪 | Added 2026-11-23, 7 JVM tests, not on a phone. Untuned guesses; owner review screen unaffected. Diag counters `flag_strong/persistent/corroborated/held`. Don't retune without recording why (`docs/research/ai-detection.md`). |
 | On-device AI flagging (optional, off by default) | 📱 | **2026-11-25 (2.22.0, 🧪): a partner flag needs NudeNet to find an exposed body part (D-038).** The GantMan model alone flagged video-call faces at 65–83%, a family photo and a hand with a chip; NudeNet found nothing exposed on all five. Not tested on real explicit content or on a phone yet; watch `body_runs`/`body_ms` and the review cards' "body check" line. **First real flag 2026-11-20 was a false positive:** a photo with no nudity scored `porn` 0.82. 236 screenshots scored so far, avg 91 ms, model load ~2 s; unchanged screens skip the AI (23 of 89 on 2.6.1). Options to cut false alarms without battery cost: `docs/research/ai-detection.md`. 2026-11-19: 41 screenshots scored, avg 100 ms, all neutral/drawings, model load 1.4 s. Bundled: GantMan MobileNet v2 NSFW (MIT), float16, 12 MB, all ops v1–v3 for the TFLite 2.14 runtime. Matched the original model on 35 synthetic inputs (same top label, ≤0.03 diff); not tested on real content or on a phone. Battery cost logged: diag `clf`, `clf_ms`, `clf_load_ms`, shown in the diagnostics report. |
 
@@ -125,7 +111,7 @@ The server is live (2026-11-23). Enrollment, upload and email alerts have run wi
 | Partner unlock codes (partner PIN without handing over a PIN) | 🧪 | Rotating 8-digit code in the partner's app, verified offline. |
 | Removing a partner is guarded, logged, and tells them | 🧪 | |
 | Exclude apps from reports | ❌ | EA has it. |
-| Screenshot to partner, owner-sent and blurred (level B, D-025) | 🧪 | Review → "Send blurred to partners…"; ≤ 48 px thumbnail, one blur (was 24 px until 2026-11-24, unreleased), sealed. Automatic sending (level C) ❌. |
+| Screenshot to partner, owner-sent and blurred (level B, D-025) | 🧪 | Review → "Send blurred to partners…"; ≤ 48 px thumbnail, one blur (was 24 px until 2026-11-24, unreleased), sealed. Automatic sending of flagged shots (level C) since 2.21 (D-037), after a 10-minute note window. |
 
 ## What's weak (read before trusting anything)
 
