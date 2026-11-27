@@ -16,7 +16,7 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
 | # | Piece | Size |
 |---|---|---|
 | 1 | Matching: disguises (look-alike digits and symbols, spaced letters, Unicode, accents, invisible characters), plurals, about 30 more sites and words; strong vs weak words; read `contentDescription` too | ~2 h |
-| 2 | Alert: a strong hit (a strong adult word, or two different weak ones) writes an urgent `svc monitor text` record, at most one per app per 10 min; partners get "Explicit words on screen in <app>: <words>" | ~2 h |
+| 2 | Alert: a strong hit (a strong adult word, or two different weak ones) writes an urgent `svc monitor text` record, at most one per app per 10 min; partners get "Explicit words on screen in <app>" (the words stay in the sealed report) | ~2 h |
 | 3 | A strong text hit starts a screenshot check right away, so the image models see the same screen | ~1 h |
 | 5 | Check each picture on screen on its own (image views' bounds from the accessibility tree; 3 squares when none) | ~half a day |
 | 4 | Why the screenshot missed it: needs a log export from the phone (analysed locally only, never posted). Likely causes to check: screenshots off for that app, the image only text (the models judge pictures, not words), a score under the owner's threshold, or `FlagPolicy` holding it back | after an export |
@@ -28,9 +28,10 @@ screenshot check (it only nudged `FlagPolicy` for a later one).
   words, plurals; a word only inside a longer hit isn't counted twice; hits are recorded as the plain word.
   `RiskTerms.strong` for piece 2. Tests in `RiskTermsTest` (innocent text: "naked eye", Sussex, Milford, Titanic,
   "rule 3 of 4").
-- **Piece 2** (2026-11-27): a strong hit writes `svc monitor text` (detail `porn, milf in Chrome`, urgent), at most
-  one per app per 10 min (`TextCapture.ALERT_EVERY_MS`); `Digest.alertText` → "Explicit words on screen: …", an
-  important alert. Counter `text_alerts`. Gambling words stay report-only.
+- **Piece 2** (2026-11-27): a strong hit writes `svc monitor text` (detail: the app, urgent), at most
+  one per app per 10 min (`TextCapture.ALERT_EVERY_MS`); `Digest.alertText` → "Explicit words on screen in <app>",
+  an important alert. (3.1.5 put the words in the alert; 3.1.6 keeps them in the sealed report only, since alert text
+  is server-readable.) Counter `text_alerts`. Gambling words stay report-only.
 - **Piece 3** (2026-11-27): any adult word on screen calls `ScreenCapture.onRiskyText`, which checks that screen with
   the image models now (`trigger=text`, counter `shot_text`), where screenshots already run for the app, at most once
   per 15 s.
