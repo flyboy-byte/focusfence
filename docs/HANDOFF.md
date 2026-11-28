@@ -54,6 +54,15 @@ workflows and big changes. Table and release steps: `AGENTS.md`.
    toolchain, A6 crop coordinates on scaled displays.
 8. Then F-Droid (plan 11), partner polish, push: ask which first, after more real testing.
 
+## Assessment at handoff (2026-11-27)
+
+- **Solid:** `main` clean and CI green, 3.1.8 APK checked (version, signing cert), server 2.1.0 healthy, no open PRs
+  or issues.
+- **Unproven:** 3.1.6, 3.1.7 and 3.1.8 have not been checked on a phone. First look: the app opens, the filter runs,
+  the update installed, apps that skip the filter stay ticked. Don't stack more releases on these before that.
+- **Housekeeping:** two branches from closed PRs remain on GitHub (`chore/release-3.1.2`, #131; `journey-3`, #95),
+  each with commits not on `main`. Delete only if Logan says.
+
 ## Parked (don't build unless Logan asks)
 
 Replies to alerts, a partner guide page (closed PR #108), push (notes in plan 12), the partner UI options (plan 12),
