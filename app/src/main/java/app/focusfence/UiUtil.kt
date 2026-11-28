@@ -498,7 +498,8 @@ object UiUtil {
 
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.excluded_dialog_title)
-            .setMultiChoiceItems(labels, checked, null)
+            // The listener is required: with null, the dialog never writes a tick back into `checked`.
+            .setMultiChoiceItems(labels, checked) { _, i, on -> checked[i] = on }
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val selected = apps.indices.filter { checked[it] }.map { apps[it].first }.toSet()
                 val guarded = app.focusfence.dns.ExclusionPolicy.needsGuard(current, selected) {
