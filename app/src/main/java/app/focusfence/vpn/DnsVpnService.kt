@@ -356,8 +356,10 @@ class DnsVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // A null intent (restart) or the system's always-on trigger both mean "start".
         if (intent?.action == ACTION_STOP) {
-            // Strict mode: refuse to stop until an unlock window is open.
-            if (StrictStore.isLocked(this)) {
+            val restart = intent.getBooleanExtra(EXTRA_RESTART, false)
+            // Strict mode: refuse to stop until an unlock window is open. A restart comes straight back, and is how a
+            // new app exclusion takes effect (whatever needed guarding was guarded before it was saved).
+            if (!restart && StrictStore.isLocked(this)) {
                 EventLog.activity(
                     LogEvents.service(System.currentTimeMillis(), COMP, "stop_refused", "strict"),
                     urgent = true,
@@ -365,7 +367,6 @@ class DnsVpnService : VpnService() {
                 broadcastState()
                 return START_STICKY
             }
-            val restart = intent.getBooleanExtra(EXTRA_RESTART, false)
             EventLog.activity(
                 LogEvents.service(System.currentTimeMillis(), COMP, "stop", if (restart) "restart" else "user"),
                 urgent = true,

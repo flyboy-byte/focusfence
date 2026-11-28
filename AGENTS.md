@@ -173,6 +173,8 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 | Sockets from the VPN app without binding | Bind to the underlying `Network` (or `protect()`) so they can't loop into the tunnel. |
 | Strict Private DNS + our VPN | Lookups skip the tunnel entirely. `VpnHealth` reports `bypassed`. |
 | Shutting down an executor in `stopVpn()` | The service restarts; a dead executor throws. |
+| `setMultiChoiceItems` with a `null` listener | The `checked` array is only updated when there is a listener: ticks are silently dropped. |
+| Refusing a VPN restart in strict mode | A restart applies settings and comes straight back; only a real stop is refused. |
 | Trusting `isPassword` | A web form's password box loses it once "show password" is tapped. `dns/SecretFields`. |
 | Waiting for a window event to know the front app | Android sometimes sends none when the app underneath comes back. `UrlFilterService.watchingAnything` polls. |
 | One guard word silencing a page | A long page mentions anything once. Guards in `RiskTerms` work by distance (`QUIT_REACH`). |
