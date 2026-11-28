@@ -6,7 +6,12 @@ untyped commits grouped by a guess; from then on PR titles carry the type (AGENT
 
 ## Unreleased
 
+### Added
+- **logs:** crashes and connection problems are recorded, and the log format is locked (`a453e48`, [#174](https://github.com/flyboy-byte/focusfence/pull/174))
 ### Docs
+- describe detection in general terms in public files (`386f808`, [#173](https://github.com/flyboy-byte/focusfence/pull/173))
+- README status table grouped by how well each feature is verified (`09de80d`, [#172](https://github.com/flyboy-byte/focusfence/pull/172))
+- README screen checks section; STATE, AGENTS, CONTRIBUTING, CHANGELOG, privacy page current with 3.1.6 (`80c548c`, [#171](https://github.com/flyboy-byte/focusfence/pull/171))
 - HANDOFF, 3.1.6 released (`8052eba`, [#170](https://github.com/flyboy-byte/focusfence/pull/170))
 
 _Undo any line with `git revert <commit>`._

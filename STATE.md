@@ -2,17 +2,18 @@
 
 > **What comes next, in order:** [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next. Plans: [`docs/plans/`](docs/plans); docs index: [`docs/README.md`](docs/README.md).
 
-> **Where it stands (2026-11-27): app 3.1.6, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
+> **Where it stands (2026-11-27): app 3.1.7, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
 > two phones. 3.1.5 (plan 17) was checked on a phone: the blind-spot fix works (longest unread gap 53 s). 3.1.6: secret
 > fields never read, written erotica matched, pictures next to explicit words flagged at a lower bar, body check from
 > 0.30 with a small boost when a woman is in the picture, and Flag sensitivity (Strict / Standard / Relaxed, less strict
-> guarded). None of 3.1.6 seen on a phone yet. **Next:** a test on the same kind of page, then an export
+> guarded). 3.1.7: crashes and connection problems are recorded and the log format is locked. Neither 3.1.6 nor 3.1.7
+> seen on a phone yet. **Next:** real use, then an export
 > ([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
 
-_Last updated: 2026-11-27 (3.1.6). Update this file in the same commit as any change that moves an item below. It is the
+_Last updated: 2026-11-27 (3.1.7). Update this file in the same commit as any change that moves an item below. It is the
 single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -34,8 +35,8 @@ strict mode passes its tests but hasn't been field-tested. The repo went public 
 | Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR (squash-only, branches auto-deleted). `main` is the default branch. |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | about 308 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every PR |
-| Latest release | `v3.1.6-accountable` (2026-11-27, code 58): secret fields skipped, erotica words, quitting guard by distance, pictures next to explicit words flagged, body check from 0.30 with a female boost, Flag sensitivity. 3.1.5: plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
+| Tests | about 327 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every PR |
+| Latest release | `v3.1.7-accountable` (2026-11-27, code 59): crash, app-stop and connection records, log format locked (`specs/event-log.md`). 3.1.6: secret fields skipped, erotica words, quitting guard by distance, pictures next to explicit words flagged, body check from 0.30 with a female boost, Flag sensitivity. 3.1.5: plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels
 
@@ -72,6 +73,7 @@ without evidence.
 | App-time timeline (UsageStats) | 🧪 | |
 | Filter health (`VpnHealth`): lockdown, bypassed, silent, failing, degraded, offline | 🧪 | Alert + home row + `svc vpn health` record. |
 | "Protection stopped" alert on revoke / failed start | 🧪 | |
+| 3.1.7: crash and exit records, network changes, DNS failure reasons, update and report-page errors (`dns/Faults`, `monitor/ProcessFaults`) | 🧪 | Unit tests only. In the first export, check the "app & connection problems" section. |
 | In-app text capture | 📱 | 182 captures across 8 apps in the 2026-11-18 export. |
 | Screenshots: sparse capture, flagged-only encrypted retention, always-on indicator | 📱 | Monitoring screen → "Is capture working?" shows the last capture, its AI verdict, totals, and what's blocking it (`dns/CaptureStatus`). |
 | Plan 17 (3.1.5): lost-foreground fix (`UrlFilterService.watchingAnything`) | 📱 | 2026-11-27 export, 4 h on 3.1.5: longest unread gap in a watched app 53 s (was 10 min), `fg_recovered` 7. |
@@ -147,7 +149,7 @@ tier (end-to-end sealed reports, D-023), licence (AGPL-3.0 since 2026-11-25, D-0
 The ordered list is [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next; each piece of work is a plan in `docs/plans/`.
 Short version (2026-11-27):
 
-1. Real use of 3.1.6, then a log export (analysed locally; nothing from it in the repo).
+1. Real use of 3.1.7, then a log export (analysed locally; nothing from it in the repo).
 2. If low-scoring pictures still slip by: the body check on every picture while words are on screen (battery cost only
    in those windows).
 3. Field-test partners and groups on two phones; open audit items in plan 15 (A3-A6).
