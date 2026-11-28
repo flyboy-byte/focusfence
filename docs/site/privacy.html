@@ -3,7 +3,7 @@
 <p class="note">Written from what the code does on 2026-11-23 (app 2.9.0). It is checked again whenever a release adds something the app observes. No ads, no analytics, no third-party tracking code.</p>
 
 <h2>With every optional layer off</h2>
-<p>The filter runs on the phone. It answers domain-name lookups itself and passes allowed ones to your network's own DNS server, or to Cloudflare (1.1.1.1) / Google (8.8.8.8) over DoH if that fails, or to the server you choose in Settings. Nothing about you is sent to us. A local activity log is kept on the phone (about 32 MB at most, oldest files removed first). It leaves the phone only when you export it yourself.</p>
+<p>The filter runs on the phone. It answers domain-name lookups itself and passes allowed ones to your network's own DNS server, or to Cloudflare (1.1.1.1) / Google (8.8.8.8) over DoH if that fails, or to the server you choose in Settings. Nothing about you is sent to us. A local activity log is kept on the phone (about 32 MB at most, oldest files removed first). It leaves the phone only when you export it yourself. The same log notes why the app crashed or stopped and how connections failed, so bugs can be fixed.</p>
 
 <h2>Optional layers, what each sees</h2>
 <table>

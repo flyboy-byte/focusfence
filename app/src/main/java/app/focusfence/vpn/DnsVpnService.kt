@@ -723,9 +723,16 @@ class DnsVpnService : VpnService() {
         when (upstream) {
             is Upstreams.Entry.Udp -> resolve(upstream.host)?.let { udpQuery(it, upstream.port, query) }
             is Upstreams.Entry.Doh -> dohQuery(upstream.url, query)
-        }
+        }.also { if (it == null) countFailure(upstream, null) }
     } catch (e: Exception) {
+        countFailure(upstream, e)
         null
+    }
+
+    /** Which kind of resolver failed and how ([Faults.netKind]; "bad" = it answered, unusably, or had no address). */
+    private fun countFailure(upstream: Upstreams.Entry, e: Exception?) {
+        val via = if (upstream is Upstreams.Entry.Udp) "udp" else "doh"
+        Monitor.perf.count("fwd_err_${via}_${e?.let(app.focusfence.dns.Faults::netKind) ?: "bad"}")
     }
 
     private fun forwardInner(udp: Packets.UdpDatagram, query: ByteArray) {
@@ -758,16 +765,9 @@ class DnsVpnService : VpnService() {
             return
         }
         for ((i, upstream) in order.withIndex()) {
-            val answer = try {
-                when (upstream) {
-                    is Upstreams.Entry.Udp -> udpQuery(resolve(upstream.host) ?: continue, upstream.port, query)
-                    is Upstreams.Entry.Doh -> dohQuery(upstream.url, query)
-                }
-            } catch (e: Exception) {
-                // Any failure (I/O, TLS, a vanished network) means "try the next
-                // one" — an escaping exception would silently drop the query.
-                null
-            }
+            // Any failure (I/O, TLS, a vanished network) is a null, so the next one is tried:
+            // an escaping exception would silently drop the query.
+            val answer = tryUpstream(upstream, query)
             if (answer != null) {
                 preferredUpstream = upstream.key
                 writeToTun(Packets.buildUdpReply(udp, answer, answer.size))

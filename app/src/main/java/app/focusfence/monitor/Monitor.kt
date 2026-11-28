@@ -4,6 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.BatteryManager
 import android.os.PowerManager
 import android.os.Build
@@ -85,6 +89,48 @@ object Monitor {
         }
     }
 
+    /**
+     * Network switches as Android reports them (Wi-Fi to mobile, a link losing its internet check), so a VPN or sync
+     * failure can be lined up with the moment the connection changed. Only changes of kind or validation are written;
+     * signal and speed updates are ignored.
+     */
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        private val states = HashMap<Network, Pair<String, Boolean>>()
+
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            val state = transport(caps) to caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            val was = synchronized(states) { states.put(network, state) }
+            if (was == state) return
+            perf.count("net_change")
+            EventLog.diag(netRecord(System.currentTimeMillis(), caps, if (was == null) "up" else "change"))
+        }
+
+        override fun onLost(network: Network) {
+            val was = synchronized(states) { states.remove(network) } ?: return
+            perf.count("net_change")
+            EventLog.diag(LogEvents.net(System.currentTimeMillis(), was.first, false, false, false, 0, 0, null, "lost"))
+        }
+
+        fun forget() = synchronized(states) { states.clear() }
+    }
+
+    private fun watchNetworks(app: Context, on: Boolean) {
+        val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
+        try {
+            if (on) {
+                // The builder's default excludes VPNs, so these are the real links under the tunnel.
+                cm.registerNetworkCallback(
+                    NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(), networkCallback,
+                )
+            } else {
+                networkCallback.forget()
+                cm.unregisterNetworkCallback(networkCallback)
+            }
+        } catch (e: RuntimeException) {
+            EventLog.diag(LogEvents.error(System.currentTimeMillis(), "monitor", "net_callback", e.javaClass.simpleName))
+        }
+    }
+
     /** [who] is a short component name ("vpn", "a11y"); attaching twice is a no-op. */
     @Synchronized
     fun attach(context: Context, who: String) {
@@ -103,6 +149,7 @@ object Monitor {
         // System broadcasts are delivered to non-exported receivers; the flag is
         // required for context-registered receivers on Android 14+.
         ContextCompat.registerReceiver(app, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        watchNetworks(app, true)
         checkIntegrityAsync(app)
     }
 
@@ -116,6 +163,7 @@ object Monitor {
             } catch (e: IllegalArgumentException) {
                 // Not registered; nothing to undo.
             }
+            watchNetworks(app, false)
             worker.execute { closePerfWindow() }
         }
         checkIntegrityAsync(app)
@@ -185,18 +233,23 @@ object Monitor {
             .sortedByDescending { it.second.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) }
             .firstOrNull()?.second
         if (best == null) { EventLog.diag(LogEvents.net(now, "none", false, false, false, 0, 0, null)); return }
-        val tr = when {
-            best.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> "cell"
-            best.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
-            else -> "other"
-        }
-        val sig = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) best.signalStrength.takeIf { it != android.net.NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED } else null
-        EventLog.diag(LogEvents.net(now, tr,
-            best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+        EventLog.diag(netRecord(now, best))
+    }
+
+    private fun transport(caps: NetworkCapabilities): String = when {
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "cell"
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+        else -> "other"
+    }
+
+    private fun netRecord(now: Long, caps: NetworkCapabilities, ev: String? = null): Map<String, Any?> {
+        val sig = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) caps.signalStrength.takeIf { it != NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED } else null
+        return LogEvents.net(now, transport(caps),
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
             // NOT_ROAMING exists from Android 9; before that hasCapability says no, which would log every network as roaming.
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
-            !best.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
-            best.linkDownstreamBandwidthKbps, best.linkUpstreamBandwidthKbps, sig))
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
+            !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+            caps.linkDownstreamBandwidthKbps, caps.linkUpstreamBandwidthKbps, sig, ev)
     }
 
     private var lastThreads: Map<Int, app.focusfence.dns.ThreadCpu.Sample>? = null

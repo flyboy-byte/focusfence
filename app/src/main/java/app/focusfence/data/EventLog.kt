@@ -51,9 +51,11 @@ object EventLog {
 
     private lateinit var appContext: Context
     private val buffers = Channel.values().associateWith { Buffer() }
+    private const val WRITER_THREAD = "focusfence-log-writer"
     private val writer = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "focusfence-log-writer").apply { isDaemon = true }
+        Thread(r, WRITER_THREAD).apply { isDaemon = true }
     }
+    private val repeats = app.focusfence.dns.Repeats()
 
     /** Lines that could not be written; reported in the next diag flush. */
     private val droppedLines = AtomicLong(0)
@@ -84,6 +86,22 @@ object EventLog {
 
     fun diag(fields: Map<String, Any?>, urgent: Boolean = false) =
         append(Channel.DIAG, fields, urgent)
+
+    /** A diag error that can recur on every retry: written when its text changes, else once per six hours. */
+    fun errorOnce(component: String, what: String, detail: String) {
+        val now = System.currentTimeMillis()
+        if (repeats.allow("$component:$what", detail, now)) diag(app.focusfence.dns.LogEvents.error(now, component, what, detail))
+    }
+
+    /** For a process that is about to die: writes [fields] and everything buffered, waiting at most two seconds. */
+    fun diagBeforeDeath(fields: Map<String, Any?>) {
+        if (!initialized) return
+        append(Channel.DIAG, fields, urgent = false)
+        val flushAll = Runnable { Channel.values().forEach { flushChannel(it) } }
+        // On the writer thread itself (it crashed), waiting for it would never return.
+        if (Thread.currentThread().name == WRITER_THREAD) flushAll.run()
+        else writer.submit(flushAll).get(2, java.util.concurrent.TimeUnit.SECONDS)
+    }
 
     private fun append(channel: Channel, fields: Map<String, Any?>, urgent: Boolean) {
         if (!initialized) return

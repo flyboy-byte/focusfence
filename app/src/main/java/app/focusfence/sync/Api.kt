@@ -36,13 +36,7 @@ class Api(private val base: String) {
                 if (r.code !in 200..299) perf.count(if (r.code >= 500) "http_5xx" else "http_4xx")
             }
         } catch (e: java.io.IOException) {
-            perf.count(when (e) {
-                is java.net.UnknownHostException -> "http_fail_dns"
-                is java.net.SocketTimeoutException -> "http_fail_timeout"
-                is java.net.ConnectException, is java.net.NoRouteToHostException -> "http_fail_connect"
-                is javax.net.ssl.SSLException -> "http_fail_tls"
-                else -> "http_fail_io"
-            })
+            perf.count("http_fail_" + app.focusfence.dns.Faults.netKind(e))
             throw e
         }
     }

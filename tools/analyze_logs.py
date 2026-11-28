@@ -134,6 +134,29 @@ def battery(diag, max_gap=2 * HOUR):
     return acc, excluded, len(samples)
 
 
+def problems(diag):
+    """Crashes, why the app stopped, and network switches: the first things to read for an app or connection bug."""
+    print("\n== app & connection problems ==")
+    crashes = [r for r in diag if r["type"] == "crash"]
+    print(f"  crashes              {len(crashes)}")
+    for r in crashes[-5:]:
+        print(f"    {ts(r['t'])}  [{r.get('thread')}] {r.get('at')}")
+    exits = sorted((r for r in diag if r["type"] == "exit"), key=lambda r: r["t"])
+    if exits:
+        c = collections.Counter(r.get("reason") for r in exits)
+        print("  app stopped          " + ", ".join(f"{k}={v}" for k, v in c.most_common()))
+        for r in exits[-8:]:
+            print(f"    {ts(r['t'])}  {r.get('reason')} importance={r.get('importance')} rss={r.get('rss_kb', 0) // 1024} MB {r.get('note', '')}")
+    changes = [r for r in diag if r["type"] == "net" and r.get("ev")]
+    if changes:
+        print(f"  network changes      {len(changes)}; last:")
+        for r in changes[-8:]:
+            print(f"    {ts(r['t'])}  {r['ev']} {r.get('tr')} validated={r.get('val')}")
+    errs = [r for r in diag if r["type"] == "err"]
+    for r in errs[-10:]:
+        print(f"  error {ts(r['t'])}  {r.get('comp')}:{r.get('what')} {r.get('detail', '')[:120]}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("export", help="export .zip or an unzipped directory")
@@ -161,10 +184,9 @@ def main():
     span_h = (t1 - t0) / HOUR
 
     print("== export ==")
-    for k in ("app_version", "manufacturer", "model", "sdk", "rules", "adlist_enabled",
-              "log_allowed_dns", "log_urls", "usage_access", "a11y_enabled", "battery_opt_exempt"):
-        if k in meta:
-            print(f"  {k:20} {meta[k]}")
+    for k, v in meta.items():
+        if k not in ("type", "t", "seq") and not k.startswith("_"):
+            print(f"  {k:20} {ts(v) if k.startswith('sync_last_') and isinstance(v, int) and v else v}")
     print(f"  span                 {ts(t0)} → {ts(t1)}  ({span_h:.1f} h)")
     print(f"  records              activity={len(activity)} diag={len(diag)} unreadable_lines={meta.get('_bad_lines', 0)}")
     for name, recs in (("activity", activity), ("diag", diag)):
@@ -172,6 +194,8 @@ def main():
         lost = sum(g[2] for g in gaps)
         if gaps:
             print(f"  {name} seq gaps     {len(gaps)} gaps, {lost} lines missing (kill before flush, or rotation)")
+
+    problems(diag)
 
     print("\n== protection coverage (VPN) ==")
     gaps = coverage(activity, t1)

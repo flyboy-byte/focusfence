@@ -43,6 +43,8 @@ object LogEvents {
     const val TYPE_NET = "net"
     const val TYPE_ERROR = "err"
     const val TYPE_META = "meta"
+    const val TYPE_CRASH = "crash"
+    const val TYPE_EXIT = "exit"
 
     const val DECISION_ALLOWED = "allowed"
     const val DECISION_BLOCKED = "blocked"
@@ -217,9 +219,25 @@ object LogEvents {
      * [tr] cell / wifi / other, [validated] Android's internet check passed, [roaming], [metered], [downKbps] / [upKbps]
      * the modem's own estimate (not a measured speed), [sig] signal strength in dBm when Android reports one.
      */
-    fun net(t: Long, tr: String, validated: Boolean, roaming: Boolean, metered: Boolean, downKbps: Int, upKbps: Int, sig: Int?): Map<String, Any?> =
+    fun net(
+        t: Long, tr: String, validated: Boolean, roaming: Boolean, metered: Boolean, downKbps: Int, upKbps: Int, sig: Int?,
+        /** Null for the sample taken with each battery record; "up" / "change" / "lost" when Android reports a switch. */
+        ev: String? = null,
+    ): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_NET, "tr" to tr, "val" to validated, "roam" to roaming,
-            "metered" to metered, "down" to downKbps, "up" to upKbps).apply { if (sig != null) put("sig", sig) }
+            "metered" to metered, "down" to downKbps, "up" to upKbps).apply {
+            if (sig != null) put("sig", sig)
+            if (ev != null) put("ev", ev)
+        }
+
+    /** Diag: the app crashed. [ex] and [at] come from [Faults] (class names and frames, never messages). */
+    fun crash(t: Long, thread: String, ex: String, at: String): Map<String, Any?> =
+        linkedMapOf("t" to t, "type" to TYPE_CRASH, "thread" to thread, "ex" to ex, "at" to at)
+
+    /** Diag: Android's own record of why an earlier process of this app ended, read at the next start (Android 11+). */
+    fun exit(t: Long, reason: String, status: Int, importance: Int, rssKb: Long, note: String?): Map<String, Any?> =
+        linkedMapOf<String, Any?>("t" to t, "type" to TYPE_EXIT, "reason" to reason, "status" to status,
+            "importance" to importance, "rss_kb" to rssKb).apply { if (note != null) put("note", note) }
 
     fun perf(t: Long, windowMs: Long, fields: Map<String, Any?>): Map<String, Any?> =
         linkedMapOf<String, Any?>("t" to t, "type" to TYPE_PERF, "win" to windowMs).apply {
@@ -230,7 +248,7 @@ object LogEvents {
     fun error(t: Long, component: String, what: String, detail: String? = null): Map<String, Any?> =
         linkedMapOf<String, Any?>(
             "t" to t, "type" to TYPE_ERROR, "comp" to component, "what" to what,
-        ).apply { if (detail != null) put("detail", detail.take(300)) }
+        ).apply { if (detail != null) put("detail", Faults.scrub(detail).take(300)) }
 
     fun qtypeName(qtype: Int): String = when (qtype) {
         1 -> "A"

@@ -20,6 +20,12 @@ quitting guard by distance (#165), pictures next to explicit words (#166), body 
 **Public-repo rule:** code, docs, tests, commits and PRs describe what the app does, never what the owner viewed, said
 about it, or prefers. No times, apps, page descriptions or alert counts from an export; test strings are made up.
 
+## Logs locked (2026-11-27, merged, not released)
+
+Added: `crash` and `exit` records, `net` changes, DNS failure reasons (`fwd_err_*`), update and report-page errors,
+connection state in the export header, an "app & connection problems" section first in both summaries. The format is
+now add-only (`LogSchemaTest`, rules in `docs/specs/event-log.md`). Not seen on a phone. Next release: 3.1.7.
+
 ## Next, in order
 
 1. Real use of 3.1.6 (ask once), then an export. Check `flag_context`, `flag_suggestive`,
