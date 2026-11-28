@@ -14,5 +14,5 @@ is [`../CLAUDE.md`](../CLAUDE.md). Why things are the way they are: [`../DECISIO
 | [`audits/`](audits) | The August 2026 outside research, checked against the code in `audits/findings.md`. History. |
 | [`benchmarks/`](benchmarks) | Battery and CPU measurements. |
 | [`parked.md`](parked.md) | Ideas set aside, with what would reopen each. |
-| [`collaboration.md`](collaboration.md), [`public-release.md`](public-release.md), [`signing-key-custody.md`](signing-key-custody.md), [`partner-lock-direction.md`](partner-lock-direction.md) | How two maintainers work together, going public, the release key, and the partner-lock reasoning. |
+| [`public-release.md`](public-release.md), [`signing-key-custody.md`](signing-key-custody.md), [`partner-lock-direction.md`](partner-lock-direction.md) | Going public, the release key, and the partner-lock reasoning. How changes land is in `../AGENTS.md`. |
 | [`archive/`](archive) | Superseded docs, kept for their history. |

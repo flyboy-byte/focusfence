@@ -1,7 +1,9 @@
 name: Android CI
 
+# Once per change (D-043): pushes to main, and pull requests. A branch push without a PR runs nothing.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # Read-only token: CI builds and tests, it never writes to the repo.

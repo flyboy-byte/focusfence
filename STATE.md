@@ -32,10 +32,10 @@ strict mode passes its tests but hasn't been field-tested. The repo went public 
 | | |
 |---|---|
 | Repo | `flyboy-byte/focusfence` (owner: flyboy-byte since 2026-11-24, transferred from sidewinderzz; public, D-027) |
-| Branch | `main` is the only long-lived branch (D-022); work lands by squash-merged PR (squash-only, branches auto-deleted). `main` is the default branch. |
+| Branch | `main` is the only long-lived and default branch. Ordinary changes are pushed to it; risky ones and outside contributions go by squash-merged PR (D-043). |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | about 327 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every PR |
+| Tests | about 327 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every push to `main` and every PR |
 | Latest release | `v3.1.7-accountable` (2026-11-27, code 59): crash, app-stop and connection records, log format locked (`specs/event-log.md`). 3.1.6: secret fields skipped, erotica words, quitting guard by distance, pictures next to explicit words flagged, body check from 0.30 with a female boost, Flag sensitivity. 3.1.5: plan 17 screen text and screenshots (word index with disguises and phrases, alerts with a quitting-screen guard, each picture checked on its own, faster deeper reads after a flag, fix for 10-minute blind spots after leaving Focus Fence). 3.1.4: targetSdk 35 (Android 15 edge-to-edge handled by `ui/EdgeToEdge`), compileSdk 35, AGP 8.7.3, library updates. 3.1.3: plan 15 fixes (push note in the rule editor, lint triage, screenshot checker leak). 3.1.2: invites shared as a QR picture with the code, one join box for code/link/message, Scan a QR code; 3.1.1 slowed the address-bar poll during videos; 3.1.0 brought plan 14 groups (Logan: "looks amazing"). Per-release detail: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26 15:39 UTC, installed with the release `install.sh`. |
 
 ## Verification levels

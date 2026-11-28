@@ -85,9 +85,8 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
 
 ## Hard rules
 
-- **Branches (D-022):** start every task on a short branch from fresh `origin/main` and open a PR to
-  `main`. **Never push to `main`, never force-push a shared branch, never merge** unless the person
-  directing you asks. Never tag a release; releases are a separate version-bump PR plus a tag on `main`.
+- **Landing work (D-043):** ordinary changes go straight to `main`, risky ones by pull request (below). Never
+  force-push `main` unless the maintainer asks for a history rewrite. Never tag a release unless the maintainer asks.
 - **Never commit signing material**: `*.jks`, `*.keystore`, `keystore.properties`, base64 keys,
   passwords. `.gitignore` covers the common names; check anyway.
 - **Never widen the tunnel routes.** DNS-only routing is the whole design (battery, privacy).
@@ -104,39 +103,55 @@ short on time, and **cannot watch you work or review every diff**. That shapes e
   counts from a real phone; test strings modelled on a real page (make them up). Don't quote a real case even as a
   bad example.
 
-## Pull requests: awareness, not rules
+## How changes land (D-043)
 
-Two people (@flyboy-byte, @sidewinderzz) and their agents send PRs into one `main`, and either may merge the
-other's work. Nothing here is enforced, by a check or by an agent: it's a habit that makes the other person's job
-easier. When you write a PR, think about who will read it, and cover what they'd want to know. The template in
-`.github/pull_request_template.md` offers these sections; use the ones that help, in a sentence or two each:
+There is one active maintainer (@flyboy-byte), who can't review every diff, so the checks are the review. Phones and
+self-hosted servers only ever get tagged releases, never `main`.
 
-- **What and why**: the change and the reason, in plain words.
-- **Pros** and **cons and risks**: what gets better, what gets worse or could break.
-- **What the other maintainer might think**: their likely view (scope, privacy, battery, a decision in
-  `DECISIONS.md`, their own work this touches), and why it's still worth it, or what you'd change if they disagree.
-- **Tested**: 📱 on a phone / 🧪 CI only / not tested, and what exactly.
-- **How to revert**: usually "revert the squash commit"; say if data, a server deploy or a release is involved.
+| Change | How it lands |
+|---|---|
+| Docs, bug fixes, detection tuning, UI, logging, tests | Commit to `main` and push |
+| Server code, `dns/Protocol`, partner encryption, stored partner data | Pull request, merged when CI passes |
+| Updater, signing, `.github/workflows/` | Pull request, merged when CI passes |
+| Anything big or half-sure, or that the maintainer wants to see first | Pull request |
+| Anyone else's work | Pull request ([`CONTRIBUTING.md`](CONTRIBUTING.md)) |
 
-**Agents:** write your own PRs this way, and when you notice the other maintainer's work nearby (an open PR on the
-same files, a decision of theirs this touches), say so in your PR. Never block, reject, rewrite or gate someone
-else's PR for missing a section; mention it at most, kindly.
+Direct pushes are for the maintainer and agents working on their request.
 
-Keep PRs to one feature or fix, with a typed title (`feat(dns): …`, `fix(server): …`, `docs: …`, `refactor(ui): …`,
-`perf(sync): …`, `chore: …`). **The title is user-facing:** it becomes a line in the changelog and in the app's
+**Before every push to `main`:**
+
+1. `git pull --rebase`.
+2. `tools/check.sh` passes (public-docs check, app tests, build, lint, server tests).
+3. Read your own diff, and read the added lines as a stranger would (the public-repo rule above).
+4. One change per commit, so it can be reverted alone.
+5. Docs the change makes untrue are fixed in the same commit.
+
+CI also runs on `main`. Check it before ending a session; if it's red, fix or revert before anything else.
+
+**Titles** (commits and PRs) are typed: `feat(dns): …`, `fix(server): …`, `docs: …`, `refactor(ui): …`,
+`perf(sync): …`, `chore: …`. **The title is user-facing:** it becomes a line in the changelog and in the app's
 "What's new" (D-031), so write it for the person using the app, in plain words ("block notices for adult and gambling
 sites", not "wire BlockTriage into DnsVpnService"). Put the type in the prefix, not a bare `ui:`.
+
+**When docs get updated**, so they don't become work of their own:
+
+| When | Update |
+|---|---|
+| With a change | The spec or plan it changes; README and privacy page only if what a user sees changed; the `STATE.md` row if a status moved |
+| At a release | `CHANGELOG.md` (generated), `STATE.md` latest release, `docs/HANDOFF.md`, all in the release commit |
+| End of a session | `docs/HANDOFF.md`, only if the next session needs it |
 
 ## Commands
 
 ```sh
+tools/check.sh                # everything below plus server tests: run before pushing to main
 ./gradlew testDebugUnitTest   # JVM unit tests (the only automated tests)
 ./gradlew assembleDebug       # debug APK
 ./gradlew lint
 python3 -I tools/analyze_logs.py <export.zip>   # summarise a phone's log export
 ```
 
-CI (`.github/workflows/android.yml`) runs tests + debug build on every push. **CI is the
+CI (`.github/workflows/android.yml`) runs tests + debug build on pushes to `main` and on pull requests. **CI is the
 authority** on whether the app compiles; check it after pushing (`gh run list` / `gh run watch`
 with `-R flyboy-byte/focusfence`).
 
@@ -158,7 +173,7 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 6. No timers or polling for background work: piggyback on existing broadcasts (see `Monitor`) or
    use WorkManager. Battery is a feature.
 7. Update the relevant spec, and **`STATE.md`** if a status changed.
-8. Removing a feature: the plan's clean-cut section lists every public doc to update, and the PR adds the removed
+8. Removing a feature: the plan's clean-cut section lists every public doc to update, and the same change adds the removed
    words to `tools/check_docs.py` (CI fails on any public doc that still names them; a line that describes the past
    on purpose ends with `<!-- docs: past -->`).
 
@@ -188,12 +203,14 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 - Signing: if repo secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
   exist, the stable key is used (updates install over each other). Otherwise a throwaway key is
   generated and the notes say so. The expected cert SHA-256 is in `STATE.md`.
-- Release = one small PR titled `chore: release X.Y.Z` that bumps `versionCode` / `versionName` in
-  `app/build.gradle.kts` **and** refreshes the changelog (`tools/changelog.py full > CHANGELOG.md`);
-  after it merges, tag `vX.Y.Z-accountable` on `main`. Never bump the version in a feature PR.
-- The changelog is generated, never hand-edited: one line per squash-merged PR, grouped by the type in
-  its title, each naming the commit to `git revert`. `tools/changelog.py notes <last-tag>` prints just
-  the new section, for the release description.
+- A release, only when the maintainer asks, and after they've tried the previous build:
+  1. `main` is pushed and its CI is green.
+  2. One commit, `chore: release X.Y.Z`: bump `versionCode` / `versionName` in `app/build.gradle.kts`, run
+     `tools/changelog.py full vX.Y.Z-accountable > CHANGELOG.md`, update `STATE.md` and `docs/HANDOFF.md`. Push it.
+  3. When CI is green on that commit, tag `vX.Y.Z-accountable` on it and push the tag.
+- Never bump the version outside a release commit. Batch fixes into one release.
+- The changelog is generated, never hand-edited: one line per commit on `main`, grouped by the type in its title,
+  each naming the commit to `git revert`. `tools/changelog.py notes <last-tag>` prints just the new section.
 - The release body's `## What's new` section is generated by `release.yml` from the changelog, and the app's update
   banner and What's new screen read it (`UpdateCheck.userNotes`). Keep that heading.
 - **No downgrades** (D-030): Android won't install an older version over a newer one. A bad release is fixed by a new

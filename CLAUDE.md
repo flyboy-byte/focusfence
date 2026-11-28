@@ -27,7 +27,7 @@ export. `applicationId app.focusfence.accountable`, namespace still `app.focusfe
 ./gradlew lint                          # Android lint
 ```
 
-CI (`.github/workflows/android.yml`) runs `testDebugUnitTest` then `assembleDebug` on every push
+CI (`.github/workflows/android.yml`) runs `testDebugUnitTest` then `assembleDebug` on pushes to `main` and on pull requests,
 and uploads the APK as artifact `focus-fence-debug-apk`. `.github/workflows/release.yml` builds a
 signed release APK on any `v*` tag and publishes a GitHub Release (see `AGENTS.md` → Releases). There are no instrumented tests — the
 only automated coverage is the JVM suite in `app/src/test/`.

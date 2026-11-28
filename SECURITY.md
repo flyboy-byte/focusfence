@@ -9,7 +9,7 @@ very welcome.
 Please **don't open a public issue**. Use GitHub's private reporting: the repo's **Security** tab →
 **Report a vulnerability**. Include what you found, how to reproduce it, and what it lets someone do.
 
-You'll get an answer within a week. Fixes land as normal pull requests once a fix is ready, and you're credited unless
+You'll get an answer within a week. The fix goes into the next release once it is ready, and you're credited unless
 you'd rather not be.
 
 ## In scope

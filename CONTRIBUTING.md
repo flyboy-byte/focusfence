@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for looking. Focus Fence AC is small and run by two people, so a few habits keep things easy.
+Thanks for looking. Focus Fence AC is small and has one active maintainer, so a few habits keep things easy.
 
 ## Before you start
 
@@ -23,6 +23,7 @@ JDK 17 or 21 and the Android SDK (platform 35).
 ```sh
 ./gradlew testDebugUnitTest assembleDebug lint   # app
 ./gradlew -p server test                         # server
+tools/check.sh                                   # all of it, plus the public-docs check
 ```
 
 There is no emulator test suite. Decision logic lives in `app/src/main/java/app/focusfence/dns/`, free of Android
@@ -34,13 +35,15 @@ suites must keep passing: app and server support each other two levels back (D-0
 
 ## Pull requests
 
-- One change per PR, branched from `main`. We squash-merge.
+- One change per PR, branched from `main`. We squash-merge, and CI must pass.
 - **The title is what users read.** It becomes a line in the changelog and in the app's "What's new", so write it
   plainly for someone using the app, with a type in front: `feat: block notices for gambling sites`,
   `fix(server): …`, `docs: …`.
-- The PR template's sections are optional; fill in the ones that help. Say how you tested it: on a phone, or tests
-  only.
-- Don't bump the version number. Releases are their own small PR.
+- Say how you tested it: on a phone, or tests only.
+- Don't bump the version number. The maintainer makes releases.
+
+The maintainer pushes small changes straight to `main` and uses PRs for risky ones (D-043; the table is in
+[`AGENTS.md`](AGENTS.md), "How changes land").
 
 ## Licence
 

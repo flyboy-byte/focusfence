@@ -1,7 +1,9 @@
 # Working on Focus Fence together without conflicts
 
+> **Superseded 2026-11-27 by D-043** (how changes land: `AGENTS.md`). Kept for the branch history.
+
 > **Tier:** How we work · **Audience:** @flyboy-byte, @sidewinderzz and any Claude session either of us
-> runs · **Decided in:** D-022 (2026-11-23), superseding D-005. Outside contributors: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+> runs · **Decided in:** D-022 (2026-11-23), superseding D-005. Outside contributors: [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 
 ## The shape
 

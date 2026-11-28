@@ -5,7 +5,7 @@ research notes and old plans cite them. Links inside them may point at files tha
 
 | File | What it was | Replaced by |
 |---|---|---|
-| `FRAMEWORK.md` | Phase-gated tracker and the old branch model (D-005) | `STATE.md`, `docs/collaboration.md` (D-022) |
+| `FRAMEWORK.md` | Phase-gated tracker and the old branch model (D-005) | `STATE.md`, `AGENTS.md` "How changes land" (D-043) |
 | `overview.md`, `approach.md`, `design.md`, `risks.md`, `infrastructure.md` | August 2026 product intent, approach (B1–B8), boundary model, risks, toolchain | `STATE.md`, `CLAUDE.md`, `DECISIONS.md` |
 | `research-handoff.md`, `notes.md`, `documentation-guide.md` | The research queue, a scratchpad, and a guide to the old layout | `docs/README.md` |
 | `roadmap.md` | The ordered roadmap as of 2026-11-25 | `docs/HANDOFF.md` → Next, `docs/plans/` |
