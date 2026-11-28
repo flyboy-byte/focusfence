@@ -324,7 +324,7 @@ reopen this.
 
 ---
 
-## D-022 — `main` is the only long-lived branch; short task branches merge by PR
+## ~~D-022 — `main` is the only long-lived branch; short task branches merge by PR~~ — how work lands superseded by D-043 (2026-11-27)
 
 *Decided: 2026-11-23 by @flyboy-byte, with @sidewinderzz. Supersedes D-005. (D-021 is the signing key, PR #15.)*
 
@@ -339,7 +339,7 @@ work to strand without adding review. The shape that matches how we actually wor
   their Claude) can see the area is claimed. Merge within a day or two; head branches are deleted on merge.
 - **Releases are tags on `main`**, and the version is bumped only in the release PR, so two builds never
   share a version (two different builds were both called 2.10.0 on 2026-11-23).
-- Details, hot files and the cleanup that went with this: [`docs/collaboration.md`](docs/collaboration.md).
+- Details, hot files and the cleanup that went with this: [`docs/archive/collaboration.md`](docs/archive/collaboration.md).
 
 **What would reopen it:** a third regular contributor, or a release cadence that needs a stabilisation
 branch.
@@ -760,3 +760,22 @@ Ask-a-partner replaces the read-aloud unlock codes (Logan: "ur pick"); a handed-
 Clean cut: protocol level 2 with `Protocol.FLOOR = 2`, so level-1 apps get HTTP 426 and the server and app delete old
 partner data (pairings, watches, mailboxes, groups, app partners, email double opt-in, SMS, the screenshot blob store)
 instead of converting it. Groups and SMS remain ideas in scope notes only. App 3.0.0 and server 2.0.0 ship together.
+
+## D-043 — Ordinary changes go straight to `main`; pull requests for what is hard to undo
+
+**Date:** 2026-11-27 · **By:** @flyboy-byte · **Status:** accepted. Supersedes how work lands in D-022.
+
+D-022 was shaped for two maintainers watching each other's pull requests. There is now one active maintainer, so a PR
+for every change added a wait and a merge step without adding a reviewer. Users and self-hosters only receive tagged
+releases, and the release build runs the app tests, so a bad commit on `main` reaches nobody until it is released.
+
+- `main` stays the only long-lived branch. Releases stay tags on it, made only when the maintainer asks.
+- Docs, fixes, tuning, UI, logging and tests are pushed straight to `main` after `tools/check.sh` passes.
+- Pull requests remain for the server, the protocol, partner encryption and data, the updater, signing, CI and release
+  workflows, big or uncertain changes, and everyone else's contributions.
+- CI runs once per change: on pushes to `main` and on pull requests.
+
+**Cost accepted:** `main` can be red until the next fix, and nobody looks before a direct push.
+
+**What would reopen it:** a second regular contributor, or a bad release that a review would have caught.
+

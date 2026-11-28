@@ -27,6 +27,12 @@ quitting guard by distance (#165), pictures next to explicit words (#166), body 
 **Public-repo rule:** code, docs, tests, commits and PRs describe what the app does, never what the owner viewed, said
 about it, or prefers. No times, apps, page descriptions or alert counts from an export; test strings are made up.
 
+## How changes land now (D-043)
+
+Ordinary changes go straight to `main` after `tools/check.sh`; PRs for server, protocol, encryption, updater, signing,
+workflows and big changes. Table and release steps: `AGENTS.md`. Fixed and merged, not released: app exclusions now
+stick, in strict mode too (#176).
+
 ## Next, in order
 
 1. Real use of 3.1.7 (ask once), then an export. Read its "app & connection problems" section, then check `flag_context`, `flag_suggestive`,
