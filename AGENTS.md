@@ -14,7 +14,7 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates, block notices or screen checks. Newest first.
 
-- **Logs locked (2026-11-27, unreleased):** `crash` / `exit` / `net` change records, `fwd_err_*`, `dns/Faults`;
+- **3.1.7 (2026-11-27), logs locked:** `crash` / `exit` / `net` change records, `fwd_err_*`, `dns/Faults`;
   the format is add-only (rules in `docs/specs/event-log.md`).
 - **3.1.6 (2026-11-27):** screen-check tuning from a real export. `dns/SecretFields` (a revealed web password box isn't
   `isPassword`); erotica words in `RiskTerms`, quitting words cancel only adult words within 40 words; for 3 min after

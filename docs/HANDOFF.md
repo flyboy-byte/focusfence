@@ -1,15 +1,22 @@
-# Handoff (2026-11-27): 3.1.6 released (detection tuning, flag sensitivity)
+# Handoff (2026-11-27): 3.1.7 released (logs locked)
 
 Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/17-screen-text-detection.md` and
 `docs/plans/15-repo-health.md` (its 2026-11-27 audit table).
 
 ## Where it stands
 
-- **Live:** app `v3.1.6-accountable` (code 58) and `server-v2.1.0`. 119 downloads in total (README badge).
+- **Live:** app `v3.1.7-accountable` (code 59) and `server-v2.1.0`. 119 downloads in total (README badge).
 - **3.1.4:** targetSdk 35 (`ui/EdgeToEdge`). Logan: "the app looks great".
 - **3.1.5, plan 17:** screen text and screenshots: word index with disguises and phrases (#149, #155), alerts (#150)
   with a quitting-page guard (#153), screenshot on words (#151), each picture checked on its own (#154), hot mode
   (#155, #156), and a fix for a blind spot after leaving Focus Fence (#158; confirmed on a phone).
+
+## 3.1.7 (2026-11-27, code 59): logs locked
+
+`crash` and `exit` records, `net` changes, DNS failure reasons (`fwd_err_*`), update and report-page errors,
+connection state in the export header, and an "app & connection problems" section first in both summaries (#174). The
+format is add-only (`LogSchemaTest`, rules and a symptom table in `docs/specs/event-log.md`). Work goes to detection,
+accountability and feel; logging changes only to add a counter or error for something new.
 
 ## 3.1.6 (2026-11-27, code 58)
 
@@ -20,15 +27,9 @@ quitting guard by distance (#165), pictures next to explicit words (#166), body 
 **Public-repo rule:** code, docs, tests, commits and PRs describe what the app does, never what the owner viewed, said
 about it, or prefers. No times, apps, page descriptions or alert counts from an export; test strings are made up.
 
-## Logs locked (2026-11-27, merged, not released)
-
-Added: `crash` and `exit` records, `net` changes, DNS failure reasons (`fwd_err_*`), update and report-page errors,
-connection state in the export header, an "app & connection problems" section first in both summaries. The format is
-now add-only (`LogSchemaTest`, rules in `docs/specs/event-log.md`). Not seen on a phone. Next release: 3.1.7.
-
 ## Next, in order
 
-1. Real use of 3.1.6 (ask once), then an export. Check `flag_context`, `flag_suggestive`,
+1. Real use of 3.1.7 (ask once), then an export. Read its "app & connection problems" section, then check `flag_context`, `flag_suggestive`,
    `body_female`, `body_runs`, `text_secret_skipped`, `text_alerts`, battery.
 2. If low-scoring pictures still slip by: run the body check on every picture while in context (more battery,
    only in those 3-minute windows). Offered, not asked for.
