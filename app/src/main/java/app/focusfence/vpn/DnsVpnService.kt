@@ -13,6 +13,8 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.os.SystemClock
@@ -33,6 +35,7 @@ import app.focusfence.data.StatsStore
 import app.focusfence.data.StrictStore
 import app.focusfence.data.UsageStore
 import app.focusfence.dns.AlwaysOnNudge
+import app.focusfence.dns.RestartGrace
 import app.focusfence.dns.StatsCodec
 import app.focusfence.dns.BlockRule
 import app.focusfence.dns.BlockScreen
@@ -88,6 +91,11 @@ class DnsVpnService : VpnService() {
         const val ACTION_STATE_CHANGED = "app.focusfence.action.STATE_CHANGED"
         /** On ACTION_STOP: a stop-then-start restart, not the user turning protection off. */
         const val EXTRA_RESTART = "restart"
+
+        /** Non-zero while a restart is under way: until then a stopped filter isn't a change ([RestartGrace]). */
+        @Volatile
+        var restartingUntil = 0L
+            private set
 
         private const val VPN4_ADDRESS = "10.111.222.1"
         private const val VPN4_DNS = "10.111.222.3"
@@ -371,7 +379,13 @@ class DnsVpnService : VpnService() {
                 LogEvents.service(System.currentTimeMillis(), COMP, "stop", if (restart) "restart" else "user"),
                 urgent = true,
             )
-            if (!restart) {
+            if (restart) {
+                restartingUntil = SystemClock.elapsedRealtime() + RestartGrace.MS
+                // If the filter hasn't come back by then, say so: nothing else may be running to notice.
+                val app = applicationContext
+                Handler(Looper.getMainLooper()).postDelayed({ Monitor.checkIntegrityAsync(app) }, RestartGrace.MS + 500)
+            } else {
+                restartingUntil = 0L
                 VpnWanted.set(this, false) // the owner turned it off: do not bring it back on boot or update
                 app.focusfence.sync.Sync.kick(this)
             }
@@ -384,6 +398,7 @@ class DnsVpnService : VpnService() {
     }
 
     override fun onRevoke() {
+        restartingUntil = 0L
         // Another app took the VPN slot, or the user disabled it from settings.
         EventLog.activity(LogEvents.service(System.currentTimeMillis(), COMP, "revoked"), urgent = true)
         postStoppedAlert(this, R.string.alert_stopped_revoked)
@@ -467,6 +482,7 @@ class DnsVpnService : VpnService() {
         // dead), so a small pool backs the queue up and every lookup stalls.
         pool = Executors.newFixedThreadPool(12)
         isRunning = true
+        restartingUntil = 0L
         VpnWanted.set(this, true)
         blockedCount.set(0)
         alwaysOnState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

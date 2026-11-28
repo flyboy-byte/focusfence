@@ -298,7 +298,12 @@ object Monitor {
         // catches anything that genuinely failed to come back.
         val settled = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime() >= STARTUP_GRACE_MS
         if (settled) {
-            state["vpn"] = if (DnsVpnService.isRunning) "running" else "stopped"
+            // Left out during the second or so a restart takes: partners are alerted on "stopped" and "running".
+            if (!app.focusfence.dns.RestartGrace.hidesState(
+                    DnsVpnService.isRunning, DnsVpnService.restartingUntil, SystemClock.elapsedRealtime())
+            ) {
+                state["vpn"] = if (DnsVpnService.isRunning) "running" else "stopped"
+            }
             // Only knowable while the VPN runs; omitted (not "unknown") when stopped
             // so every stop doesn't log a second, meaningless change.
             if (DnsVpnService.isRunning) state["vpn_always_on"] = DnsVpnService.alwaysOnState
