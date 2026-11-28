@@ -76,6 +76,7 @@ object Installer {
                 set(State.Verifying)
                 verify(ctx, apk)
             } catch (e: Exception) {
+                EventLog.diag(LogEvents.error(System.currentTimeMillis(), "update", "download", "${e.javaClass.simpleName}: ${e.message}"))
                 ctx.getString(R.string.update_failed_download)
             }
             if (error != null) {
@@ -101,7 +102,7 @@ object Installer {
         conn.readTimeout = 30_000
         conn.setRequestProperty("User-Agent", "FocusFenceAC")
         try {
-            check(conn.responseCode == 200)
+            check(conn.responseCode == 200) { "HTTP ${conn.responseCode}" }
             val total = conn.contentLengthLong.takeIf { it > 0 } ?: expected
             conn.inputStream.use { input ->
                 to.outputStream().use { out ->

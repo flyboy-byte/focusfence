@@ -71,7 +71,7 @@ object Updates {
         lastAttempt = now
         Thread {
             try {
-                val offer = runCatching { fetchOffer(app) }.getOrNull()
+                val offer = fetchQuietly(app)
                 offer?.let { notifyOnce(app, it) }
                 onDone?.invoke(offer)
             } finally {
@@ -87,11 +87,16 @@ object Updates {
         if (!running.compareAndSet(false, true)) return
         lastAttempt = System.currentTimeMillis()
         try {
-            runCatching { fetchOffer(app) }.getOrNull()?.let { notifyOnce(app, it) }
+            fetchQuietly(app)?.let { notifyOnce(app, it) }
         } finally {
             running.set(false)
         }
     }
+
+    /** A background check: a failure goes to diag (once until it changes), and the next one tries again. */
+    private fun fetchQuietly(app: Context): UpdateCheck.Offer? = runCatching { fetchOffer(app) }
+        .onFailure { EventLog.errorOnce("update", "check", "${it.javaClass.simpleName}: ${it.message}") }
+        .getOrNull()
 
     fun isEnabled(c: Context): Boolean = prefs(c).getBoolean(KEY_ENABLED, true)
 

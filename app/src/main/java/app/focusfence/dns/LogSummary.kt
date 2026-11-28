@@ -24,6 +24,9 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
     val integrity = ArrayList<String>()
     val services = ArrayList<String>()
     val errors = LinkedHashMap<String, Long>()
+    private val crashes = ArrayList<String>()
+    private val exits = LinkedHashMap<String, Long>()
+    private val networkChanges = LinkedHashMap<String, Long>()
     private val battery = ArrayList<BatterySample>()
     var firstT = Long.MAX_VALUE
         private set
@@ -57,6 +60,9 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
             LogEvents.TYPE_SERVICE ->
                 services += "${f["comp"]}:${f["state"]}${f["detail"]?.let { " [$it]" } ?: ""} @$t"
             LogEvents.TYPE_ERROR -> errors.inc("${f["comp"]}:${f["what"]}")
+            LogEvents.TYPE_CRASH -> crashes += "${f["at"]} @$t"
+            LogEvents.TYPE_EXIT -> exits.inc(f["reason"] as? String ?: "?")
+            LogEvents.TYPE_NET -> (f["ev"] as? String)?.let { networkChanges.inc(it) }
             LogEvents.TYPE_BATTERY -> BatterySample.fromLog(f)?.let { battery += it }
             LogEvents.TYPE_THREADS -> {
                 val on = f["screen"] == true
@@ -116,6 +122,8 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         appendLine("span          ${fmt(hours)} h")
         appendLine("records       ${typeCounts.entries.joinToString { "${it.key}=${it.value}" }}")
         appendLine()
+        appendProblems()
+        appendLine()
         appendLine("== battery (Focus Fence process, while a service ran) ==")
         val b = battery()
         appendLine("screen on     ${fmt(b.screenOn.hours)} h  ${fmt(b.screenOn.pctPerHour)} %/h  cpu ${fmt(b.screenOn.cpuMsPerHour)} ms/h")
@@ -140,7 +148,6 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
             )
             appendLine("screenshots   ${perfTotals["shot"] ?: 0} taken, ${perfTotals["shot_flagged"] ?: 0} flagged, ${perfTotals["shot_fail"] ?: 0} failed")
         }
-        if (errors.isNotEmpty()) appendLine("errors        ${errors.entries.joinToString { "${it.key}=${it.value}" }}")
         appendCpu()
         appendThreads()
         appendAi()
@@ -158,6 +165,22 @@ class LogSummary(private val sinceT: Long = Long.MIN_VALUE) {
         for (line in (integrity.takeLast(15))) appendLine("integ  $line")
         for (line in (services.takeLast(15))) appendLine("svc    $line")
     }
+
+    /** First in the report: crashes, why the app stopped, errors and the connection, so a bug shows without digging. */
+    private fun StringBuilder.appendProblems() {
+        appendLine("== app & connection problems ==")
+        appendLine("crashes       ${crashes.size}")
+        for (c in crashes.takeLast(3)) appendLine("  ${c.take(300)}")
+        if (exits.isNotEmpty()) appendLine("app stopped   ${counts(exits)}")
+        if (errors.isNotEmpty()) appendLine("errors        ${counts(errors)}")
+        if (networkChanges.isNotEmpty()) appendLine("network       ${counts(networkChanges)}")
+        for ((label, prefix) in listOf("dns failures" to "fwd_err_", "server fails" to "http_fail_")) {
+            val found = perfTotals.filterKeys { it.startsWith(prefix) }.mapKeys { it.key.removePrefix(prefix) }
+            if (found.isNotEmpty()) appendLine("${label.padEnd(13)} ${counts(found)}")
+        }
+    }
+
+    private fun counts(m: Map<String, Long>) = m.entries.joinToString { "${it.key}=${it.value}" }
 
     /** Thread-CPU attribution: which part of the app the battery goes to. */
     private fun StringBuilder.appendCpu() {

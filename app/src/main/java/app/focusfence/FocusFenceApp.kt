@@ -17,7 +17,9 @@ class FocusFenceApp : Application() {
         DynamicColors.applyToActivitiesIfAvailable(this)
 
         EventLog.init(this)
+        app.focusfence.monitor.ProcessFaults.installCrashHandler()
         logStartup()
+        app.focusfence.monitor.ProcessFaults.logPastExits(this)
         Monitor.checkIntegrityAsync(this)
         app.focusfence.data.PartnerReset.runOnce(this)
         app.focusfence.sync.Sync.schedule(this)

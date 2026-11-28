@@ -14,6 +14,8 @@ Humans are welcome to read it too.
 
 Read these before touching partners, the server, updates, block notices or screen checks. Newest first.
 
+- **Logs locked (2026-11-27, unreleased):** `crash` / `exit` / `net` change records, `fwd_err_*`, `dns/Faults`;
+  the format is add-only (rules in `docs/specs/event-log.md`).
 - **3.1.6 (2026-11-27):** screen-check tuning from a real export. `dns/SecretFields` (a revealed web password box isn't
   `isPassword`); erotica words in `RiskTerms`, quitting words cancel only adult words within 40 words; for 3 min after
   alert-level words, pictures face lower bars (`FlagPolicy.inContext`); body check from 0.30, `BodyCheck.FEMALE_BOOST`;
@@ -150,7 +152,9 @@ copy, each screen ordered by rank. Look at Home and Settings before inventing a 
 3. User-visible text goes in `res/values/strings.xml`.
 4. Anything that loosens protection goes through `UiUtil.guard(context, GuardPolicy.Action.X)`.
 5. A new protection component needs an `integrityState` key in `Monitor` and `svc` lifecycle
-   records; new log fields go in `dns/LogEvents` **and** `docs/specs/event-log.md` together.
+   records. **The log format is locked** (2026-11-27): add fields and counters, never rename or remove them; a new
+   feature counts its volume and misses and logs each way it fails. New log fields go in `dns/LogEvents`,
+   `LogSchemaTest` and `docs/specs/event-log.md` together.
 6. No timers or polling for background work: piggyback on existing broadcasts (see `Monitor`) or
    use WorkManager. Battery is a feature.
 7. Update the relevant spec, and **`STATE.md`** if a status changed.

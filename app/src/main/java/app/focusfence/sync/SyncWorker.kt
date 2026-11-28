@@ -54,7 +54,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
             // server or not). Daily at most, so a refusal doesn't knock on every sync.
             if (SyncStore.deviceId(ctx) == null && now - SyncStore.partnerEnrollTriedMs(ctx) > 86_400_000) {
                 SyncStore.setPartnerEnrollTriedMs(ctx, now)
-                runCatching { Accountability.enrollAsPartner(ctx) }
+                runCatching { Accountability.enrollAsPartner(ctx) }.onFailure { logStepError("enroll", it) }
             }
             val api = Api(SyncStore.serverUrl(ctx))
             var error: String? = null
@@ -147,18 +147,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
         }
     }
 
-    /**
-     * A failed sync step goes into the diag log (it used to reach only Settings' "last error"), once per step until its
-     * message changes or six hours pass: a phone offline all night writes a line, not one per sync.
-     */
-    private fun logStepError(step: String, e: Exception) {
-        val what = "${e.javaClass.simpleName}: ${e.message}".take(200)
-        val now = System.currentTimeMillis()
-        val last = lastStepError[step]
-        if (last != null && last.first == what && now - last.second < 6 * 3_600_000L) return
-        lastStepError[step] = what to now
-        EventLog.diag(LogEvents.error(now, "sync", step, what))
-    }
+    /** A failed sync step goes into the diag log (it used to reach only Settings' "last error"). */
+    private fun logStepError(step: String, e: Throwable) =
+        EventLog.errorOnce("sync", step, "${e.javaClass.simpleName}: ${e.message}".take(200))
 
     /**
      * Whether partner notifications can show at all, logged when it changes: an alert "that never came" is often a
@@ -582,7 +573,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : Worker(context, p
 
         internal fun sha256(s: String): String =
             java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()))
-        private val lastStepError = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
         private const val CHANNEL = "partner_alerts"
         private const val CH_OTHER = "partner_other"
         private const val CH_HELD = "partner_held"

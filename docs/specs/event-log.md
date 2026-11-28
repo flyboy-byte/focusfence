@@ -1,8 +1,35 @@
 # Event log specification (schema v1)
 
-**Status: implemented.** Code: `dns/LogEvents.kt` (schema), `dns/LogJson.kt`
+**Status: implemented, format locked since 2026-11-27** (see [Locked format](#locked-format)). Code: `dns/LogEvents.kt` (schema), `dns/LogJson.kt`
 (codec), `data/EventLog.kt` (storage), `monitor/Monitor.kt` (battery, perf, integrity),
 `monitor/UsageCollector.kt` (app timeline). Off-device reader: `tools/analyze_logs.py`.
+
+## Locked format
+
+Exports from different app versions are read by the same tools, so the format only grows:
+
+1. Never rename, remove or change the meaning of a record type, field, `svc` state, `integ` key or `perf` counter.
+   `LogSchemaTest` fails if a record's fields change.
+2. A new feature adds to it: a counter for its volume and its misses, an `err` for each way it can fail, an `svc` or
+   `integ` record if it protects something. Add them here in the same PR.
+3. Nothing secret or on-screen goes into diag: no exception messages from crashes, no addresses of server requests,
+   no tokens (`Faults.scrub` cleans every `err` detail).
+4. A change that breaks rule 1 needs a reason written here and a `SCHEMA_VERSION` bump.
+
+## Reading an export for a bug
+
+`python3 -I tools/analyze_logs.py <export.zip>`. The header is the phone's state at export time; **app & connection
+problems** comes next, on the phone's own summary too.
+
+| Symptom | Look at |
+|---|---|
+| App closed, filter stopped by itself | `crash`, `exit` (`reason`), `svc app process_start`, `integ vpn` |
+| Sites don't load or load slowly | `svc vpn health`, `net` with `ev`, `fwd_err_*`, `fwd_fail`, latency `p95` |
+| Partner got nothing, or reports are old | `sync_last_ok` / `sync_last_error` in the header, `err sync`, `http_fail_*`, `svc notify channels`, `feed_*` |
+| Update didn't arrive or install | `err update`, `svc update failed` |
+| Partner's report page is blank | `err report` |
+| A screen check missed or didn't run | `integ capture_*`, `a11y_bound`, `shot_fail_c*`, `clf_load_fail`, `text_*` counters |
+| Battery | `bat`, `thr`, `*_cpu_us` |
 
 ## Purpose and channels
 
@@ -82,7 +109,13 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `perf` | `win` (window ms) + counters below + `p50`/`p95`/`p99`/`max` resolver latency ms | Right after each `bat` sample, closing the window since the previous one |
 | `err` | `comp`, `what`, `detail`? (≤300 chars) | Non-fatal failures: `ipv6_rejected`, `tun_read`, `interrupt`, monitor exceptions |
 | `svc` | `comp=adlist`, `state=loaded`, `detail` (`n=…,ms=…`) | Ad list loaded after VPN start. Until then ad domains resolve normally |
-| `err` | `comp=sync`, `what` = the step (`heartbeat`, `shares`, `alerts`, `report`, `seen`), `detail` = exception and message | A sync step failed. Once per step until the message changes or 6 h pass |
+| `crash` | `thread`, `ex` (exception classes, outermost first), `at` (frames per exception: `Class.method:line`, never messages) | The app crashed; written by the dying process |
+| `exit` | `reason` (`anr`, `crash`, `crash_native`, `low_memory`, `user_requested`, `signaled`, `excessive_resource`, …), `status`, `importance` (Android's process importance), `rss_kb`, `note`? (Android's description, absent for crashes) | Android's record of why an earlier process ended, read at the next start (Android 11+). `t` is when it ended |
+| `net` | as under [`net`](#net-diag-added-after-290), plus `ev` = `up` / `change` / `lost` | Android reports a network appearing, changing kind or internet validation, or going away (while a service runs) |
+| `err` | `comp=update`, `what` = `check` / `download` | An update check or download failed |
+| `err` | `comp=report`, `what` = `load` (`code=` / `http=`) or `renderer_gone` | A partner's report page didn't load |
+| `err` | `comp=monitor`, `what` = `net_callback` / `exit_reasons` | Network watching or the exit history couldn't be read |
+| `err` | `comp=sync`, `what` = the step (`heartbeat`, `shares`, `alerts`, `report`, `seen`, `enroll`), `detail` = exception and message | A sync step failed. Once per step until the message changes or 6 h pass |
 | `err` | `comp=ask`, `what` = `network` or `http_<code>`, `detail` | "Ask a partner" couldn't be sent (409 no partner, 404 server too old) |
 | `svc` | `comp=notify`, `state=channels`, `detail` (`enabled=…,partner_alerts=<importance>,…`) | Whether partner notifications can show, per category; written when it changes (0 = switched off in Android) |
 | `svc` | `comp=partner`, `state=feed_prefs`, `detail` (`Name: level=…,quiet=22-7`) | A partner's own alert choices as their server reports them; written when they change |
@@ -103,6 +136,8 @@ every battery sample, and when the diagnostics screen opens or an export runs.
 | `fwd_attempt_fail` | Individual upstream attempts that timed out or errored |
 | `fwd_failover` | Answered, but not by the preferred upstream |
 | `fwd_fail` | No upstream answered; the client got nothing |
+| `fwd_err_<udp\|doh>_<dns\|timeout\|connect\|tls\|io\|bad\|other>` | Why each failed upstream attempt failed, by resolver kind (`bad`: unusable answer or no address) |
+| `net_change` | Network changes written (the `net` records with `ev`) |
 | `fwd_unprotected` | `protect()` failed |
 | `tun_write_fail` | Reply couldn't be written to the tunnel |
 | `a11y_ev` | Accessibility events delivered (the battery-relevant number) |
@@ -143,7 +178,10 @@ Logs & diagnostics → Export produces `focusfence-logs-<yyyyMMdd-HHmm>.zip`, sh
 system share sheet (FileProvider, `cache/export/` only). It contains:
 
 - `meta.json`: schema version, app version, manufacturer/model/SDK, configuration (rule count,
-  ad list, recording switches, Usage access, accessibility, battery-optimization exemption).
+  ad list, recording switches, Usage access, accessibility, battery-optimization exemption), the connection
+  (`vpn_running`, `vpn_health`, `vpn_always_on`, `dns_mode`, `server_set`, `server_enrolled`, `server_protocol`,
+  `reports_seen`, `sync_last_ok`, `sync_last_heartbeat`, `sync_last_error`, `notifications`) and screen checks
+  (`screenshots`, `screen_text`, `ai`, `sensitivity`, `watch_mode`). No addresses, names or keys.
 - `summary.txt`: the same report the diagnostics screen shows.
 - `activity*.jsonl`, `diag*.jsonl`: the raw logs.
 

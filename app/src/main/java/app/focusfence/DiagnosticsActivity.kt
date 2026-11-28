@@ -13,7 +13,13 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.app.NotificationManagerCompat
+import app.focusfence.data.DnsUpstreamStore
+import app.focusfence.data.MonitorSettings
+import app.focusfence.dns.Faults
 import app.focusfence.dns.GuardPolicy
+import app.focusfence.sync.SyncStore
+import app.focusfence.vpn.DnsVpnService
 import app.focusfence.data.AdListStore
 import app.focusfence.data.BlockedAppsStore
 import app.focusfence.data.BlocklistStore
@@ -246,8 +252,32 @@ class DiagnosticsActivity : AppCompatActivity() {
             // OEM battery managers kill un-exempted background services; this is
             // the first thing to check when the integrity trail shows gaps.
             "battery_opt_exempt" to (pm?.isIgnoringBatteryOptimizations(packageName) ?: false),
-        )
+        ) + connectionState() + checkState()
     }
+
+    /** How the connection and the server stand right now. No addresses, names or keys. */
+    private fun connectionState(): Map<String, Any?> = linkedMapOf(
+        "vpn_running" to DnsVpnService.isRunning,
+        "vpn_health" to DnsVpnService.health,
+        "vpn_always_on" to DnsVpnService.alwaysOnState,
+        "dns_mode" to DnsUpstreamStore.load(this).let { c -> c.mode.name.lowercase() + (c.presetId?.let { ":$it" } ?: "") },
+        "server_set" to SyncStore.serverUrl(this).isNotEmpty(),
+        "server_enrolled" to (SyncStore.deviceId(this) != null),
+        "server_protocol" to SyncStore.protocolStatus(this).name.lowercase(),
+        "reports_seen" to SyncStore.seen(this).size,
+        "sync_last_ok" to SyncStore.lastOk(this),
+        "sync_last_heartbeat" to SyncStore.lastHeartbeat(this),
+        "sync_last_error" to SyncStore.lastError(this)?.let { Faults.scrub(it).take(200) },
+        "notifications" to NotificationManagerCompat.from(this).areNotificationsEnabled(),
+    )
+
+    private fun checkState(): Map<String, Any?> = linkedMapOf(
+        "screenshots" to MonitorSettings.screenshotsEnabled(this),
+        "screen_text" to MonitorSettings.textEnabled(this),
+        "ai" to MonitorSettings.aiEnabled(this),
+        "sensitivity" to MonitorSettings.sensitivity(this).name.lowercase(),
+        "watch_mode" to MonitorSettings.watchMode(this).name.lowercase(),
+    )
 
     /**
      * Straight into the Downloads folder, so the owner can pick the file up without sending it through another

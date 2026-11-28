@@ -67,6 +67,7 @@ it's for, the filter, screen checks, strict mode, and a partner.
 | 🧪 | **Strict mode** | A wait, your own PIN, or a PIN a partner holds, before loosening anything |
 | 🧪 | **Ask a partner** | One tap asks for an OK instead of waiting out strict mode; any one partner can answer |
 | 🧪 | **Flagged screenshots to partners** | Automatic, blurred to 48 px at most, with a note from you |
+| 🧪 | **Crash and connection records** in the export | Why the app stopped, network switches, and how lookups, sync and updates failed. Stays on the phone |
 | 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, knows phrases and written erotica. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting doesn't alert. Password and code fields are never read |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |

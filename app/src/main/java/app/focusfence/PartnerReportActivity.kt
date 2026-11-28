@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import app.focusfence.data.EventLog
 import app.focusfence.databinding.ActivityPartnerReportBinding
 import app.focusfence.sync.Accountability
 import app.focusfence.sync.Sync
@@ -116,6 +117,24 @@ class PartnerReportActivity : AppCompatActivity() {
                 val u = req.url
                 if ("${u.scheme}://${u.authority}" == s.server) return false
                 runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, u)) }
+                return true
+            }
+
+            // A blank report leaves a reason in diag: the error number only, since the address holds the report's token.
+            override fun onReceivedError(view: android.webkit.WebView, req: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) {
+                if (req.isForMainFrame) EventLog.errorOnce("report", "load", "code=${error.errorCode}")
+            }
+
+            override fun onReceivedHttpError(view: android.webkit.WebView, req: android.webkit.WebResourceRequest, res: android.webkit.WebResourceResponse) {
+                if (req.isForMainFrame) EventLog.errorOnce("report", "load", "http=${res.statusCode}")
+            }
+
+            // Unhandled, a dead WebView renderer takes the whole app (and the filter) down with it.
+            override fun onRenderProcessGone(view: android.webkit.WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                EventLog.errorOnce("report", "renderer_gone", "crashed=${detail.didCrash()}")
+                (view.parent as? android.view.ViewGroup)?.removeView(view)
+                view.destroy()
+                finish()
                 return true
             }
         }
