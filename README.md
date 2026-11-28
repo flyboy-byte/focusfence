@@ -70,7 +70,7 @@ it's for, the filter, screen checks, strict mode, and a partner.
 | 🧪 | **Crash and connection records** in the export | Why the app stopped, network switches, and how lookups, sync and updates failed. Stays on the phone |
 | 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, knows phrases and written erotica. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting doesn't alert. Password and code fields are never read |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
-| 🧪 | **Apps that skip the filter** | For games or maps that break behind it; anything that could show adult content waits in strict mode. Up to 3.1.7 newly ticked apps aren't saved: fixed in the next release |
+| 🧪 | **Apps that skip the filter** | For games or maps that break behind it; anything that could show adult content waits in strict mode. Needs 3.1.8 or newer: earlier versions didn't save newly ticked apps |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
 | ❌ | Hiding apps from reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |

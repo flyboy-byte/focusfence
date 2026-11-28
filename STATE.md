@@ -2,16 +2,16 @@
 
 > **What comes next, in order:** [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next. Plans: [`docs/plans/`](docs/plans); docs index: [`docs/README.md`](docs/README.md).
 
-> **Where it stands (2026-11-27): app 3.1.7, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
-> two phones. 3.1.6 tuned screen checks; 3.1.7 records crashes and connection problems and locked the log format.
-> Neither has been checked on a phone yet. **On `main`, not released:** apps that skip the filter are saved again, in
-> strict mode too. **Next:** real use and an export, then a dry run with a real partner
+> **Where it stands (2026-11-27): app 3.1.8, server 2.1.0 live.** Partners (plan 13) and groups (plan 14) are in use on
+> two phones. 3.1.6 tuned screen checks; 3.1.7 records crashes and connection problems and locked the log format;
+> 3.1.8 saves the apps that skip the filter, in strict mode too. None of the three has been checked on a phone yet.
+> **Next:** real use and an export, then a dry run with a real partner
 > ([`docs/HANDOFF.md`](docs/HANDOFF.md) → Next).
 
 > Screenshots: a clear image never leaves the phone. A flagged shot (NudeNet found an exposed body part) goes to partners
 > as a **blurred** (≤ 48 px) thumbnail after a 10-minute note window (D-037, D-038); the owner can also send one.
 
-_Last updated: 2026-11-27 (3.1.7). Update a row in the same commit as a change that moves it, and the latest release in the release commit. It is the
+_Last updated: 2026-11-27 (3.1.8). Update a row in the same commit as a change that moves it, and the latest release in the release commit. It is the
 single place to answer "where are we?" — keep it honest, short, and dated._
 
 ## In one paragraph
@@ -33,8 +33,8 @@ strict mode passes its tests but hasn't been field-tested. The repo went public 
 | Branch | `main` is the only long-lived and default branch. Ordinary changes are pushed to it; risky ones and outside contributions go by squash-merged PR (D-043). |
 | App id | `app.focusfence.accountable` ("Focus Fence AC") — installs **alongside** the original `app.focusfence` |
 | Signing cert SHA-256 | `2ca769a523a0cf41bcba67abadc71c5abe5daddfeb130665f853c84476098671` |
-| Tests | about 327 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every push to `main` and every PR |
-| Latest release | `v3.1.7-accountable` (2026-11-27, code 59): crash, app-stop and connection records; log format locked (`docs/specs/event-log.md`). Earlier releases: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26, installed with the release `install.sh`. |
+| Tests | about 330 app JVM unit tests + 61 server tests (incl. `PartnerFlowTest`); CI runs both on every push to `main` and every PR |
+| Latest release | `v3.1.8-accountable` (2026-11-27, code 60): apps that skip the filter are saved, in strict mode too, and changing them doesn't alert partners. Earlier releases: [`CHANGELOG.md`](CHANGELOG.md). Server: `server-v2.1.0`, live since 2026-11-26, installed with the release `install.sh`. |
 
 ## Verification levels
 
@@ -54,7 +54,7 @@ without evidence.
 | DNS server choice: Automatic / Cloudflare / Cloudflare Families / Quad9 / Google / your own (UDP, hostname or DoH), optional fallback to Automatic | 🧪 | Settings → DNS server. Filtering happens before forwarding, so the choice never weakens blocking. Diag `fwd_chosen_failed` counts when your server didn't answer and the fallback did. |
 | DNS-only VPN filter, relay via network DNS → DoH fallback | 📱 | **2026-11-20 (2.6.1): 0 failed of 1,544 forwards over 14 h; download speed normal with the VPN on (owner).** 2026-11-18 export: 2.0% forward failure (was 75.6% before the relay fix), median latency fine. v2.1.3+ runs with working internet. Fixed two broken relays (see Incidents). Blocking itself not re-checked on 2.1.3. |
 | Owner screenshot review (`dns/ReviewPolicy`, `data/ReviewStore`, `ReviewActivity`): screenshots the AI scores ≥ your % (default 50, separate from the partner flag) are kept on the phone, viewable, answer logged as `rev` | 🧪 | Local only: `noBackupFilesDir` (excluded from backups), 720 px JPEG, deleted after 7 days or past 40, deleted when answered. Does not change partner evidence or reports. Diag: `shot_review_kept`, `shot_review_fail`; summary line "owner review". |
-| Apps that skip the filter (`dns/ExclusionPolicy`): games, music and maps apply at once even in strict mode; everything that could show adult content needs the strict delay | 🧪 | Settings → Apps that skip the filter. Up to 3.1.7 the list dialog didn't save newly ticked apps and a locked strict mode refused the restart that applies them; fixed on `main` (#176), not released. Risk comes from Android's app category, so a wrongly declared category is misfiled (unknown = guarded); a few open game apps are forced to guarded. A skipped app bypasses the filter completely. |
+| Apps that skip the filter (`dns/ExclusionPolicy`): games, music and maps apply at once even in strict mode; everything that could show adult content needs the strict delay | 🧪 | Settings → Apps that skip the filter. Fixed in 3.1.8: the list didn't save newly ticked apps, a locked strict mode refused the restart that applies them, and the restart could alert partners (`dns/RestartGrace`). Risk comes from Android's app category, so a wrongly declared category is misfiled (unknown = guarded); a few open game apps are forced to guarded. A skipped app bypasses the filter completely. |
 | Per-domain rules, schedules, budgets, section rules (original app) | 📱 | Inherited from upstream; unchanged. |
 | Curated bundles (HaGeZi: security, threat, bypass on; adult/gambling/social/piracy/scam opt-in), Off/Report/Block | 🧪 | `specs/bundles.md`. Download on first run. |
 | Block triage (D-024, D-034): a notification for own rules and adult/gambling/scam front doors, or nothing; Block history (sites / trackers); partner alert after 3 confirmed tries in 10 min | 🧪 | `dns/BlockTriage`, `dns/BlockHistory`, Blocking → Block notices / Block history. Partner tier needs the accessibility service. |
@@ -142,7 +142,7 @@ Settled: hosting and domain (`ff.flyboybyte.com`), end-to-end sealed reports (D-
 The ordered list is [`docs/HANDOFF.md`](docs/HANDOFF.md) → Next; each piece of work is a plan in `docs/plans/`.
 Short version (2026-11-27):
 
-1. Release the exclusion fix (3.1.8) when asked.
+1. Try 3.1.8: tick apps to skip the filter and reopen the list.
 2. Real use, then a log export (analysed locally; nothing from it in the repo).
 3. A dry run with a real partner: filter-off alert, an unplugged night, asking for an OK.
 4. If low-scoring pictures still slip by: the body check on every picture while words are on screen (battery cost only
