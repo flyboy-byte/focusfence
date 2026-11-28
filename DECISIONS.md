@@ -657,11 +657,10 @@ without one nothing is queued.
 
 **Date:** 2026-11-25 · **By:** @flyboy-byte, with @sidewinderzz's agreement · **Status:** accepted
 
-The GantMan model calls close-up faces, skin and wood grain "porn": video-call frames at 65–83%, a family photo, a
-hand holding a chip at 71% (Logan's review screen, 2026-11-25), and of the partner-level flags with an answer, 2 of 3
-were wrong. NudeNet detects exposed body parts instead of judging the whole picture, and on those five screenshots it
-found none (Marqo, Apache-2.0, also cleared them, at up to 27%). Logan asked which is better, licences aside:
-NudeNet. NudeNet's repo and the YOLOv8 it builds on are AGPL-3.0 (its PyPI page says MIT; treated as AGPL), so the
+The GantMan model calls ordinary pictures "porn" (close-up faces, bare skin, textured surfaces), and in early use
+its partner-level flags were often wrong. NudeNet detects exposed body parts instead of judging the whole picture and
+found none on those false alarms. It was preferred on accuracy, licences aside (Marqo, Apache-2.0, was also tried).
+NudeNet's repo and the YOLOv8 it builds on are AGPL-3.0 (its PyPI page says MIT; treated as AGPL), so the
 project moves from MIT to AGPL-3.0. Copyright holders Logan and sidewinderzz agreed (2026-11-25).
 
 What changes: anyone distributing the app, modified or not, must offer its source under AGPL; nobody can ship a

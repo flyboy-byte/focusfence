@@ -30,7 +30,7 @@ REMOVED = [
     (r"unlock code", "partner unlock codes", "plan 13"),
 ]
 
-PUBLIC = ["README.md", "SECURITY.md", "CONTRIBUTING.md", "CLAUDE.md", "server/README.md", "docs/site/*.html"]
+PUBLIC = ["README.md", "STATE.md", "SECURITY.md", "CONTRIBUTING.md", "CLAUDE.md", "server/README.md", "docs/site/*.html"]
 
 MARKER = "<!-- docs: past -->"
 

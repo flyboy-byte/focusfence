@@ -57,8 +57,7 @@ Two details in there are easy to "fix" into a regression:
 **The tun fd is explicitly blocking.** `establish()` returns a non-blocking fd by default,
 which turns the reader loop into a busy spin that pins a core.
 
-**Blocked queries are not answered NXDOMAIN** (the README and KDoc said so until the logging
-branch corrected them). A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
+**Blocked queries are not answered NXDOMAIN.** A bare NXDOMAIN carries no SOA, so clients treat it as uncacheable and re-ask
 continuously — this was measured waking the service thousands of times a day. Blocked A/AAAA
 queries now get a real answer of `0.0.0.0` / `::` with an explicit TTL; other query types get
 NODATA. TTLs are split deliberately: **1 hour** for ad and DoH-guard blocks, which are stable,
@@ -84,8 +83,10 @@ arrivals, screen state and system settings, with no timers.
 dns/     pure Kotlin, no Android imports, unit-tested on the JVM
 data/    thin SharedPreferences wrappers
 vpn/     the VpnService — packet loop, upstream relay, health, stats, budget accrual
-accessibility/  the AccessibilityService — section rules, app blocking, URL/text capture
-monitor/ Monitor (battery, perf, integrity trail), usage timeline, text/screen capture
+accessibility/  the AccessibilityService — section rules, app blocking, block notices, URL reads
+monitor/ Monitor (battery, perf, network, integrity trail), crash records, usage timeline, text/screen checks
+sync/    partners: enrollment, heartbeat, sealed reports, alert feed (server/ is the other end)
+update/  self-update from GitHub releases
 admin/   uninstall protection (device admin, no policies)
 ui/      fragments + the domain editor
 ```
@@ -161,8 +162,9 @@ rule resets that day's count — which doubles as the escape hatch when tracking
 
 ## Accessibility service
 
-Handles the two things DNS cannot: per-path section rules, and whole-app blocking (bounce to
-home). Both work by reacting to UI events, not by OS-level blocking.
+Handles what DNS cannot: per-path section rules and whole-app blocking (bounce to home), both
+by reacting to UI events rather than OS-level blocking. It also confirms block notices and drives
+the optional screen checks (see `CLAUDE.md`: Screenshot flagging, Screen text).
 
 The event filter is narrowed aggressively, and this is a battery matter rather than a
 stylistic one — the service tells the system to wake it for as little as possible:
@@ -182,17 +184,19 @@ release.
 ## Strict mode
 
 `StrictLock` is a pure state machine — Off / Locked / Pending / Unlocked. Loosening anything
-requires requesting an unlock, waiting 10 minutes, then acting inside a 15-minute window (a notification announces when it opens).
+requires requesting an unlock, waiting 10 minutes, then acting inside a 15-minute window (a notification
+announces when it opens).
 Adding new blocks is always allowed.
 
-Enforcement is **distributed across call sites**, not centralised: `DnsVpnService` refuses
-`ACTION_STOP` while locked, and each UI path that could loosen a rule checks
-`StrictStore.isLocked` and routes through `UiUtil.showStrictLockedDialog`. Any new destructive
-action has to add its own check — nothing will catch a missing one.
+Enforcement is **distributed across call sites**, not centralised: `DnsVpnService` refuses to
+stop while locked (a restart is allowed), and each UI path that could loosen something calls
+`UiUtil.guard` with its action, which applies that action's friction level
+(`specs/friction-tiers.md`) on top of the lock. Any new destructive action has to add its own
+check — nothing will catch a missing one.
 
 It is friction, not a security boundary. Android Settings remains authoritative: the user can
-always revoke the VPN, disable the accessibility service, clear data or uninstall. The 10/5
-minute values are a chosen default, not a validated one.
+always revoke the VPN, disable the accessibility service, clear data or uninstall. The 10 and 15
+minute values are chosen defaults, not validated ones.
 
 ## Storage
 
@@ -200,6 +204,7 @@ minute values are a chosen default, not a validated one.
 |---|---|
 | `focusfence` | rules, blocked apps, excluded apps, ad-list state, strict state, per-domain usage |
 | `focusfence_stats` | `stats_<yyyy-mm-dd>` → compact `domain=count;_ads=count` strings, pruned to 14 days |
+| `filesDir/logs/` | the activity and diag logs (`specs/event-log.md`) |
 | `filesDir/adblock_hosts.txt` | downloaded hosts file, replaced transactionally via a `.tmp` rename |
 
 ## Known limits
@@ -213,7 +218,7 @@ Worth knowing before proposing changes, because several are structural rather th
   not a boundary — any other host can offer the same service.
 - Android's Private DNS setting bypasses the filter entirely when enabled.
 - Only one VPN can be active per user, so this cannot run alongside another VPN.
-- **There is no allowlist.** Nothing can exempt a domain from the downloaded ad list; a false
-  positive can only be resolved by disabling the whole list.
-- Battery cost is unmeasured. The architecture justifies expecting it to be low; no benchmark
-  in the tree establishes it.
+- The allowlist exempts a site from downloaded lists, not from your own rules or the DoH guards.
+- Apps set to skip the filter bypass it completely.
+- Battery cost is measured from the diag log (`STATE.md`, `benchmarks/`); no automated
+  benchmark guards it.

@@ -25,6 +25,7 @@ export. `applicationId app.focusfence.accountable`, namespace still `app.focusfe
 ./gradlew testDebugUnitTest --tests 'app.focusfence.dns.BlocklistTest'          # one class
 ./gradlew testDebugUnitTest --tests 'app.focusfence.dns.BlocklistTest.matches*' # one method
 ./gradlew lint                          # Android lint
+tools/check.sh                          # docs check, app tests/build/lint, server tests: before pushing to main
 ```
 
 CI (`.github/workflows/android.yml`) runs `testDebugUnitTest` then `assembleDebug` on pushes to `main` and on pull requests,
@@ -94,7 +95,7 @@ day's count.
 `StrictLock` is a pure state machine (Off / Locked / Pending / Unlocked): loosening anything
 requires requesting an unlock, waiting 10 min, then acting within a 15 min window (notification when it opens). Adding blocks is
 always allowed. Enforcement is spread across call sites — `DnsVpnService.onStartCommand` refuses
-`ACTION_STOP` while locked, and UI paths check `StrictStore.isLocked` and route through
+`ACTION_STOP` while locked (a restart, which applies new app exclusions, is allowed), and UI paths check `StrictStore.isLocked` and route through
 `UiUtil.showStrictLockedDialog`. New destructive UI actions must add their own check.
 Loosening actions go through `UiUtil.guard(context, GuardPolicy.Action.X)`,
 which applies the per-action friction level (None / Delay / Own PIN / Partner PIN,
@@ -104,9 +105,12 @@ which applies the per-action friction level (None / Delay / Own PIN / Partner PI
 
 `data/EventLog` is a process singleton writing JSON lines to `files/logs/` in two channels:
 **activity** (detection record + integrity trail: `dns`, `url`, `app`, `screen`, `enforce`,
-`svc`, `integ`) and **diag** (`bat`, `perf`, `err`). The schema lives only in `dns/LogEvents`,
+`svc`, `integ`) and **diag** (`bat`, `perf`, `thr`, `net`, `err`, `crash`, `exit`). The schema lives only in `dns/LogEvents`,
 documented in `docs/specs/event-log.md`; change both together. Rules that matter:
 
+- The format is **locked**: add records, fields and counters, never rename or remove them (`LogSchemaTest`, rules in
+  the spec). Crashes are written by `monitor/ProcessFaults` as the process dies, and Android's reason for earlier
+  stops is read at the next start; `Monitor` logs network switches. `dns/Faults` keeps messages, paths and keys out.
 - Never write to disk from the DNS reader thread: `EventLog` buffers and flushes on its own
   thread. Lifecycle/integrity records pass `urgent = true` so they hit disk immediately.
 - A protection gap must never be silent: a new protection component needs a key in

@@ -1,11 +1,13 @@
-# Handoff (2026-11-27): 3.1.7 released (logs locked)
+# Handoff (2026-11-27): 3.1.7 released; exclusion fix and new workflow on `main`
 
 Replaces the previous handoff. Read with `STATE.md` (status block), `docs/plans/17-screen-text-detection.md` and
 `docs/plans/15-repo-health.md` (its 2026-11-27 audit table).
 
 ## Where it stands
 
-- **Live:** app `v3.1.7-accountable` (code 59) and `server-v2.1.0`. 119 downloads in total (README badge).
+- **Live:** app `v3.1.7-accountable` (code 59) and `server-v2.1.0`.
+- **On `main`, not released:** apps that skip the filter are saved again, in strict mode too (#176). Docs brought
+  up to date.
 - **3.1.4:** targetSdk 35 (`ui/EdgeToEdge`). Logan: "the app looks great".
 - **3.1.5, plan 17:** screen text and screenshots: word index with disguises and phrases (#149, #155), alerts (#150)
   with a quitting-page guard (#153), screenshot on words (#151), each picture checked on its own (#154), hot mode
@@ -30,19 +32,21 @@ about it, or prefers. No times, apps, page descriptions or alert counts from an 
 ## How changes land now (D-043)
 
 Ordinary changes go straight to `main` after `tools/check.sh`; PRs for server, protocol, encryption, updater, signing,
-workflows and big changes. Table and release steps: `AGENTS.md`. Fixed and merged, not released: app exclusions now
-stick, in strict mode too (#176).
+workflows and big changes. Table and release steps: `AGENTS.md`.
 
 ## Next, in order
 
-1. Real use of 3.1.7 (ask once), then an export. Read its "app & connection problems" section, then check `flag_context`, `flag_suggestive`,
-   `body_female`, `body_runs`, `text_secret_skipped`, `text_alerts`, battery.
-2. If low-scoring pictures still slip by: run the body check on every picture while in context (more battery,
+1. Release 3.1.8 (the exclusion fix) when asked. After updating, tick the apps again and reopen the list.
+2. Real use (ask once), then an export. Read its "app & connection problems" section, then check `flag_context`,
+   `flag_suggestive`, `body_female`, `body_runs`, `text_secret_skipped`, `text_alerts`, battery.
+3. A dry run with a real partner: turn the filter off and time the alert; leave the phone unplugged overnight and see
+   whether "went silent" arrives; ask for an OK from strict mode.
+4. If low-scoring pictures still slip by: run the body check on every picture while in context (more battery,
    only in those 3-minute windows). Offered, not asked for.
-3. Logan's open check from 3.1.4: every screen on the Pixel (bars, keyboard).
-4. Audit items still open (plan 15): A3 pin `docker/login-action`, A4 Dependabot security updates (Logan's call), A5
+5. Logan's open check from 3.1.4: every screen on the Pixel (bars, keyboard).
+6. Audit items still open (plan 15): A3 pin `docker/login-action`, A4 Dependabot security updates (Logan's call), A5
    toolchain, A6 crop coordinates on scaled displays.
-5. Then F-Droid (plan 11), partner polish, push: ask which first, after more real testing.
+7. Then F-Droid (plan 11), partner polish, push: ask which first, after more real testing.
 
 ## Parked (don't build unless Logan asks)
 

@@ -52,7 +52,7 @@ bar (`FEMALE_BOOST`, counter `body_female`). The boost never makes a flag on its
 
 Same day, flag sensitivity (`dns/Sensitivity`): Strict 0.45, Standard 0.50 (default), Relaxed 0.70.
 A suggestive picture at or over the bar is a partner flag (`flag_suggestive`); before, suggestive was report-only.
-`BodyCheck.CONFIRM` 0.40 → 0.30 (the five false alarms peaked at 0.11). Less strict is a guarded loosening.
+`BodyCheck.CONFIRM` 0.40 → 0.30 (the known false alarms scored far below it). Less strict is a guarded loosening.
 
 ## Options, cheapest first
 

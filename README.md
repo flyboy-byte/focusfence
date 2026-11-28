@@ -70,6 +70,7 @@ it's for, the filter, screen checks, strict mode, and a partner.
 | 🧪 | **Crash and connection records** in the export | Why the app stopped, network switches, and how lookups, sync and updates failed. Stays on the phone |
 | 🧪 | **Explicit words on screen** | Optional; reads the apps you choose. Sees through `p0rn`, `p o r n` and fancy letters, knows phrases and written erotica. Clear hits alert partners (by app, the words stay in the report) and start a screenshot check; a page about quitting doesn't alert. Password and code fields are never read |
 | 🧪 | **Uninstall protection** | Removing the app takes an extra step, and partners are told |
+| 🧪 | **Apps that skip the filter** | For games or maps that break behind it; anything that could show adult content waits in strict mode. Up to 3.1.7 newly ticked apps aren't saved: fixed in the next release |
 | 🧪 | **Block notices and history** | A notice (or nothing) on a blocked adult, gambling or scam site; partners hear if you keep trying |
 | 🧪 | **Groups** of up to 6, everyone sees everyone | Tried on two phones; full flow tested across app and server code |
 | ❌ | Hiding apps from reports; removing one person from a group | Planned or parked: [`docs/parked.md`](docs/parked.md), [`docs/plans/`](docs/plans) |
@@ -101,7 +102,7 @@ Optional, and only in the apps you pick. Everything below runs on the phone; a c
 | **Standard** (default) | 50% | always |
 | Relaxed | 70% | always |
 
-- **Why two models:** the first one alone called faces on video calls "porn" at 65-83%. A flag now needs the second
+- **Why two models:** the first one alone can call an ordinary face or bare skin "porn". A flag now needs the second
   one to find something.
 - **Context counts:** for 3 minutes after explicit words in an app, its pictures are looked at from 25% and flag from
   35%, so covers and thumbnails on such a page are caught with the text. A woman in the picture adds a little to its
@@ -189,6 +190,7 @@ https://flyboy-byte.github.io/focusfence/privacy.html.
 - On-screen text is matched against word and phrase lists, not understood. Disguises are caught; new slang isn't until
   it's added.
 - YouTube and Twitch ads come from the same servers as the videos, so DNS blocking can't remove them.
+- Apps you let skip the filter aren't filtered at all.
 - You can always turn it off. If you have partners, they'll hear about it.
 
 ---
@@ -221,6 +223,7 @@ JDK 17 or 21 and the Android SDK (platform 35).
 ```sh
 ./gradlew testDebugUnitTest assembleDebug lint   # app
 ./gradlew -p server test                         # server
+tools/check.sh                                   # all of it, plus the public-docs check
 ```
 
 Debug builds use a debug key, so they won't install over a release. [`STATE.md`](STATE.md) has where everything

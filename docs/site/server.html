@@ -4,6 +4,6 @@
 <pre>cd server/deploy
 cp .env.example .env     # FF_PUBLIC_URL, RESEND_API_KEY, FF_MAIL_FROM, FF_DOMAIN
 docker compose --profile https up -d</pre>
-<p>Full instructions, environment settings, backups and security notes are in <code>server/README.md</code> in the repository. The Docker Compose file and Caddy setup have <strong>not yet been run end to end</strong>; say so in any bug report.</p>
-<p>In the app: Settings, Accountability, enter your server address (and the enrollment code if you set one).</p>
+<p>Full instructions, environment settings, backups and security notes are in <code>server/README.md</code> in the repository. The Docker Compose setup has been run end to end from source; fetching a real public certificate with Caddy has <strong>not been tested</strong>.</p>
+<p>In the app: Partners, then Join with a code (an enrollment code from your server's admin page), or enter the address and code under Server.</p>
 </main></body></html>

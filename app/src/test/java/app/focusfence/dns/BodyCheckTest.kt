@@ -14,7 +14,7 @@ class BodyCheckTest {
 
     @Test
     fun aFaceOrFeetIsNotAConfirmation() {
-        // Logan's video-call false alarm: a face at 0.78 and nothing else.
+        // A face and nothing else.
         val best = BodyCheck.best(output(Triple("FACE_FEMALE", 2, 0.78f), Triple("FEET_EXPOSED", 1, 0.9f)), anchors)
         assertEquals(0.78, best.getValue("FACE_FEMALE"), 1e-6)
         assertNull(BodyCheck.confirm(best))
@@ -58,7 +58,7 @@ class BodyCheckTest {
         val both = BodyCheck.best(output(Triple("BUTTOCKS_COVERED", 1, 0.9f), Triple("FEMALE_BREAST_EXPOSED", 2, 0.5f)), anchors)
         assertEquals(BodyCheck.Kind.NUDITY, BodyCheck.classify(both).kind)
 
-        // Logan's video-call false alarm: covered-part scores around 0.01.
+        // A face, with a covered-part score near zero.
         val face = BodyCheck.best(output(Triple("FACE_FEMALE", 0, 0.78f), Triple("FEMALE_BREAST_COVERED", 3, 0.01f)), anchors)
         assertEquals(BodyCheck.Kind.NONE, BodyCheck.classify(face).kind)
     }

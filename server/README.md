@@ -1,7 +1,7 @@
 # Focus Fence accountability server (prototype)
 
 **Status: small-group server, built and tested by CI** (`./gradlew -p server test` from the repo root).
-Running for one person since 2026-11-23, after an independent security audit; not load-tested. Flat-file storage:
+Running for a small group since 2026-11-23, after an independent security audit; not load-tested. Flat-file storage:
 fine for a person or a few, not for many.
 
 It compiles the phone's pure `app/src/main/java/app/focusfence/dns/` code too, so the server
@@ -45,12 +45,12 @@ work without email.
 1. **Install** with Docker Compose or the systemd tarball (below). Set `FF_PUBLIC_URL` to your `https://` address.
 2. **HTTPS:** the `https` compose profile (Caddy) or `nginx.conf.example`. The app only talks to `https://`.
 3. **Check it:** `https://your.domain/healthz` answers `ok`.
-4. **Connect your own phone:** create an enrollment code and paste what it prints into the app (Partners → *Join with an
-   invite*). systemd: `sudo ./ff-admin.sh admin codes add me --uses 1`. Docker:
+4. **Connect your own phone:** create an enrollment code and paste what it prints into the app (Partners → *Join with a
+   code*). systemd: `sudo ./ff-admin.sh admin codes add me --uses 1`. Docker:
    `docker compose exec server /opt/focusfence-server/bin/focusfence-server admin codes add me --uses 1`.
    Or turn on the admin page (`FF_ADMIN_EMAILS`) and use its People tab.
-5. **Add a partner** from the app (Partners → *Invite a partner*). Share the link: opened in a browser it's an email
-   partner, pasted into their Focus Fence it's an app partner.
+5. **Add a partner** from the app (Partners → *Add a partner*): they type the code or scan its QR code in their Focus
+   Fence app, or open it in a browser; or you enter their email and the server sends an invite.
 
 ## Run with Docker Compose (recommended)
 
@@ -70,7 +70,7 @@ or your own TLS proxy. Whatever sits in front must send `X-Forwarded-For`, and i
 `FF_TRUSTED_PROXIES` (default: loopback, plus the private ranges in the compose file), or every client shares one
 rate-limit bucket.
 
-Back up the data volume (it holds every partner's report token and the activity records):
+Back up the data volume (it holds every partner's report token and the sealed reports):
 
 ```sh
 docker run --rm -v focusfence_ff-data:/data -v "$PWD":/backup alpine tar czf /backup/ff-data-$(date +%F).tgz -C /data .
@@ -86,7 +86,7 @@ volume survives a restart. Caddy getting a real public certificate wasn't tested
 Each `server-vX.Y.Z` release also has a tarball with an installer. It needs a JRE 17 or newer on the host.
 
 ```sh
-v=1.2.0   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
+v=2.1.0   # the newest server-v* release: https://github.com/flyboy-byte/focusfence/releases
 f=focusfence-server-$v.tar.gz
 base=https://github.com/flyboy-byte/focusfence/releases/download/server-v$v
 curl -fLO $base/$f && curl -fLO $base/$f.sha256
